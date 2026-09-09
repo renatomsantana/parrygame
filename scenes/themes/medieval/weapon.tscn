@@ -1,0 +1,161 @@
+[gd_scene load_steps=18 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Steel"]
+albedo_color = Color(0.768627, 0.800000, 0.807843, 1)
+roughness = 0.72
+metallic = 0.75
+
+[sub_resource type="StandardMaterial3D" id="Edge"]
+albedo_color = Color(0.933333, 0.945098, 0.905882, 1)
+roughness = 0.72
+metallic = 0.65
+
+[sub_resource type="StandardMaterial3D" id="Brass"]
+albedo_color = Color(0.709804, 0.541176, 0.301961, 1)
+roughness = 0.72
+metallic = 0.55
+
+[sub_resource type="StandardMaterial3D" id="Grip"]
+albedo_color = Color(0.286275, 0.196078, 0.160784, 1)
+roughness = 0.72
+metallic = 0.0
+
+[sub_resource type="StandardMaterial3D" id="Wrap"]
+albedo_color = Color(0.466667, 0.380392, 0.298039, 1)
+roughness = 0.72
+metallic = 0.0
+
+[sub_resource type="CylinderMesh" id="Root_Handle_mesh"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 0.3
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Root_Wrap0_mesh"]
+top_radius = 0.043
+bottom_radius = 0.043
+height = 0.018
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Root_Wrap1_mesh"]
+top_radius = 0.043
+bottom_radius = 0.043
+height = 0.018
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Root_Wrap2_mesh"]
+top_radius = 0.043
+bottom_radius = 0.043
+height = 0.018
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Root_Wrap3_mesh"]
+top_radius = 0.043
+bottom_radius = 0.043
+height = 0.018
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Root_Wrap4_mesh"]
+top_radius = 0.043
+bottom_radius = 0.043
+height = 0.018
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Root_Wrap5_mesh"]
+top_radius = 0.043
+bottom_radius = 0.043
+height = 0.018
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxMesh" id="Root_Crossguard_mesh"]
+size = Vector3(0.4, 0.055, 0.09)
+
+[sub_resource type="SphereMesh" id="Root_Pommel_mesh"]
+radius = 0.062
+height = 0.13
+radial_segments = 12
+rings = 6
+
+[sub_resource type="BoxMesh" id="Root_Blade_mesh"]
+size = Vector3(0.115, 1.04, 0.035)
+
+[sub_resource type="BoxMesh" id="Root_Fuller_mesh"]
+size = Vector3(0.022, 0.93, 0.039)
+
+[sub_resource type="CylinderMesh" id="Root_Tip_mesh"]
+top_radius = 0
+bottom_radius = 0.068
+height = 0.18
+radial_segments = 12
+rings = 1
+
+[node name="Longsword" type="Node3D"]
+
+
+[node name="Handle" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.16, 0)
+mesh = SubResource("Root_Handle_mesh")
+material_override = SubResource("Grip")
+
+[node name="Wrap0" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.29, 0)
+mesh = SubResource("Root_Wrap0_mesh")
+material_override = SubResource("Wrap")
+
+[node name="Wrap1" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.24, 0)
+mesh = SubResource("Root_Wrap1_mesh")
+material_override = SubResource("Wrap")
+
+[node name="Wrap2" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.19, 0)
+mesh = SubResource("Root_Wrap2_mesh")
+material_override = SubResource("Wrap")
+
+[node name="Wrap3" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.14, 0)
+mesh = SubResource("Root_Wrap3_mesh")
+material_override = SubResource("Wrap")
+
+[node name="Wrap4" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.09, 0)
+mesh = SubResource("Root_Wrap4_mesh")
+material_override = SubResource("Wrap")
+
+[node name="Wrap5" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.04, 0)
+mesh = SubResource("Root_Wrap5_mesh")
+material_override = SubResource("Wrap")
+
+[node name="Crossguard" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, 0)
+mesh = SubResource("Root_Crossguard_mesh")
+material_override = SubResource("Brass")
+
+[node name="Pommel" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.35, 0)
+mesh = SubResource("Root_Pommel_mesh")
+material_override = SubResource("Brass")
+
+[node name="Blade" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.55, 0)
+mesh = SubResource("Root_Blade_mesh")
+material_override = SubResource("Steel")
+
+[node name="Fuller" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.52, 0)
+mesh = SubResource("Root_Fuller_mesh")
+material_override = SubResource("Edge")
+
+[node name="Tip" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.16, 0)
+mesh = SubResource("Root_Tip_mesh")
+material_override = SubResource("Steel")
+scale = Vector3(1, 1, 0.3)

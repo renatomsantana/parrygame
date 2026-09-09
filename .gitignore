@@ -1,0 +1,10 @@
+# Cache de importação do Godot: gerado na máquina, não é fonte.
+.godot/
+*.import
+
+# Sons e imagens de referência de terceiros. Ficam na máquina de quem estuda;
+# nada do que o jogo gera depende deles — feedback.gd sintetiza tudo, e um
+# arquivo aqui só substitui o sintetizado enquanto estiver presente.
+art/audio/*.mp3
+art/audio/*.ogg
+art/audio/*.wav

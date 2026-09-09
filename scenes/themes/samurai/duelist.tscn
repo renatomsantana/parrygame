@@ -1,0 +1,303 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/themes/samurai/weapon.tscn" id="1_km2wj"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_at6va"]
+albedo_color = Color(0.026, 0.055, 0.056, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_puk56"]
+size = Vector3(0.16, 0.46, 0.18)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pvrlg"]
+albedo_color = Color(0.01, 0.008, 0.018, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_m7agk"]
+size = Vector3(0.2, 0.1, 0.32)
+
+[sub_resource type="BoxMesh" id="BoxMesh_26olo"]
+size = Vector3(0.16, 0.46, 0.18)
+
+[sub_resource type="BoxMesh" id="BoxMesh_31j6p"]
+size = Vector3(0.2, 0.1, 0.32)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ji3tl"]
+top_radius = 0.24
+bottom_radius = 0.44
+height = 0.58
+radial_segments = 8
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5g2hk"]
+albedo_color = Color(0.66, 0.9, 0.81, 1)
+roughness = 0.5
+emission_enabled = true
+emission = Color(0.66, 0.9, 0.81, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_wdreg"]
+top_radius = 0.435
+bottom_radius = 0.45
+height = 0.022
+radial_segments = 8
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_f7ulb"]
+albedo_color = Color(0.145, 0.29, 0.27, 1)
+metallic = 0.15
+roughness = 0.55
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_fiqnh"]
+top_radius = 0.245
+bottom_radius = 0.26
+height = 0.13
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ybt5c"]
+top_radius = 0.272
+bottom_radius = 0.272
+height = 0.02
+radial_segments = 8
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gwln0"]
+albedo_color = Color(0.04, 0.078, 0.076, 1)
+metallic = 0.25
+roughness = 0.45
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_mwp38"]
+top_radius = 0.315
+bottom_radius = 0.215
+height = 0.52
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="BoxMesh_cffgf"]
+size = Vector3(0.075, 0.44, 0.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_qgnl6"]
+size = Vector3(0.075, 0.44, 0.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_lyb4h"]
+size = Vector3(0.72, 0.11, 0.3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_w0lif"]
+size = Vector3(0.74, 0.02, 0.028)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_aa7hh"]
+top_radius = 0.085
+bottom_radius = 0.095
+height = 0.14
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="BoxMesh_2wly7"]
+size = Vector3(0.28, 0.29, 0.28)
+
+[sub_resource type="BoxMesh" id="BoxMesh_yv7o7"]
+size = Vector3(0.22, 0.17, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1ovdl"]
+size = Vector3(0.3, 0.055, 0.3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_o868v"]
+size = Vector3(0.085, 0.12, 0.24)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ppqjl"]
+size = Vector3(0.155, 0.16275, 0.2496)
+
+[sub_resource type="BoxMesh" id="BoxMesh_5u8u4"]
+size = Vector3(0.1736, 0.1736, 0.0728)
+
+[sub_resource type="BoxMesh" id="BoxMesh_c7vod"]
+size = Vector3(0.1333, 0.1395, 0.2132)
+
+[sub_resource type="BoxMesh" id="BoxMesh_nso1l"]
+size = Vector3(0.124, 0.1333, 0.1144)
+
+[sub_resource type="BoxMesh" id="BoxMesh_nu24x"]
+size = Vector3(0.145, 0.15225, 0.2496)
+
+[sub_resource type="BoxMesh" id="BoxMesh_fqbna"]
+size = Vector3(0.1624, 0.1624, 0.0728)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ehxgx"]
+size = Vector3(0.1247, 0.1305, 0.2132)
+
+[sub_resource type="BoxMesh" id="BoxMesh_b0qq6"]
+size = Vector3(0.116, 0.1247, 0.1144)
+
+[node name="Duelist" type="Node3D" unique_id=929031875]
+
+[node name="Body" type="Node3D" parent="." unique_id=1336726161]
+transform = Transform3D(0.98722726, 0, -0.15931821, 0, 1, 0, 0.15931821, 0, 0.98722726, 0, 0, 0)
+
+[node name="FrontShin" type="MeshInstance3D" parent="Body" unique_id=5284458]
+transform = Transform3D(1, 0, 0, 0, 0.99280864, -0.119712204, 0, 0.119712204, 0.99280864, -0.19, 0.26, -0.14)
+material_override = SubResource("StandardMaterial3D_at6va")
+mesh = SubResource("BoxMesh_puk56")
+
+[node name="FrontFoot" type="MeshInstance3D" parent="Body" unique_id=1595719556]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.19, 0.05, -0.24)
+material_override = SubResource("StandardMaterial3D_pvrlg")
+mesh = SubResource("BoxMesh_m7agk")
+
+[node name="BackShin" type="MeshInstance3D" parent="Body" unique_id=792650043]
+transform = Transform3D(1, 0, 0, 0, 0.98722726, 0.15931821, 0, -0.15931821, 0.98722726, 0.21, 0.26, 0.14)
+material_override = SubResource("StandardMaterial3D_at6va")
+mesh = SubResource("BoxMesh_26olo")
+
+[node name="BackFoot" type="MeshInstance3D" parent="Body" unique_id=655738203]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.21, 0.05, 0.2)
+material_override = SubResource("StandardMaterial3D_pvrlg")
+mesh = SubResource("BoxMesh_31j6p")
+
+[node name="Coat" type="MeshInstance3D" parent="Body" unique_id=439058631]
+transform = Transform3D(0.9238795, 0, 0.38268346, 0, 1, 0, -0.38268346, 0, 0.9238795, 0, 0.66, 0)
+material_override = SubResource("StandardMaterial3D_at6va")
+mesh = SubResource("CylinderMesh_ji3tl")
+
+[node name="CoatHem" type="MeshInstance3D" parent="Body" unique_id=1537478766]
+transform = Transform3D(0.9238795, 0, 0.38268346, 0, 1, 0, -0.38268346, 0, 0.9238795, 0, 0.385, 0)
+material_override = SubResource("StandardMaterial3D_5g2hk")
+mesh = SubResource("CylinderMesh_wdreg")
+
+[node name="Sash" type="MeshInstance3D" parent="Body" unique_id=253835486]
+transform = Transform3D(0.9238795, 0, 0.38268346, 0, 1, 0, -0.38268346, 0, 0.9238795, 0, 0.96, 0)
+material_override = SubResource("StandardMaterial3D_f7ulb")
+mesh = SubResource("CylinderMesh_fiqnh")
+
+[node name="SashEdge" type="MeshInstance3D" parent="Body" unique_id=584574967]
+transform = Transform3D(0.9238795, 0, 0.38268346, 0, 1, 0, -0.38268346, 0, 0.9238795, 0, 1.02, 0)
+material_override = SubResource("StandardMaterial3D_5g2hk")
+mesh = SubResource("CylinderMesh_ybt5c")
+
+[node name="Torso" type="MeshInstance3D" parent="Body" unique_id=1940981035]
+transform = Transform3D(0.9238795, 0, 0.38268346, 0, 1, 0, -0.38268346, 0, 0.9238795, 0, 1.29, 0)
+material_override = SubResource("StandardMaterial3D_gwln0")
+mesh = SubResource("CylinderMesh_mwp38")
+
+[node name="LapelL" type="MeshInstance3D" parent="Body" unique_id=788953926]
+transform = Transform3D(0.97589743, -0.21822962, 0, 0.21822962, 0.97589743, 0, 0, 0, 1, -0.1, 1.32, -0.265)
+material_override = SubResource("StandardMaterial3D_f7ulb")
+mesh = SubResource("BoxMesh_cffgf")
+
+[node name="LapelR" type="MeshInstance3D" parent="Body" unique_id=1502447803]
+transform = Transform3D(0.97589743, 0.21822962, 0, -0.21822962, 0.97589743, 0, 0, 0, 1, 0.1, 1.32, -0.265)
+material_override = SubResource("StandardMaterial3D_f7ulb")
+mesh = SubResource("BoxMesh_qgnl6")
+
+[node name="Shoulder" type="MeshInstance3D" parent="Body" unique_id=381943850]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -0.02)
+material_override = SubResource("StandardMaterial3D_gwln0")
+mesh = SubResource("BoxMesh_lyb4h")
+
+[node name="ShoulderEdge" type="MeshInstance3D" parent="Body" unique_id=1003655850]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.555, -0.145)
+material_override = SubResource("StandardMaterial3D_5g2hk")
+mesh = SubResource("BoxMesh_w0lif")
+
+[node name="Head" type="Node3D" parent="." unique_id=250228848]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.56, 0)
+
+[node name="Neck" type="MeshInstance3D" parent="Head" unique_id=76612595]
+transform = Transform3D(0.9238795, 0, 0.38268346, 0, 1, 0, -0.38268346, 0, 0.9238795, 0, 0.02, 0)
+material_override = SubResource("StandardMaterial3D_pvrlg")
+mesh = SubResource("CylinderMesh_aa7hh")
+
+[node name="Skull" type="MeshInstance3D" parent="Head" unique_id=551769537]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22, 0)
+material_override = SubResource("StandardMaterial3D_gwln0")
+mesh = SubResource("BoxMesh_2wly7")
+
+[node name="Face" type="MeshInstance3D" parent="Head" unique_id=440996304]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.19, -0.145)
+material_override = SubResource("StandardMaterial3D_pvrlg")
+mesh = SubResource("BoxMesh_yv7o7")
+
+[node name="Headband" type="MeshInstance3D" parent="Head" unique_id=1087983859]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.31, 0)
+material_override = SubResource("StandardMaterial3D_5g2hk")
+mesh = SubResource("BoxMesh_1ovdl")
+
+[node name="Topknot" type="MeshInstance3D" parent="Head" unique_id=1572029223]
+transform = Transform3D(1, 0, 0, 0, 0.87758255, 0.47942555, 0, -0.47942555, 0.87758255, 0, 0.4, 0.11)
+material_override = SubResource("StandardMaterial3D_pvrlg")
+mesh = SubResource("BoxMesh_o868v")
+
+[node name="Arms" type="Node3D" parent="." unique_id=1836446691]
+
+[node name="SwordArm" type="Node3D" parent="Arms" unique_id=712930578]
+transform = Transform3D(0.99745864, 0.056185044, -0.04381082, 0, 0.6149138, 0.78859437, 0.07124708, -0.7865903, 0.61335117, 0.32, 1.44, -0.02)
+metadata/reach = 0.52
+
+[node name="SwordArmUpper" type="MeshInstance3D" parent="Arms/SwordArm" unique_id=209140495]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.1248)
+material_override = SubResource("StandardMaterial3D_gwln0")
+mesh = SubResource("BoxMesh_ppqjl")
+
+[node name="SwordArmElbow" type="MeshInstance3D" parent="Arms/SwordArm" unique_id=1678360862]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2652)
+material_override = SubResource("StandardMaterial3D_f7ulb")
+mesh = SubResource("BoxMesh_5u8u4")
+
+[node name="SwordArmLower" type="MeshInstance3D" parent="Arms/SwordArm" unique_id=1800544533]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.3692)
+material_override = SubResource("StandardMaterial3D_gwln0")
+mesh = SubResource("BoxMesh_c7vod")
+
+[node name="SwordArmHand" type="MeshInstance3D" parent="Arms/SwordArm" unique_id=385307910]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.52)
+material_override = SubResource("StandardMaterial3D_pvrlg")
+mesh = SubResource("BoxMesh_nso1l")
+
+[node name="OffArm" type="Node3D" parent="Arms" unique_id=1005349676]
+transform = Transform3D(0.39054987, 0.4131016, -0.8226894, 0, 0.8936625, 0.44873974, 0.92058176, -0.17525524, 0.34901977, -0.32, 1.44, -0.02)
+metadata/reach = 0.52
+
+[node name="OffArmUpper" type="MeshInstance3D" parent="Arms/OffArm" unique_id=1103427597]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.1248)
+material_override = SubResource("StandardMaterial3D_gwln0")
+mesh = SubResource("BoxMesh_nu24x")
+
+[node name="OffArmElbow" type="MeshInstance3D" parent="Arms/OffArm" unique_id=1978857409]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2652)
+material_override = SubResource("StandardMaterial3D_f7ulb")
+mesh = SubResource("BoxMesh_fqbna")
+
+[node name="OffArmLower" type="MeshInstance3D" parent="Arms/OffArm" unique_id=1417259597]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.3692)
+material_override = SubResource("StandardMaterial3D_gwln0")
+mesh = SubResource("BoxMesh_ehxgx")
+
+[node name="OffArmHand" type="MeshInstance3D" parent="Arms/OffArm" unique_id=870517836]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.52)
+material_override = SubResource("StandardMaterial3D_pvrlg")
+mesh = SubResource("BoxMesh_b0qq6")
+
+[node name="RimWarm" type="OmniLight3D" parent="." unique_id=2045537829]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.58, 1.443, 0.5)
+light_color = Color(0.35, 1, 0.86, 1)
+light_energy = 3.4
+light_specular = 1.0
+omni_range = 1.55
+
+[node name="RimCool" type="OmniLight3D" parent="." unique_id=737088766]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.58, 1.3845, 0.5)
+light_color = Color(0.24, 0.7, 1, 1)
+light_energy = 2.8
+light_specular = 1.0
+omni_range = 1.55
+
+[node name="KeyLight" type="SpotLight3D" parent="." unique_id=4260591]
+transform = Transform3D(-0.91669595, 0.16649354, -0.36324704, 0, 0.90905976, 0.4166657, 0.39958543, 0.38195577, -0.8333314, -0.85, 1.794, -1.95)
+light_color = Color(1, 0.95, 0.98, 1)
+light_energy = 3.2
+spot_range = 6.0
+spot_angle = 36.0
+spot_angle_attenuation = 1.4
+
+[node name="WeaponPivot" type="Node3D" parent="." unique_id=1984110944]
+transform = Transform3D(1, 0, 0, 0, 0.9887711, 0.14943814, 0, -0.14943814, 0.9887711, 0.34, 1.08, -0.3)
+
+[node name="WeaponVisual" type="Node3D" parent="WeaponPivot" unique_id=710526548 instance=ExtResource("1_km2wj")]
