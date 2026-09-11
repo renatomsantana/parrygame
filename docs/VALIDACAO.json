@@ -1,0 +1,30 @@
+{
+  "version": "0.5.0",
+  "date": "2026-09-11",
+  "unity": {
+    "engine": "Unity 6000.0 (não instalado nesta máquina)",
+    "core_compilation": {
+      "compiler": ".NET Framework 4.x csc.exe, /langversion:5",
+      "script": "unity_project/Tools/RunCoreTests.ps1",
+      "status": "passed"
+    },
+    "core_tests": { "source": "Assets/Scripts/Core/CoreSelfTest.cs", "checks": 474, "failures": 0 },
+    "scene_layer": "not_run"
+  },
+  "rpgmaker_mz": {
+    "engine": "RPG Maker MZ (não instalado nesta máquina)",
+    "core_tests": { "source": "rpgmaker_mz/tests/core_test.js", "runtime": "Node 24", "checks": 275, "failures": 0 },
+    "scene_layer": "not_run"
+  },
+  "human_audio_and_feel_review": "pending",
+  "bosses": 7,
+  "feint_styles": ["none", "syncopated", "heavy", "double", "blinding", "triple", "mimic"],
+  "arenas_per_boss": true,
+  "arena_art": "pending",
+  "final_boss": "undefined",
+  "png_assets": {
+    "hero_orange.png": { "width": 1536, "height": 1024, "mode": "RGBA" },
+    "boss.png": { "width": 1536, "height": 1024, "mode": "RGBA" },
+    "arena.png": { "width": 1672, "height": 941, "mode": "RGB" }
+  }
+}
