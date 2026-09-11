@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace Apara.Core
 {
     /// <summary>
-    /// Verificações das regras, dos mestres, dos estilos de finta e da trilha.
-    /// Não dependem do Unity: rodam no Test Runner (EditMode) e no harness de
-    /// console em Tools/. O plugin de RPG Maker repete as mesmas em JavaScript.
+    /// Verificações das regras, dos mestres, dos estilos de finta, do Boss Final
+    /// e da trilha. Não dependem do Unity: rodam no Test Runner (EditMode) e no
+    /// harness de console em Tools/.
     /// </summary>
     public class CoreSelfTest
     {
@@ -31,6 +31,9 @@ namespace Apara.Core
             t.TestMultipleCues();
             t.TestSyncopation();
             t.TestNextInstantHidesFeint();
+            t.TestFinalBossPhases();
+            t.TestFinalBossStances();
+            t.TestFinalBossCombos();
             t.TestCampaign();
             return t;
         }
@@ -67,11 +70,14 @@ namespace Apara.Core
             return p;
         }
 
-        private static BossProfile NoFeint(BossProfile profile)
+        /// <summary>Cópia sem sorteios: sem fintas, sem jitter, sem compostos.</summary>
+        private static BossProfile Deterministic(BossProfile profile)
         {
             BossProfile copy = profile.Clone();
             copy.FeintChance = 0f;
             copy.RhythmJitter = 0f;
+            foreach (Stance s in copy.Stances) s.FeintChance = 0f;
+            foreach (PhaseRule r in copy.Phases) r.ComboChance = 0f;
             return copy;
         }
 
@@ -106,6 +112,15 @@ namespace Apara.Core
             duel.Tick(lead + 0.00001f);
         }
 
+        /// <summary>Deixa o golpe passar sem custo, para avançar a sequência.</summary>
+        private static void Skip(CombatCore duel)
+        {
+            Prepare(duel);
+            duel.Tick(duel.TimeToImpact() + 0.001f);
+            duel.PlayerHp = 100;
+            if (duel.CurrentPhase == CombatCore.Phase.Finished) duel.CurrentPhase = CombatCore.Phase.Recovery;
+        }
+
         /// <summary>Avança até a próxima preparação que seja finta (até vinte golpes).</summary>
         private static CombatCore FeintDuel(BossProfile boss, int seed)
         {
@@ -114,9 +129,7 @@ namespace Apara.Core
             {
                 Prepare(duel);
                 if (duel.IsFeint) return duel;
-                duel.Tick(duel.TimeToImpact() + 0.001f);
-                duel.PlayerHp = 100;
-                duel.CurrentPhase = CombatCore.Phase.Recovery;
+                Skip(duel);
             }
             return duel;
         }
@@ -129,6 +142,19 @@ namespace Apara.Core
             duel.OnCue += delegate(bool feint) { events.Add(feint ? "sinal_falso" : "sinal"); };
             duel.OnImpact += delegate(string r, float l, bool b) { events.Add("contato"); };
             return events;
+        }
+
+        private void CheckStance(string owner, Stance s, CombatSettings settings)
+        {
+            foreach (float windup in s.Windups) Check(windup >= settings.AttackLead + 0.1f, owner + ": preparação cabe a partida do golpe");
+            Check(s.PerfectWindow < s.GoodWindow, owner + ": janela perfeita dentro da boa");
+            if (s.FeintChance > 0f)
+            {
+                Check(s.FalseCues >= 1 && s.FalseCues <= 3, owner + ": de um a três instantes falsos");
+                Check(s.FeintDelayMin > 0f && s.FeintDelayMax >= s.FeintDelayMin, owner + ": faixa de atraso válida");
+                Check(s.FeintDelayMin / s.FalseCues >= settings.CueLead - 0.0001f, owner + ": instantes falsos afastados pelo menos um sinal");
+                Check(s.FeintDelayMin > s.GoodWindow, owner + ": o clique no instante falso nunca cabe na janela boa");
+            }
         }
 
         private void TestTimingLimits()
@@ -211,7 +237,7 @@ namespace Apara.Core
         {
             BossProfile[] bosses = BossRoster.Create();
             CombatSettings settings = new CombatSettings();
-            Check(bosses.Length == 7, "A trilha tem sete mestres");
+            Check(bosses.Length == 8, "A trilha tem sete mestres e o Boss Final");
             HashSet<string> arenas = new HashSet<string>();
             for (int i = 0; i < bosses.Length; i++)
             {
@@ -221,23 +247,18 @@ namespace Apara.Core
                 foreach (string line in boss.Intro) Check(line.Contains("|"), "Fala de " + boss.Name + " traz o nome do falante");
                 foreach (string line in boss.Outro) Check(line.Contains("|"), "Fala de " + boss.Name + " traz o nome do falante");
                 foreach (float windup in boss.Windups) Check(windup - boss.RhythmJitter >= settings.AttackLead + 0.1f, boss.Name + ": preparação cabe a partida do golpe");
-                Check(boss.PerfectWindow < boss.GoodWindow, boss.Name + ": janela perfeita dentro da boa");
                 Check(boss.ArenaAsset.Length > 0 && arenas.Add(boss.ArenaAsset), boss.Name + " tem cenário próprio");
                 Check(boss.Venue.Length > 0 && boss.Special.Length > 0, boss.Name + " descreve cenário e mecânica");
-                if (boss.FeintChance > 0f)
-                {
-                    Check(boss.FalseCues >= 1 && boss.FalseCues <= 3, boss.Name + ": de um a três instantes falsos");
-                    Check(boss.FeintDelayMin > 0f && boss.FeintDelayMax >= boss.FeintDelayMin, boss.Name + ": faixa de atraso válida");
-                    Check(boss.FeintDelayMin / boss.FalseCues >= settings.CueLead - 0.0001f, boss.Name + ": instantes falsos afastados pelo menos um sinal");
-                    Check(boss.FeintDelayMin > boss.GoodWindow, boss.Name + ": o clique no instante falso nunca cabe na janela boa");
-                }
-                if (i > 0)
+                CheckStance(boss.Name, boss.DefaultStance(), settings);
+                foreach (Stance s in boss.Stances) CheckStance(boss.Name + " (" + s.Name + ")", s, settings);
+                if (i > 0 && i < 7)
                 {
                     BossProfile previous = bosses[i - 1];
                     Check(boss.PerfectWindow < previous.PerfectWindow && boss.GoodWindow < previous.GoodWindow,
                         boss.Name + " é mais exigente que " + previous.Name);
                     Check(boss.FeintChance >= previous.FeintChance, boss.Name + " finta pelo menos tanto quanto " + previous.Name);
                 }
+                Check((boss.Id == 8) == boss.Provisional, boss.Name + ": só o Boss Final é provisório");
             }
             Check(bosses[0].FeintChance == 0f && bosses[0].FalseCues == 0, "Gorou não finta");
             Check(bosses[1].RhythmJitter > 0f, "Neon Jax é sincopado");
@@ -251,21 +272,43 @@ namespace Apara.Core
                 "Sombra ataca no intervalo de cooldown");
             Check(Approx(bosses[0].PerfectWindow, 0.09f) && Approx(bosses[0].GoodWindow, 0.22f), "Gorou: 90 / 220 ms");
             Check(Approx(bosses[6].PerfectWindow, 0.05f) && Approx(bosses[6].GoodWindow, 0.14f), "Sombra: 50 / 140 ms");
+
+            BossProfile final = bosses[7];
+            Check(final.Stances.Length >= 2, "Boss Final troca de postura: pelo menos duas posturas");
+            Check(final.Phases.Length >= 3 && Approx(final.Phases[0].HpFraction, 1f), "Boss Final tem fases múltiplas a partir da vida cheia");
+            for (int i = 1; i < final.Phases.Length; i++)
+            {
+                Check(final.Phases[i].HpFraction < final.Phases[i - 1].HpFraction, "Fases do Boss Final em ordem decrescente de vida");
+            }
+            bool combos = false;
+            foreach (PhaseRule r in final.Phases) if (r.ComboStrikes > 1 && r.ComboChance > 0f) combos = true;
+            Check(combos, "Boss Final tem ataques compostos em alguma fase");
+            Check(final.ComboWindup >= settings.AttackLead + 0.1f, "Preparação do golpe composto cabe a partida");
+            Check(final.ComboGap < settings.Recovery, "Golpes compostos vêm mais rápido que a recuperação normal");
+            float hardestPerfect = 1f, hardestGood = 1f;
+            foreach (Stance s in final.Stances)
+            {
+                hardestPerfect = Math.Min(hardestPerfect, s.PerfectWindow);
+                hardestGood = Math.Min(hardestGood, s.GoodWindow);
+            }
+            Check(hardestPerfect <= bosses[6].PerfectWindow && hardestGood <= bosses[6].GoodWindow, "A postura mais dura do Boss Final não é mais fácil que a Sombra");
         }
 
         private void TestBossWindows()
         {
             foreach (BossProfile boss in BossRoster.Create())
             {
-                BossProfile profile = NoFeint(boss);
+                BossProfile profile = Deterministic(boss);
+                float perfect = profile.Stances.Length > 0 ? profile.Stances[0].PerfectWindow : profile.PerfectWindow;
+                float good = profile.Stances.Length > 0 ? profile.Stances[0].GoodWindow : profile.GoodWindow;
                 CombatCore duel = NewDuel(profile, 7);
-                Parry(duel, profile.PerfectWindow);
+                Parry(duel, perfect);
                 Check(duel.PerfectCount == 1, boss.Name + ": limite perfeito inclusivo");
                 duel = NewDuel(profile, 7);
-                Parry(duel, profile.PerfectWindow + 0.005f);
+                Parry(duel, perfect + 0.005f);
                 Check(duel.GoodCount == 1, boss.Name + ": logo após o perfeito é bom");
                 duel = NewDuel(profile, 7);
-                Parry(duel, profile.GoodWindow + 0.005f);
+                Parry(duel, good + 0.005f);
                 Check(duel.BadCount == 1, boss.Name + ": fora da janela boa é ruim");
             }
         }
@@ -360,9 +403,7 @@ namespace Apara.Core
                 Check(actual >= expected - jax.RhythmJitter - 0.0001f && actual <= expected + jax.RhythmJitter + 0.0001f,
                     "Neon Jax fica dentro do compasso ± " + jax.RhythmJitter);
                 if (Math.Abs(actual - expected) > 0.01f) varied = true;
-                duel.Tick(duel.TimeToImpact() + 0.001f);
-                duel.PlayerHp = 100;
-                duel.CurrentPhase = CombatCore.Phase.Recovery;
+                Skip(duel);
             }
             Check(varied, "Neon Jax realmente sai do compasso");
             CombatCore gorou = NewDuel(Boss(1), 5);
@@ -384,14 +425,105 @@ namespace Apara.Core
             Check(plain.TimeToNextInstant() >= 0f, "Fora da preparação devolve -1; dentro, nunca negativo");
         }
 
+        private void TestFinalBossPhases()
+        {
+            BossProfile final = Deterministic(Boss(8));
+            CombatCore duel = NewDuel(final, 21);
+            List<string> phases = new List<string>();
+            duel.OnPhaseChanged += delegate(int index, string name) { phases.Add(index + ":" + name); };
+            Prepare(duel);
+            Check(duel.PhaseIndex == 0 && duel.CurrentRule().Name == final.Phases[0].Name, "Boss Final começa na primeira fase");
+            Check(Approx(duel.WindupDuration, final.Stances[0].Windups[0]), "Primeira fase usa a preparação da primeira postura sem acelerar");
+            // Quatro perfeitos: 62 de dano, vida 38, abaixo de 66%.
+            for (int i = 0; i < 4; i++) Parry(duel, 0.030f);
+            Check(duel.BossHp == 38 && duel.PhaseIndex == 0, "A fase só muda na próxima preparação");
+            Prepare(duel);
+            Check(duel.PhaseIndex == 1 && phases.Count == 1 && phases[0] == "1:" + final.Phases[1].Name, "Vida a 38% entra na segunda fase");
+            Check(!duel.SecondPhase, "Mestre com fases próprias não usa a regra comum da segunda fase");
+            // Mais um perfeito: 30, abaixo de 34%.
+            Parry(duel, 0.030f);
+            Prepare(duel);
+            Check(duel.PhaseIndex == 2 && phases.Count == 2, "Vida a 30% entra na terceira fase");
+            Check(Approx(duel.WindupDuration, duel.Rules().Windups[(duel.Attacks - 1) % duel.Rules().Windups.Length] * final.Phases[2].SpeedMultiplier),
+                "Terceira fase multiplica a preparação pela velocidade da fase");
+            duel.Reset();
+            Check(duel.PhaseIndex == 0 && duel.StanceIndex == 0 && !duel.InCombo(), "Reiniciar volta à primeira fase e postura");
+        }
+
+        private void TestFinalBossStances()
+        {
+            BossProfile final = Deterministic(Boss(8));
+            CombatCore duel = NewDuel(final, 21);
+            List<string> stances = new List<string>();
+            duel.OnStanceChanged += delegate(int index, string name) { stances.Add(index + ":" + name); };
+            int every = final.Phases[0].StanceSwitchEvery;
+            for (int i = 0; i < every; i++)
+            {
+                Prepare(duel);
+                Check(duel.StanceIndex == 0 && Approx(duel.PerfectWindow(), final.Stances[0].PerfectWindow), "Primeiros golpes na postura " + final.Stances[0].Name);
+                Parry(duel, 0.100f);
+            }
+            Prepare(duel);
+            Check(duel.StanceIndex == 1 && stances.Count == 1 && stances[0] == "1:" + final.Stances[1].Name, "Troca de postura depois de " + every + " golpes");
+            Check(Approx(duel.PerfectWindow(), final.Stances[1].PerfectWindow) && Approx(duel.GoodWindow(), final.Stances[1].GoodWindow),
+                "Janelas seguem a nova postura");
+            // Na postura Baixa, o timing que era bom na Alta vira ruim.
+            duel.Tick(duel.TimeToImpact() - 0.160f);
+            duel.Press();
+            duel.Tick(0.161f);
+            Check(duel.BadCount == 1, "160 ms é ruim na postura " + final.Stances[1].Name);
+            for (int i = 0; i < every - 1; i++) Skip(duel);
+            Prepare(duel);
+            Check(duel.StanceIndex == 0 && stances.Count == 2, "A postura volta ao início depois da última");
+        }
+
+        private void TestFinalBossCombos()
+        {
+            BossProfile final = Deterministic(Boss(8));
+            final.Phases[0].ComboChance = 1f;
+            final.Phases[0].ComboStrikes = 3;
+            final.Phases[0].StanceSwitchEvery = 0;
+            CombatCore duel = NewDuel(final, 21);
+            int announced = 0;
+            duel.OnComboStarted += delegate(int strikes) { announced = strikes; };
+            Prepare(duel);
+            Check(announced == 3 && duel.ComboRemaining == 2 && duel.ComboStrike == 0, "Golpe composto de três contatos anunciado na preparação");
+            Check(!duel.IsFeint, "Sem finta no golpe composto determinístico");
+            // Primeiro contato: bom.
+            duel.Tick(duel.TimeToImpact() - 0.100f);
+            Check(duel.Press(), "Primeiro contato aceita tentativa");
+            duel.Tick(0.101f);
+            Check(duel.GoodCount == 1 && Approx(duel.PhaseEnd - duel.Clock, final.ComboGap), "Depois do primeiro contato vem só a pausa curta do composto");
+            Prepare(duel);
+            Check(duel.ComboStrike == 1 && duel.ComboRemaining == 1 && Approx(duel.WindupDuration, final.ComboWindup), "Segundo contato usa a preparação curta");
+            duel.Tick(duel.TimeToImpact() - 0.100f);
+            Check(duel.Press(), "Segundo contato aceita nova tentativa");
+            duel.Tick(0.101f);
+            Check(duel.GoodCount == 2, "Cada contato do composto resolve sozinho");
+            Prepare(duel);
+            Check(duel.ComboStrike == 2 && duel.ComboRemaining == 0, "Terceiro contato é o último");
+            duel.Tick(duel.TimeToImpact() + 0.001f);
+            Check(duel.BadCount == 1 && duel.PlayerHp == 75 && Approx(duel.PhaseEnd - duel.Clock, duel.Settings.Recovery),
+                "Deixar passar o último contato custa vida e volta à recuperação normal");
+            Prepare(duel);
+            Check(duel.ComboStrike == 0 && duel.ComboRemaining == 2, "O golpe seguinte abre um composto novo");
+            // Quebra de postura interrompe o composto.
+            duel.BossStability = 25;
+            duel.Tick(duel.TimeToImpact() - 0.030f);
+            duel.Press();
+            duel.Tick(0.031f);
+            Check(duel.PerfectCount == 1 && duel.BossStability == 0 && duel.ComboRemaining == 0
+                && Approx(duel.PhaseEnd - duel.Clock, duel.Settings.BreakRecovery), "Quebrar a postura corta o composto e abre a recuperação longa");
+        }
+
         private void TestCampaign()
         {
             Campaign trail = new Campaign(BossRoster.Create());
-            Check(trail.Stage == 1 && trail.Total == 7 && trail.Current.Name == "Gorou", "Trilha começa em Gorou");
+            Check(trail.Stage == 1 && trail.Total == 8 && trail.Current.Name == "Gorou", "Trilha começa em Gorou");
             for (int i = 0; i < 6; i++) Check(trail.Advance(), "Avança para o mestre " + (i + 2));
             Check(trail.Current.Name == "Sombra" && !trail.Completed, "Sétimo mestre é a Sombra");
-            Check(!trail.Advance() && trail.Completed, "Depois da Sombra a trilha termina");
-            Check(trail.Current.Name == "Sombra", "Terminar não passa do último mestre");
+            Check(trail.Advance() && trail.Current.Id == 8 && trail.Current.Provisional, "Depois da Sombra vem o Boss Final provisório");
+            Check(!trail.Advance() && trail.Completed, "Depois do Boss Final a trilha termina");
             trail.Reset();
             Check(trail.Stage == 1 && !trail.Completed, "Reiniciar volta ao primeiro mestre");
         }

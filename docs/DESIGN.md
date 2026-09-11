@@ -33,7 +33,7 @@ ambiente.
 | 5. Kaelen, Pintor Visionário | Galeria surrealista | 65 / 170 ms | 0,77 · 0,97 · 0,73 | 50% | Cortes cegantes: a silhueta da lâmina se distorce. |
 | 6. Eleonor, Grã-Duquesa Esgrimista | Salão de baile com espelhos | 60 / 160 ms | 0,70 · 0,83 · 0,63 | 60% | Finta tripla e estocadas rápidas. |
 | 7. Sombra, o Reflexo de Ren | Jardim de Vidro | 50 / 140 ms | 0,60 · 0,73 · 0,57 | 75% | Mímica: finge o próprio parry e ataca no intervalo. |
-| 8. Boss Final | A definir | — | — | — | Ataques compostos, troca de postura e fases múltiplas. |
+| 8. Mestre Supremo (provisório) | Salão da Liga | Alta 70 / 180 ms · Baixa 45 / 130 ms | Alta 1,05 · 0,95 · 1,15 · Baixa 0,60 · 0,55 · 0,65 | Alta 30% (dupla) · Baixa 50% (mímica) | Ataques compostos, troca de postura e fases múltiplas. |
 
 As preparações vêm da especificação em quadros a 60 FPS, convertidas para
 segundos. Os sete mestres estão em `Assets/Scripts/Core/BossRoster.cs`, na ordem da trilha.
@@ -87,6 +87,30 @@ ela não existe, a arena comum recebe a tonalidade do mestre. No RPG Maker,
 cada mestre é um mapa, e o plugin aplica uma tonalidade de tela provisória.
 A arte pixel art de cada cenário fica para depois; `docs/ARTE.md` lista os
 nomes esperados.
+
+## Boss Final (provisório)
+
+O roteiro deixa o Boss Final "a definir" e nomeia três mecânicas. O código
+implementa as três num mestre provisório, o **Mestre Supremo**; nome, cenário
+e falas são espaço reservado (`Provisional = true`) até o roteiro decidir.
+
+- **Troca de postura.** Duas posturas com janelas, ritmo e finta próprios:
+  *Alta*, lenta e telegrafada, com finta dupla; *Baixa*, rápida, com a mímica
+  da Sombra. A troca acontece a cada N golpes, N definido pela fase. O HUD
+  mostra a postura ao lado do título e avisa "POSTURA ALTA/BAIXA".
+- **Fases múltiplas.** Três fases por vida: 100% a 66%, 66% a 34%, abaixo de
+  34%. Cada fase define a cadência da troca (4, 3, 2 golpes), os golpes
+  compostos e a velocidade (a última é 10% mais rápida). A fase só muda na
+  preparação seguinte e nunca volta. Mestres com fases próprias não usam a
+  regra comum da segunda fase.
+- **Ataques compostos.** A partir da segunda fase, uma preparação pode abrir
+  dois contatos seguidos; na terceira, três. Cada contato tem sua tentativa
+  e seu julgamento; entre eles há só uma pausa curta (100 ms) e uma
+  preparação curta (500 ms), sem finta. Quebrar a postura interrompe o
+  composto e abre a recuperação longa.
+
+Tudo isso está em `BossProfile.Stances`, `BossProfile.Phases`, `ComboWindup`
+e `ComboGap`; `CoreSelfTest` cobre fases, posturas e compostos.
 
 ## Timings e consequências
 
@@ -174,7 +198,7 @@ original (Y para baixo) são convertidas na ponte.
 3. Acertar o atraso da finta: curto demais vira golpe normal, longo demais fica óbvio.
 4. Refinar os recortes e âncoras se a silhueta deslizar.
 5. Criar arte própria por mestre e por cenário; hoje só a cor muda.
-6. Definir o Boss Final: ataques compostos, troca de postura e fases múltiplas.
+6. Redefinir o Boss Final no roteiro: nome, cenário, falas e o ajuste das posturas e fases provisórias.
 
 ## Validação
 

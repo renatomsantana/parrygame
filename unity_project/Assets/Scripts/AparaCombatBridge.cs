@@ -65,6 +65,9 @@ namespace Apara
             Combat.OnParryPressed += OnPress;
             Combat.OnImpact += OnImpact;
             Combat.OnFinished += OnFinished;
+            Combat.OnStanceChanged += OnStanceChanged;
+            Combat.OnPhaseChanged += OnPhaseChanged;
+            Combat.OnComboStarted += OnComboStarted;
             ApplyBoss();
             lastTime = Time.realtimeSinceStartupAsDouble;
             PaintHud();
@@ -405,8 +408,7 @@ namespace Apara
 
         private void OnFeint()
         {
-            BossProfile profile = Campaign.Current;
-            if (profile.MimicParry && boss.Has("parry"))
+            if (Combat.Rules().MimicParry && boss.Has("parry"))
             {
                 // A Sombra finge o parry de Ren: a sequência de defesa para no frame de contato.
                 boss.Pose("parry", 3f / (28f * Settings.AttackLead), false, 0, 3);
@@ -429,6 +431,35 @@ namespace Apara
             float visibility = Campaign.Current.CueVisibility;
             fx.Sound("cue", feint ? 1.3f : 1f, visibility);
             boss.Flash(visibility);
+        }
+
+        private void OnStanceChanged(int index, string name)
+        {
+            // Troca de postura: aviso curto; as janelas e o ritmo já mudaram no núcleo.
+            message = "POSTURA " + name.ToUpperInvariant();
+            detail = index == 0 ? "Lenta e telegrafada" : "Rápida e curta";
+            messageColor = new Color32(0xF0, 0xA0, 0x44, 0xFF);
+            messageLife = 0.9f;
+            fx.Sound("cue", 0.8f);
+        }
+
+        private void OnPhaseChanged(int index, string name)
+        {
+            message = name.ToUpperInvariant();
+            detail = "O mestre muda o jogo";
+            messageColor = new Color32(0xFF, 0xE4, 0xA0, 0xFF);
+            messageLife = 1.1f;
+            shake = 2.0f;
+            SetFlash(new Color(1f, 0.9f, 0.6f, 0.4f), 0.2f);
+            fx.Sound("break", 1.2f);
+        }
+
+        private void OnComboStarted(int strikes)
+        {
+            message = "GOLPE COMPOSTO ×" + strikes;
+            detail = "Um parry por contato";
+            messageColor = new Color32(0xEC, 0x72, 0x85, 0xFF);
+            messageLife = 0.8f;
         }
 
         private void OnPress()
@@ -516,9 +547,9 @@ namespace Apara
             state.Screen = Screen; state.Paused = Paused; state.Victory = Victory; state.FinishAge = finishAge;
             state.Message = message; state.Detail = detail; state.MessageLife = messageLife; state.MessageColor = messageColor;
             // O relógio da tela conta até o próximo instante mostrado, falso ou real: não entrega a finta.
-            state.Lead = Combat.TimeToNextInstant(); state.PerfectWindow = profile.PerfectWindow; state.CueLead = Settings.CueLead;
+            state.Lead = Combat.TimeToNextInstant(); state.PerfectWindow = Combat.PerfectWindow(); state.CueLead = Settings.CueLead;
             state.CueVisibility = profile.CueVisibility;
-            state.BossName = profile.Name; state.BossTitle = profile.Title; state.BossColor = ToColor(profile.HudColor);
+            state.BossName = profile.Name; state.BossTitle = profile.Stances.Length > 0 ? profile.Title + " · " + Combat.Rules().Name : profile.Title; state.BossColor = ToColor(profile.HudColor);
             state.Special = profile.Special; state.Stage = Campaign.Stage; state.Stages = Campaign.Total; state.Venue = profile.Venue;
             state.Premise = BossRoster.Premise; state.FinalNote = BossRoster.FinalNote;
             state.Speaker = ""; state.Line = "";

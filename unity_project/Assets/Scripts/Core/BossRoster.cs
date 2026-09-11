@@ -4,7 +4,9 @@ namespace Apara.Core
     /// A Trilha dos Sete Mestres (especificação v0.5.0). Preparações convertidas
     /// dos quadros a 60 FPS para segundos. Cada mestre tem cenário próprio
     /// (ArenaAsset) e um estilo de finta que segue a mecânica descrita no roteiro.
-    /// O Boss Final ainda será definido.
+    /// O Boss Final está PROVISÓRIO: o roteiro só pede "ataques compostos, troca
+    /// de postura e fases múltiplas", e é isso que ele tem; nome, cenário e
+    /// falas são espaço reservado até a próxima fase do projeto.
     /// </summary>
     public static class BossRoster
     {
@@ -12,7 +14,7 @@ namespace Apara.Core
             "O mestre de Ren foi traído pela Liga dos Mestres Dissidentes. Cada um roubou " +
             "uma das sete gemas da empunhadura sagrada. Ren desafia cada mestre em seu próprio terreno.";
 
-        public const string FinalNote = "O Boss Final será definido na próxima fase do projeto.";
+        public const string FinalNote = "O Boss Final ainda é provisório: o roteiro definirá nome, cenário e falas na próxima fase.";
 
         public static BossProfile[] Create()
         {
@@ -103,7 +105,60 @@ namespace Apara.Core
             sombra.MirrorHero = true;
             sombra.SheetAsset = "hero";
 
-            return new BossProfile[] { gorou, jax, cavan, vance, kaelen, eleonor, sombra };
+            // Boss Final (provisório). Duas posturas: Alta, lenta e telegrafada, com
+            // finta dupla; Baixa, rápida, com a mímica da Sombra. Três fases por vida:
+            // troca de postura mais frequente, golpes compostos de dois e depois três
+            // contatos, e 10% mais rápido no fim. A quebra de postura corta o composto.
+            BossProfile supremo = Make(8, "Mestre Supremo", "Líder da Liga Dissidente", "Salão da Liga, sete gemas vazias",
+                "Ataques compostos, troca de postura e fases múltiplas.",
+                0.045f, 0.13f, new float[] { 0.60f, 0.55f, 0.65f },
+                "arena_liga", new Rgb(0.9f, 0.82f, 0.6f), new Rgb(0.8f, 0.72f, 0.9f), new Rgb(0.95f, 0.8f, 0.4f),
+                "Mestre Supremo|Sete gemas, sete quedas. Você limpou o caminho até mim, e por isso agradeço: ninguém mais ficará entre nós.",
+                "Ren|Não vim agradecer. Vim devolver a empunhadura ao meu mestre.",
+                "Mestre Supremo|A técnica pura... então ela ainda existia...");
+            supremo.Provisional = true;
+            supremo.ComboWindup = 0.50f;
+            supremo.ComboGap = 0.10f;
+            Stance alta = new Stance();
+            alta.Name = "Alta";
+            alta.PerfectWindow = 0.07f;
+            alta.GoodWindow = 0.18f;
+            alta.Windups = new float[] { 1.05f, 0.95f, 1.15f };
+            alta.FeintChance = 0.3f;
+            alta.FalseCues = 2;
+            alta.FeintDelayMin = 0.40f;
+            alta.FeintDelayMax = 0.55f;
+            Stance baixa = new Stance();
+            baixa.Name = "Baixa";
+            baixa.PerfectWindow = 0.045f;
+            baixa.GoodWindow = 0.13f;
+            baixa.Windups = new float[] { 0.60f, 0.55f, 0.65f };
+            baixa.FeintChance = 0.5f;
+            baixa.FalseCues = 1;
+            baixa.FeintDelayMin = 0.30f;
+            baixa.FeintDelayMax = 0.36f;
+            baixa.MimicParry = true;
+            supremo.Stances = new Stance[] { alta, baixa };
+            PhaseRule primeira = new PhaseRule();
+            primeira.Name = "Primeira fase";
+            primeira.HpFraction = 1.0f;
+            primeira.StanceSwitchEvery = 4;
+            PhaseRule segunda = new PhaseRule();
+            segunda.Name = "Segunda fase";
+            segunda.HpFraction = 0.66f;
+            segunda.StanceSwitchEvery = 3;
+            segunda.ComboChance = 0.5f;
+            segunda.ComboStrikes = 2;
+            PhaseRule terceira = new PhaseRule();
+            terceira.Name = "Terceira fase";
+            terceira.HpFraction = 0.34f;
+            terceira.StanceSwitchEvery = 2;
+            terceira.ComboChance = 0.7f;
+            terceira.ComboStrikes = 3;
+            terceira.SpeedMultiplier = 0.9f;
+            supremo.Phases = new PhaseRule[] { primeira, segunda, terceira };
+
+            return new BossProfile[] { gorou, jax, cavan, vance, kaelen, eleonor, sombra, supremo };
         }
 
         private static BossProfile Make(int id, string name, string title, string venue, string special,

@@ -127,7 +127,16 @@ do mestre.
 | Kaelen | `arena_galeria.png` | Galeria de arte surrealista, telas rasgadas e tintas brilhantes |
 | Eleonor | `arena_salao.png` | Salão de baile nobre com espelhos |
 | Sombra | `arena_jardim.png` | Jardim de Vidro, Altar da Alma |
+| Mestre Supremo (provisório) | `arena_liga.png` | Salão da Liga, sete gemas vazias |
 
 Pranchas próprias por mestre entram por `SheetAsset`: acrescente a chave em
 `frames.json` (mesmo formato de `hero` e `boss`) e o PNG ao lado. No RPG
 Maker, o equivalente é um mapa por mestre e um SV battler por mestre.
+
+## Referências de arte
+
+- **KATANA ZERO**: visão lateral, neon, contraste forte, o que já guia a arena atual.
+- **Children of Morta**: pixel art pintado, luz quente e volumes suaves nos
+  personagens, cenários com profundidade e detalhe sem perder a leitura.
+  É a direção para as pranchas e os sete cenários quando a arte entrar:
+  silhuetas limpas para o duelo, acabamento pintado para o fundo.
