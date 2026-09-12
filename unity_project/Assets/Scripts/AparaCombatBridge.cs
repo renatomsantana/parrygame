@@ -18,6 +18,8 @@ namespace Apara
         private const float Height = 360f;
         /// <summary>Progresso na trilha, salvo ao vencer um mestre; apagado ao terminar a trilha.</summary>
         private const string ProgressKey = "apara.stage";
+        /// <summary>Máscara de bits dos mestres vencidos.</summary>
+        private const string ClearedKey = "apara.cleared";
 
         public CombatSettings Settings = new CombatSettings();
         public Campaign Campaign;
@@ -46,6 +48,9 @@ namespace Apara
         private string[] dialogue = new string[0];
         private int dialogueIndex;
         private string dialogueNext = "play";
+        private int trailSelected;
+        private bool training;
+        private string lastLead = "";
         private double lastTime;
         private readonly HudState state = new HudState();
 
@@ -58,8 +63,9 @@ namespace Apara
         private void Awake()
         {
             BuildScene();
-            Campaign = new Campaign(BossRoster.Create());
+            Campaign = new Campaign(LoadRoster());
             Campaign.Index = Mathf.Clamp(PlayerPrefs.GetInt(ProgressKey, 0), 0, Campaign.Total - 1);
+            trailSelected = Campaign.Index;
             Combat = new CombatCore(Settings, Campaign.Current, null);
             Combat.OnWindupStarted += OnWindup;
             Combat.OnFeintStarted += OnFeint;
@@ -74,6 +80,20 @@ namespace Apara
             ApplyBoss();
             lastTime = Time.realtimeSinceStartupAsDouble;
             PaintHud();
+        }
+
+        /// <summary>Assets em Resources/Bosses, se existirem (ordenados por Id); senão o elenco em código.</summary>
+        private static BossProfile[] LoadRoster()
+        {
+            BossDefinition[] assets = Resources.LoadAll<BossDefinition>("Bosses");
+            if (assets == null || assets.Length == 0)
+            {
+                return BossRoster.Create();
+            }
+            System.Array.Sort(assets, (a, b) => a.Profile.Id.CompareTo(b.Profile.Id));
+            BossProfile[] roster = new BossProfile[assets.Length];
+            for (int i = 0; i < assets.Length; i++) roster[i] = assets[i].Profile;
+            return roster;
         }
 
         private void BuildScene()
@@ -220,9 +240,20 @@ namespace Apara
             if (KeyDown("0"))
             {
                 PlayerPrefs.DeleteKey(ProgressKey);
+                PlayerPrefs.DeleteKey(ClearedKey);
                 PlayerPrefs.Save();
                 RestartCampaign();
                 return;
+            }
+            if (KeyDown("t"))
+            {
+                training = !training;
+            }
+            if (Screen == "intro")
+            {
+                int unlocked = Mathf.Clamp(PlayerPrefs.GetInt(ProgressKey, 0), 0, Campaign.Total - 1);
+                if (KeyDown("left")) trailSelected = Mathf.Max(0, trailSelected - 1);
+                if (KeyDown("right")) trailSelected = Mathf.Min(unlocked, trailSelected + 1);
             }
             if (!Pressed())
             {
@@ -236,6 +267,9 @@ namespace Apara
             switch (Screen)
             {
                 case "intro":
+                    Campaign.Index = Mathf.Clamp(trailSelected, 0, Campaign.Total - 1);
+                    Campaign.Completed = false;
+                    ApplyBoss();
                     OpenDialogue(Campaign.Current.Intro, "play");
                     break;
                 case "dialogue":
@@ -289,6 +323,9 @@ namespace Apara
                 case "r": return Keyboard.current.rKey.wasPressedThisFrame;
                 case "p": return Keyboard.current.pKey.wasPressedThisFrame;
                 case "escape": return Keyboard.current.escapeKey.wasPressedThisFrame;
+                case "t": return Keyboard.current.tKey.wasPressedThisFrame;
+                case "left": return Keyboard.current.leftArrowKey.wasPressedThisFrame || Keyboard.current.aKey.wasPressedThisFrame;
+                case "right": return Keyboard.current.rightArrowKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame;
                 case "0": return Keyboard.current.digit0Key.wasPressedThisFrame;
                 case "1": return Keyboard.current.digit1Key.wasPressedThisFrame;
                 case "2": return Keyboard.current.digit2Key.wasPressedThisFrame;
@@ -308,6 +345,9 @@ namespace Apara
                 case "r": return Input.GetKeyDown(KeyCode.R);
                 case "p": return Input.GetKeyDown(KeyCode.P);
                 case "escape": return Input.GetKeyDown(KeyCode.Escape);
+                case "t": return Input.GetKeyDown(KeyCode.T);
+                case "left": return Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A);
+                case "right": return Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D);
                 case "0": return Input.GetKeyDown(KeyCode.Alpha0);
                 case "1": return Input.GetKeyDown(KeyCode.Alpha1);
                 case "2": return Input.GetKeyDown(KeyCode.Alpha2);
@@ -391,24 +431,32 @@ namespace Apara
             {
                 StartDuel();
             }
-            else if (Campaign.Advance())
-            {
-                PlayerPrefs.SetInt(ProgressKey, Campaign.Index);
-                PlayerPrefs.Save();
-                ApplyBoss();
-                OpenDialogue(Campaign.Current.Intro, "play");
-            }
             else
             {
-                PlayerPrefs.DeleteKey(ProgressKey);
-                PlayerPrefs.Save();
-                Screen = "end";
+                // Mestre vencido: marca na trilha e libera o próximo.
+                int cleared = PlayerPrefs.GetInt(ClearedKey, 0) | (1 << Campaign.Index);
+                PlayerPrefs.SetInt(ClearedKey, cleared);
+                if (Campaign.Advance())
+                {
+                    PlayerPrefs.SetInt(ProgressKey, Mathf.Max(PlayerPrefs.GetInt(ProgressKey, 0), Campaign.Index));
+                    PlayerPrefs.Save();
+                    ApplyBoss();
+                    OpenDialogue(Campaign.Current.Intro, "play");
+                }
+                else
+                {
+                    PlayerPrefs.SetInt(ProgressKey, Campaign.Total - 1);
+                    PlayerPrefs.Save();
+                    Screen = "end";
+                }
             }
         }
 
         private void RestartCampaign()
         {
             Campaign.Reset();
+            Campaign.Index = Mathf.Clamp(PlayerPrefs.GetInt(ProgressKey, 0), 0, Campaign.Total - 1);
+            trailSelected = Campaign.Index;
             ApplyBoss();
             Screen = "intro";
             Paused = false;
@@ -521,6 +569,7 @@ namespace Apara
         {
             message = "TIMING " + result.ToUpperInvariant();
             messageLife = 0.70f;
+            lastLead = lead >= 0f ? Mathf.RoundToInt(lead * 1000f) + " ms antes do contato" : "sem tentativa";
             fx.Sound(result);
             Vector2 point = V(325f, 222f);
             switch (result)
@@ -566,6 +615,7 @@ namespace Apara
                     SetFlash(new Color(1f, 0f, 0f, 0.6f), 0.30f);
                     break;
             }
+            if (training) detail += " · " + lastLead;
             fx.Burst(point, result);
         }
 
@@ -602,6 +652,20 @@ namespace Apara
             state.Special = profile.Special; state.Stage = Campaign.Stage; state.Stages = Campaign.Total; state.Venue = profile.Venue;
             state.Premise = BossRoster.Premise; state.FinalNote = BossRoster.FinalNote;
             state.Speaker = ""; state.Line = "";
+            state.Training = training; state.GoodWindow = Combat.GoodWindow(); state.LastLead = lastLead;
+            if (state.TrailNames.Length != Campaign.Total)
+            {
+                state.TrailNames = new string[Campaign.Total];
+                state.TrailVenues = new string[Campaign.Total];
+                for (int i = 0; i < Campaign.Total; i++)
+                {
+                    state.TrailNames[i] = Campaign.Bosses[i].Name;
+                    state.TrailVenues[i] = Campaign.Bosses[i].Venue;
+                }
+            }
+            state.TrailUnlocked = Mathf.Clamp(PlayerPrefs.GetInt(ProgressKey, 0), 0, Campaign.Total - 1);
+            state.TrailCleared = PlayerPrefs.GetInt(ClearedKey, 0);
+            state.TrailSelected = trailSelected;
             if (Screen == "dialogue" && dialogueIndex < dialogue.Length)
             {
                 string[] parts = dialogue[dialogueIndex].Split(new[] { '|' }, 2);

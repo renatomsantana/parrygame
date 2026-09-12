@@ -1,6 +1,7 @@
 namespace Apara.Core
 {
     /// <summary>Cor sem depender de UnityEngine; a camada de jogo converte.</summary>
+    [System.Serializable]
     public struct Rgb
     {
         public float R;
@@ -21,6 +22,7 @@ namespace Apara.Core
     /// Uma postura de combate: janelas, ritmo e estilo de finta. Os mestres 1 a 7
     /// têm uma só (derivada do perfil); o Boss Final troca entre várias.
     /// </summary>
+    [System.Serializable]
     public class Stance
     {
         public string Name = "";
@@ -45,6 +47,7 @@ namespace Apara.Core
     /// Uma fase do Boss Final, ativa quando a vida cai até a fração indicada.
     /// Define velocidade, golpes compostos e a cadência da troca de postura.
     /// </summary>
+    [System.Serializable]
     public class PhaseRule
     {
         public string Name = "";
@@ -69,6 +72,7 @@ namespace Apara.Core
     /// falas ("Nome|Texto"). Os campos de arte são nomes de recurso: a camada de
     /// jogo carrega o que existir e cai no padrão quando a arte ainda não chegou.
     /// </summary>
+    [System.Serializable]
     public class BossProfile
     {
         public int Id = 1;

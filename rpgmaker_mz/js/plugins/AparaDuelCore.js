@@ -850,6 +850,7 @@
             this.hero.setMotion("damage", 1, false, 2);
             this.boss.setMotion("swing", 1, false, 2, 2);
         }
+        if (lead >= 0) this.detail += " · " + Math.round(lead * 1000) + " ms";
         $gameVariables.setValue(VAR_PLAYER_HP, this.combat.playerHp);
         $gameVariables.setValue(VAR_BOSS_HP, this.combat.bossHp);
         setTimeout(function() { self.hero.setMotion("wait", 1, true); }, 600);

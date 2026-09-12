@@ -17,6 +17,14 @@ namespace Apara
         public int Stage = 1, Stages = 7;
         /// <summary>Força do sinal na tela (0 a 1): Kaelen esconde parte dele.</summary>
         public float CueVisibility = 1f;
+        // Tela da trilha.
+        public string[] TrailNames = new string[0];
+        public string[] TrailVenues = new string[0];
+        public int TrailUnlocked, TrailSelected, TrailCleared;
+        // Modo treino.
+        public bool Training;
+        public float GoodWindow;
+        public string LastLead = "";
     }
 
     /// <summary>
@@ -39,6 +47,12 @@ namespace Apara
         private GameObject play, panel, dialogue;
         private Text panelTitle, panelSubtitle, panelRuleA, panelRuleB, panelAction, speaker, line;
         private RectTransform panelSubtitleRect;
+        private GameObject trail, training;
+        private Text[] trailRows = new Text[0];
+        private Text trailPremise;
+        private Image goodZone, perfectZone, cursor;
+        private Text leadText;
+        private const float BarX = 170f, BarW = 300f, BarSpan = 0.5f;
 
         public static HudView Create()
         {
@@ -105,6 +119,27 @@ namespace Apara
             line = Label("Line", dialogue.transform, 24, 296, 592, "", Paper, 11, TextAnchor.UpperLeft, true);
             Label("Prompt", dialogue.transform, 416, 350, 200, "CLIQUE PARA CONTINUAR", Cyan, 9, TextAnchor.UpperRight);
 
+            trail = Group("Trail", root);
+            Box("TrailDim", trail.transform, 0, 62, 640, 298, new Color(0.035f, 0.023f, 0.08f, 0.7f));
+            Box("TrailCard", trail.transform, 60, 74, 520, 272, new Color(0.05f, 0.035f, 0.10f, 0.95f));
+            Box("TrailStripe", trail.transform, 60, 74, 4, 272, Orange);
+            Label("TrailTitle", trail.transform, 70, 100, 500, "A TRILHA DOS SETE MESTRES", Orange, 19, TextAnchor.UpperCenter);
+            trailPremise = Label("TrailPremise", trail.transform, 80, 112, 480, "", Paper, 9, TextAnchor.UpperLeft, true);
+            trailRows = new Text[8];
+            for (int i = 0; i < trailRows.Length; i++)
+            {
+                trailRows[i] = Label("TrailRow" + i, trail.transform, 84, 158 + i * 20, 472, "", Paper, 11);
+            }
+            Label("TrailAction", trail.transform, 70, 336, 500, "← →  ESCOLHA  ·  CLIQUE OU ESPAÇO PARA COMEÇAR  ·  0 APAGA O PROGRESSO", Cyan, 9, TextAnchor.UpperCenter);
+
+            training = Group("Training", root);
+            Box("BarBack", training.transform, BarX, 280, BarW, 8, BarBack);
+            goodZone = Box("GoodZone", training.transform, BarX, 280, 10, 8, new Color(0.45f, 0.82f, 0.87f, 0.9f));
+            perfectZone = Box("PerfectZone", training.transform, BarX, 280, 10, 8, Paper);
+            cursor = Box("Cursor", training.transform, BarX, 276, 2, 16, Orange);
+            Label("BarLabel", training.transform, BarX, 275, 150, "TREINO · 500 ms", Paper, 9);
+            leadText = Label("Lead", training.transform, BarX + 150, 275, 150, "", Paper, 9, TextAnchor.UpperRight);
+
             flash.transform.SetAsLastSibling();
         }
 
@@ -122,11 +157,11 @@ namespace Apara
             stage.text = "MESTRE " + s.Stage + " / " + s.Stages + (s.Venue.Length > 0 ? " · " + s.Venue : "");
             perfects.text = "PERFEITOS  " + s.Perfects.ToString("00");
 
-            bool showPanel = false, showDialogue = false, showPlay = false, rules = false;
+            bool showPanel = false, showDialogue = false, showPlay = false, rules = false, showTrail = false;
             if (s.Screen == "intro")
             {
-                showPanel = true; rules = true;
-                SetPanel("A TRILHA DOS SETE MESTRES", s.Premise, "CLIQUE OU ESPAÇO PARA COMEÇAR");
+                showTrail = true;
+                PaintTrail(s);
             }
             else if (s.Screen == "end")
             {
@@ -175,11 +210,49 @@ namespace Apara
             play.SetActive(showPlay);
             panel.SetActive(showPanel);
             dialogue.SetActive(showDialogue);
+            trail.SetActive(showTrail);
+            training.SetActive(showPlay && s.Training);
+            if (showPlay && s.Training) PaintTraining(s);
             panelRuleA.enabled = rules;
             panelRuleB.enabled = rules;
             panelSubtitleRect.anchoredPosition = new Vector2(140f, rules ? -138f : -150f);
             panelSubtitle.fontSize = rules ? 11 : 12;
             flash.transform.SetAsLastSibling();
+        }
+
+        private void PaintTrail(HudState s)
+        {
+            trailPremise.text = s.Premise;
+            for (int i = 0; i < trailRows.Length; i++)
+            {
+                if (i >= s.TrailNames.Length)
+                {
+                    trailRows[i].text = "";
+                    continue;
+                }
+                bool cleared = (s.TrailCleared & (1 << i)) != 0;
+                bool unlocked = i <= s.TrailUnlocked;
+                bool selected = i == s.TrailSelected;
+                string mark = cleared ? "VENCIDO" : (unlocked ? "" : "· · ·");
+                string name = unlocked ? s.TrailNames[i].ToUpperInvariant() + "  —  " + s.TrailVenues[i] : "? ? ?";
+                trailRows[i].text = (selected ? "▶ " : "   ") + (i + 1) + ".  " + name + (mark.Length > 0 ? "   " + mark : "");
+                trailRows[i].color = selected ? Orange : (unlocked ? Paper : new Color(0.5f, 0.47f, 0.55f));
+            }
+        }
+
+        private void PaintTraining(HudState s)
+        {
+            float pxPerSecond = BarW / BarSpan;
+            float goodW = Mathf.Min(BarW, s.GoodWindow * pxPerSecond);
+            float perfectW = Mathf.Min(BarW, s.PerfectWindow * pxPerSecond);
+            goodZone.rectTransform.anchoredPosition = new Vector2(BarX + BarW - goodW, -280f);
+            goodZone.rectTransform.sizeDelta = new Vector2(goodW, 8f);
+            perfectZone.rectTransform.anchoredPosition = new Vector2(BarX + BarW - perfectW, -280f);
+            perfectZone.rectTransform.sizeDelta = new Vector2(perfectW, 8f);
+            bool inRange = s.Lead >= 0f && s.Lead <= BarSpan;
+            cursor.enabled = inRange;
+            if (inRange) cursor.rectTransform.anchoredPosition = new Vector2(BarX + BarW - s.Lead * pxPerSecond, -276f);
+            leadText.text = s.LastLead;
         }
 
         private void SetPanel(string title, string subtitle, string action)
