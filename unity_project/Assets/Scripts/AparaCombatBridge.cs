@@ -16,6 +16,8 @@ namespace Apara
     {
         private const float Width = 640f;
         private const float Height = 360f;
+        /// <summary>Progresso na trilha, salvo ao vencer um mestre; apagado ao terminar a trilha.</summary>
+        private const string ProgressKey = "apara.stage";
 
         public CombatSettings Settings = new CombatSettings();
         public Campaign Campaign;
@@ -57,6 +59,7 @@ namespace Apara
         {
             BuildScene();
             Campaign = new Campaign(BossRoster.Create());
+            Campaign.Index = Mathf.Clamp(PlayerPrefs.GetInt(ProgressKey, 0), 0, Campaign.Total - 1);
             Combat = new CombatCore(Settings, Campaign.Current, null);
             Combat.OnWindupStarted += OnWindup;
             Combat.OnFeintStarted += OnFeint;
@@ -206,6 +209,21 @@ namespace Apara
             {
                 ScreenCapture.CaptureScreenshot("apara_" + System.DateTime.Now.ToString("HHmmss") + ".png");
             }
+            for (int digit = 1; digit <= 8; digit++)
+            {
+                if (KeyDown(digit.ToString()) && digit <= Campaign.Total)
+                {
+                    JumpTo(digit - 1);
+                    return;
+                }
+            }
+            if (KeyDown("0"))
+            {
+                PlayerPrefs.DeleteKey(ProgressKey);
+                PlayerPrefs.Save();
+                RestartCampaign();
+                return;
+            }
             if (!Pressed())
             {
                 return;
@@ -271,6 +289,15 @@ namespace Apara
                 case "r": return Keyboard.current.rKey.wasPressedThisFrame;
                 case "p": return Keyboard.current.pKey.wasPressedThisFrame;
                 case "escape": return Keyboard.current.escapeKey.wasPressedThisFrame;
+                case "0": return Keyboard.current.digit0Key.wasPressedThisFrame;
+                case "1": return Keyboard.current.digit1Key.wasPressedThisFrame;
+                case "2": return Keyboard.current.digit2Key.wasPressedThisFrame;
+                case "3": return Keyboard.current.digit3Key.wasPressedThisFrame;
+                case "4": return Keyboard.current.digit4Key.wasPressedThisFrame;
+                case "5": return Keyboard.current.digit5Key.wasPressedThisFrame;
+                case "6": return Keyboard.current.digit6Key.wasPressedThisFrame;
+                case "7": return Keyboard.current.digit7Key.wasPressedThisFrame;
+                case "8": return Keyboard.current.digit8Key.wasPressedThisFrame;
             }
             return false;
 #else
@@ -281,9 +308,27 @@ namespace Apara
                 case "r": return Input.GetKeyDown(KeyCode.R);
                 case "p": return Input.GetKeyDown(KeyCode.P);
                 case "escape": return Input.GetKeyDown(KeyCode.Escape);
+                case "0": return Input.GetKeyDown(KeyCode.Alpha0);
+                case "1": return Input.GetKeyDown(KeyCode.Alpha1);
+                case "2": return Input.GetKeyDown(KeyCode.Alpha2);
+                case "3": return Input.GetKeyDown(KeyCode.Alpha3);
+                case "4": return Input.GetKeyDown(KeyCode.Alpha4);
+                case "5": return Input.GetKeyDown(KeyCode.Alpha5);
+                case "6": return Input.GetKeyDown(KeyCode.Alpha6);
+                case "7": return Input.GetKeyDown(KeyCode.Alpha7);
+                case "8": return Input.GetKeyDown(KeyCode.Alpha8);
             }
             return false;
 #endif
+        }
+
+        /// <summary>Atalho de teste: vai direto às falas de abertura do mestre indicado. Não salva progresso.</summary>
+        private void JumpTo(int index)
+        {
+            Campaign.Index = Mathf.Clamp(index, 0, Campaign.Total - 1);
+            Campaign.Completed = false;
+            ApplyBoss();
+            OpenDialogue(Campaign.Current.Intro, "play");
         }
 
         private static Color ToColor(Rgb rgb)
@@ -348,11 +393,15 @@ namespace Apara
             }
             else if (Campaign.Advance())
             {
+                PlayerPrefs.SetInt(ProgressKey, Campaign.Index);
+                PlayerPrefs.Save();
                 ApplyBoss();
                 OpenDialogue(Campaign.Current.Intro, "play");
             }
             else
             {
+                PlayerPrefs.DeleteKey(ProgressKey);
+                PlayerPrefs.Save();
                 Screen = "end";
             }
         }

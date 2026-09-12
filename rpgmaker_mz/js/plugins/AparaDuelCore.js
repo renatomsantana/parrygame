@@ -15,7 +15,7 @@
  * @default 10
  *
  * @param BossIdVar
- * @text Variável: ID do mestre (1 a 7)
+ * @text Variável: ID do mestre (1 a 8)
  * @type variable
  * @default 20
  *
@@ -61,13 +61,13 @@
  *
  * @command startDuel
  * @text Iniciar duelo
- * @desc Inicia o duelo contra um mestre (1 a 7) e liga o switch ativador.
+ * @desc Inicia o duelo contra um mestre (1 a 8; o 8 é o Boss Final provisório) e liga o switch ativador.
  *
  * @arg bossId
  * @text Mestre
  * @type number
  * @min 1
- * @max 7
+ * @max 8
  * @default 1
  *
  * @help
@@ -83,11 +83,13 @@
  * Quatro perfeitos quebram a postura (+30 de dano). Oito vencem. Quatro
  * erros derrotam Ren. Cada golpe aceita uma tentativa: vale o primeiro
  * clique. Fintas mostram a partida e o sinal em instantes falsos; o contato
- * real chega depois. Clicar no sinal falso gasta a tentativa.
+ * real chega depois. Clicar no sinal falso gasta a tentativa. O Boss Final
+ * (8, provisório) troca de postura, tem três fases por vida e golpes
+ * compostos: vários contatos seguidos, um parry por contato.
  *
  * Como usar (um mapa por mestre = um cenário por mestre):
  *   1. Em cada mapa, crie o evento do mestre. No evento, use o comando de
- *      plugin "Iniciar duelo" com o número dele (1 a 7). Ou faça como o
+ *      plugin "Iniciar duelo" com o número dele (1 a 8). Ou faça como o
  *      documento: coloque o ID na variável de mestre e ligue o switch.
  *   2. O plugin assume o controle: falas (se ativas), duelo, HUD, resultado.
  *   3. Ao terminar, o switch desliga e a variável de resultado recebe
@@ -155,15 +157,23 @@
             rhythmJitter: 0, cueVisibility: 1, mimicParry: false,
             arenaAsset: "arena", sheetAsset: "boss", mirrorHero: false,
             svBattler: "Actor3_4", tint: [0, 0, 0, 0],
+            stances: [], phases: [], comboWindup: 0.50, comboGap: 0.10, provisional: false,
             intro: [], outro: []
         };
         for (var key in spec) p[key] = spec[key];
         return p;
     }
 
+    /** Postura derivada dos campos do próprio perfil (mestres sem posturas próprias). */
+    AparaCore.defaultStance = function(p) {
+        return { name: "", perfectWindow: p.perfectWindow, goodWindow: p.goodWindow, windups: p.windups.slice(),
+            feintChance: p.feintChance, falseCues: p.falseCues, feintDelayMin: p.feintDelayMin,
+            feintDelayMax: p.feintDelayMax, mimicParry: p.mimicParry };
+    };
+
     AparaCore.PREMISE = "O mestre de Ren foi traído pela Liga dos Mestres Dissidentes. Cada um roubou " +
         "uma das sete gemas da empunhadura sagrada. Ren desafia cada mestre em seu próprio terreno.";
-    AparaCore.FINAL_NOTE = "O Boss Final será definido na próxima fase do projeto.";
+    AparaCore.FINAL_NOTE = "O Boss Final ainda é provisório: o roteiro definirá nome, cenário e falas na próxima fase.";
 
     /** A Trilha dos Sete Mestres. Preparações em segundos (quadros a 60 FPS / 60). */
     AparaCore.createRoster = function() {
@@ -222,7 +232,26 @@
                 arenaAsset: "arena_jardim", sheetAsset: "hero", mirrorHero: true, svBattler: "Actor1_3", tint: [-60, -60, -40, 120],
                 intro: ["Sombra|Você derrotou todos eles e acha que está purificando o caminho? Olhe para você. O mesmo casaco, a mesma frieza. Eu sou o que resta de você quando a espada não tiver mais quem cortar.",
                         "Ren|Você é apenas a dúvida que deixei para trás no tatame. Vou cortar meu próprio reflexo se for preciso."],
-                outro: ["Sombra|Se você hesitar contra ele... eu retornarei..."] })
+                outro: ["Sombra|Se você hesitar contra ele... eu retornarei..."] }),
+            // Boss Final (provisório): duas posturas, três fases por vida e golpes compostos.
+            make({ id: 8, name: "Mestre Supremo", title: "Líder da Liga Dissidente", venue: "Salão da Liga, sete gemas vazias",
+                special: "Ataques compostos, troca de postura e fases múltiplas.", provisional: true,
+                perfectWindow: 0.045, goodWindow: 0.13, windups: [0.60, 0.55, 0.65],
+                arenaAsset: "arena_liga", svBattler: "Actor2_5", tint: [-20, -40, 20, 30],
+                stances: [
+                    { name: "Alta", perfectWindow: 0.07, goodWindow: 0.18, windups: [1.05, 0.95, 1.15],
+                      feintChance: 0.3, falseCues: 2, feintDelayMin: 0.40, feintDelayMax: 0.55, mimicParry: false },
+                    { name: "Baixa", perfectWindow: 0.045, goodWindow: 0.13, windups: [0.60, 0.55, 0.65],
+                      feintChance: 0.5, falseCues: 1, feintDelayMin: 0.30, feintDelayMax: 0.36, mimicParry: true }
+                ],
+                phases: [
+                    { name: "Primeira fase", hpFraction: 1.0, speedMultiplier: 1, comboChance: 0, comboStrikes: 1, stanceSwitchEvery: 4 },
+                    { name: "Segunda fase", hpFraction: 0.66, speedMultiplier: 1, comboChance: 0.5, comboStrikes: 2, stanceSwitchEvery: 3 },
+                    { name: "Terceira fase", hpFraction: 0.34, speedMultiplier: 0.9, comboChance: 0.7, comboStrikes: 3, stanceSwitchEvery: 2 }
+                ],
+                intro: ["Mestre Supremo|Sete gemas, sete quedas. Você limpou o caminho até mim, e por isso agradeço: ninguém mais ficará entre nós.",
+                        "Ren|Não vim agradecer. Vim devolver a empunhadura ao meu mestre."],
+                outro: ["Mestre Supremo|A técnica pura... então ela ainda existia..."] })
         ];
     };
 
@@ -265,7 +294,24 @@
         var list = this.listeners[name] || [];
         for (var i = 0; i < list.length; i++) list[i](a, b, c);
     };
-    AparaCore.Combat.prototype.setBoss = function(profile) { this.boss = profile; this.reset(); };
+    AparaCore.Combat.prototype.setBoss = function(profile) {
+        this.boss = profile;
+        this._defaultStance = AparaCore.defaultStance(profile);
+        this.reset();
+    };
+    /** Postura em vigor: a do mestre, ou a derivada do perfil quando ele não troca. */
+    AparaCore.Combat.prototype.rules = function() {
+        var st = this.boss.stances;
+        return st.length > 0 ? st[Math.min(this.stanceIndex, st.length - 1)] : this._defaultStance;
+    };
+    /** Fase em vigor, ou null para mestres sem fases próprias. */
+    AparaCore.Combat.prototype.currentRule = function() {
+        var ph = this.boss.phases;
+        return ph.length > 0 ? ph[Math.min(this.phaseIndex, ph.length - 1)] : null;
+    };
+    AparaCore.Combat.prototype.perfectWindow = function() { return this.rules().perfectWindow; };
+    AparaCore.Combat.prototype.goodWindow = function() { return this.rules().goodWindow; };
+    AparaCore.Combat.prototype.inCombo = function() { return this.comboRemaining > 0 || this.comboStrike > 0; };
     AparaCore.Combat.prototype.reset = function() {
         this.clock = 0;
         this.phase = Phase.READY;
@@ -290,6 +336,10 @@
         this.goodCount = 0;
         this.badCount = 0;
         this.secondPhase = false;
+        this.stanceIndex = 0;
+        this.phaseIndex = 0;
+        this.comboRemaining = 0;
+        this.comboStrike = 0;
         this._schedule = [];
         this._scheduleIndex = 0;
     };
@@ -340,6 +390,17 @@
         }
         return Math.max(0, next - this.clock);
     };
+    AparaCore.Combat.prototype._updatePhase = function() {
+        // A fase mais avançada cujo limite de vida já foi alcançado. Nunca volta.
+        var target = this.phaseIndex;
+        for (var i = this.phaseIndex + 1; i < this.boss.phases.length; i++) {
+            if (this.bossHp <= this.boss.phases[i].hpFraction * this.settings.bossHealth) target = i;
+        }
+        if (target !== this.phaseIndex) {
+            this.phaseIndex = target;
+            this.emit("phaseChanged", this.phaseIndex, this.boss.phases[this.phaseIndex].name);
+        }
+    };
     AparaCore.Combat.prototype._beginAttack = function() {
         var s = this.settings, b = this.boss;
         this.phase = Phase.WINDUP;
@@ -349,20 +410,47 @@
         this.feintLaunched = false;
         this.cuePlayed = false;
         this.fakeCuePlayed = false;
-        var duration = b.windups[this.attacks % b.windups.length];
-        if (b.rhythmJitter > 0) duration += (this.random.next() * 2 - 1) * b.rhythmJitter;
-        this.secondPhase = this.bossHp <= s.bossHealth / 2;
-        if (this.secondPhase) duration *= s.phaseTwoSpeed;
+        var continuing = this.comboRemaining > 0;
+        if (continuing) { this.comboRemaining -= 1; this.comboStrike += 1; }
+        else { this.comboStrike = 0; this._updatePhase(); }
+        var rule = this.currentRule();
+        if (!continuing && rule && rule.stanceSwitchEvery > 0 && b.stances.length > 1 &&
+            this.attacks > 0 && this.attacks % rule.stanceSwitchEvery === 0) {
+            this.stanceIndex = (this.stanceIndex + 1) % b.stances.length;
+            this.emit("stanceChanged", this.stanceIndex, b.stances[this.stanceIndex].name);
+        }
+        var stance = this.rules();
+        var duration;
+        if (continuing) {
+            // Golpe seguinte de um composto: preparação curta e sem finta.
+            duration = b.comboWindup;
+        } else {
+            duration = stance.windups[this.attacks % stance.windups.length];
+            if (b.rhythmJitter > 0) duration += (this.random.next() * 2 - 1) * b.rhythmJitter;
+        }
+        if (rule) {
+            duration *= rule.speedMultiplier;
+        } else {
+            this.secondPhase = this.bossHp <= s.bossHealth / 2;
+            if (this.secondPhase) duration *= s.phaseTwoSpeed;
+        }
         this.windupDuration = Math.max(duration, s.attackLead + 0.1);
-        var roll = this.random.next();
-        this.isFeint = b.feintChance > 0 && b.falseCues > 0 && roll < b.feintChance;
         var delay = 0, cues = 0;
-        if (this.isFeint) {
-            var min = b.feintDelayMax > 0 ? b.feintDelayMin : s.feintDelayMin;
-            var max = b.feintDelayMax > 0 ? b.feintDelayMax : s.feintDelayMax;
-            delay = min + this.random.next() * (max - min);
-            cues = b.falseCues;
-            this.feints += 1;
+        this.isFeint = false;
+        if (!continuing) {
+            var roll = this.random.next();
+            this.isFeint = stance.feintChance > 0 && stance.falseCues > 0 && roll < stance.feintChance;
+            if (this.isFeint) {
+                var min = stance.feintDelayMax > 0 ? stance.feintDelayMin : s.feintDelayMin;
+                var max = stance.feintDelayMax > 0 ? stance.feintDelayMax : s.feintDelayMax;
+                delay = min + this.random.next() * (max - min);
+                cues = stance.falseCues;
+                this.feints += 1;
+            }
+            if (rule && rule.comboStrikes > 1 && rule.comboChance > 0 && this.random.next() < rule.comboChance) {
+                this.comboRemaining = rule.comboStrikes - 1;
+                this.emit("comboStarted", rule.comboStrikes);
+            }
         }
         var first = this.clock + this.windupDuration;
         this.strikeAt = first + delay;
@@ -389,10 +477,11 @@
         var s = this.settings, b = this.boss;
         // Consumir o golpe antes dos eventos impede dano duplicado/reentrância.
         this.phase = Phase.RECOVERY;
-        this.phaseEnd = this.clock + s.recovery;
+        this.phaseEnd = this.clock + (this.comboRemaining > 0 ? b.comboGap : s.recovery);
+        var stance = this.rules();
         var lead = this.attempted ? this.strikeAt - this.lastPress : -1;
         var result = "ruim", broke = false;
-        if (this.attempted && lead >= 0 && lead <= b.perfectWindow + 0.000001) {
+        if (this.attempted && lead >= 0 && lead <= stance.perfectWindow + 0.000001) {
             result = "perfeito";
             this.perfectCount += 1;
             this.bossHp = Math.max(0, this.bossHp - s.perfectHealthDamage);
@@ -401,8 +490,10 @@
                 broke = true;
                 this.bossHp = Math.max(0, this.bossHp - s.postureBreakDamage);
                 this.phaseEnd = this.clock + s.breakRecovery;
+                // A quebra de postura interrompe o golpe composto.
+                this.comboRemaining = 0;
             }
-        } else if (this.attempted && lead >= 0 && lead <= b.goodWindow + 0.000001) {
+        } else if (this.attempted && lead >= 0 && lead <= stance.goodWindow + 0.000001) {
             result = "bom";
             this.goodCount += 1;
         } else {
@@ -412,6 +503,7 @@
         this.emit("impact", result, lead, broke);
         if (this.bossHp <= 0 || this.playerHp <= 0) {
             this.phase = Phase.FINISHED;
+            this.comboRemaining = 0;
             this.emit("finished", this.bossHp <= 0);
         }
     };
@@ -594,7 +686,7 @@
             self.boss.setMotion("chant", 3 / (6 * Math.max(0.1, duration - self.settings.attackLead)), false, 2);
         });
         c.on("feintStarted", function() {
-            if (self.profile.mimicParry) self.boss.setMotion("guard", 3 / (6 * self.settings.attackLead), false, 2);
+            if (c.rules().mimicParry) self.boss.setMotion("guard", 3 / (6 * self.settings.attackLead), false, 2);
             else self.boss.setMotion("thrust", 1 / (6 * self.settings.attackLead), false, 1);
             se("Wind7", 115, 0.6);
         });
@@ -610,11 +702,33 @@
             self.hero.setMotion("guard", 2, false, 2);
             se("Wind7", 90, 0.5);
         });
+        c.on("stanceChanged", function(index, name) {
+            self.message = "POSTURA " + name.toUpperCase();
+            self.detail = index === 0 ? "Lenta e telegrafada" : "Rápida e curta";
+            self.messageColor = "#f0a044";
+            self.messageLife = 0.9;
+            se("Wind7", 80, 0.7);
+        });
+        c.on("phaseChanged", function(index, name) {
+            self.message = name.toUpperCase();
+            self.detail = "O mestre muda o jogo";
+            self.messageColor = "#ffe4a0";
+            self.messageLife = 1.1;
+            se("Collapse1", 120, 0.8);
+            $gameScreen.startShake(5, 5, 20);
+            $gameScreen.startFlash([255, 230, 150, 100], 12);
+        });
+        c.on("comboStarted", function(strikes) {
+            self.message = "GOLPE COMPOSTO ×" + strikes;
+            self.detail = "Um parry por contato";
+            self.messageColor = "#ec7285";
+            self.messageLife = 0.8;
+        });
         c.on("impact", function(result, lead, broke) { self._impact(result, lead, broke); });
         c.on("finished", function(won) { self._finished(won); });
     };
     AparaDuelManager.prototype.start = function(scene, bossId) {
-        this.profile = this.roster[Math.max(1, Math.min(7, bossId)) - 1];
+        this.profile = this.roster[Math.max(1, Math.min(this.roster.length, bossId)) - 1];
         this.combat.setBoss(this.profile);
         this.scene = scene;
         this.victory = false;
@@ -764,10 +878,11 @@
         return {
             hp: c.playerHp, maxHp: s.playerHealth, bossHp: c.bossHp, maxBossHp: s.bossHealth,
             posture: c.bossStability, maxPosture: s.bossPosture, perfects: c.perfectCount,
-            bossName: p.name, bossTitle: p.title, bossColor: "#ec7285", venue: p.venue, special: p.special,
+            bossName: p.name, bossTitle: p.stances.length > 0 ? p.title + " · " + c.rules().name : p.title,
+            bossColor: "#ec7285", venue: p.venue, special: p.special,
             stage: p.id, stages: this.roster.length,
             message: this.messageLife > 0 ? this.message : "", detail: this.detail, messageColor: this.messageColor,
-            cueOn: cueOn, cuePerfect: cueOn && lead <= p.perfectWindow, cueVisibility: p.cueVisibility
+            cueOn: cueOn, cuePerfect: cueOn && lead <= c.perfectWindow(), cueVisibility: p.cueVisibility
         };
     };
 

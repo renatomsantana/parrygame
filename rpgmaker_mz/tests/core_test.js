@@ -22,7 +22,15 @@ function baseProfile() {
 function noFeint(profile) {
     const copy = Object.assign({}, profile, { windups: profile.windups.slice() });
     copy.feintChance = 0; copy.rhythmJitter = 0;
+    copy.stances = profile.stances.map(st => Object.assign({}, st, { windups: st.windups.slice(), feintChance: 0 }));
+    copy.phases = profile.phases.map(ph => Object.assign({}, ph, { comboChance: 0 }));
     return copy;
+}
+function skip(duel) {
+    prepare(duel);
+    duel.tick(duel.timeToImpact() + 0.001);
+    duel.playerHp = 100;
+    if (duel.phase === Core.Phase.FINISHED) duel.phase = Core.Phase.RECOVERY;
 }
 const newDuel = (profile, seed) => new Core.Combat(new Core.Settings(), profile || baseProfile(), new Core.SeededRandom(seed || 7));
 function prepare(duel) {
@@ -118,13 +126,18 @@ for (const lead of [0.001, 0.07, 0.0701, 0.18, 0.1801, 0.5]) {
 {
     const bosses = roster();
     const s = new Core.Settings();
-    check(bosses.length === 7, "Sete mestres");
+    check(bosses.length === 8, "Sete mestres e o Boss Final");
     const arenas = new Set();
     bosses.forEach((b, i) => {
         check(b.id === i + 1, b.name + " id em ordem");
         check(b.intro.length === 2 && b.outro.length === 1 && b.intro.concat(b.outro).every(l => l.includes("|")), b.name + " falas com falante");
         check(b.windups.every(w => w - b.rhythmJitter >= s.attackLead + 0.1), b.name + " preparação cabe a partida");
         check(b.perfectWindow < b.goodWindow, b.name + " janela perfeita dentro da boa");
+        check((b.id === 8) === b.provisional, b.name + " só o Boss Final é provisório");
+        for (const st of b.stances) {
+            check(st.perfectWindow < st.goodWindow && st.windups.every(w => w >= s.attackLead + 0.1), b.name + " postura " + st.name + " válida");
+            if (st.feintChance > 0) check(st.feintDelayMin / st.falseCues >= s.cueLead - 0.0001 && st.feintDelayMin > st.goodWindow, b.name + " postura " + st.name + " finta válida");
+        }
         check(!arenas.has(b.arenaAsset) && b.arenaAsset.length > 0, b.name + " cenário próprio");
         arenas.add(b.arenaAsset);
         check(b.svBattler.length > 0, b.name + " tem battler RTP");
@@ -133,7 +146,7 @@ for (const lead of [0.001, 0.07, 0.0701, 0.18, 0.1801, 0.5]) {
             check(b.feintDelayMin / b.falseCues >= s.cueLead - 0.0001, b.name + " instantes falsos afastados um sinal");
             check(b.feintDelayMin > b.goodWindow, b.name + " clique no instante falso nunca cabe na janela boa");
         }
-        if (i > 0) {
+        if (i > 0 && i < 7) {
             const prev = bosses[i - 1];
             check(b.perfectWindow < prev.perfectWindow && b.goodWindow < prev.goodWindow, b.name + " mais exigente que " + prev.name);
             check(b.feintChance >= prev.feintChance, b.name + " finta pelo menos tanto quanto " + prev.name);
@@ -144,12 +157,76 @@ for (const lead of [0.001, 0.07, 0.0701, 0.18, 0.1801, 0.5]) {
     check(approx(bosses[0].perfectWindow, 0.09) && approx(bosses[6].goodWindow, 0.14), "Janelas de Gorou e Sombra");
 }
 
-// Janelas por mestre
+// Janelas por mestre (postura inicial no Boss Final)
 for (const b of roster()) {
     const p = noFeint(b);
-    let duel = newDuel(p); parry(duel, p.perfectWindow); check(duel.perfectCount === 1, b.name + " limite perfeito inclusivo");
-    duel = newDuel(p); parry(duel, p.perfectWindow + 0.005); check(duel.goodCount === 1, b.name + " logo após o perfeito é bom");
-    duel = newDuel(p); parry(duel, p.goodWindow + 0.005); check(duel.badCount === 1, b.name + " fora da boa é ruim");
+    const perfect = p.stances.length ? p.stances[0].perfectWindow : p.perfectWindow;
+    const good = p.stances.length ? p.stances[0].goodWindow : p.goodWindow;
+    let duel = newDuel(p); parry(duel, perfect); check(duel.perfectCount === 1, b.name + " limite perfeito inclusivo");
+    duel = newDuel(p); parry(duel, perfect + 0.005); check(duel.goodCount === 1, b.name + " logo após o perfeito é bom");
+    duel = newDuel(p); parry(duel, good + 0.005); check(duel.badCount === 1, b.name + " fora da boa é ruim");
+}
+
+// Boss Final: fases
+{
+    const final = noFeint(boss(8));
+    const duel = newDuel(final, 21);
+    const phases = [];
+    duel.on("phaseChanged", (i, name) => phases.push(i + ":" + name));
+    prepare(duel);
+    check(duel.phaseIndex === 0 && approx(duel.windupDuration, final.stances[0].windups[0]), "Boss Final começa na primeira fase e postura");
+    for (let i = 0; i < 4; i++) parry(duel, 0.03);
+    check(duel.bossHp === 38 && duel.phaseIndex === 0, "A fase só muda na próxima preparação");
+    prepare(duel);
+    check(duel.phaseIndex === 1 && phases[0] === "1:" + final.phases[1].name && !duel.secondPhase, "Vida a 38% entra na segunda fase");
+    parry(duel, 0.03);
+    prepare(duel);
+    check(duel.phaseIndex === 2 && phases.length === 2, "Vida a 30% entra na terceira fase");
+    check(approx(duel.windupDuration, duel.rules().windups[(duel.attacks - 1) % duel.rules().windups.length] * final.phases[2].speedMultiplier), "Terceira fase é mais rápida");
+    duel.reset();
+    check(duel.phaseIndex === 0 && duel.stanceIndex === 0 && !duel.inCombo(), "Reiniciar volta ao início");
+}
+
+// Boss Final: troca de postura
+{
+    const final = noFeint(boss(8));
+    const duel = newDuel(final, 21);
+    const stances = [];
+    duel.on("stanceChanged", (i, name) => stances.push(i + ":" + name));
+    const every = final.phases[0].stanceSwitchEvery;
+    for (let i = 0; i < every; i++) { prepare(duel); check(duel.stanceIndex === 0, "Primeiros golpes na postura Alta"); parry(duel, 0.1); }
+    prepare(duel);
+    check(duel.stanceIndex === 1 && stances[0] === "1:" + final.stances[1].name, "Troca de postura depois de " + every + " golpes");
+    check(approx(duel.perfectWindow(), final.stances[1].perfectWindow) && approx(duel.goodWindow(), final.stances[1].goodWindow), "Janelas seguem a nova postura");
+    duel.tick(duel.timeToImpact() - 0.16); duel.press(); duel.tick(0.161);
+    check(duel.badCount === 1, "160 ms é ruim na postura Baixa");
+    for (let i = 0; i < every - 1; i++) skip(duel);
+    prepare(duel);
+    check(duel.stanceIndex === 0 && stances.length === 2, "A postura volta ao início depois da última");
+}
+
+// Boss Final: golpes compostos
+{
+    const final = noFeint(boss(8));
+    final.phases[0].comboChance = 1; final.phases[0].comboStrikes = 3; final.phases[0].stanceSwitchEvery = 0;
+    const duel = newDuel(final, 21);
+    let announced = 0;
+    duel.on("comboStarted", (n) => { announced = n; });
+    prepare(duel);
+    check(announced === 3 && duel.comboRemaining === 2 && duel.comboStrike === 0 && !duel.isFeint, "Composto de três anunciado, sem finta");
+    duel.tick(duel.timeToImpact() - 0.1); check(duel.press(), "Primeiro contato aceita tentativa"); duel.tick(0.101);
+    check(duel.goodCount === 1 && approx(duel.phaseEnd - duel.clock, final.comboGap), "Depois do primeiro contato vem a pausa curta");
+    prepare(duel);
+    check(duel.comboStrike === 1 && approx(duel.windupDuration, final.comboWindup), "Segundo contato usa a preparação curta");
+    duel.tick(duel.timeToImpact() - 0.1); check(duel.press(), "Segundo contato aceita nova tentativa"); duel.tick(0.101);
+    prepare(duel);
+    check(duel.comboStrike === 2 && duel.comboRemaining === 0, "Terceiro contato é o último");
+    duel.tick(duel.timeToImpact() + 0.001);
+    check(duel.badCount === 1 && approx(duel.phaseEnd - duel.clock, duel.settings.recovery), "Deixar passar o último custa vida e volta à recuperação normal");
+    prepare(duel);
+    duel.bossStability = 25;
+    duel.tick(duel.timeToImpact() - 0.03); duel.press(); duel.tick(0.031);
+    check(duel.perfectCount === 1 && duel.comboRemaining === 0 && approx(duel.phaseEnd - duel.clock, duel.settings.breakRecovery), "Quebrar a postura corta o composto");
 }
 
 // Gorou nunca finta
@@ -230,7 +307,8 @@ for (const id of [4, 6]) {
     const trail = new Core.Campaign(roster());
     check(trail.stage() === 1 && trail.current().name === "Gorou", "Começa em Gorou");
     for (let i = 0; i < 6; i++) check(trail.advance(), "Avança");
-    check(trail.current().name === "Sombra" && !trail.advance() && trail.completed, "Termina na Sombra");
+    check(trail.current().name === "Sombra" && trail.advance() && trail.current().provisional, "Depois da Sombra vem o Boss Final provisório");
+    check(!trail.advance() && trail.completed, "Termina no Boss Final");
     trail.reset();
     check(trail.stage() === 1 && !trail.completed, "Reinicia");
 }

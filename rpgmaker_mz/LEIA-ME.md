@@ -1,7 +1,8 @@
 # APARA para RPG Maker MZ
 
-Plugin único: `js/plugins/AparaDuelCore.js`. Mesmas regras, mestres, fintas e
-falas do projeto Unity; o núcleo em JavaScript é testado fora do RPG Maker.
+Plugin único: `js/plugins/AparaDuelCore.js`. Mesmas regras, mestres, fintas,
+falas e Boss Final provisório (troca de postura, fases, golpes compostos) do
+projeto Unity; o núcleo em JavaScript é testado fora do RPG Maker.
 
 ## Instalar
 
@@ -12,8 +13,8 @@ falas do projeto Unity; o núcleo em JavaScript é testado fora do RPG Maker.
    cenário e volume.
 3. O plugin usa só recursos do RTP: sons `Wind7`, `Parry`, `Iron1`, `Blow3`,
    `Collapse1` e os SV battlers `Actor3_4`, `Actor2_3`, `Actor2_1`, `Actor1_7`,
-   `Actor3_6`, `Actor1_5`, `Actor1_3`. Troque pelos seus em `BOSS_ROSTER`
-   quando a arte pixel art existir.
+   `Actor3_6`, `Actor1_5`, `Actor1_3` e `Actor2_5` (Boss Final provisório).
+   Troque pelos seus em `createRoster` quando a arte pixel art existir.
 
 ## Um mapa por mestre
 
@@ -64,6 +65,6 @@ mais agudo nas fintas e mais baixo contra Kaelen.
 node rpgmaker_mz/tests/core_test.js
 ```
 
-Em 11/09/2026: 275 verificações, 0 falhas, em Node 24. **O RPG Maker não
+Em 11/09/2026: 331 verificações, 0 falhas, em Node 24. **O RPG Maker não
 estava instalado nesta máquina**: a camada de cena (sprites, HUD, falas,
 switch e variáveis) ainda não foi executada no editor.
