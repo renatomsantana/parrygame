@@ -52,6 +52,12 @@
  * @type boolean
  * @default true
  *
+ * @param GemsVar
+ * @text Variável: gemas recuperadas (0 a 7)
+ * @desc O plugin soma uma gema por mestre vencido entre os sete; o evento pode ler daqui.
+ * @type variable
+ * @default 24
+ *
  * @param Volume
  * @text Volume dos efeitos
  * @type number
@@ -258,9 +264,20 @@
     /** Posição na trilha. */
     AparaCore.Campaign = function(roster) {
         this.bosses = roster;
+        this.clearedMask = 0;
         this.reset();
     };
+    AparaCore.Campaign.GEM_COUNT = 7;
     AparaCore.Campaign.prototype.reset = function() { this.index = 0; this.completed = false; };
+    AparaCore.Campaign.prototype.markCleared = function(i) { if (i >= 0 && i < this.bosses.length) this.clearedMask |= (1 << i); };
+    AparaCore.Campaign.prototype.isCleared = function(i) { return (this.clearedMask & (1 << i)) !== 0; };
+    AparaCore.Campaign.prototype.holdsGem = function(i) { return i >= 0 && i < Math.min(AparaCore.Campaign.GEM_COUNT, this.bosses.length); };
+    AparaCore.Campaign.prototype.gems = function() {
+        var n = 0, limit = Math.min(AparaCore.Campaign.GEM_COUNT, this.bosses.length);
+        for (var i = 0; i < limit; i++) if (this.isCleared(i)) n++;
+        return n;
+    };
+    AparaCore.Campaign.prototype.allGems = function() { return this.gems() === Math.min(AparaCore.Campaign.GEM_COUNT, this.bosses.length); };
     AparaCore.Campaign.prototype.current = function() { return this.bosses[this.index]; };
     AparaCore.Campaign.prototype.stage = function() { return this.index + 1; };
     AparaCore.Campaign.prototype.total = function() { return this.bosses.length; };
@@ -525,6 +542,7 @@
     var VAR_PLAYER_HP = Number(params.PlayerHPVar || 21);
     var VAR_BOSS_HP = Number(params.BossHPVar || 22);
     var VAR_RESULT = Number(params.ResultVar || 23);
+    var VAR_GEMS = Number(params.GemsVar || 24);
     var PLAYER_BATTLER = String(params.PlayerBattler || "Actor1_1");
     var SHOW_DIALOGUES = String(params.ShowDialogues || "true") === "true";
     var APPLY_TINT = String(params.ApplyTint || "true") === "true";
@@ -575,7 +593,21 @@
     Sprite_AparaBattler.prototype.tick = function(delta) {
         this._time += delta * this._rate;
         this._flash = Math.max(0, this._flash - delta);
+        if (this._hopTime > 0) {
+            this._hopTime = Math.max(0, this._hopTime - delta);
+            var t = 1 - this._hopTime / this._hopDuration;
+            this.y = this._baseY - Math.sin(t * Math.PI) * this._hopHeight;
+        } else if (this._baseY !== undefined) {
+            this.y = this._baseY;
+        }
         this._show();
+    };
+    /** Salto curto no lugar (a ameaça de pular do Neon Jax); a linha do chão não muda. */
+    Sprite_AparaBattler.prototype.hop = function(height, duration) {
+        if (this._baseY === undefined) this._baseY = this.y;
+        this._hopHeight = height;
+        this._hopDuration = Math.max(0.05, duration);
+        this._hopTime = this._hopDuration;
     };
     Sprite_AparaBattler.prototype.flash = function(strength) {
         this._flash = 0.10;
@@ -633,6 +665,8 @@
         b.drawText("MESTRE " + s.stage + " / " + s.stages + " · " + s.venue, 0, 30, w, 20, "center");
         b.textColor = "#f5eddc";
         b.drawText("PERFEITOS  " + String(s.perfects).padZero(2), 20, 48, 200, 20, "left");
+        b.textColor = "#f0a044";
+        b.drawText("GEMAS  " + s.gems + " / " + s.gemCount, 150, 48, 200, 20, "left");
         if (s.message) {
             b.fontSize = 26;
             b.textColor = s.messageColor;
@@ -684,10 +718,14 @@
         var self = this, c = this.combat;
         c.on("windupStarted", function(duration) {
             self.boss.setMotion("chant", 3 / (6 * Math.max(0.1, duration - self.settings.attackLead)), false, 2);
+            // Cortes cegantes: um pulso de tinta na tela antes da estocada.
+            if (self.profile.cueVisibility < 1) $gameScreen.startFlash([220, 70, 200, 70], 10);
         });
         c.on("feintStarted", function() {
             if (c.rules().mimicParry) self.boss.setMotion("guard", 3 / (6 * self.settings.attackLead), false, 2);
             else self.boss.setMotion("thrust", 1 / (6 * self.settings.attackLead), false, 1);
+            // Ataque sincopado: ele ameaça pular e atrasa a descida.
+            if (self.profile.rhythmJitter > 0) self.boss.hop(24, 0.22);
             se("Wind7", 115, 0.6);
         });
         c.on("attackStarted", function() {
@@ -817,7 +855,8 @@
             this.hitstop = s.perfectHitstop;
             this.messageColor = "#ffe4a0";
             this.detail = "−" + s.perfectHealthDamage + " vida · −" + s.perfectPostureDamage + " postura do mestre";
-            se("Parry", 110);
+            se("Parry", 120);
+            se("Damage5", 100, 0.7);
             $gameScreen.startFlash([255, 255, 255, 220], 8);
             this.hero.setMotion("guard", 1, false, 2, 2);
             this.boss.setMotion("damage", 1, false, 2);
@@ -844,7 +883,7 @@
             if (lead < 0) this.detail = "Golpe recebido · −" + s.badDamage + " vida";
             else if (this.combat.isFeint) this.detail = "Caiu na finta · −" + s.badDamage + " vida";
             else this.detail = "Muito cedo · −" + s.badDamage + " vida";
-            se("Blow3", 100);
+            se("Blow3", 90);
             $gameScreen.startShake(7, 7, 15);
             $gameScreen.startFlash([255, 0, 0, 180], 18);
             this.hero.setMotion("damage", 1, false, 2);
@@ -859,6 +898,19 @@
         this.state = "result";
         this.victory = won;
         this.finishAge = 0;
+        if (won && this.profile.id <= AparaCore.Campaign.GEM_COUNT) {
+            // Gema recuperada: uma por mestre dos sete, contada uma vez só.
+            var mask = $gameVariables.value(VAR_GEMS + 1000) | 0;
+            var bit = 1 << (this.profile.id - 1);
+            if (!(mask & bit)) {
+                $gameVariables.setValue(VAR_GEMS, Math.min(AparaCore.Campaign.GEM_COUNT, ($gameVariables.value(VAR_GEMS) | 0) + 1));
+                $gameVariables.setValue(VAR_GEMS + 1000, mask | bit);
+            }
+            this.message = "GEMA RECUPERADA";
+            this.detail = $gameVariables.value(VAR_GEMS) + " / " + AparaCore.Campaign.GEM_COUNT;
+            this.messageColor = "#ffe4a0";
+            this.messageLife = 1.5;
+        }
         if (won) { this.boss.setMotion("dead", 1, false, 0); se("Parry", 130); }
         else this.hero.setMotion("dead", 1, false, 0);
     };
@@ -882,6 +934,7 @@
             bossName: p.name, bossTitle: p.stances.length > 0 ? p.title + " · " + c.rules().name : p.title,
             bossColor: "#ec7285", venue: p.venue, special: p.special,
             stage: p.id, stages: this.roster.length,
+            gems: $gameVariables.value(VAR_GEMS) | 0, gemCount: AparaCore.Campaign.GEM_COUNT,
             message: this.messageLife > 0 ? this.message : "", detail: this.detail, messageColor: this.messageColor,
             cueOn: cueOn, cuePerfect: cueOn && lead <= c.perfectWindow(), cueVisibility: p.cueVisibility
         };

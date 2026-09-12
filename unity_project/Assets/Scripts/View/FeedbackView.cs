@@ -29,6 +29,8 @@ namespace Apara
             public Vector2 Velocity;
             public float Life;
             public Color Color;
+            public bool Gravity = true;
+            public float Size = 2f;
         }
 
         public static FeedbackView Create(Transform parent)
@@ -137,6 +139,32 @@ namespace Apara
             }
         }
 
+        /// <summary>
+        /// Manchas de tinta que borram a silhueta da lâmina: os cortes cegantes de
+        /// Kaelen. Blobs maiores, sem gravidade, em cores de galeria.
+        /// </summary>
+        public void Splatter(Vector2 point)
+        {
+            Color[] palette = { new Color(0.95f, 0.3f, 0.75f), new Color(0.35f, 0.85f, 0.9f), new Color(1f, 0.85f, 0.3f), new Color(0.6f, 0.4f, 0.95f) };
+            for (int i = 0; i < 12 && pool.Count > 0; i++)
+            {
+                float angle = Random.Range(-Mathf.PI, Mathf.PI);
+                Spark blob = new Spark
+                {
+                    Renderer = pool.Pop(),
+                    Position = point + new Vector2(Random.Range(-18f, 18f), Random.Range(-14f, 14f)),
+                    Velocity = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * Random.Range(6f, 30f),
+                    Life = Random.Range(0.25f, 0.45f),
+                    Color = palette[i % palette.Length],
+                    Gravity = false,
+                    Size = Random.Range(3f, 7f)
+                };
+                blob.Renderer.transform.localScale = new Vector3(blob.Size, blob.Size, 1f);
+                blob.Renderer.enabled = true;
+                sparks.Add(blob);
+            }
+        }
+
         public void Tick(float delta)
         {
             ringLife = Mathf.Max(0f, ringLife - delta);
@@ -147,12 +175,13 @@ namespace Apara
                 if (spark.Life <= 0f)
                 {
                     spark.Renderer.enabled = false;
+                    spark.Renderer.transform.localScale = Vector3.one;
                     pool.Push(spark.Renderer);
                     sparks.RemoveAt(i);
                     continue;
                 }
                 // Gravidade para baixo: no Unity o eixo Y cresce para cima.
-                spark.Velocity += new Vector2(0f, -240f) * delta;
+                if (spark.Gravity) spark.Velocity += new Vector2(0f, -240f) * delta;
                 spark.Position += spark.Velocity * delta;
                 Color color = spark.Color;
                 color.a = Mathf.Min(1f, spark.Life * 8f);
@@ -180,6 +209,7 @@ namespace Apara
             foreach (Spark spark in sparks)
             {
                 spark.Renderer.enabled = false;
+                spark.Renderer.transform.localScale = Vector3.one;
                 pool.Push(spark.Renderer);
             }
             sparks.Clear();

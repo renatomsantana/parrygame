@@ -30,6 +30,9 @@ namespace Apara
         private bool returnToIdle = true;
         private int holdFrame = -1;
         private float flashTime;
+        private float hopTime, hopDuration, hopHeight;
+        private Vector3 basePosition;
+        private bool baseCaptured;
 
         public static ActorView Create(string name, Transform parent, Vector2 position, Vector2 scale, int sortingOrder)
         {
@@ -132,6 +135,14 @@ namespace Apara
             Pose(AttackAnimation, 1f, true, ContactFrame);
         }
 
+        /// <summary>Salto curto no lugar: a ameaça de pular do Neon Jax. Não muda a linha do chão.</summary>
+        public void Hop(float height, float duration)
+        {
+            hopHeight = height;
+            hopDuration = Mathf.Max(0.05f, duration);
+            hopTime = hopDuration;
+        }
+
         /// <summary>Clarão sobre o sprite; a força (0 a 1) segue a visibilidade do sinal do mestre.</summary>
         public void Flash(float strength = 1f)
         {
@@ -146,6 +157,21 @@ namespace Apara
             flashTime = Mathf.Max(0f, flashTime - delta);
             FlashOverlay.enabled = flashTime > 0f;
             Renderer.color = BaseTint;
+            if (!baseCaptured)
+            {
+                basePosition = transform.localPosition;
+                baseCaptured = true;
+            }
+            if (hopTime > 0f)
+            {
+                hopTime = Mathf.Max(0f, hopTime - delta);
+                float t = 1f - hopTime / hopDuration;
+                transform.localPosition = basePosition + new Vector3(0f, Mathf.Sin(t * Mathf.PI) * hopHeight, 0f);
+            }
+            else
+            {
+                transform.localPosition = basePosition;
+            }
             AnimationData animation = sheet.Animations[Current];
             animationTime += delta * rate;
             int count = animation.Frames.Length;

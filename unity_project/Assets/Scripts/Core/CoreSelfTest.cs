@@ -526,6 +526,22 @@ namespace Apara.Core
             Check(!trail.Advance() && trail.Completed, "Depois do Boss Final a trilha termina");
             trail.Reset();
             Check(trail.Stage == 1 && !trail.Completed, "Reiniciar volta ao primeiro mestre");
+
+            // Gemas: uma por mestre dos sete; o Boss Final não guarda gema.
+            Campaign gems = new Campaign(BossRoster.Create());
+            Check(gems.Gems == 0 && !gems.AllGems, "Trilha nova sem gemas");
+            gems.MarkCleared(0);
+            gems.MarkCleared(0);
+            Check(gems.Gems == 1 && gems.IsCleared(0) && !gems.IsCleared(1), "Vencer Gorou devolve uma gema, uma vez só");
+            gems.MarkCleared(7);
+            Check(gems.Gems == 1 && !gems.HoldsGem(7) && gems.HoldsGem(6), "O Boss Final não guarda gema; a Sombra guarda");
+            for (int i = 1; i < 7; i++) gems.MarkCleared(i);
+            Check(gems.Gems == 7 && gems.AllGems, "Sete mestres vencidos, sete gemas");
+            gems.MarkCleared(99);
+            gems.MarkCleared(-1);
+            Check(gems.Gems == 7, "Índices fora da trilha são ignorados");
+            gems.Reset();
+            Check(gems.Gems == 7 && gems.Stage == 1, "Reiniciar a posição não apaga as gemas");
         }
 
         private void TestSheet(string json)

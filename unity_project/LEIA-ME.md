@@ -60,6 +60,9 @@ prepara os golpes 10% mais rápido. Cada golpe aceita **uma tentativa**.
 | 7. Sombra, o Reflexo de Ren | Jardim de Vidro | 50 / 140 ms | 75% | Mímica: finge o parry e ataca no cooldown |
 | 8. Mestre Supremo (provisório) | Salão da Liga | Alta 70/180 · Baixa 45/130 ms | 30% / 50% | Troca de postura, três fases, golpes compostos |
 
+**Gemas:** cada um dos sete mestres roubou uma gema da empunhadura; vencer
+devolve a gema, e a trilha mostra as sete. O Boss Final não guarda gema.
+
 **Finta:** a preparação e o sinal (mais agudo) chegam em um ou mais instantes
 falsos; o contato real vem depois. Quem clica num instante falso gasta a
 única tentativa e leva o corte. Duas falas antes e uma depois de cada mestre.

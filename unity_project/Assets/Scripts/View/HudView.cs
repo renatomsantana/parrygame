@@ -25,6 +25,9 @@ namespace Apara
         public bool Training;
         public float GoodWindow;
         public string LastLead = "";
+        // Gemas da empunhadura.
+        public int Gems, GemCount = 7;
+        public bool GemWon;
     }
 
     /// <summary>
@@ -52,6 +55,7 @@ namespace Apara
         private Text trailPremise;
         private Image goodZone, perfectZone, cursor;
         private Text leadText;
+        private Text gemsText, trailGems;
         private const float BarX = 170f, BarW = 300f, BarSpan = 0.5f;
 
         public static HudView Create()
@@ -89,6 +93,7 @@ namespace Apara
             Label("Title", root, 220, 24, 200, "APARA", Paper, 18, TextAnchor.UpperCenter);
             stage = Label("Stage", root, 170, 43, 300, "", Orange, 9, TextAnchor.UpperCenter);
             perfects = Label("Perfects", root, 20, 49, 120, "", Paper, 10);
+            gemsText = Label("Gems", root, 150, 49, 120, "", Orange, 10);
 
             play = Group("Play", root);
             message = Label("Message", play.transform, 70, 108, 500, "", Paper, 20, TextAnchor.UpperCenter);
@@ -125,6 +130,7 @@ namespace Apara
             Box("TrailStripe", trail.transform, 60, 74, 4, 272, Orange);
             Label("TrailTitle", trail.transform, 70, 100, 500, "A TRILHA DOS SETE MESTRES", Orange, 19, TextAnchor.UpperCenter);
             trailPremise = Label("TrailPremise", trail.transform, 80, 112, 480, "", Paper, 9, TextAnchor.UpperLeft, true);
+            trailGems = Label("TrailGems", trail.transform, 70, 148, 500, "", Orange, 10, TextAnchor.UpperCenter);
             trailRows = new Text[8];
             for (int i = 0; i < trailRows.Length; i++)
             {
@@ -156,6 +162,7 @@ namespace Apara
             postureBar.fillAmount = s.Posture / (float)s.MaxPosture;
             stage.text = "MESTRE " + s.Stage + " / " + s.Stages + (s.Venue.Length > 0 ? " · " + s.Venue : "");
             perfects.text = "PERFEITOS  " + s.Perfects.ToString("00");
+            gemsText.text = "GEMAS  " + s.Gems + " / " + s.GemCount;
 
             bool showPanel = false, showDialogue = false, showPlay = false, rules = false, showTrail = false;
             if (s.Screen == "intro")
@@ -185,6 +192,7 @@ namespace Apara
                 string title = s.Victory ? s.BossName.ToUpperInvariant() + " DERROTADO" : "REN DERROTADO";
                 string summary = s.Perfects + " perfeitos · " + s.Goods + " bons · " + s.Bads + " ruins";
                 if (s.Feints > 0) summary += " · " + s.Feints + " fintas";
+                if (s.GemWon) summary += "\nGEMA RECUPERADA · " + s.Gems + " / " + s.GemCount;
                 SetPanel(title, summary, s.Victory ? "CLIQUE PARA CONTINUAR" : "CLIQUE OU R PARA TENTAR DE NOVO");
             }
             else
@@ -223,6 +231,9 @@ namespace Apara
         private void PaintTrail(HudState s)
         {
             trailPremise.text = s.Premise;
+            string gems = "";
+            for (int i = 0; i < s.GemCount; i++) gems += i < s.Gems ? "◆ " : "◇ ";
+            trailGems.text = "GEMAS DA EMPUNHADURA   " + gems.TrimEnd();
             for (int i = 0; i < trailRows.Length; i++)
             {
                 if (i >= s.TrailNames.Length)

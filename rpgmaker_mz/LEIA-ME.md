@@ -9,8 +9,9 @@ projeto Unity; o núcleo em JavaScript é testado fora do RPG Maker.
 1. Copie `js/plugins/AparaDuelCore.js` para `js/plugins/` do seu projeto MZ.
 2. Em **Plugin Manager**, adicione `AparaDuelCore` e confira os parâmetros:
    switch ativador (10), variáveis de mestre (20), vida de Ren (21), vida do
-   mestre (22) e resultado (23), SV battler de Ren, falas automáticas, tom de
-   cenário e volume.
+   mestre (22), resultado (23) e gemas recuperadas (24; o plugin usa também a
+   variável 1024 como memória de quais mestres já deram gema), SV battler de
+   Ren, falas automáticas, tom de cenário e volume.
 3. O plugin usa só recursos do RTP: sons `Wind7`, `Parry`, `Iron1`, `Blow3`,
    `Collapse1` e os SV battlers `Actor3_4`, `Actor2_3`, `Actor2_1`, `Actor1_7`,
    `Actor3_6`, `Actor1_5`, `Actor1_3` e `Actor2_5` (Boss Final provisório).
@@ -54,8 +55,12 @@ postura do mestre, placar de perfeitos, mensagem do timing e o sinal
 (losango + AGORA / PREPARE-SE). Trocar de mapa no meio encerra o duelo como
 derrota.
 
-Efeitos por resultado, como no documento: perfeito = `Parry` + flash branco;
-bom = `Iron1` + flash amarelo; ruim = `Blow3` + tremor + flash vermelho;
+Vencer um dos sete mestres devolve uma gema da empunhadura (variável 24,
+0 a 7, contada uma vez por mestre); o HUD mostra "GEMAS n / 7".
+
+Efeitos por resultado, como no documento: perfeito = `Parry` (tom 120) com
+`Damage5` sincronizado + flash branco;
+bom = `Iron1` + flash amarelo; ruim = `Blow3` (tom 90) + tremor + flash vermelho;
 quebra de postura = `Collapse1` + congelamento do mestre. O sinal `Wind7` sai
 mais agudo nas fintas e mais baixo contra Kaelen.
 

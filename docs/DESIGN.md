@@ -22,6 +22,15 @@ Mestre Supremo (Boss Final), Ren desafia cada mestre em seu próprio terreno,
 quebrando sua postura e provando a pureza da técnica sobre os truques de cada
 ambiente.
 
+## As sete gemas
+
+Cada um dos sete mestres roubou uma gema da empunhadura sagrada. Vencer um
+mestre devolve a gema: a trilha mostra as sete (◆ recuperada, ◇ faltando),
+o HUD conta "GEMAS n / 7" e o painel de vitória anuncia "GEMA RECUPERADA".
+A contagem fica salva com o progresso. O Boss Final não guarda gema; ele
+espera quem juntar as sete. No RPG Maker a contagem vai para a variável de
+gemas (24), uma por mestre, contada uma vez só.
+
 ## A trilha dos sete mestres
 
 | Mestre | Cenário | Perfeito / Bom | Preparações (s) | Fintas | Mecânica |
@@ -64,10 +73,10 @@ finta". Esperar o contato real permite bom ou perfeito normalmente.
 | Mestre | Estilo (roteiro) | Como o código faz |
 |---|---|---|
 | Gorou | Sem fintas | `FeintChance` 0, `FalseCues` 0 |
-| Neon Jax | Ataque sincopado | Um instante falso; a preparação sai do compasso em até ±120 ms (`RhythmJitter`) |
+| Neon Jax | Ataque sincopado | Um instante falso; a preparação sai do compasso em até ±120 ms (`RhythmJitter`); na partida falsa ele dá um salto curto no lugar (ameaça pular) |
 | Cavan | Finta pesada | Um instante falso; atraso longo, 350 a 550 ms |
 | Vance | Finta dupla | Dois instantes falsos (`FalseCues` 2) espalhados em 400 a 550 ms |
-| Kaelen | Cortes cegantes | Um instante falso; sinal com 35% da força (`CueVisibility`): clarão e som mais fracos, losango translúcido |
+| Kaelen | Cortes cegantes | Um instante falso; sinal com 35% da força (`CueVisibility`): clarão e som mais fracos, losango translúcido; manchas de tinta borram a lâmina em toda preparação |
 | Eleonor | Finta tripla e estocadas rápidas | Três instantes falsos em 540 a 720 ms; preparações curtas |
 | Sombra | Mímica e cancelamento | A partida falsa mostra o gesto de parry (`MimicParry`); o atraso, 300 a 360 ms, cai no intervalo de cooldown do jogador |
 

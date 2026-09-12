@@ -65,6 +65,7 @@ namespace Apara
             BuildScene();
             Campaign = new Campaign(LoadRoster());
             Campaign.Index = Mathf.Clamp(PlayerPrefs.GetInt(ProgressKey, 0), 0, Campaign.Total - 1);
+            Campaign.ClearedMask = PlayerPrefs.GetInt(ClearedKey, 0);
             trailSelected = Campaign.Index;
             Combat = new CombatCore(Settings, Campaign.Current, null);
             Combat.OnWindupStarted += OnWindup;
@@ -242,6 +243,7 @@ namespace Apara
                 PlayerPrefs.DeleteKey(ProgressKey);
                 PlayerPrefs.DeleteKey(ClearedKey);
                 PlayerPrefs.Save();
+                Campaign.ClearedMask = 0;
                 RestartCampaign();
                 return;
             }
@@ -433,9 +435,9 @@ namespace Apara
             }
             else
             {
-                // Mestre vencido: marca na trilha e libera o próximo.
-                int cleared = PlayerPrefs.GetInt(ClearedKey, 0) | (1 << Campaign.Index);
-                PlayerPrefs.SetInt(ClearedKey, cleared);
+                // Mestre vencido: marca na trilha, devolve a gema e libera o próximo.
+                Campaign.MarkCleared(Campaign.Index);
+                PlayerPrefs.SetInt(ClearedKey, Campaign.ClearedMask);
                 if (Campaign.Advance())
                 {
                     PlayerPrefs.SetInt(ProgressKey, Mathf.Max(PlayerPrefs.GetInt(ProgressKey, 0), Campaign.Index));
@@ -501,6 +503,11 @@ namespace Apara
         {
             // A preparação termina no instante mostrado; na finta esse instante mente.
             boss.Windup(Mathf.Max(0.10f, duration - Settings.AttackLead));
+            if (Campaign.Current.CueVisibility < 1f)
+            {
+                // Cortes cegantes: manchas de tinta borram a lâmina antes da estocada.
+                fx.Splatter(V(362f, 205f));
+            }
         }
 
         private void OnFeint()
@@ -513,6 +520,11 @@ namespace Apara
             else
             {
                 boss.Launch(Settings.AttackLead, true);
+            }
+            if (Campaign.Current.RhythmJitter > 0f)
+            {
+                // Ataque sincopado: ele ameaça pular e atrasa a descida.
+                boss.Hop(14f, 0.22f);
             }
             fx.Sound("swing", 1.15f);
         }
@@ -664,8 +676,11 @@ namespace Apara
                 }
             }
             state.TrailUnlocked = Mathf.Clamp(PlayerPrefs.GetInt(ProgressKey, 0), 0, Campaign.Total - 1);
-            state.TrailCleared = PlayerPrefs.GetInt(ClearedKey, 0);
+            state.TrailCleared = Campaign.ClearedMask;
             state.TrailSelected = trailSelected;
+            state.Gems = Campaign.Gems;
+            state.GemCount = Campaign.GemCount;
+            state.GemWon = Victory && Campaign.HoldsGem(Campaign.Index) && Screen == "result";
             if (Screen == "dialogue" && dialogueIndex < dialogue.Length)
             {
                 string[] parts = dialogue[dialogueIndex].Split(new[] { '|' }, 2);

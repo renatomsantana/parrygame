@@ -311,6 +311,19 @@ for (const id of [4, 6]) {
     check(!trail.advance() && trail.completed, "Termina no Boss Final");
     trail.reset();
     check(trail.stage() === 1 && !trail.completed, "Reinicia");
+
+    const gems = new Core.Campaign(roster());
+    check(gems.gems() === 0 && !gems.allGems(), "Trilha nova sem gemas");
+    gems.markCleared(0); gems.markCleared(0);
+    check(gems.gems() === 1 && gems.isCleared(0) && !gems.isCleared(1), "Vencer Gorou devolve uma gema, uma vez só");
+    gems.markCleared(7);
+    check(gems.gems() === 1 && !gems.holdsGem(7) && gems.holdsGem(6), "O Boss Final não guarda gema; a Sombra guarda");
+    for (let i = 1; i < 7; i++) gems.markCleared(i);
+    check(gems.gems() === 7 && gems.allGems(), "Sete mestres vencidos, sete gemas");
+    gems.markCleared(99); gems.markCleared(-1);
+    check(gems.gems() === 7, "Índices fora da trilha são ignorados");
+    gems.reset();
+    check(gems.gems() === 7 && gems.stage() === 1, "Reiniciar a posição não apaga as gemas");
 }
 
 // Determinismo: mesma semente, mesma sequência
