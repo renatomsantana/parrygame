@@ -22,3 +22,6 @@ art/audio/*.wav
 .godot/
 *.import
 capturas/
+.DS_Store
+# modelo original em 4K; o jogo usa a cópia reduzida em c_game/assets/katana
+katana 3d/

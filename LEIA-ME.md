@@ -7,6 +7,12 @@ Versão 0.5.0, em duas plataformas com as mesmas regras:
 |---|---|---|
 | `unity_project/` | Unity 6 | `powershell -ExecutionPolicy Bypass -File unity_project/Tools/RunCoreTests.ps1` |
 | `rpgmaker_mz/` | RPG Maker MZ | `node rpgmaker_mz/tests/core_test.js` |
+| `c_game/` | **C + raylib (nova versão)** | `make -C c_game test` |
+
+> **A versão em C é a nova base.** Ela muda as regras: não há vida, só
+> postura; são doze mestres e o BIG BOSS (Oboro), com lore de abertura.
+> Veja `c_game/LEIA-ME.md`. O resto deste arquivo descreve as versões
+> Unity e RPG Maker, que seguem com as regras antigas.
 
 Cada pasta tem o seu `LEIA-ME.md` com instalação e controles. Este arquivo
 resume o jogo; o roteiro completo está em `docs/DESIGN.md` e a arte em

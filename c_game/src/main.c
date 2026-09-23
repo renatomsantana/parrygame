@@ -1,0 +1,1715 @@
+/*
+ * main.c - APARA: A Trilha dos Doze Mestres.
+ * O mundo é desenhado em 320 x 180 e ampliado por número inteiro, sem filtro.
+ * A interface vai por cima, em alta resolução (1280 x 720 virtuais), com fonte
+ * serifada e paleta antiga: tinta, papel envelhecido, dourado gasto e vermelhão.
+ *
+ * Controles: clique esquerdo, Espaço, J ou Enter = aparar / avançar.
+ * Esc = pausa. F = liga/desliga o tremor de tela. F11 = tela cheia.
+ *
+ * Opções de teste (sem efeito no jogo normal):
+ *   --master N     começa direto nas falas do mestre N (1 a 13)
+ *   --duel         pula as falas e vai direto ao duelo
+ *   --state S      title | lore | trail | ending (com --master N: sensei)
+ *   --demo         um robô apara no tempo perfeito e avança as telas
+ *   --shot F T     salva uma captura em F depois de T segundos e sai
+ */
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#include "arenas.h"
+#include "audio.h"
+#include "core.h"
+#include "fx.h"
+#include "katana3d.h"
+#include "lore.h"
+#include "raylib.h"
+#include "rig.h"
+#include "rlgl.h"
+
+#define REN_X 124.0f
+#define BOSS_X 190.0f
+#define ACTOR_SCALE 1.25f     /* tamanho dos bonecos provisórios */
+#define UI_W 1280
+#define UI_H 720
+#define UNIT 4.0f             /* px da interface por px do mundo */
+#define RS 4                  /* o cenário é desenhado em 1280 x 720; os lutadores em pixel art de 320 x 180 */
+#define RW (LOW_W * RS)
+#define RH (LOW_H * RS)
+#define SWORD_GRAVITY 380.0f
+#define GHOST_MAX 10
+#define SKIP_HOLD 2.0f        /* segundos segurando Esc para pular a abertura */
+
+static const char *POST_FS =
+    "#version 330\n"
+    "in vec2 fragTexCoord; in vec4 fragColor; uniform sampler2D texture0;\n"
+    "uniform float aberr; uniform vec2 res; out vec4 finalColor;\n"
+    "void main() {\n"
+    "    vec2 uv = fragTexCoord;\n"
+    "    vec2 d = vec2(aberr / res.x, 0.0);\n"
+    "    vec3 c = vec3(texture(texture0, uv + d).r, texture(texture0, uv).g, texture(texture0, uv - d).b);\n"
+    "    c *= 1.0 - 0.07 * mod(floor(uv.y * res.y), 2.0);\n"
+    "    vec2 v = uv - 0.5;\n"
+    "    c *= 1.0 - dot(v, v) * 0.45;\n"
+    "    finalColor = vec4(c, 1.0);\n"
+    "}\n";
+
+typedef enum {
+    ST_TITLE, ST_LORE, ST_TRAIL, ST_INTRO, ST_DUEL, ST_FINISHER, ST_OUTRO, ST_CLEARED, ST_DEFEAT, ST_SENSEI, ST_ENDING
+} State;
+
+/* Paleta da interface. */
+static const Color INK = {24, 19, 16, 255};
+static const Color PAPER = {236, 222, 192, 255};
+static const Color AGED_GOLD = {201, 160, 82, 255};
+static const Color VERMILION = {184, 62, 40, 255};
+static const Color OCHRE = {214, 140, 58, 255};
+static const Color INK_TEXT = {36, 22, 12, 255};
+static const Color INK_SOFT = {76, 52, 32, 255};
+static const Color INK_LINE = {52, 32, 18, 255};
+static const Color SEAL_RED = {150, 44, 32, 255};
+
+/* Visual provisório de cada lutador (troque quando a pixel art chegar).
+ * Roupa de acordo com o lugar de cada mestre; katana com lâmina, cabo e largura próprios. */
+#define RGB(r, g, b) ((Color){r, g, b, 255})
+
+static const Look REN_LOOK = {
+    .coat = RGB(150, 56, 18), .sleeve = RGB(168, 70, 26), .pants = RGB(58, 38, 30), .skin = RGB(232, 186, 146),
+    .hair = RGB(22, 18, 22), .blade = RGB(240, 240, 245), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 20, .hairTail = true,
+    .handle = RGB(96, 52, 28), .bladeWidth = 1};
+
+static const Look MASTER_LOOKS[ROSTER_SIZE] = {
+    /* tetsu: capitão da guarda. Haori azul, ombreiras de ferro, hakama. */
+    {.coat = RGB(58, 68, 108), .sleeve = RGB(205, 195, 175), .pants = RGB(42, 40, 56), .skin = RGB(225, 185, 150),
+     .hair = RGB(175, 175, 175), .blade = RGB(235, 235, 240), .hat = HAT_NONE, .size = 1.05f, .bladeLen = 20,
+     .robe = 0.8f, .flare = 0.3f, .pantsWidth = 1.6f, .trim = RGB(196, 160, 82), .extra = RGB(96, 100, 110), .extras = EX_PAULDRONS,
+     .handle = RGB(40, 46, 80), .bladeWidth = 1},
+    /* neon jax: jaqueta preta com neon, visor. */
+    {.coat = RGB(30, 30, 40), .sleeve = RGB(255, 60, 200), .pants = RGB(26, 20, 40), .skin = RGB(230, 180, 150),
+     .hair = RGB(255, 60, 200), .blade = RGB(255, 120, 230), .hat = HAT_NONE, .size = 1, .bladeLen = 19,
+     .trim = RGB(60, 230, 255), .extra = RGB(60, 230, 255), .extras = EX_VISOR, .handle = RGB(30, 30, 40), .bladeWidth = 0.9f},
+    /* cavan: colete de palha, lenço vermelho, chapéu de palha, nodachi. */
+    {.coat = RGB(196, 170, 96), .sleeve = RGB(215, 165, 120), .pants = RGB(92, 70, 48), .skin = RGB(215, 165, 120),
+     .hair = RGB(80, 50, 30), .blade = RGB(200, 200, 195), .hat = HAT_KASA, .size = 1.15f, .bladeLen = 26,
+     .extra = RGB(170, 40, 36), .extras = EX_SCARF, .handle = RGB(110, 74, 42), .bladeWidth = 1.3f},
+    /* vance: sobretudo de executivo, gravata e óculos escuros, lâmina negra. */
+    {.coat = RGB(44, 46, 58), .sleeve = RGB(44, 46, 58), .pants = RGB(30, 32, 40), .skin = RGB(230, 190, 160),
+     .hair = RGB(20, 20, 20), .blade = RGB(80, 80, 92), .hat = HAT_NONE, .size = 1, .bladeLen = 20,
+     .robe = 1, .trim = RGB(200, 200, 210), .extra = RGB(15, 15, 18), .extras = EX_TIE | EX_VISOR,
+     .handle = RGB(230, 230, 235), .bladeWidth = 0.9f},
+    /* kaelen: avental de pintor sujo de tinta, cachecol amarelo, lâmina violeta. */
+    {.coat = RGB(236, 224, 200), .sleeve = RGB(236, 224, 200), .pants = RGB(60, 40, 70), .skin = RGB(235, 195, 165),
+     .hair = RGB(240, 200, 90), .blade = RGB(200, 160, 255), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 20,
+     .robe = 1.2f, .trim = RGB(200, 60, 180), .extra = RGB(240, 190, 60), .extras = EX_SCARF,
+     .handle = RGB(200, 160, 60), .bladeWidth = 0.9f},
+    /* taiko: happi branco de festival, faixa na testa, lâmina curta e pesada. */
+    {.coat = RGB(236, 234, 226), .sleeve = RGB(44, 64, 140), .pants = RGB(32, 42, 92), .skin = RGB(215, 160, 115),
+     .hair = RGB(30, 24, 20), .blade = RGB(230, 230, 235), .band = RGB(200, 40, 40), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 18,
+     .headband = true, .robe = 0.3f, .trim = RGB(40, 60, 150), .handle = RGB(140, 100, 60), .bladeWidth = 1.4f},
+    /* eleonor: vestido de baile vinho com dourado, colar, lâmina fina e longa. */
+    {.coat = RGB(120, 30, 60), .sleeve = RGB(240, 230, 220), .pants = RGB(90, 20, 50), .skin = RGB(245, 210, 185),
+     .hair = RGB(140, 60, 40), .blade = RGB(240, 240, 255), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 27,
+     .robe = 2, .flare = 1.1f, .trim = RGB(220, 180, 90), .extra = RGB(220, 180, 90), .extras = EX_BEADS,
+     .handle = RGB(220, 180, 90), .bladeWidth = 0.55f},
+    /* kira: uniforme de maquinista com botões dourados, cachecol branco, lâmina curta. */
+    {.coat = RGB(36, 90, 70), .sleeve = RGB(36, 90, 70), .pants = RGB(24, 30, 30), .skin = RGB(225, 185, 150),
+     .hair = RGB(232, 232, 232), .blade = RGB(230, 240, 240), .hat = HAT_NONE, .size = 1, .bladeLen = 16,
+     .robe = 0.5f, .trim = RGB(220, 180, 90), .extra = RGB(236, 236, 230), .extras = EX_BEADS | EX_SCARF,
+     .handle = RGB(36, 90, 70), .bladeWidth = 1.1f},
+    /* hayate: túnica açafrão de monge, contas de madeira, chapéu de palha. */
+    {.coat = RGB(226, 160, 60), .sleeve = RGB(226, 160, 60), .pants = RGB(200, 140, 60), .skin = RGB(215, 165, 125),
+     .hair = RGB(40, 30, 26), .blade = RGB(215, 220, 225), .hat = HAT_KASA, .size = 1.05f, .bladeLen = 21,
+     .robe = 2, .flare = 0.4f, .extra = RGB(90, 50, 30), .extras = EX_BEADS, .handle = RGB(230, 210, 170), .bladeWidth = 1},
+    /* yoru: caçadora de capuz, cachecol vermelho, lâmina negra. */
+    {.coat = RGB(30, 30, 46), .sleeve = RGB(30, 30, 46), .pants = RGB(20, 20, 30), .skin = RGB(200, 190, 210),
+     .hair = RGB(22, 22, 36), .blade = RGB(70, 60, 96), .hat = HAT_HOOD, .size = 1, .bladeLen = 20,
+     .robe = 0.6f, .trim = RGB(120, 40, 60), .extra = RGB(150, 34, 44), .extras = EX_SCARF,
+     .handle = RGB(20, 20, 28), .bladeWidth = 0.9f},
+    /* magna: ferreira de braços de fora e avental de couro, lâmina larga e em brasa. */
+    {.coat = RGB(160, 50, 30), .sleeve = RGB(210, 150, 110), .pants = RGB(40, 32, 30), .skin = RGB(210, 150, 110),
+     .hair = RGB(205, 72, 32), .blade = RGB(255, 170, 110), .hat = HAT_NONE, .size = 1.15f, .bladeLen = 22,
+     .extra = RGB(110, 70, 40), .extras = EX_APRON, .handle = RGB(60, 40, 30), .bladeWidth = 1.7f},
+    /* sombra: o reflexo de ren em roxo. */
+    {.coat = RGB(52, 42, 72), .sleeve = RGB(72, 62, 96), .pants = RGB(22, 22, 32), .skin = RGB(84, 84, 104),
+     .hair = RGB(12, 12, 22), .blade = RGB(130, 110, 170), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 20, .hairTail = true,
+     .handle = RGB(40, 30, 60), .bladeWidth = 1},
+    /* oboro: armadura com ombreiras, capa carmim, kabuto e nodachi. */
+    {.coat = RGB(60, 30, 70), .sleeve = RGB(34, 22, 44), .pants = RGB(22, 16, 28), .skin = RGB(220, 200, 190),
+     .hair = RGB(20, 16, 24), .blade = RGB(245, 225, 225), .hat = HAT_KABUTO, .size = 1.25f, .bladeLen = 28,
+     .robe = 1.1f, .flare = 0.4f, .pantsWidth = 1.4f, .trim = RGB(200, 160, 80), .extra = RGB(120, 30, 50),
+     .extras = EX_PAULDRONS | EX_CAPE, .handle = RGB(30, 20, 30), .bladeWidth = 1.2f},
+};
+
+static KatanaStyle katana_style(const Look *l) {
+    KatanaStyle k = {l->blade, l->handle.a ? l->handle : RGB(60, 40, 34), l->bladeWidth > 0 ? l->bladeWidth : 1};
+    return k;
+}
+
+/* A espada do mestre voando depois do desarme. */
+typedef struct {
+    bool active, stuck;
+    Vector2 pos, vel;
+    float angle, spin, len, t, flight, landY, target, stuckTime;
+    Color blade;
+    KatanaStyle style;
+} FlySword;
+
+static struct {
+    RenderTexture2D scene, actors;
+    Font ui, uiBold;
+    Texture2D parch;
+    Shader post;
+    int locAberr, locRes;
+    float aberr;              /* aberração cromática (px), decai sozinha */
+    struct { Rig rig; float life; Color color; } ghosts[GHOST_MAX];
+    int ghostHead;
+    float ghostTimer;
+    Rig ren, boss;
+    Fx fx;
+    FlySword sword;
+
+    Settings settings;
+    Duel duel;
+    Campaign camp;
+    const MasterProfile *m;
+
+    State state;
+    float stateTime;
+    float time;
+    bool paused;
+
+    const Line *lines;
+    int lineCount, lineIndex;
+    float typeChars;
+    int lorePage;
+    float loreScroll, loreHeight, skipHold;
+
+    int menuIndex;
+    bool hasSave;
+
+    /* Coreografia. */
+    bool bossWinding;
+    float windupLen, windupTime;
+    bool strikeFeint;
+    float renParryTime;       /* tempo desde o gesto; -1 = nenhum pendente */
+    float renKnock, bossKnock;
+    float bossHome;
+    float hopTime;
+    float hitstop;
+    float slowmo, slowmoTime;
+    float staggerTime;
+    float blackoutTarget;
+    float lightningTimer;
+    float bannerTime;
+    char banner[64];
+    Color bannerColor;
+    float renStepFrom;
+    bool special;             /* golpe especial em preparação */
+    int defeatsHere;          /* derrotas seguidas contra o mestre atual */
+    int defeatIndex;          /* opção escolhida no painel de derrota */
+
+    float shownRen, shownBoss, ghostRen, ghostBoss;
+    ArenaCtx ctx;
+
+    bool demo;
+    const char *shotFile;
+    float shotTime;
+} G;
+
+/* ------------------------------------------------------------------ */
+/* Utilidades                                                          */
+/* ------------------------------------------------------------------ */
+
+static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
+static Color fadec(Color c, float a) { c.a = (unsigned char)(c.a * clampf(a, 0, 1)); return c; }
+static float smooth(float t) { t = clampf(t, 0, 1); return t * t * (3 - 2 * t); }
+
+static bool pressed(void) {
+    /* No modo demonstração, o robô também avança falas e painéis. */
+    if (G.demo && G.state != ST_DUEL && fmodf(G.stateTime, 0.9f) < GetFrameTime()) return true;
+    if (G.demo && G.shotFile) return false; /* capturas: só o robô joga */
+    return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER);
+}
+
+/* Não corta um caractere UTF-8 ao meio. */
+static int utf8_visible(const char *s, float chars) {
+    int n = (int)chars, len = (int)strlen(s);
+    if (n >= len) return len;
+    while (n > 0 && ((unsigned char)s[n] & 0xC0) == 0x80) n++;
+    return n;
+}
+
+static void banner(const char *s, Color c) {
+    snprintf(G.banner, sizeof G.banner, "%s", s);
+    G.bannerColor = c;
+    G.bannerTime = 1.6f;
+}
+
+/* ------------------------------------------------------------------ */
+/* Interface em alta resolução                                         */
+/* ------------------------------------------------------------------ */
+
+static float ui_spacing(float size) { return size * 0.01f; }
+
+static float ui_width_f(Font f, const char *s, float size) { return MeasureTextEx(f, s, size, ui_spacing(size)).x; }
+static float ui_width(const char *s, float size) { return ui_width_f(G.ui, s, size); }
+
+/* Texto sobre a cena: sombra escura. Texto sobre pergaminho: tinta, sem sombra. */
+static void draw_text_f(Font f, const char *s, float x, float y, float size, Color c, bool shadow) {
+    if (shadow) DrawTextEx(f, s, (Vector2){x + 2, y + 2}, size, ui_spacing(size), fadec((Color){12, 8, 6, 255}, c.a / 255.0f * 0.75f));
+    DrawTextEx(f, s, (Vector2){x, y}, size, ui_spacing(size), c);
+}
+
+static void ui_text(const char *s, float x, float y, float size, Color c) { draw_text_f(G.ui, s, x, y, size, c, true); }
+static void ui_center(const char *s, float cx, float y, float size, Color c) { ui_text(s, cx - ui_width(s, size) / 2, y, size, c); }
+
+/* Tinta no pergaminho; bold para nomes e títulos. */
+static void ink(const char *s, float x, float y, float size, Color c) { draw_text_f(G.ui, s, x, y, size, c, false); }
+static void ink_bold(const char *s, float x, float y, float size, Color c) { draw_text_f(G.uiBold, s, x, y, size, c, false); }
+static void ink_center(const char *s, float cx, float y, float size, Color c) { ink(s, cx - ui_width(s, size) / 2, y, size, c); }
+static void ink_bold_center(const char *s, float cx, float y, float size, Color c) {
+    draw_text_f(G.uiBold, s, cx - ui_width_f(G.uiBold, s, size) / 2, y, size, c, false);
+}
+static void ink_right(const char *s, float rx, float y, float size, Color c) { ink(s, rx - ui_width(s, size), y, size, c); }
+
+/* Tudo em minúsculo: nomes, rótulos e títulos. */
+static void to_lower_utf8(char *dst, const char *src, size_t cap) {
+    size_t n = 0;
+    for (const unsigned char *p = (const unsigned char *)src; *p && n + 2 < cap; p++) {
+        unsigned char c = *p;
+        if (c >= 'A' && c <= 'Z') dst[n++] = (char)(c + 32);
+        else if (c == 0xC3 && p[1] >= 0x80 && p[1] <= 0x9E && p[1] != 0x97) { dst[n++] = (char)c; dst[n++] = (char)(p[1] + 0x20); p++; }
+        else dst[n++] = (char)c;
+    }
+    dst[n] = 0;
+}
+
+static const char *lower(const char *s) {
+    static char buf[4][256];
+    static int slot;
+    slot = (slot + 1) % 4;
+    to_lower_utf8(buf[slot], s, sizeof buf[slot]);
+    return buf[slot];
+}
+
+/* Quebra em linhas e mostra só os primeiros `visible` bytes (máquina de escrever). */
+static void ink_wrapped(const char *s, float x, float y, float width, float size, Color c, int visible) {
+    char line[512], word[256], trial[512];
+    int lineLen = 0, used = 0;
+    float ly = y;
+    const char *p = s;
+    line[0] = 0;
+    while (*p) {
+        int wl = 0;
+        while (p[wl] && p[wl] != ' ') wl++;
+        if (wl > 255) wl = 255;
+        memcpy(word, p, (size_t)wl);
+        word[wl] = 0;
+        snprintf(trial, sizeof trial, "%s%s%s", line, lineLen ? " " : "", word);
+        if (lineLen && ui_width(trial, size) > width) {
+            int show = visible - used;
+            if (show <= 0) return;
+            if (show < lineLen) line[show] = 0;
+            ink(line, x, ly, size, c);
+            used += lineLen + 1;
+            ly += size * 1.4f;
+            snprintf(line, sizeof line, "%s", word);
+            lineLen = wl;
+        } else {
+            snprintf(line, sizeof line, "%s", trial);
+            lineLen = (int)strlen(line);
+        }
+        p += wl;
+        while (*p == ' ') p++;
+    }
+    int show = visible - used;
+    if (show > 0) {
+        if (show < lineLen) line[show] = 0;
+        ink(line, x, ly, size, c);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Pergaminho                                                          */
+/* ------------------------------------------------------------------ */
+
+static float hashf(int x, int y) {
+    unsigned h = (unsigned)x * 374761393u + (unsigned)y * 668265263u;
+    h = (h ^ (h >> 13)) * 1274126177u;
+    return (float)((h ^ (h >> 16)) & 0xFFFF) / 65535.0f;
+}
+
+static float vnoise(float x, float y) {
+    int xi = (int)floorf(x), yi = (int)floorf(y);
+    float fx = x - xi, fy = y - yi;
+    fx = fx * fx * (3 - 2 * fx);
+    fy = fy * fy * (3 - 2 * fy);
+    float a = hashf(xi, yi), b = hashf(xi + 1, yi), c = hashf(xi, yi + 1), d = hashf(xi + 1, yi + 1);
+    return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+}
+
+/* Papel envelhecido: manchas, fibras e bordas queimadas. Gerado uma vez. */
+static Texture2D make_parchment(int w, int h) {
+    Image img = GenImageColor(w, h, BLANK);
+    Color *px = img.data;
+    for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++) {
+            float n = vnoise(x / 40.0f, y / 40.0f) * 0.5f + vnoise(x / 13.0f, y / 13.0f) * 0.3f + vnoise(x / 4.0f, y / 4.0f) * 0.2f;
+            float fiber = vnoise(x / 60.0f, y / 2.5f) * 0.08f;
+            float e = fminf(fminf(x, w - 1 - x), fminf(y, h - 1 - y)) / 26.0f;
+            float burn = e >= 1 ? 0 : (1 - e) * (1 - e);
+            float k = (0.86f + 0.16f * n - fiber) * (1 - 0.5f * burn);
+            px[y * w + x] = (Color){(unsigned char)fminf(255, 178 * k), (unsigned char)fminf(255, 150 * k), (unsigned char)fminf(255, 108 * k), 255};
+        }
+    Texture2D t = LoadTextureFromImage(img);
+    UnloadImage(img);
+    SetTextureFilter(t, TEXTURE_FILTER_BILINEAR);
+    return t;
+}
+
+/* Janela de pergaminho no jeito RPG Maker: papel, borda dupla de tinta. */
+static void parchment(Rectangle r, float alpha) {
+    DrawRectangle((int)r.x + 4, (int)r.y + 6, (int)r.width, (int)r.height, fadec((Color){10, 6, 4, 255}, 0.35f * alpha));
+    DrawTexturePro(G.parch, (Rectangle){0, 0, (float)G.parch.width, (float)G.parch.height}, r, (Vector2){0, 0}, 0, fadec(WHITE, alpha));
+    DrawRectangleLinesEx(r, 2, fadec(INK_LINE, 0.9f * alpha));
+    DrawRectangleLinesEx((Rectangle){r.x + 7, r.y + 7, r.width - 14, r.height - 14}, 1, fadec(INK_LINE, 0.4f * alpha));
+}
+
+/* Bastões de madeira nas pontas, como um rolo aberto. */
+static void scroll_rods(Rectangle r, float alpha) {
+    for (int side = 0; side < 2; side++) {
+        float x = side ? r.x + r.width - 8 : r.x - 10;
+        Rectangle rod = {x, r.y - 10, 18, r.height + 20};
+        DrawRectangleGradientH((int)rod.x, (int)rod.y, 9, (int)rod.height, fadec((Color){70, 42, 24, 255}, alpha), fadec((Color){130, 84, 48, 255}, alpha));
+        DrawRectangleGradientH((int)rod.x + 9, (int)rod.y, 9, (int)rod.height, fadec((Color){130, 84, 48, 255}, alpha), fadec((Color){60, 36, 20, 255}, alpha));
+        DrawCircle((int)(rod.x + 9), (int)rod.y, 8, fadec((Color){150, 44, 32, 255}, alpha));
+        DrawCircle((int)(rod.x + 9), (int)(rod.y + rod.height), 8, fadec((Color){150, 44, 32, 255}, alpha));
+    }
+}
+
+/* Cursor de seleção: faixa escura translúcida e a seta à esquerda. */
+static void ui_cursor(Rectangle r, float alpha) {
+    float pulse = 0.6f + 0.4f * sinf(G.time * 5);
+    DrawRectangleRec(r, fadec((Color){90, 56, 30, 255}, 0.22f * pulse * alpha));
+    DrawRectangleLinesEx(r, 1, fadec(INK_LINE, 0.5f * alpha));
+    float cy = r.y + r.height / 2, cx = r.x + 16 + sinf(G.time * 6) * 2;
+    DrawTriangle((Vector2){cx, cy - 7}, (Vector2){cx, cy + 7}, (Vector2){cx + 10, cy}, fadec(SEAL_RED, alpha));
+}
+
+/* Gauge no jeito RPG Maker: trilho escuro, preenchimento em degradê, rastro claro. */
+static void ui_gauge(float x, float y, float w, float value, float ghost, float max, Color a, Color b) {
+    float h = 10, k = clampf(value / max, 0, 1), g = clampf(ghost / max, 0, 1);
+    DrawRectangle((int)x - 1, (int)y - 1, (int)w + 2, (int)h + 2, INK_LINE);
+    DrawRectangle((int)x, (int)y, (int)w, (int)h, (Color){46, 34, 26, 255});
+    DrawRectangle((int)x, (int)y, (int)(w * g), (int)h, (Color){246, 232, 196, 170});
+    DrawRectangleGradientH((int)x, (int)y, (int)(w * k), (int)h, a, b);
+    DrawRectangle((int)x, (int)y + 1, (int)(w * k), 2, (Color){255, 245, 220, 60});
+}
+
+/* Linha de menu dentro de uma janela de pergaminho. */
+static void ui_menu_row(const char *label, float cx, float y, bool selected, Color c, float alpha) {
+    float w = 360;
+    if (selected) ui_cursor((Rectangle){cx - w / 2, y - 8, w, 48}, alpha);
+    ink_center(label, cx, y, 30, fadec(selected ? c : INK_SOFT, alpha));
+}
+
+static Vector2 mouse_ui(void) {
+    float sw = (float)GetScreenWidth(), sh = (float)GetScreenHeight();
+    float scale = fminf(sw / RW, sh / RH);
+    if (scale >= 1) scale = floorf(scale);
+    float ox = floorf((sw - RW * scale) / 2), oy = floorf((sh - RH * scale) / 2);
+    Vector2 m = GetMousePosition();
+    float u = RW * scale / UI_W;
+    return (Vector2){(m.x - ox) / u, (m.y - oy) / u};
+}
+
+/* ------------------------------------------------------------------ */
+/* Progresso salvo                                                     */
+/* ------------------------------------------------------------------ */
+
+#define SAVE_FILE "apara_save.txt"
+
+static void save_game(void) {
+    if (G.demo) return;
+    FILE *f = fopen(SAVE_FILE, "w");
+    if (!f) return;
+    fprintf(f, "APARA-C 2\n%d %u %d %d\n", G.camp.index, G.camp.clearedMask, G.camp.completed, G.camp.loreSeen);
+    fclose(f);
+}
+
+static bool load_game(void) {
+    FILE *f = fopen(SAVE_FILE, "r");
+    if (!f) return false;
+    int idx = 0, done = 0, lore = 0, ver = 0;
+    unsigned mask = 0;
+    bool ok = fscanf(f, "APARA-C %d\n%d %u %d %d", &ver, &idx, &mask, &done, &lore) == 5;
+    fclose(f);
+    if (!ok || idx < 0 || idx >= ROSTER_SIZE) return false;
+    G.camp.index = idx;
+    G.camp.clearedMask = mask;
+    G.camp.completed = done;
+    G.camp.loreSeen = lore;
+    return true;
+}
+
+/* ------------------------------------------------------------------ */
+/* Troca de tela                                                       */
+/* ------------------------------------------------------------------ */
+
+static void set_state(State s) {
+    G.state = s;
+    G.stateTime = 0;
+}
+
+static void setup_actors(void) {
+    int idx = G.camp.index < ROSTER_SIZE ? G.camp.index : ROSTER_SIZE - 1;
+    Look rl = REN_LOOK, bl = MASTER_LOOKS[idx];
+    rl.size *= ACTOR_SCALE;
+    bl.size *= ACTOR_SCALE;
+    G.bossHome = BOSS_X + (bl.size - ACTOR_SCALE) * 30;
+    rig_init(&G.ren, &rl, REN_X, GROUND_LOW, false);
+    rig_init(&G.boss, &bl, G.bossHome, GROUND_LOW, true);
+    G.boss.time = 1.3f; /* respiração fora de fase com a de Ren */
+    G.ren.hideBlade = G.boss.hideBlade = katana3d_ready();
+    G.bossWinding = false;
+    G.renParryTime = -1;
+    G.renKnock = G.bossKnock = 0;
+    G.staggerTime = 0;
+    memset(&G.sword, 0, sizeof G.sword);
+}
+
+static void start_master(int index) {
+    G.camp.index = index;
+    G.m = roster_get(index);
+    G.defeatsHere = 0;
+    setup_actors();
+    fx_clear(&G.fx);
+    memset(&G.ctx, 0, sizeof G.ctx);
+    audio_music(G.m->arena);
+    audio_music_intensity(0);
+}
+
+static void start_lines(const Line *lines, int count, State s) {
+    G.lines = lines;
+    G.lineCount = count;
+    G.lineIndex = 0;
+    G.typeChars = 0;
+    set_state(s);
+}
+
+static void start_duel(void) {
+    settings_default(&G.settings);
+    settings_for_level(&G.settings, campaign_defeated(&G.camp));
+    G.special = false;
+    duel_init(&G.duel, &G.settings, G.m, (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919));
+    setup_actors();
+    fx_clear(&G.fx);
+    G.shownRen = G.ghostRen = G.settings.renPosture;
+    G.shownBoss = G.ghostBoss = G.m->posture;
+    G.hitstop = 0;
+    G.slowmo = 1;
+    G.slowmoTime = 0;
+    G.blackoutTarget = 0;
+    G.ctx.blackout = 0;
+    G.ctx.seal = 0;
+    G.lightningTimer = 3;
+    audio_music_intensity(0);
+    banner(G.m->style, PAPER);
+    set_state(ST_DUEL);
+}
+
+/* ------------------------------------------------------------------ */
+/* Desarme: a espada do mestre voa, gira e crava no chão               */
+/* ------------------------------------------------------------------ */
+
+static void start_disarm(void) {
+    Rig *b = &G.boss, *r = &G.ren;
+    FlySword *s = &G.sword;
+    Vector2 h, t;
+    rig_sword_line(b, &h, &t);
+    s->active = true;
+    s->stuck = false;
+    s->len = sqrtf((t.x - h.x) * (t.x - h.x) + (t.y - h.y) * (t.y - h.y));
+    s->pos = (Vector2){(h.x + t.x) / 2, (h.y + t.y) / 2};
+    s->angle = fmodf(atan2f(t.y - h.y, t.x - h.x) * RAD2DEG + 360, 360);
+    s->vel = (Vector2){58, -175}; /* para cima e para trás do mestre */
+    s->target = 100;               /* ponta para baixo, levemente inclinada */
+    s->landY = GROUND_LOW + 3 - sinf(s->target * DEG2RAD) * s->len / 2;
+    float dy = s->landY - s->pos.y;
+    s->flight = (-s->vel.y + sqrtf(s->vel.y * s->vel.y + 2 * SWORD_GRAVITY * dy)) / SWORD_GRAVITY;
+    s->spin = (s->target + 720 - s->angle) / s->flight; /* duas voltas e meia até cravar */
+    s->t = 0;
+    s->blade = b->look.blade;
+    s->style = katana_style(&b->look);
+    b->noSword = true;
+    b->trail = false;
+
+    rig_pose(b, POSE_DISARMED, 0.12f, EASE_OUT);
+    rig_then(b, POSE_KNEEL, 0.9f, EASE_INOUT);
+    b->breath = 0.4f;
+    rig_pose(r, POSE_DEFLECT, 0.05f, EASE_OUT);
+    G.renStepFrom = r->offsetX;
+
+    audio_play(SND_SWING, 1, 1.4f);
+    fx_popup(&G.fx, "desarmado", (Vector2){160, 44}, 1.2f, PAPER);
+    G.slowmo = 0.3f;
+    G.slowmoTime = 1.0f;
+    set_state(ST_FINISHER);
+}
+
+static void update_sword(float dt) {
+    FlySword *s = &G.sword;
+    if (!s->active) return;
+    if (s->stuck) { s->stuckTime += dt; return; }
+    s->t += dt;
+    s->vel.y += SWORD_GRAVITY * dt;
+    s->pos.x += s->vel.x * dt;
+    s->pos.y += s->vel.y * dt;
+    s->angle += s->spin * dt;
+    if (s->t >= s->flight) {
+        s->stuck = true;
+        s->stuckTime = 0;
+        s->pos.y = s->landY;
+        s->angle = s->target;
+        Vector2 tip = {s->pos.x + cosf(s->target * DEG2RAD) * s->len / 2, GROUND_LOW};
+        fx_burst(&G.fx, P_DUST, tip, 10, 50, 0.9f, -1.57f, (Color){210, 190, 160, 170}, (Color){140, 120, 100, 120});
+        fx_burst(&G.fx, P_SPARK, tip, 6, 70, 0.8f, -1.57f, (Color){255, 240, 200, 255}, (Color){255, 190, 90, 255});
+        fx_kick(&G.fx, 1.5f, 0.15f);
+        audio_play(SND_THUD, 0.7f, 1);
+    }
+}
+
+/* A espada do desarme em 3D: gira no ar e no próprio eixo, e crava pela ponta. */
+static void draw_sword_3d(Color light) {
+    FlySword *s = &G.sword;
+    if (!s->active) return;
+    float wobble = s->stuck ? sinf(s->stuckTime * 38) * expf(-s->stuckTime * 5) * 7 : 0;
+    float a = (s->angle + wobble) * DEG2RAD;
+    Vector2 dir = {cosf(a), sinf(a)};
+    Vector2 c = s->pos;
+    if (s->stuck) {
+        Vector2 tip = {s->pos.x + cosf(s->target * DEG2RAD) * s->len / 2, s->pos.y + sinf(s->target * DEG2RAD) * s->len / 2};
+        c = (Vector2){tip.x - dir.x * s->len / 2, tip.y - dir.y * s->len / 2};
+    }
+    Vector2 butt = {c.x - dir.x * s->len / 2, c.y - dir.y * s->len / 2};
+    Vector2 tip = {c.x + dir.x * s->len / 2, c.y + dir.y * s->len / 2};
+    float roll = s->stuck ? 0 : s->t * 900;
+    katana3d_draw(butt, tip, roll, &s->style, light);
+}
+
+static void draw_sword(void) {
+    FlySword *s = &G.sword;
+    if (!s->active) return;
+    float wobble = s->stuck ? sinf(s->stuckTime * 38) * expf(-s->stuckTime * 5) * 7 : 0;
+    int ghosts = s->stuck ? 0 : 3;
+    for (int g = ghosts; g >= 0; g--) {
+        float a = (s->angle - s->spin * 0.012f * g + wobble) * DEG2RAD;
+        /* Cravada, gira em volta da ponta; no ar, em volta do centro. */
+        Vector2 dir = {cosf(a), sinf(a)};
+        Vector2 c = s->pos;
+        if (s->stuck) {
+            Vector2 tip = {s->pos.x + cosf(s->target * DEG2RAD) * s->len / 2, s->pos.y + sinf(s->target * DEG2RAD) * s->len / 2};
+            c = (Vector2){tip.x - dir.x * s->len / 2, tip.y - dir.y * s->len / 2};
+        }
+        Vector2 hilt = {roundf(c.x - dir.x * s->len / 2), roundf(c.y - dir.y * s->len / 2)};
+        Vector2 guard = {roundf(hilt.x + dir.x * s->len * 0.2f), roundf(hilt.y + dir.y * s->len * 0.2f)};
+        Vector2 tip = {roundf(c.x + dir.x * s->len / 2), roundf(c.y + dir.y * s->len / 2)};
+        float alpha = g == 0 ? 1 : 0.25f / g;
+        DrawLineEx(hilt, guard, 2.5f, fadec((Color){50, 30, 30, 255}, alpha));
+        DrawLineEx(guard, tip, 1.6f, fadec(s->blade, alpha));
+        if (g == 0) DrawCircleV(guard, 1.8f, (Color){170, 140, 70, 255});
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Reação aos eventos do duelo                                         */
+/* ------------------------------------------------------------------ */
+
+static Vector2 clash_point(void) { return rig_sword_mid(&G.ren); }
+
+/* Tipo do golpe k da sequência: o primeiro é o da sequência; os seguintes alternam. */
+static MoveLook strike_look(void) {
+    const Move *mv = duel_move(&G.duel);
+    MoveLook look = mv ? mv->look : LOOK_HIGH;
+    int k = G.duel.comboStrike;
+    if (k == 0) return look;
+    if (look == LOOK_THRUST) return k % 2 ? LOOK_HIGH : LOOK_THRUST;
+    if (k % 2 == 0) return look;
+    return look == LOOK_HIGH ? LOOK_LOW : LOOK_HIGH;
+}
+
+static Pose windup_pose(MoveLook l) { return l == LOOK_LOW ? POSE_WINDUP_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_WINDUP); }
+static Pose rearm_pose(MoveLook l) { return l == LOOK_LOW ? POSE_REARM_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_REARM_HIGH); }
+static Pose contact_pose(MoveLook l) { return l == LOOK_LOW ? POSE_CONTACT_LOW : (l == LOOK_THRUST ? POSE_CONTACT_THRUST : POSE_CONTACT); }
+static Pose parry_pose(MoveLook l) { return l == LOOK_LOW ? POSE_PARRY_LOW : (l == LOOK_THRUST ? POSE_PARRY_THRUST : POSE_PARRY); }
+
+static void on_impact(const DuelEvent *e) {
+    Vector2 at = clash_point();
+    Rig *r = &G.ren, *b = &G.boss;
+    b->trail = false;
+    switch (e->judgement) {
+        case J_PERFEITO:
+            G.hitstop = e->flag ? G.settings.breakHitstop : G.settings.perfectHitstop;
+            G.aberr = 1.5f;
+            audio_play(SND_PERFECT, 1, 1 + (rand() % 5) * 0.02f);
+            fx_burst(&G.fx, P_SPARK, at, 26, 170, 1.2f, -0.5f, (Color){255, 255, 230, 255}, (Color){255, 200, 90, 255});
+            fx_burst(&G.fx, P_SPARK, at, 12, 130, 0.9f, 3.14f + 0.5f, (Color){255, 240, 200, 255}, (Color){255, 180, 60, 255});
+            fx_ring(&G.fx, at, 180, 0.3f, 2, (Color){255, 245, 210, 230});
+            fx_flash(&G.fx, (Color){255, 250, 235, 90}, 1);
+            fx_kick(&G.fx, 1.5f, 0.1f);
+            rig_pose(r, POSE_DEFLECT, 0.05f, EASE_OUT);
+            rig_then(r, POSE_IDLE, 0.4f, EASE_INOUT);
+            rig_pose(b, POSE_HURT, 0.07f, EASE_OUT);
+            rig_then(b, POSE_IDLE, 0.5f, EASE_INOUT);
+            b->flash = 1;
+            b->flashColor = WHITE;
+            G.bossKnock = 7;
+            G.renKnock = 1;
+            break;
+        case J_BOM:
+            G.hitstop = G.settings.goodHitstop;
+            audio_play(SND_GOOD, 0.9f, 1);
+            fx_burst(&G.fx, P_SPARK, at, 10, 110, 1.0f, -0.6f, (Color){255, 230, 120, 255}, (Color){255, 170, 50, 255});
+            fx_flash(&G.fx, (Color){255, 230, 120, 40}, 1);
+            rig_pose(r, POSE_DEFLECT, 0.06f, EASE_OUT);
+            rig_then(r, POSE_IDLE, 0.4f, EASE_INOUT);
+            rig_pose(b, POSE_FOLLOW, 0.08f, EASE_OUT);
+            rig_then(b, POSE_IDLE, 0.45f, EASE_INOUT);
+            G.renKnock = 4;
+            G.bossKnock = 3;
+            break;
+        default: {
+            G.hitstop = G.settings.badHitstop;
+            G.aberr = 2.5f;
+            audio_play(SND_BAD, 1, 1);
+            Vector2 hit = {r->x + 4, GROUND_LOW - 28};
+            fx_burst(&G.fx, P_SPARK, hit, 14, 140, 1.1f, 3.14f, (Color){255, 80, 60, 255}, (Color){255, 160, 90, 255});
+            fx_burst(&G.fx, P_DUST, (Vector2){r->x, GROUND_LOW - 1}, 6, 40, 0.6f, 3.14f, (Color){200, 180, 160, 140}, (Color){120, 100, 90, 110});
+            fx_flash(&G.fx, (Color){255, 40, 30, 80}, 1);
+            fx_kick(&G.fx, 3, 0.2f);
+            rig_pose(r, POSE_HURT, 0.06f, EASE_OUT);
+            rig_then(r, POSE_IDLE, 0.45f, EASE_INOUT);
+            r->flash = 1;
+            r->flashColor = (Color){255, 80, 60, 255};
+            rig_pose(b, POSE_FOLLOW, 0.1f, EASE_OUT);
+            rig_then(b, POSE_IDLE, 0.5f, EASE_INOUT);
+            G.renKnock = 9;
+            G.renParryTime = -1;
+            break;
+        }
+    }
+    if (e->flag) {
+        G.aberr = 3.5f;
+        /* Quebra final: vitória suave; selo do oboro: estalo mais contido. */
+        if (G.duel.phase == PH_FINISHED) audio_play(SND_VICTORY, 0.9f, 1);
+        else audio_play(SND_BREAK, 0.45f, 1);
+        Vector2 c = {b->x, GROUND_LOW - 30};
+        fx_burst(&G.fx, P_SHARD, c, 20, 160, 1.4f, -1.57f, (Color){230, 230, 255, 255}, (Color){180, 140, 255, 255});
+        fx_ring(&G.fx, c, 320, 0.5f, 3, WHITE);
+        fx_flash(&G.fx, WHITE, 1);
+        fx_kick(&G.fx, 4, 0.35f);
+        rig_pose(b, POSE_STAGGER, 0.15f, EASE_OUT);
+        G.staggerTime = 0.01f;
+        G.bossKnock = 10;
+        G.slowmo = 0.3f;
+        G.slowmoTime = 0.8f;
+    }
+}
+
+static void handle_events(void) {
+    DuelEvent ev[MAX_EVENTS];
+    int n = duel_drain(&G.duel, ev, MAX_EVENTS);
+    const MasterProfile *m = G.m;
+    Rig *b = &G.boss, *r = &G.ren;
+    for (int i = 0; i < n; i++) {
+        const DuelEvent *e = &ev[i];
+        switch (e->kind) {
+            case EV_WINDUP:
+                G.strikeFeint = e->flag;
+                G.windupLen = fmaxf(0.1f, e->a - G.settings.attackLead);
+                G.windupTime = 0;
+                G.bossWinding = true;
+                G.staggerTime = 0;
+                /* A preparação leva exatamente o tempo até a partida da lâmina.
+                 * Cada tipo de sequência tem sua preparação: é assim que se lê o moveset. */
+                if (G.duel.comboStrike == 0) rig_pose(b, windup_pose(strike_look()), G.windupLen, EASE_INOUT);
+                else rig_pose(b, rearm_pose(strike_look()), G.windupLen, EASE_OUT);
+                G.blackoutTarget = G.duel.blackout ? 1 : 0;
+                if (m->arena == ARENA_PORTO) { audio_play(SND_DRUM, 0.9f, 1); G.ctx.beat = 1; }
+                break;
+            case EV_FEINT_LAUNCH:
+                G.bossWinding = false;
+                if (duel_stance(&G.duel)->mimicParry) {
+                    rig_pose(b, POSE_PARRY, 0.08f, EASE_OUT);
+                    rig_then(b, POSE_WINDUP, 0.25f, EASE_INOUT);
+                } else {
+                    /* Parte como um golpe de verdade e trava no instante falso. */
+                    rig_pose(b, POSE_FEINT, G.settings.attackLead, EASE_IN);
+                    rig_then(b, windup_pose(strike_look()), 0.2f, EASE_OUT);
+                }
+                audio_play(SND_SWING, 0.5f, 1.2f);
+                if (m->rhythmJitter > 0) G.hopTime = 0.3f; /* neon jax ameaça pular */
+                break;
+            case EV_LAUNCH:
+                G.bossWinding = false;
+                /* O corte chega em POSE_CONTACT exatamente no instante do contato. */
+                rig_pose(b, contact_pose(strike_look()), G.settings.attackLead, EASE_IN);
+                b->trail = true;
+                audio_play(SND_SWING, 0.9f, 1);
+                break;
+            case EV_CUE:
+                audio_play(e->flag ? SND_CUE_FEINT : SND_CUE, m->cueAudio, 1);
+                break;
+            case EV_PRESS:
+                rig_pose(r, G.duel.phase == PH_WINDUP ? parry_pose(strike_look()) : POSE_PARRY, 0.06f, EASE_OUT);
+                G.renParryTime = 0;
+                audio_play(SND_GESTURE, 0.8f, 1 + (rand() % 7) * 0.02f);
+                break;
+            case EV_IMPACT:
+                G.special = false;
+                on_impact(e);
+                G.renParryTime = -1;
+                G.blackoutTarget = 0;
+                break;
+            case EV_STANCE:
+                banner(duel_stance(&G.duel)->name, AGED_GOLD);
+                break;
+            case EV_SEAL: {
+                static const char *names[] = {"primeiro selo", "segundo selo", "terceiro selo"};
+                banner(names[e->i < 3 ? e->i : 2], VERMILION);
+                audio_play(SND_SEAL, 1, 1);
+                audio_play(SND_THUNDER, 0.8f, 1);
+                G.ctx.seal = e->i;
+                G.ctx.lightning = 1;
+                audio_music_intensity(e->i / 2.0f);
+                break;
+            }
+            case EV_SPECIAL:
+                G.special = true;
+                audio_play(SND_DRUM, 1, 0.7f);
+                break;
+            case EV_COMBO:
+                break;
+            case EV_FINISHED:
+                if (e->flag) {
+                    start_disarm();
+                } else {
+                    rig_pose(r, POSE_FALLEN, 0.7f, EASE_OUT);
+                    r->breath = 0;
+                    G.slowmo = 0.4f;
+                    G.slowmoTime = 0.9f;
+                    fx_popup(&G.fx, "postura quebrada", (Vector2){160, 44}, 1.2f, VERMILION);
+                    audio_play(SND_DEFEAT, 0.9f, 1);
+                    G.defeatsHere++;
+                    G.defeatIndex = 0;
+                    set_state(ST_DEFEAT);
+                }
+                break;
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Por quadro                                                          */
+/* ------------------------------------------------------------------ */
+
+/* Guarda uma silhueta de quem está em movimento rápido. */
+static void update_ghosts(float dt) {
+    for (int i = 0; i < GHOST_MAX; i++) G.ghosts[i].life = fmaxf(0, G.ghosts[i].life - dt * 4);
+    Rig *src = G.boss.trail ? &G.boss : ((G.ren.trail || (G.renParryTime >= 0 && G.renParryTime < 0.12f)) ? &G.ren : NULL);
+    if (!src) return;
+    G.ghostTimer -= dt;
+    if (G.ghostTimer > 0) return;
+    G.ghostTimer = 0.03f;
+    G.ghostHead = (G.ghostHead + 1) % GHOST_MAX;
+    G.ghosts[G.ghostHead].rig = *src;
+    G.ghosts[G.ghostHead].rig.flash = 0;
+    G.ghosts[G.ghostHead].life = 1;
+    G.ghosts[G.ghostHead].color = (G.ghostHead % 2) ? (Color){80, 220, 255, 255} : (Color){255, 70, 200, 255};
+}
+
+static void update_actors(float dt) {
+    Rig *b = &G.boss, *r = &G.ren;
+    rig_update(r, dt);
+    rig_update(b, dt);
+    /* Gesto sem golpe: Ren volta à guarda sozinho. */
+    if (G.renParryTime >= 0) {
+        G.renParryTime += dt;
+        if (G.renParryTime > 0.3f) { rig_pose(r, POSE_IDLE, 0.22f, EASE_INOUT); G.renParryTime = -1; }
+    }
+    /* Golpe especial: o mestre arde em vermelhão enquanto arma. */
+    if (G.special && G.state == ST_DUEL) {
+        b->flash = 0.35f + 0.2f * sinf(G.time * 14);
+        b->flashColor = VERMILION;
+    }
+    /* Tensão no fim da preparação. */
+    if (G.bossWinding) {
+        G.windupTime += dt;
+        G.ctx.danger = clampf(G.windupTime / G.windupLen, 0, 1);
+    } else {
+        G.ctx.danger *= expf(-dt * 6);
+    }
+    /* BIG BOSS se recompõe depois de perder um selo. */
+    if (G.staggerTime > 0) {
+        G.staggerTime += dt;
+        if (G.state == ST_DUEL && G.staggerTime > 1.3f) {
+            rig_pose(b, POSE_IDLE, 0.5f, EASE_INOUT);
+            G.staggerTime = 0;
+        }
+    }
+    if (G.hopTime > 0) {
+        G.hopTime = fmaxf(0, G.hopTime - dt);
+        b->hopY = sinf((1 - G.hopTime / 0.3f) * PI) * 9;
+    } else {
+        b->hopY = 0;
+    }
+    update_ghosts(dt);
+    G.renKnock *= expf(-dt * 9);
+    G.bossKnock *= expf(-dt * 7);
+    r->offsetX = -G.renKnock;
+    b->offsetX = G.bossKnock;
+}
+
+static void update_ctx(float dt) {
+    G.ctx.t += dt;
+    if (G.m->arena == ARENA_RAVE) {
+        float ph = fmodf(G.ctx.t * 128 / 60.0f, 1);
+        G.ctx.beat = fmaxf(G.ctx.beat * expf(-dt * 8), ph < 0.08f ? 1 : 0);
+    } else {
+        G.ctx.beat *= expf(-dt * 6);
+    }
+    G.ctx.blackout += (G.blackoutTarget - G.ctx.blackout) * (1 - expf(-dt * (G.blackoutTarget > G.ctx.blackout ? 5 : 3)));
+    G.ctx.lightning = fmaxf(0, G.ctx.lightning - dt * 3);
+    if (G.m->arena == ARENA_CIDADELA && G.ctx.seal >= 1) {
+        G.lightningTimer -= dt;
+        if (G.lightningTimer <= 0) {
+            G.lightningTimer = 3 + frand(0, 5);
+            G.ctx.lightning = 1;
+            audio_play(SND_THUNDER, 0.6f, frand(0.8f, 1.1f));
+        }
+    }
+}
+
+static void update_hud_values(float dt) {
+    float k = 1 - expf(-dt * 18), g = 1 - expf(-dt * 2.5f);
+    G.shownRen += (G.duel.renPosture - G.shownRen) * k;
+    G.shownBoss += (G.duel.bossPosture - G.shownBoss) * k;
+    if (G.ghostRen < G.shownRen) G.ghostRen = G.shownRen; else G.ghostRen += (G.shownRen - G.ghostRen) * g;
+    if (G.ghostBoss < G.shownBoss) G.ghostBoss = G.shownBoss; else G.ghostBoss += (G.shownBoss - G.ghostBoss) * g;
+}
+
+static void update_duel(float dtReal) {
+    float dt = dtReal * G.slowmo;
+    if (G.slowmoTime > 0) { G.slowmoTime -= dtReal; if (G.slowmoTime <= 0) G.slowmo = 1; }
+    bool press = pressed();
+    if (G.demo && G.duel.phase == PH_WINDUP && !G.duel.attempted && G.duel.strikeAt - G.duel.clock <= 0.03) press = true;
+
+    /* Hitstop congela o duelo e as poses. */
+    if (G.hitstop > 0) {
+        G.hitstop -= dtReal;
+        if (press) duel_press(&G.duel);
+        handle_events();
+        audio_music_duck(0.6f);
+        return;
+    }
+    audio_music_duck(0);
+    if (press) {
+        /* O clique chegou em algum ponto do último quadro: aplicamos no meio. */
+        duel_tick(&G.duel, dt * 0.5);
+        duel_press(&G.duel);
+        duel_tick(&G.duel, dt * 0.5);
+    } else {
+        duel_tick(&G.duel, dt);
+    }
+    handle_events();
+    if (G.state == ST_DUEL || G.state == ST_DEFEAT) update_actors(dt);
+}
+
+static void update_finisher(float dt) {
+    /* O mestre perde a espada: ela voa, gira e crava; ele cai de joelhos e Ren aponta a lâmina. */
+    float t = G.stateTime;
+    Rig *r = &G.ren, *b = &G.boss;
+    if (t > 0.45f && r->to.sword != POSE_POINT.sword) rig_pose(r, POSE_POINT, 0.6f, EASE_INOUT);
+    r->offsetX = G.renStepFrom + (14 - G.renStepFrom) * smooth((t - 0.45f) / 0.6f);
+    G.bossKnock *= expf(-dt * 3);
+    b->offsetX = G.bossKnock;
+    rig_update(r, dt);
+    rig_update(b, dt);
+    update_sword(dt);
+    if (G.sword.stuck && G.sword.stuckTime > 1.1f) start_lines(G.m->outro, G.m->outroCount, ST_OUTRO);
+}
+
+/* ------------------------------------------------------------------ */
+/* Mundo (320 x 180)                                                   */
+/* ------------------------------------------------------------------ */
+
+/* Câmera 2D que desenha as coordenadas do mundo (320 x 180) na textura grande. */
+/* Câmera dos lutadores: pixel art de 320 x 180, sem ampliar. */
+static void begin_actors(void) {
+    Camera2D cam = {0};
+    cam.zoom = 1;
+    BeginMode2D(cam);
+}
+
+static void begin_world(Vector2 offset) {
+    Camera2D cam = {0};
+    cam.offset = (Vector2){offset.x * RS, offset.y * RS};
+    cam.zoom = RS;
+    BeginMode2D(cam);
+}
+
+/* Lutador no estilo de ação 2D: contorno escuro de 1 px e um filete de neon do lado de trás. */
+static void draw_fighter(const Rig *r, Color light, Color rim, bool dark) {
+    static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    Color ink = {16, 12, 18, 255};
+    Rig t = *r;
+    for (int k = 0; k < 4; k++) {
+        t.x = r->x + off[k][0];
+        t.y = r->y + off[k][1];
+        rig_draw_flat(&t, ink);
+    }
+    if (dark) {
+        rig_draw_flat(r, (Color){24, 20, 36, 255});
+        return;
+    }
+    t = *r;
+    t.x = r->x + (r->faceLeft ? 1 : -1);
+    t.y = r->y - 1;
+    rig_draw_flat(&t, rim);
+    rig_draw(r, light);
+}
+
+static void draw_rigs(Color light) {
+    BeginTextureMode(G.actors);
+    ClearBackground(BLANK);
+    bool dark = G.ctx.blackout > 0.5f;
+    Color rim = arena_rim(G.m->arena);
+    begin_actors();
+    /* Rastros: silhuetas que ficam para trás, alternando ciano e magenta. */
+    for (int n = GHOST_MAX; n >= 1; n--) {
+        int i = (G.ghostHead - n + GHOST_MAX * 2) % GHOST_MAX;
+        if (G.ghosts[i].life <= 0) continue;
+        Color c = G.ghosts[i].color;
+        c.a = (unsigned char)(150 * G.ghosts[i].life);
+        rig_draw_flat(&G.ghosts[i].rig, c);
+    }
+    draw_fighter(&G.boss, light, rim, dark);
+    draw_fighter(&G.ren, light, rim, false);
+    EndMode2D();
+    if (katana3d_ready()) {
+        katana3d_begin(LOW_W, LOW_H);
+        Vector2 butt, tip;
+        /* Quem olha para a direita segura com meia volta: fio para baixo, ponta subindo. */
+        KatanaStyle bs = katana_style(&G.boss.look), rs = katana_style(&G.ren.look);
+        Color bossLight = dark ? (Color){40, 34, 54, 255} : light;
+        if (!G.boss.noSword) { rig_sword_line(&G.boss, &butt, &tip); katana3d_draw(butt, tip, G.boss.faceLeft ? 0 : 180, &bs, bossLight); }
+        rig_sword_line(&G.ren, &butt, &tip);
+        katana3d_draw(butt, tip, G.ren.faceLeft ? 0 : 180, &rs, light);
+        draw_sword_3d(light);
+        katana3d_end();
+    } else {
+        begin_actors();
+        draw_sword();
+        EndMode2D();
+    }
+    EndTextureMode();
+}
+
+static void draw_shadow(const Rig *r) {
+    float w = 11 * r->look.size * (1 - clampf(r->hopY / 20, 0, 0.6f));
+    DrawEllipse((int)(r->x + r->offsetX), GROUND_LOW, w, 2, (Color){0, 0, 0, 80});
+}
+
+static void draw_arena(void) {
+    const MasterProfile *m = G.m;
+    Color light = arena_light(m->arena, &G.ctx);
+    draw_rigs(light);
+
+    BeginTextureMode(G.scene);
+    ClearBackground(BLACK);
+    Vector2 sh = fx_shake_offset(&G.fx);
+    begin_world(sh);
+    arena_draw_back(m->arena, &G.ctx);
+    /* Reflexo no chão polido: a camada dos lutadores espelhada no chão. */
+    float refl = arena_reflection(m->arena);
+    if (refl > 0) {
+        BeginScissorMode(0, GROUND_LOW * RS, RW, (LOW_H - GROUND_LOW) * RS);
+        DrawTexturePro(G.actors.texture, (Rectangle){0, 0, LOW_W, LOW_H}, (Rectangle){0, 2 * GROUND_LOW - LOW_H, LOW_W, LOW_H},
+                       (Vector2){0, 0}, 0, fadec(WHITE, refl));
+        EndScissorMode();
+    }
+    draw_shadow(&G.boss);
+    draw_shadow(&G.ren);
+    DrawTexturePro(G.actors.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, (Rectangle){0, 0, LOW_W, LOW_H}, (Vector2){0, 0}, 0, WHITE);
+    fx_draw_world(&G.fx);
+    arena_draw_front(m->arena, &G.ctx);
+    EndMode2D();
+    /* Postura baixa: a borda pulsa. */
+    if (G.state == ST_DUEL && G.duel.renPosture <= G.settings.renPosture * 0.25f) {
+        float p = 0.5f + 0.5f * sinf(G.time * 7);
+        for (int i = 0; i < 4; i++)
+            DrawRectangleLinesEx((Rectangle){i * 6.0f, i * 6.0f, RW - i * 12.0f, RH - i * 12.0f}, 6, fadec((Color){170, 0, 0, 255}, (0.4f - i * 0.09f) * p));
+    }
+    fx_draw_flash(&G.fx, RW, RH);
+    EndTextureMode();
+}
+
+/* As ilustrações sobem 18 px para o chão ficar acima da faixa de texto. */
+static void draw_illustration(void (*fn)(int, float), int page, float t) {
+    BeginTextureMode(G.scene);
+    ClearBackground((Color){20, 16, 14, 255});
+    begin_world((Vector2){0, -18});
+    fn(page, t);
+    EndMode2D();
+    EndTextureMode();
+}
+
+static void ending_scene(int page, float t) { (void)page; lore_draw_ending(t); }
+
+static void draw_world(void) {
+    switch (G.state) {
+        case ST_TITLE:
+            BeginTextureMode(G.scene);
+            ClearBackground(BLACK);
+            begin_world((Vector2){0, 0});
+            lore_draw_title(G.time);
+            EndMode2D();
+            if (katana3d_ready()) {
+                /* A katana gira devagar no próprio eixo, abaixo do título. */
+                katana3d_begin(LOW_W, LOW_H);
+                float bob = sinf(G.time * 1.3f) * 1.5f;
+                KatanaStyle ks = katana_style(&REN_LOOK);
+                katana3d_draw((Vector2){92, 86 + bob}, (Vector2){232, 80 + bob}, 180 + sinf(G.time * 0.8f) * 14, &ks, WHITE);
+                katana3d_end();
+            }
+            EndTextureMode();
+            break;
+        case ST_LORE:
+            BeginTextureMode(G.scene);
+            ClearBackground(BLACK);
+            begin_world((Vector2){0, 0});
+            lore_draw_title(G.time);
+            DrawRectangle(0, 0, LOW_W, LOW_H, (Color){10, 6, 8, 110});
+            EndMode2D();
+            EndTextureMode();
+            break;
+        case ST_ENDING: draw_illustration(ending_scene, 0, G.stateTime); break;
+        case ST_SENSEI: draw_illustration(lore_draw_scene, 0, G.time); break;
+        case ST_TRAIL:
+            BeginTextureMode(G.scene);
+            ClearBackground(BLACK);
+            begin_world((Vector2){0, 0});
+            lore_draw_trail(&G.camp, G.time, G.camp.index);
+            EndMode2D();
+            EndTextureMode();
+            break;
+        default: draw_arena(); break;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Interface (1280 x 720)                                              */
+/* ------------------------------------------------------------------ */
+
+/* Placa de status no jeito RPG Maker: pergaminho pequeno com nome e gauge de postura. */
+static void ui_status(Rectangle r, const char *name, const char *note, float value, float ghost, float max, Color a, Color b) {
+    parchment(r, 0.96f);
+    ink_bold(name, r.x + 18, r.y + 12, 24, INK_TEXT);
+    if (note && note[0]) ink_right(note, r.x + r.width - 18, r.y + 16, 18, INK_SOFT);
+    ink("postura", r.x + 18, r.y + 46, 16, INK_SOFT);
+    ui_gauge(r.x + 96, r.y + 49, r.width - 116, value, ghost, max, a, b);
+}
+
+static void ui_hud(void) {
+    const MasterProfile *m = G.m;
+    bool pressure = duel_under_pressure(&G.duel) && m->sealCount <= 1;
+    const char *note = m->sealCount > 1 ? duel_stance(&G.duel)->name : m->style;
+    Rectangle top = {UI_W / 2 - 230, 16, 460, 76};
+    ui_status(top, lower(m->name), lower(note), G.shownBoss, G.ghostBoss, m->posture,
+              pressure ? (Color){150, 40, 30, 255} : (Color){78, 62, 104, 255}, pressure ? (Color){200, 80, 50, 255} : (Color){134, 108, 160, 255});
+    if (m->sealCount > 1)
+        for (int i = 0; i < m->sealCount; i++) {
+            Vector2 c = {top.x + 30 + ui_width_f(G.uiBold, lower(m->name), 24) + 14 + i * 20.0f, top.y + 25};
+            DrawCircleV(c, 7, i < G.duel.seal ? (Color){120, 100, 80, 160} : SEAL_RED);
+            DrawCircleLines((int)c.x, (int)c.y, 7, INK_LINE);
+        }
+    Rectangle bot = {UI_W / 2 - 230, UI_H - 92, 460, 76};
+    bool low = G.shownRen <= G.settings.renPosture * 0.25f;
+    ui_status(bot, "musashi", NULL, G.shownRen, G.ghostRen, G.settings.renPosture,
+              low ? (Color){150, 40, 30, 255} : (Color){170, 76, 30, 255}, low ? (Color){210, 70, 50, 255} : (Color){226, 142, 60, 255});
+
+    if (G.bannerTime > 0) {
+        float a = clampf(G.bannerTime * 2, 0, 1);
+        const char *t = lower(G.banner);
+        float w = ui_width_f(G.uiBold, t, 34) + 100;
+        Rectangle r = {UI_W / 2 - w / 2, 262, w, 64};
+        parchment(r, a);
+        scroll_rods(r, a);
+        ink_bold_center(t, UI_W / 2.0f, r.y + 14, 34, fadec(INK_TEXT, a));
+    }
+}
+
+static void ui_dialogue(const char *header) {
+    ui_text(lower(header), 48, 30, 24, (Color){230, 216, 190, 220});
+    if (G.lineIndex >= G.lineCount) return;
+    const Line *l = &G.lines[G.lineIndex];
+    bool ren = strcmp(l->speaker, "musashi") == 0;
+    Rectangle r = {80, 512, UI_W - 160, 180};
+    parchment(r, 1);
+    scroll_rods(r, 1);
+    /* Caixa do nome separada, como no RPG Maker. */
+    const char *who = lower(l->speaker);
+    float nw = ui_width_f(G.uiBold, who, 26) + 44;
+    Rectangle nb = {r.x + 24, r.y - 34, nw, 46};
+    parchment(nb, 1);
+    ink_bold(who, nb.x + 22, nb.y + 10, 26, ren ? (Color){170, 70, 24, 255} : SEAL_RED);
+    int vis = utf8_visible(l->text, G.typeChars);
+    ink_wrapped(l->text, r.x + 36, r.y + 34, r.width - 72, 28, INK_TEXT, vis);
+    if (vis >= (int)strlen(l->text)) {
+        float bob = sinf(G.time * 6) * 3;
+        Vector2 c = {r.x + r.width - 40, r.y + r.height - 30 + bob};
+        DrawTriangle((Vector2){c.x - 8, c.y - 5}, (Vector2){c.x, c.y + 5}, (Vector2){c.x + 8, c.y - 5}, SEAL_RED);
+    }
+}
+
+static void ui_text_band(const char *textStr, int visible) {
+    Rectangle r = {80, 512, UI_W - 160, 180};
+    parchment(r, 1);
+    scroll_rods(r, 1);
+    ink_wrapped(textStr, r.x + 36, r.y + 30, r.width - 72, 28, INK_TEXT, visible);
+}
+
+
+/* Quebra um parágrafo em linhas que cabem em `width`. Devolve quantas. */
+static int wrap_lines(const char *t, float size, float width, char lines[][256], int max) {
+    int n = 0;
+    char line[256] = "", trial[512];
+    while (*t && n < max) {
+        int wl = 0;
+        while (t[wl] && t[wl] != ' ') wl++;
+        snprintf(trial, sizeof trial, "%s%s%.*s", line, line[0] ? " " : "", wl, t);
+        if (line[0] && ui_width(trial, size) > width) {
+            snprintf(lines[n++], 256, "%s", line);
+            snprintf(line, sizeof line, "%.*s", wl, t);
+        } else {
+            snprintf(line, sizeof line, "%s", trial);
+        }
+        t += wl;
+        while (*t == ' ') t++;
+    }
+    if (line[0] && n < max) snprintf(lines[n++], 256, "%s", line);
+    return n;
+}
+
+/* Texto do narrador subindo pela tela, com as bordas esmaecidas. */
+static void ui_narration(void) {
+    /* Uma coluna alinhada à esquerda, como página de livro, no meio da tela. */
+    float size = 26, lh = size * 1.7f, width = 760, x = UI_W / 2 - width / 2;
+    DrawRectangleGradientH((int)x - 200, 0, 200, UI_H, fadec(INK, 0), fadec(INK, 0.45f));
+    DrawRectangle((int)x, 0, (int)width, UI_H, fadec(INK, 0.45f));
+    DrawRectangleGradientH((int)(x + width), 0, 200, UI_H, fadec(INK, 0.45f), fadec(INK, 0));
+    float y = UI_H * 0.62f - G.loreScroll;
+    char lines[16][256];
+    for (int p = 0; p < LORE_PAGES; p++) {
+        int n = wrap_lines(lore_page(p), size, width, lines, 16);
+        for (int i = 0; i < n; i++, y += lh) {
+            /* Surge embaixo e some no alto. */
+            float a = clampf((y - 90) / 160, 0, 1) * clampf((UI_H - 40 - y) / 160, 0, 1);
+            bool quote = (unsigned char)lore_page(p)[0] == 0xE2; /* começa com aspas curvas */
+            if (a > 0.01f) ui_text(lines[i], x + (quote ? 48 : 0), y, size, fadec(quote ? (Color){232, 196, 120, 255} : (Color){232, 220, 196, 255}, a));
+        }
+        y += lh * 1.1f;
+    }
+    G.loreHeight = y + G.loreScroll - UI_H * 0.62f;
+    /* Anel de pular: só aparece enquanto Esc está pressionado. */
+    if (G.skipHold > 0.02f) {
+        Vector2 c = {UI_W - 70, UI_H - 70};
+        float k = clampf(G.skipHold / SKIP_HOLD, 0, 1);
+        DrawRing(c, 18, 23, 0, 360, 48, (Color){60, 50, 44, 160});
+        DrawRing(c, 18, 23, -90, -90 + 360 * k, 48, (Color){210, 180, 130, 230});
+        ui_center("esc", c.x, c.y - 11, 18, (Color){200, 186, 160, 200});
+    }
+}
+
+static void ui_title(void) {
+    DrawRectangleGradientV(0, 360, UI_W, 360, fadec(INK, 0), fadec(INK, 0.5f));
+    float bob = sinf(G.time * 1.2f) * 4;
+    draw_text_f(G.uiBold, "apara", UI_W / 2.0f - ui_width_f(G.uiBold, "apara", 130) / 2, 96 + bob, 130, (Color){238, 214, 170, 255}, true);
+    ui_center("a trilha dos doze mestres", UI_W / 2.0f, 250, 26, (Color){236, 220, 190, 230});
+    int options = G.hasSave ? 3 : 2;
+    Rectangle w = {UI_W / 2.0f - 220, 396, 440, 40 + options * 60.0f};
+    parchment(w, 1);
+    const char *all[] = {"continuar", "novo jogo", "ver a lore"};
+    for (int i = 0; i < options; i++)
+        ui_menu_row(all[G.hasSave ? i : i + 1], UI_W / 2.0f, 420 + i * 60.0f, i == G.menuIndex, INK_TEXT, 1);
+}
+
+
+/* Botão de voltar ao menu, no canto da trilha. */
+static const Rectangle MENU_BUTTON = {UI_W - 48 - 170, 22, 170, 46};
+
+static void go_to_menu(void) {
+    G.paused = false;
+    G.hasSave = true;
+    G.menuIndex = 0;
+    save_game();
+    audio_music(MUSIC_TITLE);
+    set_state(ST_TITLE);
+}
+
+static void ui_trail(void) {
+    const MasterProfile *m = roster_get(G.camp.index);
+    char buf[128];
+    snprintf(buf, sizeof buf, "vencidos %d de %d", campaign_defeated(&G.camp), MASTER_COUNT);
+    Rectangle tag = {40, 18, ui_width(buf, 24) + 48, 48};
+    parchment(tag, 1);
+    ink(buf, tag.x + 24, tag.y + 12, 24, INK_TEXT);
+    bool hover = CheckCollisionPointRec(mouse_ui(), MENU_BUTTON);
+    parchment(MENU_BUTTON, 1);
+    if (hover) ui_cursor((Rectangle){MENU_BUTTON.x + 8, MENU_BUTTON.y + 6, MENU_BUTTON.width - 16, MENU_BUTTON.height - 12}, 1);
+    ink_center("menu", MENU_BUTTON.x + MENU_BUTTON.width / 2 + 6, MENU_BUTTON.y + 10, 24, INK_TEXT);
+
+    Rectangle r = {70, 500, UI_W - 140, 190};
+    parchment(r, 1);
+    scroll_rods(r, 1);
+    if (m->isBigBoss) snprintf(buf, sizeof buf, "último duelo");
+    else snprintf(buf, sizeof buf, "mestre %d de %d", m->id, MASTER_COUNT);
+    ink(buf, r.x + 36, r.y + 22, 22, INK_SOFT);
+    ink_bold(lower(m->name), r.x + 36, r.y + 50, 48, m->isBigBoss ? SEAL_RED : (Color){160, 66, 22, 255});
+    ink(lower(m->title), r.x + 36, r.y + 118, 24, INK_TEXT);
+    float cx = r.x + r.width - 36;
+    draw_text_f(G.uiBold, lower(m->style), cx - ui_width_f(G.uiBold, lower(m->style), 28), r.y + 60, 28, INK_TEXT, false);
+    ink_right(lower(m->venue), cx, r.y + 110, 22, INK_SOFT);
+    if (fmodf(G.time, 1.4f) < 1.0f) ink_right("clique para lutar", cx, r.y + 22, 22, INK_SOFT);
+}
+
+
+/* Opções da derrota: o sensei só aparece para quem já caiu duas vezes aqui. */
+static int defeat_options(const char **labels) {
+    int n = 0;
+    labels[n++] = "tentar de novo";
+    if (G.defeatsHere >= 2) labels[n++] = "conversar com hanzo";
+    labels[n++] = "voltar à trilha";
+    return n;
+}
+
+static void ui_defeat(void) {
+    if (G.stateTime < 1.2f) return;
+    float a = clampf((G.stateTime - 1.2f) * 3, 0, 1);
+    DrawRectangle(0, 0, UI_W, UI_H, fadec((Color){20, 6, 4, 255}, 0.6f * a));
+    draw_text_f(G.uiBold, "derrota", UI_W / 2.0f - ui_width_f(G.uiBold, "derrota", 80) / 2, 190, 80, fadec((Color){206, 70, 50, 255}, a), true);
+    if (G.stateTime < 1.6f) return;
+    const char *labels[3];
+    int n = defeat_options(labels);
+    parchment((Rectangle){UI_W / 2.0f - 220, 356, 440, 40 + n * 56.0f}, a);
+    for (int i = 0; i < n; i++) {
+        bool sensei = strcmp(labels[i], "conversar com hanzo") == 0;
+        ui_menu_row(labels[i], UI_W / 2.0f, 380 + i * 56.0f, i == G.defeatIndex, sensei ? SEAL_RED : INK_TEXT, a);
+    }
+}
+
+static void ui_cleared(void) {
+    float a = clampf(G.stateTime * 3, 0, 1);
+    DrawRectangle(0, 0, UI_W, UI_H, fadec(INK, 0.45f * a));
+    Rectangle r = {UI_W / 2.0f - 300, 200, 600, 220};
+    parchment(r, a);
+    scroll_rods(r, a);
+    ink_bold_center("mestre vencido", UI_W / 2.0f, r.y + 34, 50, fadec(INK_TEXT, a));
+    ink_bold_center(lower(G.m->name), UI_W / 2.0f, r.y + 104, 34, fadec((Color){160, 66, 22, 255}, a));
+    if (G.stateTime > 1.0f)
+        ink_center(campaign_big_boss_open(&G.camp) ? "os doze caíram. oboro espera no castelo." : "clique para seguir a trilha",
+                   UI_W / 2.0f, r.y + 162, 24, fadec(INK_SOFT, a));
+}
+
+
+static const char *ENDING_TEXT =
+    "Oboro caiu de joelhos, sem espada, e pela primeira vez entendeu o que o velho ensinava. Musashi subiu a serra "
+    "e devolveu a espada ao mestre de um braço só. Hanzo a recebeu sem dizer nada. Não precisava.";
+
+static void ui_pause(void) {
+    DrawRectangle(0, 0, UI_W, UI_H, fadec(INK, 0.6f));
+    Rectangle r = {UI_W / 2 - 250, 170, 500, 360};
+    parchment(r, 1);
+    scroll_rods(r, 1);
+    ink_bold_center("pausa", UI_W / 2.0f, r.y + 30, 54, INK_TEXT);
+    const char *items[] = {"esc   continuar", "t   voltar à trilha", G.fx.shakeEnabled ? "f   tremor ligado" : "f   tremor desligado",
+                           "m   voltar ao menu", "q   sair"};
+    for (int i = 0; i < 5; i++) ink_center(items[i], UI_W / 2.0f, r.y + 120 + i * 44.0f, 26, INK_SOFT);
+}
+
+
+static void draw_ui(void) {
+    switch (G.state) {
+        case ST_TITLE: ui_title(); break;
+        case ST_LORE: ui_narration(); break;
+        case ST_TRAIL: ui_trail(); break;
+        case ST_SENSEI: {
+            DrawRectangleGradientV(0, 0, UI_W, UI_H, fadec(INK, 0.2f), fadec(INK, 0.6f));
+            char head[96];
+            snprintf(head, sizeof head, "hanzo fala sobre %s", G.m->name);
+            ui_dialogue(head);
+            break;
+        }
+        case ST_ENDING:
+            ui_text_band(ENDING_TEXT, utf8_visible(ENDING_TEXT, G.typeChars));
+            if (G.typeChars > strlen(ENDING_TEXT)) ui_center("fim", UI_W / 2.0f, 40, 72, OCHRE);
+            break;
+        default:
+            if (G.state == ST_DUEL || G.state == ST_DEFEAT || G.state == ST_FINISHER) ui_hud();
+            fx_draw_popups(&G.fx, G.ui, UNIT);
+            if (G.state == ST_INTRO || G.state == ST_OUTRO) ui_dialogue(G.m->venue);
+            if (G.state == ST_DEFEAT) ui_defeat();
+            if (G.state == ST_CLEARED) ui_cleared();
+            break;
+    }
+    if (G.paused) ui_pause();
+}
+
+/* ------------------------------------------------------------------ */
+/* Telas                                                               */
+/* ------------------------------------------------------------------ */
+
+static void update_title(void) {
+    int options = G.hasSave ? 3 : 2;
+    if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) { G.menuIndex = (G.menuIndex + 1) % options; audio_play(SND_UI, 1, 1); }
+    if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) { G.menuIndex = (G.menuIndex + options - 1) % options; audio_play(SND_UI, 1, 1); }
+    Vector2 v = mouse_ui();
+    for (int i = 0; i < options; i++) {
+        Rectangle r = {UI_W / 2.0f - 200, 414 + i * 60.0f, 400, 54};
+        if (CheckCollisionPointRec(v, r) && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.menuIndex = i;
+    }
+    if (!pressed() || G.stateTime < 0.3f) return;
+    audio_play(SND_UI, 1, 1.2f);
+    int choice = G.hasSave ? G.menuIndex : G.menuIndex + 1; /* 0 continuar, 1 novo, 2 lore */
+    if (choice == 0) {
+        if (G.camp.completed) { campaign_reset(&G.camp); G.camp.loreSeen = true; }
+        set_state(ST_TRAIL);
+        audio_music(MUSIC_TITLE);
+        return;
+    }
+    if (choice == 1) campaign_reset(&G.camp);
+    G.lorePage = 0;
+    G.typeChars = 0;
+    G.loreScroll = 0;
+    G.skipHold = 0;
+    set_state(ST_LORE);
+    audio_music(MUSIC_LORE);
+}
+
+static void finish_lore(void) {
+    G.camp.loreSeen = true;
+    save_game();
+    set_state(ST_TRAIL);
+    audio_music(MUSIC_TITLE);
+}
+
+/* A abertura: o texto sobe sozinho; segurar o clique acelera; segurar Esc enche o anel e pula. */
+static void update_lore(float dt) {
+    bool fast = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsKeyDown(KEY_SPACE) || (G.demo && !G.shotFile);
+    G.loreScroll += dt * (fast ? 90 : 26);
+    if (IsKeyDown(KEY_ESCAPE)) G.skipHold += dt;
+    else G.skipHold = fmaxf(0, G.skipHold - dt * 3);
+    if (G.skipHold >= SKIP_HOLD) { finish_lore(); return; }
+    if (G.loreHeight > 0 && G.loreScroll > G.loreHeight + UI_H * 0.55f) finish_lore();
+}
+
+static void update_trail(void) {
+    if (G.stateTime < 0.4f) return;
+    if (IsKeyPressed(KEY_ESCAPE) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse_ui(), MENU_BUTTON))) {
+        audio_play(SND_UI, 1, 1);
+        go_to_menu();
+        return;
+    }
+    if (!pressed()) return;
+    audio_play(SND_UI, 1, 1);
+    start_master(G.camp.index);
+    start_lines(G.m->intro, G.m->introCount, ST_INTRO);
+}
+
+static void update_lines(float dt, void (*done)(void)) {
+    const Line *l = &G.lines[G.lineIndex];
+    int len = (int)strlen(l->text);
+    float before = G.typeChars;
+    G.typeChars += dt * 50;
+    if ((int)G.typeChars / 3 != (int)before / 3 && G.typeChars < len) audio_play(SND_TYPE, 0.5f, strcmp(l->speaker, "musashi") ? 0.8f : 1.1f);
+    if (!pressed() || G.stateTime < 0.25f) return;
+    if (G.typeChars < len) { G.typeChars = (float)len; return; }
+    audio_play(SND_UI, 0.8f, 1);
+    G.lineIndex++;
+    G.typeChars = 0;
+    if (G.lineIndex >= G.lineCount) done();
+}
+
+static void intro_done(void) { start_duel(); }
+
+static void outro_done(void) {
+    campaign_mark_cleared(&G.camp, G.camp.index);
+    if (G.m->isBigBoss) {
+        campaign_advance(&G.camp);
+        save_game();
+        G.typeChars = 0;
+        set_state(ST_ENDING);
+        audio_music(MUSIC_LORE);
+        return;
+    }
+    set_state(ST_CLEARED);
+    audio_play(SND_UI, 0.6f, 0.8f);
+}
+
+static void start_sensei(void) {
+    start_lines(G.m->sensei, G.m->senseiCount, ST_SENSEI);
+    audio_music(MUSIC_LORE);
+}
+
+static void sensei_done(void) {
+    audio_music(G.m->arena);
+    start_duel();
+}
+
+static void update_defeat(float dt) {
+    if (G.slowmoTime > 0) { G.slowmoTime -= dt; if (G.slowmoTime <= 0) G.slowmo = 1; }
+    update_actors(dt * G.slowmo);
+    if (G.stateTime < 1.6f) return;
+    const char *labels[3];
+    int n = defeat_options(labels);
+    if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) { G.defeatIndex = (G.defeatIndex + 1) % n; audio_play(SND_UI, 1, 1); }
+    if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) { G.defeatIndex = (G.defeatIndex + n - 1) % n; audio_play(SND_UI, 1, 1); }
+    Vector2 v = mouse_ui();
+    for (int i = 0; i < n; i++) {
+        Rectangle r = {UI_W / 2.0f - 220, 374 + i * 56.0f, 440, 52};
+        if (CheckCollisionPointRec(v, r) && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.defeatIndex = i;
+    }
+    const char *choice = NULL;
+    if (IsKeyPressed(KEY_T)) choice = "voltar à trilha";
+    else if (IsKeyPressed(KEY_H) && G.defeatsHere >= 2) choice = "conversar com hanzo";
+    else if (pressed()) choice = labels[G.defeatIndex < n ? G.defeatIndex : 0];
+    if (!choice) return;
+    audio_play(SND_UI, 1, 1);
+    if (!strcmp(choice, "tentar de novo")) start_duel();
+    else if (!strcmp(choice, "conversar com hanzo")) start_sensei();
+    else { audio_music(MUSIC_TITLE); set_state(ST_TRAIL); }
+}
+
+static void update_cleared(float dt) {
+    rig_update(&G.ren, dt);
+    rig_update(&G.boss, dt);
+    update_sword(dt);
+    if (G.stateTime > 1.0f && pressed()) {
+        campaign_advance(&G.camp);
+        save_game();
+        audio_music(MUSIC_TITLE);
+        set_state(ST_TRAIL);
+    }
+}
+
+static void update_ending(float dt) {
+    G.typeChars += dt * 30;
+    if (G.stateTime > 2 && pressed()) {
+        if (G.typeChars < (float)strlen(ENDING_TEXT)) { G.typeChars = (float)strlen(ENDING_TEXT); return; }
+        G.hasSave = true;
+        G.menuIndex = 0;
+        set_state(ST_TITLE);
+        audio_music(MUSIC_TITLE);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+
+static bool in_arena_state(void) {
+    return G.state == ST_INTRO || G.state == ST_DUEL || G.state == ST_FINISHER || G.state == ST_OUTRO ||
+           G.state == ST_CLEARED || G.state == ST_DEFEAT;
+}
+
+static void parse_args(int argc, char **argv, int *startMaster, bool *direct, const char **startState) {
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "--master") && i + 1 < argc) *startMaster = atoi(argv[++i]) - 1;
+        else if (!strcmp(argv[i], "--duel")) *direct = true;
+        else if (!strcmp(argv[i], "--demo")) G.demo = true;
+        else if (!strcmp(argv[i], "--state") && i + 1 < argc) *startState = argv[++i];
+        else if (!strcmp(argv[i], "--shot") && i + 2 < argc) { G.shotFile = argv[++i]; G.shotTime = (float)atof(argv[++i]); }
+    }
+}
+
+static void step(float dtReal) {
+    switch (G.state) {
+        case ST_TITLE: update_title(); break;
+        case ST_LORE: update_lore(dtReal); break;
+        case ST_TRAIL: update_trail(); break;
+        case ST_INTRO:
+            update_lines(dtReal, intro_done);
+            update_actors(dtReal);
+            break;
+        case ST_DUEL: update_duel(dtReal); break;
+        case ST_FINISHER: {
+            float dt = dtReal;
+            if (G.hitstop > 0) { G.hitstop -= dtReal; dt = 0; }
+            if (G.slowmoTime > 0) { G.slowmoTime -= dtReal; dt *= G.slowmo; if (G.slowmoTime <= 0) G.slowmo = 1; }
+            G.stateTime += dt - dtReal; /* o desarme corre no tempo lento */
+            update_finisher(dt);
+            break;
+        }
+        case ST_OUTRO:
+            update_lines(dtReal, outro_done);
+            rig_update(&G.ren, dtReal);
+            rig_update(&G.boss, dtReal);
+            update_sword(dtReal);
+            break;
+        case ST_CLEARED: update_cleared(dtReal); break;
+        case ST_DEFEAT: update_defeat(dtReal); break;
+        case ST_SENSEI: update_lines(dtReal, sensei_done); break;
+        case ST_ENDING: update_ending(dtReal); break;
+    }
+    if (in_arena_state()) {
+        update_ctx(dtReal * (G.hitstop > 0 ? 0.1f : 1));
+        fx_update(&G.fx, dtReal * (G.hitstop > 0 ? 0.25f : 1));
+        update_hud_values(dtReal);
+    }
+}
+
+static Font load_font(const char *path, int size) {
+    int cps[256 - 32 + 3], n = 0;
+    for (int c = 32; c < 256; c++) cps[n++] = c;
+    cps[n++] = 0x2014; /* travessão */
+    cps[n++] = 0x2026; /* reticências */
+    cps[n++] = 0x201C;
+    Font f = LoadFontEx(path, size, cps, n);
+    if (f.texture.id == 0 || f.glyphCount == 0) return GetFontDefault();
+    GenTextureMipmaps(&f.texture);
+    SetTextureFilter(f.texture, TEXTURE_FILTER_TRILINEAR);
+    return f;
+}
+
+int main(int argc, char **argv) {
+    int startMaster = -1;
+    bool direct = false;
+    const char *startState = NULL;
+    parse_args(argc, argv, &startMaster, &direct, &startState);
+
+    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
+    SetTraceLogLevel(LOG_WARNING);
+    InitWindow(UI_W, UI_H, "APARA - A Trilha dos Doze Mestres");
+    SetExitKey(KEY_NULL);
+    SetWindowMinSize(LOW_W, LOW_H);
+    ChangeDirectory(GetApplicationDirectory());
+    srand((unsigned)time(NULL));
+
+    G.scene = LoadRenderTexture(RW, RH);
+    G.actors = LoadRenderTexture(LOW_W, LOW_H);
+    SetTextureFilter(G.scene.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(G.actors.texture, TEXTURE_FILTER_POINT);
+    G.post = LoadShaderFromMemory(NULL, POST_FS);
+    G.locAberr = GetShaderLocation(G.post, "aberr");
+    G.locRes = GetShaderLocation(G.post, "res");
+    katana3d_load("assets/katana");
+    G.ui = load_font("assets/fonts/Montserrat-Medium.ttf", 96);
+    G.uiBold = load_font("assets/fonts/Montserrat-SemiBold.ttf", 96);
+    G.parch = make_parchment(512, 256);
+    audio_init();
+    fx_init(&G.fx);
+    settings_default(&G.settings);
+    campaign_reset(&G.camp);
+    G.hasSave = load_game();
+    G.slowmo = 1;
+    G.m = roster_get(G.camp.index);
+    setup_actors();
+
+    if (startMaster >= 0 && startMaster < ROSTER_SIZE) {
+        for (int i = 0; i < startMaster; i++) campaign_mark_cleared(&G.camp, i);
+        start_master(startMaster);
+        if (startState && !strcmp(startState, "sensei")) start_sensei();
+        else if (direct) start_duel();
+        else start_lines(G.m->intro, G.m->introCount, ST_INTRO);
+    } else if (startState && !strcmp(startState, "lore")) {
+        set_state(ST_LORE);
+        audio_music(MUSIC_LORE);
+    } else if (startState && !strcmp(startState, "trail")) {
+        set_state(ST_TRAIL);
+        audio_music(MUSIC_TITLE);
+    } else if (startState && !strcmp(startState, "ending")) {
+        set_state(ST_ENDING);
+        audio_music(MUSIC_LORE);
+    } else {
+        set_state(ST_TITLE);
+        audio_music(MUSIC_TITLE);
+    }
+
+    double wall = 0;
+    while (!WindowShouldClose()) {
+        float dtReal = GetFrameTime();
+        wall += dtReal;
+        /* Travamento longo: pausa em vez de engolir o golpe. */
+        if (dtReal > 0.2f) {
+            dtReal = 0;
+            if (G.state == ST_DUEL && !G.shotFile) G.paused = true;
+        }
+        if (!IsWindowFocused() && G.state == ST_DUEL && !G.shotFile) G.paused = true;
+        if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
+        if (IsKeyPressed(KEY_F)) G.fx.shakeEnabled = !G.fx.shakeEnabled;
+        if (IsKeyPressed(KEY_ESCAPE) && in_arena_state()) G.paused = !G.paused;
+        if (G.paused) {
+            if (IsKeyPressed(KEY_T)) { G.paused = false; audio_music(MUSIC_TITLE); set_state(ST_TRAIL); }
+            if (IsKeyPressed(KEY_M)) go_to_menu();
+            if (IsKeyPressed(KEY_Q)) break;
+            dtReal = 0;
+        }
+
+        G.time += dtReal;
+        G.stateTime += dtReal;
+        G.bannerTime = fmaxf(0, G.bannerTime - dtReal);
+        G.aberr = fmaxf(0, G.aberr - dtReal * 6);
+        if (!G.paused) step(dtReal);
+        draw_world();
+
+        /* Mundo: ampliação só por número inteiro e sem filtro. Sem mistura,
+         * o alfa acumulado na textura não escurece a imagem. */
+        BeginDrawing();
+        ClearBackground(BLACK);
+        float sw = (float)GetScreenWidth(), sh = (float)GetScreenHeight();
+        float scale = fminf(sw / RW, sh / RH);
+        if (scale >= 1) scale = floorf(scale);
+        Rectangle dst = {floorf((sw - RW * scale) / 2), floorf((sh - RH * scale) / 2), RW * scale, RH * scale};
+        rlDrawRenderBatchActive();
+        rlDisableColorBlend();
+        /* Pós-processo: aberração cromática nos impactos, scanlines e vinheta. */
+        float res[2] = {LOW_W, LOW_H}; /* scanlines e aberração na escala dos lutadores */
+        SetShaderValue(G.post, G.locAberr, &G.aberr, SHADER_UNIFORM_FLOAT);
+        SetShaderValue(G.post, G.locRes, res, SHADER_UNIFORM_VEC2);
+        BeginShaderMode(G.post);
+        DrawTexturePro(G.scene.texture, (Rectangle){0, 0, RW, -RH}, dst, (Vector2){0, 0}, 0, WHITE);
+        EndShaderMode();
+        rlDrawRenderBatchActive();
+        rlEnableColorBlend();
+        /* Interface: coordenadas de 1280 x 720, esticadas até o tamanho do mundo na tela. */
+        rlPushMatrix();
+        rlTranslatef(dst.x, dst.y, 0);
+        rlScalef(dst.width / UI_W, dst.width / UI_W, 1);
+        draw_ui();
+        rlDrawRenderBatchActive();
+        rlPopMatrix();
+
+        if (G.shotFile && wall >= G.shotTime) {
+            Image img = LoadImageFromScreen();
+            ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+            ImageResize(&img, UI_W, UI_H);
+            ExportImage(img, G.shotFile);
+            UnloadImage(img);
+            EndDrawing();
+            break;
+        }
+        EndDrawing();
+    }
+
+    audio_shutdown();
+    katana3d_unload();
+    UnloadShader(G.post);
+    UnloadRenderTexture(G.scene);
+    UnloadRenderTexture(G.actors);
+    if (G.ui.texture.id != GetFontDefault().texture.id) UnloadFont(G.ui);
+    if (G.uiBold.texture.id != GetFontDefault().texture.id) UnloadFont(G.uiBold);
+    UnloadTexture(G.parch);
+    CloseWindow();
+    return 0;
+}
