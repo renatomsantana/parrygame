@@ -35,6 +35,10 @@ enum {
     EX_APRON = 1 << 6,       /* avental */
 };
 
+/* Arma principal e o que vai na outra mão. */
+typedef enum { WEAPON_KATANA, WEAPON_SPEAR, WEAPON_STAFF } WeaponKind;
+typedef enum { OFF_NONE, OFF_DAGGER, OFF_SWORD, OFF_SHIELD } OffhandKind;
+
 typedef struct {
     Color coat, sleeve, pants, skin, hair, blade, band;
     HatKind hat;
@@ -52,6 +56,8 @@ typedef struct {
     /* Katana. */
     Color handle;        /* cor do cabo (alfa 0 = escuro padrão) */
     float bladeWidth;    /* 1 = normal */
+    WeaponKind weapon;   /* katana (e parentes), lança ou cajado */
+    OffhandKind offhand; /* segunda lâmina ou escudo na mão de trás */
 } Look;
 
 typedef struct {
@@ -68,8 +74,11 @@ typedef struct {
     bool hasNext;
     float time;          /* relógio próprio (respiração) */
     float breath;        /* 0..1: quanto respira */
+    float fatigue;       /* 0..1: postura perdida; muda a respiração, a guarda e o tremor */
     float shiver;        /* tremor da tensão (px) */
     float hopY;
+    float footF, footB;  /* posição atual dos pés (segue a pose com atraso) */
+    float liftF, liftB;  /* quanto cada pé está levantado */
     /* Movimento secundário: ponta da faixa e barra do casaco. */
     Vector2 band[4], bandVel[4];
     Vector2 cape[5], capeVel[5];
@@ -108,5 +117,6 @@ void rig_draw(const Rig *r, Color light);
 void rig_draw_flat(const Rig *r, Color c);               /* silhueta chapada */
 Vector2 rig_sword_mid(const Rig *r);                     /* meio da lâmina, para faíscas */
 void rig_sword_line(const Rig *r, Vector2 *hilt, Vector2 *tip); /* empunhadura e ponta, no mundo */
+bool rig_offhand_line(const Rig *r, Vector2 *hilt, Vector2 *tip); /* lâmina da outra mão; false sem ela */
 
 #endif

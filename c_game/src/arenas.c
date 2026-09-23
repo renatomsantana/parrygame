@@ -28,12 +28,6 @@ static Color fade(Color c, float a) {
     return c;
 }
 
-/* Degradê liso (o cenário é desenhado em alta resolução). */
-static void bands(int x, int y, int w, int h, Color top, Color bot, int n) {
-    (void)n;
-    DrawRectangleGradientV(x, y, w, h, top, bot);
-}
-
 /* Brilho suave: círculo em degradê somado à cena. */
 static void glow(float x, float y, float r, Color c) {
     BeginBlendMode(BLEND_ADDITIVE);
@@ -277,51 +271,6 @@ static void cobertura(const ArenaCtx *c) {
         float ph = fract(t * 1.3f + hash1(i)), x = hash1(i + 11) * LOW_W, y = GROUND_LOW + 2 + hash1(i + 13) * 26;
         DrawEllipseLines((int)x, (int)y, ph * 3, ph * 0.8f, fade(C(170, 180, 220), 1 - ph));
     }
-}
-
-/* ------------------------------------------------------------------ */
-/* 5. Galeria                                                          */
-/* ------------------------------------------------------------------ */
-static void galeria(const ArenaCtx *c) {
-    float t = c->t;
-    vgrad(0, 0, LOW_W, GROUND_LOW, C(226, 220, 214), C(190, 182, 178));
-    vgrad(0, 0, LOW_W, 18, C(60, 58, 60), C(120, 116, 116));
-    for (int f = 0; f < 5; f++) {
-        float x = 14 + f * 62, y = 34 + (f % 2) * 8, w = 44, h = 52 - (f % 2) * 8;
-        /* Cone de luz do trilho no teto. */
-        BeginBlendMode(BLEND_ADDITIVE);
-        DrawTriangle((Vector2){x + w / 2, 16}, (Vector2){x - 8, y + h + 20}, (Vector2){x + w + 8, y + h + 20}, CA(255, 240, 210, 26));
-        EndBlendMode();
-        rect(x + w / 2 - 2, 14, 4, 3, C(40, 40, 44));
-        rect(x + 3, y + 3, w + 6, h + 6, CA(0, 0, 0, 50));
-        vgrad(x - 3, y - 3, w + 6, h + 6, C(214, 170, 80), C(150, 104, 40));
-        vgrad(x, y, w, h, C(40, 30, 50), C(22, 18, 30));
-        for (int k = 0; k < 7; k++) {
-            float cx = x + w / 2 + sinf(t * 0.5f + k * 1.3f + f) * w * 0.3f;
-            float cy = y + h / 2 + cosf(t * 0.4f + k + f) * h * 0.3f;
-            Color col = ColorFromHSV(fmodf(t * 20 + k * 50 + f * 40, 360), 0.65f, 0.85f);
-            DrawCircleGradient((Vector2){cx, cy}, 5 + k * 0.8f, fade(col, 0.85f), fade(col, 0));
-        }
-        if (f == 2) DrawTriangle((Vector2){x + 20, y}, (Vector2){x + 14, y + h}, (Vector2){x + 28, y + h * 0.6f}, C(236, 230, 226));
-    }
-    /* Escultura no pedestal e banco. */
-    vgrad(150, 112, 20, 26, C(236, 232, 228), C(200, 194, 190));
-    DrawCircleGradient((Vector2){160, 104}, 8, C(250, 250, 248), C(180, 176, 176));
-    rect(208, 128, 40, 3, C(90, 64, 44));
-    rect(212, 131, 2, 8, C(70, 50, 34));
-    rect(242, 131, 2, 8, C(70, 50, 34));
-    for (int i = 0; i < 14; i++) {
-        float x = hash1(i) * LOW_W + sinf(t + i) * 6, y = LOW_H - fract(t * 0.05f + hash1(i + 3)) * 200;
-        DrawCircleV((Vector2){x, y}, 1 + hash1(i + 1) * 1.5f, ColorFromHSV(i * 40.0f, 0.7f, 0.9f));
-    }
-    /* Assoalho de tacos com reflexo. */
-    floor_shade(C(140, 98, 64), C(86, 58, 38));
-    for (int r = 0; r < 5; r++)
-        for (int k = 0; k < 20; k++) {
-            float x = k * 16 + (r % 2) * 8, y = GROUND_LOW - 6 + r * 7;
-            DrawRectangleLinesEx((Rectangle){x, y, 16, 7}, 0.3f, CA(60, 40, 26, 120));
-        }
-    vgrad(0, GROUND_LOW - 6, LOW_W, 14, CA(255, 240, 220, 30), CA(255, 240, 220, 0));
 }
 
 /* ------------------------------------------------------------------ */
@@ -732,75 +681,55 @@ static void cidadela(const ArenaCtx *c) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 2. Rave                                                             */
+/* Encosta da serra (jinshi): pôr do sol, serras em camadas, vento     */
 /* ------------------------------------------------------------------ */
-static void rave(const ArenaCtx *c) {
-    float t = c->t, beat = c->beat;
-    /* Porão escuro: paredes de concreto, teto baixo com canos, pouca luz. */
-    bands(0, 0, LOW_W, GROUND_LOW, C(10, 8, 14), C(20, 16, 24), 4);
-    for (int x = 0; x < LOW_W; x += 40) rect(x, 0, 1, GROUND_LOW, C(16, 13, 20));
-    rect(0, 12, LOW_W, 3, C(28, 24, 30));
-    rect(0, 20, LOW_W, 2, C(22, 18, 26));
-    for (int k = 0; k < 5; k++) rect(30 + k * 64, 12, 2, 10, C(34, 30, 36));
-    /* Balcão do bar à esquerda, com garrafas contra a luz. */
-    rect(6, 96, 70, 38, C(18, 14, 18));
-    rect(6, 94, 70, 3, C(46, 30, 26));
-    rect(10, 60, 60, 1, C(40, 30, 30));
-    for (int b = 0; b < 12; b++) {
-        float bx = 12 + b * 5;
-        Color g = b % 3 == 0 ? C(120, 70, 40) : (b % 3 == 1 ? C(50, 90, 70) : C(90, 80, 60));
-        rect(bx, 52 - (b % 2) * 2, 3, 8 + (b % 2) * 2, g);
-        rect(bx + 1, 49 - (b % 2) * 2, 1, 3, g);
-    }
-    glow(40, 58, 26, C(120, 60, 40));
-    /* Placa verde de saída e cabine do DJ. */
-    rect(286, 30, 18, 7, C(20, 120, 60));
-    glow(295, 33, 10, C(40, 200, 90));
-    rect(128, 102, 64, 22, C(16, 13, 18));
-    rect(134, 98, 52, 4, C(26, 22, 28));
-    for (int k = 0; k < 8; k++) DrawPixel(138 + k * 6, 100, fract(t * 2 + k * 0.3f) < 0.5f ? C(255, 60, 120) : C(60, 200, 255));
-    glow(160, 100, 16, C(90, 40, 120));
-    /* Dois feixes fracos atravessando a fumaça, no ritmo. */
-    BeginBlendMode(BLEND_ADDITIVE);
-    for (int i = 0; i < 2; i++) {
-        float ox = 110 + i * 100, a = sinf(t * 0.35f + i * 2) * 0.5f;
-        Vector2 o = {ox, 18}, p1 = {ox + sinf(a) * 170 - 18, 18 + cosf(a) * 170}, p2 = {ox + sinf(a) * 170 + 18, 18 + cosf(a) * 170};
-        DrawTriangle(o, p1, p2, fade(i ? C(150, 60, 200) : C(60, 120, 200), 0.05f + beat * 0.05f));
-    }
-    EndBlendMode();
-    /* Multidão: três fileiras de silhuetas de alturas diferentes, balançando. */
-    for (int row = 0; row < 3; row++) {
-        Color k = row == 0 ? C(22, 18, 28) : (row == 1 ? C(14, 11, 18) : C(8, 6, 10));
-        for (int i = 0; i < 26 - row * 4; i++) {
-            float seed = i * 3.7f + row * 31;
-            float x = hash1(seed) * (LOW_W + 20) - 10;
-            float hgt = 22 + hash1(seed + 1) * 9 + row * 4;
-            float bob = fabsf(sinf(t * (3.4f + hash1(seed + 2)) + seed)) * (1.5f + beat * 1.5f);
-            float feet = 132 + row * 8, top = feet - hgt - bob;
-            rect(x - 4, top + 6, 8, hgt - 6, k);               /* tronco */
-            DrawCircle((int)x, (int)(top + 3), 3, k);           /* cabeça */
-            if (hash1(seed + 3) > 0.7f) {                       /* braço erguido */
-                DrawLine((int)x + 3, (int)(top + 8), (int)(x + 6), (int)(top - 4 - bob), k);
-                if (hash1(seed + 4) > 0.6f) DrawPixel((int)(x + 6), (int)(top - 5 - bob), C(200, 220, 255)); /* tela de celular */
-            }
-        }
-    }
-    /* Chão de concreto molhado refletindo as luzes. */
-    rect(0, GROUND_LOW - 6, LOW_W, LOW_H, C(14, 12, 16));
+static void serra(const ArenaCtx *c) {
+    float t = c->t;
+    vgrad(0, 0, LOW_W, 70, C(58, 40, 72), C(190, 110, 110));
+    vgrad(0, 70, LOW_W, 60, C(190, 110, 110), C(255, 176, 110));
+    glow(172, 104, 80, C(255, 150, 70));
+    DrawCircleGradient((Vector2){172, 104}, 22, C(255, 240, 196), C(255, 200, 130));
     for (int i = 0; i < 6; i++) {
-        float x = fract(hash1(i) + t * 0.02f) * LOW_W;
-        rect(x, GROUND_LOW + 4 + i * 4, 10 + hash1(i + 1) * 20, 1, fade(i % 2 ? C(150, 60, 200) : C(60, 120, 200), 0.25f + beat * 0.2f));
+        float x = fract(hash1(i) + t * 0.004f * (1 + i % 3)) * 380 - 30, y = 20 + hash1(i + 4) * 44;
+        DrawEllipse((int)x, (int)y, 28 + hash1(i + 1) * 16, 3, CA(250, 180, 150, 120));
     }
-    rect(0, GROUND_LOW - 6, LOW_W, 1, C(30, 26, 34));
+    /* Três camadas de serra com névoa entre elas. */
+    Color layers[3] = {C(168, 110, 124), C(126, 80, 100), C(84, 54, 70)};
+    for (int l = 0; l < 3; l++) {
+        for (int x = 0; x < LOW_W; x++) {
+            float fx = x + l * 57;
+            float h = 70 + l * 20 + sinf(fx * (0.018f + l * 0.006f)) * (18 - l * 4) + sinf(fx * 0.061f + l) * 5;
+            vgrad(x, h, 1.05f, GROUND_LOW - h, layers[l], mix(layers[l], C(40, 24, 34), 0.3f));
+        }
+        vgrad(0, 76 + l * 20, LOW_W, 20, CA(255, 190, 150, 0), CA(255, 190, 150, 36));
+    }
+    /* Pagode distante e pinheiros torcidos pelo vento. */
+    rect(58, 88, 8, 14, C(70, 40, 54));
+    for (int k = 0; k < 3; k++) {
+        float w = 16 - k * 4, y = 88 - k * 6;
+        DrawTriangle((Vector2){62 - w / 2, y}, (Vector2){62 + w / 2, y}, (Vector2){62, y - 5}, C(70, 40, 54));
+    }
+    for (int k = 0; k < 2; k++) {
+        float px = k ? 268 : 28, sw = sinf(t * 0.9f + k) * 2;
+        line(px, GROUND_LOW - 4, px + 2 + sw, 96, 2.2f, C(40, 26, 30));
+        for (int b = 0; b < 3; b++) DrawEllipse((int)(px + 6 + sw + b * 2), (int)(100 + b * 10), 12 - b * 2, 3, C(46, 50, 44));
+    }
+    /* Campo de capim com as pontas pegando o sol. */
+    floor_shade(C(84, 58, 52), C(44, 30, 30));
+    for (int i = 0; i < 200; i++) {
+        float x = hash1(i) * LOW_W, y = GROUND_LOW + 1 + hash1(i + 5) * 28;
+        float sw = sinf(t * 1.6f + x * 0.05f) * 2.4f;
+        line(x, y, x + sw, y - 7, 0.35f, C(120, 84, 70));
+        DrawCircleV((Vector2){x + sw, y - 7}, 0.5f, C(230, 170, 120));
+    }
 }
 
 void arena_draw_back(ArenaId id, const ArenaCtx *c) {
     switch (id) {
         case ARENA_DOJO: dojo(c); break;
-        case ARENA_RAVE: rave(c); break;
+        case ARENA_SERRA: serra(c); break;
         case ARENA_CELEIRO: celeiro(c); break;
         case ARENA_COBERTURA: cobertura(c); break;
-        case ARENA_GALERIA: galeria(c); break;
         case ARENA_PORTO: porto(c); break;
         case ARENA_SALAO: salao(c); break;
         case ARENA_TREM: trem(c); break;
@@ -827,11 +756,11 @@ void arena_draw_front(ArenaId id, const ArenaCtx *c) {
                 DrawPixel((int)x, (int)y, CA(255, 225, 170, 110));
             }
             break;
-        case ARENA_RAVE:
-            /* Fumaça rasteira. */
-            for (int i = 0; i < 8; i++) {
-                float x = fract(hash1(i) + t * 0.012f) * 400 - 40, y = 120 + hash1(i + 2) * 40 + sinf(t * 0.4f + i) * 3;
-                DrawCircle((int)x, (int)y, 18 + hash1(i + 3) * 16, CA(90, 80, 110, 14));
+        case ARENA_SERRA:
+            /* Pétalas e folhas atravessando com o vento. */
+            for (int i = 0; i < 18; i++) {
+                float x = fract(hash1(i) + t * 0.05f) * 360 - 20, y = fract(hash1(i + 3) + t * 0.03f) * 190 - 5;
+                DrawEllipse((int)x, (int)y, 1.4f, 0.7f, CA(255, 200, 210, 200));
             }
             break;
         case ARENA_CELEIRO:
@@ -847,16 +776,6 @@ void arena_draw_front(ArenaId id, const ArenaCtx *c) {
             for (int i = 0; i < 50; i++) {
                 float x = fract(hash1(i) + t * 0.05f) * (LOW_W + 20) - 10, y = fract(hash1(i + 3) + t * (1.6f + hash1(i) * 0.6f)) * (LOW_H + 10) - 10;
                 DrawLine((int)x, (int)y, (int)(x - 1), (int)(y + 5), CA(170, 190, 230, 110));
-            }
-            break;
-        case ARENA_GALERIA:
-            /* Manchas de tinta atravessando na frente: o corte cegante. */
-            for (int i = 0; i < 5; i++) {
-                float x = fract(hash1(i) + t * 0.03f) * 380 - 30, y = 45 + hash1(i + 2) * 95;
-                float r = 4 + c->danger * 8;
-                Color col = ColorFromHSV(fmodf(i * 60 + t * 20, 360), 0.8f, 0.6f);
-                DrawCircle((int)x, (int)y, r, fade(col, 0.3f + c->danger * 0.4f));
-                DrawCircle((int)(x + r * 0.8f), (int)(y + r * 0.4f), r * 0.5f, fade(col, 0.3f + c->danger * 0.4f));
             }
             break;
         case ARENA_PORTO:
@@ -935,10 +854,9 @@ Color arena_light(ArenaId id, const ArenaCtx *c) {
     Color base;
     switch (id) {
         case ARENA_DOJO: base = C(255, 236, 215); break;
-        case ARENA_RAVE: base = mix(C(150, 130, 180), C(190, 170, 220), c->beat * 0.5f); break;
+        case ARENA_SERRA: base = C(255, 214, 186); break;
         case ARENA_CELEIRO: base = C(255, 215, 175); break;
         case ARENA_COBERTURA: base = C(200, 210, 240); break;
-        case ARENA_GALERIA: base = C(250, 240, 250); break;
         case ARENA_PORTO: base = C(205, 205, 235); break;
         case ARENA_SALAO: base = C(255, 230, 200); break;
         case ARENA_TREM: base = C(200, 205, 235); break;
@@ -956,9 +874,13 @@ Color arena_light(ArenaId id, const ArenaCtx *c) {
 /* Cor da luz de contorno nos lutadores, o neon de cada cenário. */
 Color arena_rim(ArenaId id) {
     static const Color rim[ARENA_COUNT] = {
-        {255, 190, 120, 255}, {150, 90, 190, 255}, {255, 150, 80, 255}, {90, 200, 255, 255}, {240, 120, 255, 255},
-        {140, 170, 255, 255}, {255, 210, 140, 255}, {120, 255, 210, 255}, {190, 240, 255, 255}, {170, 255, 140, 255},
-        {255, 120, 40, 255}, {160, 210, 255, 255}, {255, 90, 120, 255}};
+        {255, 190, 120, 255}, /* dojo */      {255, 170, 120, 255}, /* serra */
+        {255, 150, 80, 255},  /* celeiro */   {90, 200, 255, 255},  /* cobertura */
+        {140, 170, 255, 255}, /* porto */     {255, 210, 140, 255}, /* salão */
+        {120, 255, 210, 255}, /* trem */      {190, 240, 255, 255}, /* cachoeira */
+        {170, 255, 140, 255}, /* bambuzal */  {255, 120, 40, 255},  /* forja */
+        {160, 210, 255, 255}, /* jardim */    {255, 90, 120, 255},  /* cidadela */
+    };
     return (id >= 0 && id < ARENA_COUNT) ? rim[id] : WHITE;
 }
 
@@ -967,7 +889,6 @@ float arena_reflection(ArenaId id) {
         case ARENA_SALAO: return 0.28f;
         case ARENA_COBERTURA: return 0.2f;
         case ARENA_JARDIM: return 0.32f;
-        case ARENA_RAVE: return 0.15f;
         case ARENA_TREM: return 0.12f;
         default: return 0;
     }
@@ -975,7 +896,6 @@ float arena_reflection(ArenaId id) {
 
 const char *arena_name(ArenaId id) {
     static const char *names[ARENA_COUNT] = {
-        "Dojo", "Rave", "Celeiro", "Cobertura", "Galeria", "Porto", "Salão",
-        "Trem-bala", "Cachoeira", "Bambuzal", "Forja", "Jardim de Vidro", "Cidadela"};
+        "Dojo", "Serra", "Celeiro", "Cobertura", "Porto", "Salão", "Trem", "Cachoeira", "Bambuzal", "Forja", "Jardim", "Cidadela"};
     return (id >= 0 && id < ARENA_COUNT) ? names[id] : "";
 }

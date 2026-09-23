@@ -66,18 +66,18 @@ static void test_settings(void) {
 }
 
 static void test_roster(const Settings *s) {
-    CHECK(roster_size() == 13, "doze mestres e o BIG BOSS");
-    CHECK(roster_get(-1) == NULL && roster_get(13) == NULL, "índices fora da trilha");
+    CHECK(roster_size() == 12, "onze aprendizes e oboro");
+    CHECK(roster_get(-1) == NULL && roster_get(12) == NULL, "índices fora da trilha");
     float lastPerfect = 1, lastGood = 1;
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
         CHECK(m->id == i + 1, "id em ordem (%s)", m->name);
         CHECK(m->name && m->name[0], "nome do mestre %d", i + 1);
-        CHECK(m->style && strncmp(m->style, "postura d", 9) == 0, "cada mestre tem uma postura (%s)", m->name);
+        CHECK(m->style && (m->isBigBoss || strncmp(m->style, "postura d", 9) == 0), "cada aprendiz tem uma postura (%s)", m->name);
         CHECK(m->posture > 0, "postura positiva (%s)", m->name);
         CHECK(m->introCount >= 2 && m->outroCount >= 1, "falas antes e depois (%s)", m->name);
-        CHECK(m->arena == (ArenaId)i, "um cenário próprio por mestre (%s)", m->name);
-        CHECK(m->isBigBoss == (i == 12), "só o último é o BIG BOSS (%s)", m->name);
+        for (int o = 0; o < i; o++) CHECK(roster_get(o)->arena != m->arena, "um cenário próprio por lutador (%s)", m->name);
+        CHECK(m->isBigBoss == (i == 11), "só o último é oboro (%s)", m->name);
         CHECK(m->stanceCount >= 1, "ao menos uma guarda (%s)", m->name);
         for (int k = 0; k < m->stanceCount; k++) {
             const Stance *st = &m->stances[k];
@@ -105,18 +105,19 @@ static void test_roster(const Settings *s) {
         CHECK(dmg >= lastDamage, "o dano de um erro não diminui ao longo da trilha (%s)", roster_get(i)->name);
         lastDamage = dmg;
     }
-    static const int HITS[13] = {50, 40, 35, 30, 25, 22, 20, 18, 15, 12, 10, 10, 10};
+    static const int HITS[12] = {50, 40, 35, 30, 25, 22, 20, 18, 15, 12, 10, 10};
     for (int i = 0; i < roster_size(); i++) {
         CHECK(roster_get(i)->hitsToFall == HITS[i], "Ren aguenta %d erros contra %s", HITS[i], roster_get(i)->name);
         CHECK(roster_get(i)->senseiCount >= 1, "hanzo tem conselho para %s", roster_get(i)->name);
         for (int k = 0; k < roster_get(i)->senseiCount; k++)
             CHECK(strcmp(roster_get(i)->sensei[k].speaker, "hanzo") == 0, "quem aconselha é hanzo (%s)", roster_get(i)->name);
     }
-    CHECK(roster_get(12)->specialChance > 0, "o BIG BOSS tem golpe especial");
-    for (int i = 0; i < 12; i++) CHECK(roster_get(i)->specialChance == 0, "só o BIG BOSS tem especial (%s)", roster_get(i)->name);
-    const MasterProfile *boss = roster_get(12);
+    CHECK(roster_get(11)->specialChance > 0, "oboro tem golpe especial");
+    for (int i = 0; i < 11; i++) CHECK(roster_get(i)->specialChance == 0, "só o BIG BOSS tem especial (%s)", roster_get(i)->name);
+    const MasterProfile *boss = roster_get(11);
     CHECK(boss->sealCount == 3, "o BIG BOSS tem três selos");
-    CHECK(boss->stanceCount == 2, "o BIG BOSS troca de guarda");
+    CHECK(boss->stanceCount == 11, "oboro domina as onze posturas");
+    for (int k = 0; k < 11; k++) CHECK(strcmp(boss->stances[k].name, roster_get(k)->style) == 0, "a %dª postura de oboro é a de %s", k + 1, roster_get(k)->name);
     for (int i = 0; i < LORE_PAGES; i++) CHECK(lore_page(i)[0] != 0, "página %d da lore", i);
 }
 
@@ -151,7 +152,7 @@ static void test_no_defense(void) {
     Tally t = play(roster_get(0), 7, -1, 120);
     CHECK(t.finished == 1 && !t.victory, "sem defesa, Ren cai");
     CHECK(t.impacts[J_RUIM] == 50, "contra o primeiro mestre, musashi aguenta 50 erros (%d)", t.impacts[J_RUIM]);
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 11; i++) {
         Tally k = play(roster_get(i), 7, -1, 600);
         CHECK(k.impacts[J_RUIM] == roster_get(i)->hitsToFall, "%s derruba Ren em %d erros (%d)", roster_get(i)->name,
               roster_get(i)->hitsToFall, k.impacts[J_RUIM]);
@@ -313,7 +314,7 @@ static void test_big_step_order(void) {
 }
 
 static void test_accelerando(void) {
-    const MasterProfile *taiko = roster_get(5);
+    const MasterProfile *taiko = roster_get(7);
     Settings s;
     settings_default(&s);
     s.pressureSpeed = 1; /* isola o efeito do ciclo */
@@ -336,15 +337,15 @@ static void test_accelerando(void) {
 }
 
 static void test_combos(void) {
-    Tally kira = play(roster_get(7), 21, 0.02, 300);
+    Tally kira = play(roster_get(9), 21, 0.02, 300);
     CHECK(kira.combos > 0, "Kira abre golpes duplos");
     CHECK(kira.victory, "perfeitos vencem a Kira mesmo nos compostos");
-    Tally magna = play(roster_get(10), 21, 0.02, 300);
+    Tally magna = play(roster_get(6), 21, 0.02, 300);
     CHECK(magna.combos > 0, "Magna abre golpes triplos");
 }
 
 static void test_blackout_and_cues(void) {
-    const MasterProfile *yoru = roster_get(9);
+    const MasterProfile *yoru = roster_get(2);
     Settings s;
     settings_default(&s);
     int dark = 0, lit = 0;
@@ -355,8 +356,7 @@ static void test_blackout_and_cues(void) {
         if (d.blackout) dark++; else lit++;
     }
     CHECK(dark > 10 && lit > 10, "Yoru apaga as luzes em parte dos golpes (%d/%d)", dark, lit);
-    CHECK(roster_get(8)->cueAudio == 0 && roster_get(8)->cueVisual > 0, "Hayate: sinal mudo, só visual");
-    CHECK(roster_get(4)->cueVisual < 1, "Kaelen: sinal enfraquecido");
+    CHECK(roster_get(10)->cueAudio == 0 && roster_get(10)->cueVisual > 0, "jinshi: sinal mudo, só visual");
 }
 
 static void test_pressure(void) {
@@ -371,7 +371,7 @@ static void test_pressure(void) {
 }
 
 static void test_big_boss(void) {
-    const MasterProfile *oboro = roster_get(12);
+    const MasterProfile *oboro = roster_get(11);
     Tally t = play(oboro, 99, 0.02, 600);
     CHECK(t.finished == 1 && t.victory, "perfeitos vencem o Oboro");
     CHECK(t.seals == 2, "dois selos quebrados antes do último (%d)", t.seals);
@@ -414,11 +414,28 @@ static void test_big_boss(void) {
     CHECK(!lose.victory && lose.finished == 1, "sem defesa, Ren cai contra o Oboro");
 }
 
+/* Oboro mostra as posturas uma a uma: a guarda muda ao longo do duelo e cada eco sai na postura certa. */
 static void test_mimic(void) {
-    CHECK(roster_get(11)->useHeroSheet, "Sombra usa a prancha de Ren");
-    Tally t = play(roster_get(11), 5, 0.02, 600);
-    CHECK(t.victory, "perfeitos vencem a Sombra");
-    CHECK(t.feintLaunches == 0, "Sombra não finta");
+    const MasterProfile *oboro = roster_get(11);
+    Settings s;
+    settings_default(&s);
+    Duel d;
+    duel_init(&d, &s, oboro, 5);
+    int seen[MAX_STANCES] = {0};
+    bool matching = true;
+    for (int k = 0; k < 40 && d.phase != PH_FINISHED; k++) {
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        const Move *mv = duel_move(&d);
+        if (mv && d.comboStrike == 0 && mv->stance >= 0 && mv->stance != d.stanceIndex) matching = false;
+        seen[d.stanceIndex] = 1;
+        while (d.phase == PH_WINDUP) { if (!d.attempted && d.strikeAt - d.clock <= 0.01) duel_press(&d); duel_tick(&d, DT); }
+    }
+    int count = 0;
+    for (int i = 0; i < MAX_STANCES; i++) count += seen[i];
+    CHECK(count >= 6, "oboro passa por várias posturas (%d)", count);
+    CHECK(matching, "cada eco sai na postura do aprendiz dele");
+    Tally t = play(oboro, 5, 0.02, 900);
+    CHECK(t.victory && t.feintLaunches == 0, "perfeitos vencem oboro, sem fintas");
 }
 
 static void test_determinism(void) {
@@ -468,7 +485,7 @@ static void test_levels(void) {
 }
 
 static void test_special(void) {
-    const MasterProfile *oboro = roster_get(12);
+    const MasterProfile *oboro = roster_get(11);
     Settings s;
     settings_default(&s);
     int specials = 0, doubled = 0;
@@ -538,20 +555,20 @@ static void test_campaign(void) {
     Campaign c;
     campaign_reset(&c);
     CHECK(c.index == 0 && campaign_defeated(&c) == 0, "trilha começa vazia");
-    for (int i = 0; i < 12; i++) {
-        CHECK(!campaign_big_boss_open(&c), "BIG BOSS fechado antes dos doze mestres");
+    for (int i = 0; i < 11; i++) {
+        CHECK(!campaign_big_boss_open(&c), "oboro fechado antes dos onze aprendizes");
         campaign_mark_cleared(&c, c.index);
         CHECK(campaign_advance(&c), "avança ao próximo");
     }
-    CHECK(campaign_defeated(&c) == 12, "doze mestres vencidos");
-    CHECK(campaign_big_boss_open(&c), "BIG BOSS aberto");
-    CHECK(c.index == 12, "o décimo terceiro é o BIG BOSS");
-    campaign_mark_cleared(&c, 12);
-    CHECK(campaign_defeated(&c) == 12, "o BIG BOSS não conta entre os doze");
+    CHECK(campaign_defeated(&c) == 11, "onze aprendizes vencidos");
+    CHECK(campaign_big_boss_open(&c), "oboro aberto");
+    CHECK(c.index == 11, "o décimo segundo é oboro");
+    campaign_mark_cleared(&c, 11);
+    CHECK(campaign_defeated(&c) == 11, "oboro não conta entre os onze");
     CHECK(!campaign_advance(&c) && c.completed, "trilha completa");
     campaign_mark_cleared(&c, 3);
     campaign_mark_cleared(&c, 3);
-    CHECK(campaign_defeated(&c) == 12, "cada mestre contado uma vez só");
+    CHECK(campaign_defeated(&c) == 11, "cada aprendiz contado uma vez só");
 }
 
 int main(void) {

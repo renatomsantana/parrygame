@@ -9,12 +9,12 @@
 #include <stdint.h>
 
 #define MAX_WINDUPS 6
-#define MAX_STANCES 2
+#define MAX_STANCES 12         /* oboro usa as onze posturas dos aprendizes */
 #define MAX_SEALS 3
 #define MAX_FALSE_CUES 3
 #define MAX_LINES 3
 #define MAX_EVENTS 32
-#define MASTER_COUNT 12   /* mestres antes do BIG BOSS */
+#define MASTER_COUNT 11   /* aprendizes antes de oboro */
 
 /* ------------------------------------------------------------------ */
 /* Parâmetros comuns. Não existe vida: só postura, de Ren e do mestre. */
@@ -73,7 +73,7 @@ typedef struct {
  * uma preparação seguida de 1 a MAX_CHAIN golpes, com intervalos sempre iguais
  * entre um contato e o próximo. É isso que o jogador estuda e decora.
  */
-#define MAX_MOVES 6
+#define MAX_MOVES 14
 #define MAX_CHAIN 5
 
 typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST } MoveLook; /* preparação que denuncia a sequência */
@@ -89,9 +89,9 @@ typedef struct {
 } Move;
 
 typedef enum {
-    ARENA_DOJO, ARENA_RAVE, ARENA_CELEIRO, ARENA_COBERTURA, ARENA_GALERIA,
-    ARENA_PORTO, ARENA_SALAO, ARENA_TREM, ARENA_CACHOEIRA, ARENA_BAMBUZAL,
-    ARENA_FORJA, ARENA_JARDIM, ARENA_CIDADELA, ARENA_COUNT
+    ARENA_DOJO, ARENA_SERRA, ARENA_CELEIRO, ARENA_COBERTURA, ARENA_PORTO, ARENA_SALAO,
+    ARENA_TREM, ARENA_CACHOEIRA, ARENA_BAMBUZAL, ARENA_FORJA, ARENA_JARDIM, ARENA_CIDADELA,
+    ARENA_COUNT
 } ArenaId;
 
 typedef struct {
@@ -130,11 +130,11 @@ typedef struct {
     int senseiCount;
 } MasterProfile;
 
-#define ROSTER_SIZE 13
+#define ROSTER_SIZE 12
 const MasterProfile *roster_get(int index);   /* 0..12 */
 int roster_size(void);
 
-#define LORE_PAGES 9
+#define LORE_PAGES 10
 const char *lore_page(int index);
 
 /* ------------------------------------------------------------------ */

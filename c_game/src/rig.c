@@ -26,12 +26,12 @@ const Pose POSE_DISARMED = {-22, 3, -2, -12, -120, -2, -5, -4};
 const Pose POSE_KNEEL   = {22, 12, 7, 9, 80, 5, -5, 1};
 const Pose POSE_POINT   = {8, 3, 11, -2, 2, 6, 0, 3};
 /* Preparações e contatos de cada tipo de golpe, e as defesas de Ren para cada um. */
-const Pose POSE_WINDUP_LOW    = {-2, 6, 5, 9, 165, 2, -4, -2};
-const Pose POSE_WINDUP_THRUST = {-8, 4, 1, 1, -5, 3, -3, -3};
-const Pose POSE_CONTACT_LOW   = {16, 7, 11, 5, 12, 8, 2, 5};
-const Pose POSE_CONTACT_THRUST = {20, 5, 13, -2, -5, 9, 2, 7};
+const Pose POSE_WINDUP_LOW    = {-6, 8, 4, 10, 62, 0, -6, -3};
+const Pose POSE_WINDUP_THRUST = {-10, 5, 0, -3, -18, 0, -6, -4};
+const Pose POSE_CONTACT_LOW   = {18, 7, 13, 1, -6, 10, 1, 6};
+const Pose POSE_CONTACT_THRUST = {22, 6, 14, -1, -3, 11, 2, 8};
 const Pose POSE_REARM_HIGH    = {4, 4, 2, -9, -120, 4, 0, 2};
-const Pose POSE_REARM_LOW     = {6, 6, 6, 8, 160, 4, -1, 2};
+const Pose POSE_REARM_LOW     = {4, 8, 5, 9, 58, 5, -2, 1};
 const Pose POSE_PARRY_LOW     = {6, 6, 9, 4, 40, 1, -1, 0};
 const Pose POSE_PARRY_THRUST  = {4, 4, 9, -2, -35, 1, -1, 0};
 
@@ -70,6 +70,8 @@ void rig_init(Rig *r, const Look *look, float x, float y, bool faceLeft) {
     r->dur = 0;
     r->t = 1;
     r->breath = 1;
+    r->footF = POSE_IDLE.stepF;
+    r->footB = POSE_IDLE.stepB;
     for (int i = 0; i < 4; i++) r->band[i] = (Vector2){x, y - 40};
     for (int i = 0; i < 5; i++) r->cape[i] = (Vector2){x, y - 30};
     if (r->look.pantsWidth <= 0) r->look.pantsWidth = 1;
@@ -102,6 +104,7 @@ bool rig_busy(const Rig *r) { return r->t < 1 || r->hasNext; }
 typedef struct {
     Vector2 footB, footF, hip, kneeB, kneeF, chest, head, shoulder, hands, elbowB, elbowF;
     Vector2 hiltEnd, guard, bladeStart, tip;
+    Vector2 hands2, offButt, offTip;  /* mão de trás e a lâmina dela */
     Vector2 coat[4];
 } Skeleton;
 
@@ -121,12 +124,19 @@ static Vector2 ik(Vector2 a, Vector2 b, float l1, float l2, float bend) {
     return v2(p.x + bend * h * (-dy / d), p.y + bend * h * (dx / d));
 }
 
+/* A postura aparece no corpo: calmo até 40%, respiração curta e guarda mais baixa até 75%,
+ * ofegante e com a lâmina tremendo depois disso. */
 static Pose breathing(const Rig *r) {
     Pose p = r->cur;
-    float b = sinf(r->time * 2.4f) * r->breath;
-    p.crouch += b * 0.6f;
-    p.handY += sinf(r->time * 2.4f + 0.6f) * 0.5f * r->breath;
-    p.sword += b * 1.5f;
+    float f = r->fatigue;
+    float tired = f > 0.4f ? fminf(1, (f - 0.4f) / 0.35f) : 0;
+    float spent = f > 0.75f ? fminf(1, (f - 0.75f) / 0.25f) : 0;
+    float rate = 2.4f + tired * 2.2f + spent * 2.4f, amp = 1 + tired * 0.8f + spent * 1.2f;
+    float b = sinf(r->time * rate) * r->breath * amp;
+    p.crouch += b * 0.6f + tired * 1.2f * r->breath;
+    p.handY += (sinf(r->time * rate + 0.6f) * 0.5f * amp + tired * 1.5f + spent * 1.5f) * r->breath;
+    p.lean += spent * 4 * r->breath;
+    p.sword += b * 1.5f + sinf(r->time * 43) * spent * 2.5f * r->breath;
     return p;
 }
 
@@ -136,8 +146,8 @@ static Skeleton build(const Rig *r) {
     float s = r->look.size;
     Skeleton k;
     float a = p.lean * DEG;
-    k.footB = v2(-8 * s + p.stepB, 0);
-    k.footF = v2(9 * s + p.stepF, 0);
+    k.footB = v2(-8 * s + r->footB, -r->liftB);
+    k.footF = v2(9 * s + r->footF, -r->liftF);
     k.hip = v2(p.bodyX, -21 * s + p.crouch);
     k.kneeB = ik(k.hip, k.footB, 11 * s, 11 * s, -1);
     k.kneeF = ik(k.hip, k.footF, 11 * s, 11 * s, -1);
@@ -145,14 +155,21 @@ static Skeleton build(const Rig *r) {
     k.head = add(k.hip, v2(21 * s * sinf(a * 1.1f), -21 * s * cosf(a * 1.1f)));
     k.shoulder = add(k.chest, v2(-1 * s, 1));
     k.hands = add(k.chest, v2(p.handX * s, p.handY * s));
+    /* Com arma na outra mão, a mão de trás fica mais baixa e recolhida. */
+    k.hands2 = r->look.offhand != OFF_NONE ? add(k.chest, v2((p.handX * 0.55f - 2) * s, (p.handY * 0.5f + 5) * s)) : k.hands;
     /* Cotovelo dobra sempre para o mesmo lado; as poses nunca levam as mãos para trás do ombro. */
-    k.elbowB = ik(add(k.shoulder, v2(-2 * s, 0)), k.hands, 7.5f * s, 7.5f * s, 1);
+    k.elbowB = ik(add(k.shoulder, v2(-2 * s, 0)), k.hands2, 7.5f * s, 7.5f * s, 1);
     k.elbowF = ik(add(k.shoulder, v2(1 * s, 0)), k.hands, 7.5f * s, 7.5f * s, 1);
     Vector2 dir = v2(cosf(p.sword * DEG), sinf(p.sword * DEG));
     k.hiltEnd = add(k.hands, scl(dir, -4 * s));
     k.guard = add(k.hands, scl(dir, 1.5f * s));
     k.bladeStart = add(k.hands, scl(dir, 2 * s));
     k.tip = add(k.hands, scl(dir, (2 + r->look.bladeLen) * s));
+    if (r->look.weapon != WEAPON_KATANA) k.hiltEnd = add(k.hands, scl(dir, -12 * s)); /* haste longa para trás */
+    float offLen = r->look.offhand == OFF_SWORD ? r->look.bladeLen * 0.9f : 9;
+    Vector2 odir = v2(cosf((p.sword + 38) * DEG), sinf((p.sword + 38) * DEG));
+    k.offButt = add(k.hands2, scl(odir, -3 * s));
+    k.offTip = add(k.hands2, scl(odir, (1 + offLen) * s));
     float hem = r->hem;
     k.coat[0] = add(k.chest, v2(-4 * s, -1));
     k.coat[1] = add(k.chest, v2(3.5f * s, -1));
@@ -187,6 +204,16 @@ void rig_update(Rig *r, float dt) {
         }
     }
     r->flash = fmaxf(0, r->flash - dt * 5);
+
+    /* Passos: o pé persegue a posição da pose e sobe enquanto está no ar. */
+    if (dt > 0) {
+        float df = r->cur.stepF - r->footF, db = r->cur.stepB - r->footB;
+        float kf = fminf(1, dt * 16), kb = fminf(1, dt * 12);
+        r->footF += df * kf;
+        r->footB += db * kb;
+        r->liftF = fminf(3.5f, fabsf(df) * 0.9f);
+        r->liftB = fminf(2.5f, fabsf(db) * 0.7f);
+    }
 
     Skeleton k = build(r);
     /* Barra do casaco: mola puxada pela velocidade do quadril. */
@@ -411,7 +438,8 @@ static void draw_body(const Paint *pt) {
     limb(pt, k.kneeB, k.footB, 3.5f * s * (pw > 1 ? pw * 1.1f : 1), back);
     draw_foot(pt, k.footB, s, 0.7f);
     limb(pt, add(k.shoulder, v2(-2 * s, 0)), k.elbowB, 3 * s, backSleeve);
-    limb(pt, k.elbowB, k.hands, 2.5f * s, backSleeve);
+    limb(pt, k.elbowB, k.hands2, 2.5f * s, backSleeve);
+    if (L->offhand != OFF_NONE) circle(pt, k.hands2, 1.4f * s, darker(L->skin, 0.8f));
     /* Perna da frente. */
     limb(pt, k.hip, k.kneeF, 4 * s * pw, L->pants);
     limb(pt, add(k.hip, v2(1.4f * s, 0.5f * s)), add(k.kneeF, v2(1 * s, -0.5f * s)), 1, lighter(L->pants, 1.25f)); /* luz na coxa */
@@ -452,8 +480,34 @@ static void draw_body(const Paint *pt) {
              add(k.shoulder, v2(-5 * s, 2.5f * s)), L->extra);
         limb(pt, add(k.shoulder, v2(-5 * s, 2.5f * s)), add(k.shoulder, v2(4 * s, 2.5f * s)), 1, darker(L->extra, 0.6f));
     }
+    /* Escudo redondo na mão de trás, na frente do peito. */
+    if (L->offhand == OFF_SHIELD) {
+        Vector2 c = add(k.hands2, v2(2 * s, -1 * s));
+        circle(pt, c, 5.2f * s, (Color){58, 40, 28, 255});
+        circle(pt, c, 4.4f * s, (Color){120, 86, 52, 255});
+        circle(pt, c, 1.5f * s, (Color){170, 160, 140, 255});
+        limb(pt, add(c, v2(-4 * s, 0)), add(c, v2(4 * s, 0)), 1, (Color){80, 58, 36, 255});
+    }
+    /* Lança e cajado: haste desenhada aqui; a katana vem do modelo 3D. */
+    if (!r->noSword && L->weapon != WEAPON_KATANA) {
+        bool spear = L->weapon == WEAPON_SPEAR;
+        Color shaft = spear ? (Color){116, 80, 48, 255} : (Color){70, 72, 80, 255};
+        Vector2 end = spear ? v2(k.tip.x - (k.tip.x - k.hands.x) * 0.2f, k.tip.y - (k.tip.y - k.hands.y) * 0.2f) : k.tip;
+        limb(pt, k.hiltEnd, end, 1.6f * s, shaft);
+        limb(pt, k.hiltEnd, add(k.hiltEnd, scl(v2(k.tip.x - k.hiltEnd.x, k.tip.y - k.hiltEnd.y), 0.04f)), 2.2f * s, darker(shaft, 0.6f));
+        if (spear) {
+            Vector2 dir = v2(k.tip.x - end.x, k.tip.y - end.y);
+            float dl = sqrtf(dir.x * dir.x + dir.y * dir.y);
+            Vector2 nrm = v2(-dir.y / dl * 1.8f * s, dir.x / dl * 1.8f * s);
+            Vector2 A = P(pt, add(end, nrm)), B = P(pt, v2(end.x - nrm.x, end.y - nrm.y)), C = P(pt, k.tip);
+            tri(A, B, C, col(pt, L->blade));
+            limb(pt, add(end, nrm), v2(end.x - nrm.x, end.y - nrm.y), 1.2f * s, (Color){150, 40, 30, 255});
+        } else {
+            limb(pt, add(k.tip, scl(v2(k.hiltEnd.x - k.tip.x, k.hiltEnd.y - k.tip.y), 0.04f)), k.tip, 2.2f * s, darker(shaft, 0.6f));
+        }
+    }
     /* Espada. */
-    if (!r->noSword && !r->hideBlade) {
+    if (!r->noSword && !r->hideBlade && L->weapon == WEAPON_KATANA) {
         limb(pt, k.hiltEnd, k.guard, 2 * s, (Color){50, 30, 30, 255});
         DrawCircleV(P(pt, k.guard), 1.6f * s, col(pt, (Color){170, 140, 70, 255}));
         DrawLineEx(P(pt, k.bladeStart), P(pt, k.tip), 1.5f * s, col(pt, L->blade));
@@ -528,4 +582,13 @@ void rig_bones(const Rig *r, RigBones *o) {
     o->hemB = to_world_f(r, k.coat[3]);
     o->s = s;
     o->lean = r->faceLeft ? -r->cur.lean : r->cur.lean;
+}
+
+bool rig_offhand_line(const Rig *r, Vector2 *hilt, Vector2 *tip) {
+    if (r->look.offhand != OFF_DAGGER && r->look.offhand != OFF_SWORD) return false;
+    if (r->noSword) return false;
+    Skeleton k = build(r);
+    *hilt = to_world(r, k.offButt);
+    *tip = to_world(r, k.offTip);
+    return true;
 }

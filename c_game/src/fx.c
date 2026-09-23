@@ -52,6 +52,7 @@ void fx_update(Fx *fx, float dt) {
         fx->popups[i].pos.y -= 7 * dt;
     }
     for (int i = 0; i < MAX_ARCS; i++) if (fx->arcs[i].life > 0) fx->arcs[i].life -= dt;
+    for (int i = 0; i < 4; i++) if (fx->stars[i].life > 0) fx->stars[i].life -= dt;
     fx->flash = fmaxf(0, fx->flash - dt * 3.5f);
     if (fx->shakeTime > 0) fx->shakeTime -= dt; else fx->shake = 0;
     /* Mola crítica para o soco de câmera. */
@@ -102,6 +103,26 @@ void fx_ring(Fx *fx, Vector2 at, float speed, float life, float width, Color c) 
     }
 }
 
+/* Faísca do parry perfeito: estrela de quatro pontas, branca no centro e dourada nas pontas. */
+void fx_star(Fx *fx, Vector2 at, float size, float life) {
+    for (int i = 0; i < 4; i++) {
+        if (fx->stars[i].life > 0) continue;
+        fx->stars[i] = (Star){at, size, life, life};
+        return;
+    }
+}
+
+static void star_shape(Vector2 c, float len, float wid, float rot, Color col) {
+    for (int k = 0; k < 4; k++) {
+        float a = rot + k * 1.5708f;
+        Vector2 tip = {c.x + cosf(a) * len, c.y + sinf(a) * len};
+        Vector2 l = {c.x + cosf(a + 1.5708f) * wid, c.y + sinf(a + 1.5708f) * wid};
+        Vector2 r = {c.x - cosf(a + 1.5708f) * wid, c.y - sinf(a + 1.5708f) * wid};
+        DrawTriangle(l, r, tip, col);
+        DrawTriangle(r, l, tip, col);
+    }
+}
+
 void fx_arc(Fx *fx, Vector2 center, float radius, float start, float sweep, float life, float width, Color c) {
     for (int i = 0; i < MAX_ARCS; i++) {
         if (fx->arcs[i].life > 0) continue;
@@ -147,6 +168,14 @@ Vector2 fx_shake_offset(const Fx *fx) {
 
 void fx_draw_world(const Fx *fx) {
     BeginBlendMode(BLEND_ADDITIVE);
+    for (int i = 0; i < 4; i++) {
+        const Star *st = &fx->stars[i];
+        if (st->life <= 0) continue;
+        float t = st->life / st->maxLife, grow = 0.6f + 0.4f * (1 - t);
+        star_shape(st->pos, st->size * grow, st->size * 0.18f, 0.2f, (Color){255, 196, 90, (unsigned char)(220 * t)});
+        star_shape(st->pos, st->size * 0.55f * grow, st->size * 0.1f, 0.2f + 0.785f, (Color){255, 230, 160, (unsigned char)(200 * t)});
+        DrawCircleV(st->pos, st->size * 0.2f * t + 0.5f, (Color){255, 255, 255, (unsigned char)(255 * t)});
+    }
     for (int i = 0; i < MAX_RINGS; i++) {
         const Ring *r = &fx->rings[i];
         if (r->life <= 0) continue;

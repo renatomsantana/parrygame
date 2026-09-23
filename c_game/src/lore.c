@@ -133,10 +133,10 @@ void lore_draw_scene(int page, float t) {
 
 void lore_trail_point(int index, float *x, float *y) {
     /* Ziguezague subindo a serra até a cidadela. */
-    float k = index / 12.0f;
+    float k = index / (float)(ROSTER_SIZE - 1);
     *x = 40 + (index % 2 ? 1 : -1) * 18 + k * 200 + sinf(index * 1.3f) * 10;
     *y = 118 - k * 96;
-    if (index == 12) { *x = 250; *y = 16; }
+    if (index == ROSTER_SIZE - 1) { *x = 250; *y = 16; }
 }
 
 void lore_draw_trail(const Campaign *c, float t, int selected) {
@@ -163,9 +163,10 @@ void lore_draw_trail(const Campaign *c, float t, int selected) {
         float x, y;
         lore_trail_point(i, &x, &y);
         bool done = campaign_is_cleared(c, i);
-        bool open = i == 12 ? campaign_big_boss_open(c) : true;
-        Color col = i == 12 ? C(200, 60, 90) : (done ? C(255, 160, 70) : C(90, 84, 110));
-        float r = i == 12 ? 5 : 3;
+        bool last = i == ROSTER_SIZE - 1;
+        bool open = last ? campaign_big_boss_open(c) : true;
+        Color col = last ? C(200, 60, 90) : (done ? C(255, 160, 70) : C(90, 84, 110));
+        float r = last ? 5 : 3;
         if (i == selected) {
             float p = 0.5f + 0.5f * sinf(t * 5);
             DrawCircleLines((int)x, (int)y, r + 3 + p * 2, C(255, 220, 150));

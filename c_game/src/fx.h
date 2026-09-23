@@ -26,12 +26,14 @@ typedef struct {
 typedef struct { Vector2 pos; float radius, speed, life, maxLife, width; Color color; } Ring;
 typedef struct { char text[32]; Vector2 pos; float life, maxLife, scale; Color color; } Popup;
 typedef struct { Vector2 center; float radius, start, sweep, life, maxLife, width; Color color; } Arc;
+typedef struct { Vector2 pos; float size, life, maxLife; } Star;
 
 typedef struct {
     Particle p[MAX_PARTICLES];
     Ring rings[MAX_RINGS];
     Popup popups[MAX_POPUPS];
     Arc arcs[MAX_ARCS];
+    Star stars[4];
     float flash;               /* 0..1 */
     Color flashColor;
     float shake, shakeTime;    /* amplitude em px, duração */
@@ -49,6 +51,7 @@ Vector2 fx_shake_offset(const Fx *fx);
 
 void fx_burst(Fx *fx, ParticleKind kind, Vector2 at, int count, float speed, float spread, float dir, Color a, Color b);
 void fx_ring(Fx *fx, Vector2 at, float speed, float life, float width, Color c);
+void fx_star(Fx *fx, Vector2 at, float size, float life);
 void fx_arc(Fx *fx, Vector2 center, float radius, float start, float sweep, float life, float width, Color c);
 void fx_popup(Fx *fx, const char *text, Vector2 at, float scale, Color c);
 void fx_flash(Fx *fx, Color c, float strength);

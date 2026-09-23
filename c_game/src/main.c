@@ -1,5 +1,5 @@
 /*
- * main.c - APARA: A Trilha dos Doze Mestres.
+ * main.c - APARAR: A Trilha dos Doze Aprendizes.
  * O mundo é desenhado em 320 x 180 e ampliado por número inteiro, sem filtro.
  * A interface vai por cima, em alta resolução (1280 x 720 virtuais), com fonte
  * serifada e paleta antiga: tinta, papel envelhecido, dourado gasto e vermelhão.
@@ -46,14 +46,17 @@
 static const char *POST_FS =
     "#version 330\n"
     "in vec2 fragTexCoord; in vec4 fragColor; uniform sampler2D texture0;\n"
-    "uniform float aberr; uniform vec2 res; out vec4 finalColor;\n"
+    "uniform float aberr; uniform vec2 res; uniform float desat; uniform float duo; out vec4 finalColor;\n"
     "void main() {\n"
     "    vec2 uv = fragTexCoord;\n"
     "    vec2 d = vec2(aberr / res.x, 0.0);\n"
     "    vec3 c = vec3(texture(texture0, uv + d).r, texture(texture0, uv).g, texture(texture0, uv - d).b);\n"
+    "    float lum = dot(c, vec3(0.3, 0.59, 0.11));\n"
+    "    c = mix(c, vec3(lum), desat);\n"
+    "    c = mix(c, lum > 0.33 ? vec3(0.96, 0.94, 0.9) : vec3(0.12, 0.0, 0.02), duo);\n"
     "    c *= 1.0 - 0.07 * mod(floor(uv.y * res.y), 2.0);\n"
     "    vec2 v = uv - 0.5;\n"
-    "    c *= 1.0 - dot(v, v) * 0.45;\n"
+    "    c *= 1.0 - dot(v, v) * (0.45 + desat * 1.4);\n"
     "    finalColor = vec4(c, 1.0);\n"
     "}\n";
 
@@ -82,65 +85,61 @@ static const Look REN_LOOK = {
     .handle = RGB(96, 52, 28), .bladeWidth = 1};
 
 static const Look MASTER_LOOKS[ROSTER_SIZE] = {
-    /* tetsu: capitão da guarda. Haori azul, ombreiras de ferro, hakama. */
-    {.coat = RGB(58, 68, 108), .sleeve = RGB(205, 195, 175), .pants = RGB(42, 40, 56), .skin = RGB(225, 185, 150),
-     .hair = RGB(175, 175, 175), .blade = RGB(235, 235, 240), .hat = HAT_NONE, .size = 1.05f, .bladeLen = 20,
-     .robe = 0.8f, .flare = 0.3f, .pantsWidth = 1.6f, .trim = RGB(196, 160, 82), .extra = RGB(96, 100, 110), .extras = EX_PAULDRONS,
-     .handle = RGB(40, 46, 80), .bladeWidth = 1},
-    /* neon jax: jaqueta preta com neon, visor. */
-    {.coat = RGB(30, 30, 40), .sleeve = RGB(255, 60, 200), .pants = RGB(26, 20, 40), .skin = RGB(230, 180, 150),
-     .hair = RGB(255, 60, 200), .blade = RGB(255, 120, 230), .hat = HAT_NONE, .size = 1, .bladeLen = 19,
-     .trim = RGB(60, 230, 255), .extra = RGB(60, 230, 255), .extras = EX_VISOR, .handle = RGB(30, 30, 40), .bladeWidth = 0.9f},
-    /* cavan: colete de palha, lenço vermelho, chapéu de palha, nodachi. */
-    {.coat = RGB(196, 170, 96), .sleeve = RGB(215, 165, 120), .pants = RGB(92, 70, 48), .skin = RGB(215, 165, 120),
-     .hair = RGB(80, 50, 30), .blade = RGB(200, 200, 195), .hat = HAT_KASA, .size = 1.15f, .bladeLen = 26,
-     .extra = RGB(170, 40, 36), .extras = EX_SCARF, .handle = RGB(110, 74, 42), .bladeWidth = 1.3f},
-    /* vance: sobretudo de executivo, gravata e óculos escuros, lâmina negra. */
-    {.coat = RGB(44, 46, 58), .sleeve = RGB(44, 46, 58), .pants = RGB(30, 32, 40), .skin = RGB(230, 190, 160),
-     .hair = RGB(20, 20, 20), .blade = RGB(80, 80, 92), .hat = HAT_NONE, .size = 1, .bladeLen = 20,
-     .robe = 1, .trim = RGB(200, 200, 210), .extra = RGB(15, 15, 18), .extras = EX_TIE | EX_VISOR,
-     .handle = RGB(230, 230, 235), .bladeWidth = 0.9f},
-    /* kaelen: avental de pintor sujo de tinta, cachecol amarelo, lâmina violeta. */
-    {.coat = RGB(236, 224, 200), .sleeve = RGB(236, 224, 200), .pants = RGB(60, 40, 70), .skin = RGB(235, 195, 165),
-     .hair = RGB(240, 200, 90), .blade = RGB(200, 160, 255), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 20,
-     .robe = 1.2f, .trim = RGB(200, 60, 180), .extra = RGB(240, 190, 60), .extras = EX_SCARF,
-     .handle = RGB(200, 160, 60), .bladeWidth = 0.9f},
-    /* taiko: happi branco de festival, faixa na testa, lâmina curta e pesada. */
-    {.coat = RGB(236, 234, 226), .sleeve = RGB(44, 64, 140), .pants = RGB(32, 42, 92), .skin = RGB(215, 160, 115),
-     .hair = RGB(30, 24, 20), .blade = RGB(230, 230, 235), .band = RGB(200, 40, 40), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 18,
-     .headband = true, .robe = 0.3f, .trim = RGB(40, 60, 150), .handle = RGB(140, 100, 60), .bladeWidth = 1.4f},
-    /* eleonor: vestido de baile vinho com dourado, colar, lâmina fina e longa. */
-    {.coat = RGB(120, 30, 60), .sleeve = RGB(240, 230, 220), .pants = RGB(90, 20, 50), .skin = RGB(245, 210, 185),
-     .hair = RGB(140, 60, 40), .blade = RGB(240, 240, 255), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 27,
-     .robe = 2, .flare = 1.1f, .trim = RGB(220, 180, 90), .extra = RGB(220, 180, 90), .extras = EX_BEADS,
-     .handle = RGB(220, 180, 90), .bladeWidth = 0.55f},
-    /* kira: uniforme de maquinista com botões dourados, cachecol branco, lâmina curta. */
-    {.coat = RGB(36, 90, 70), .sleeve = RGB(36, 90, 70), .pants = RGB(24, 30, 30), .skin = RGB(225, 185, 150),
-     .hair = RGB(232, 232, 232), .blade = RGB(230, 240, 240), .hat = HAT_NONE, .size = 1, .bladeLen = 16,
-     .robe = 0.5f, .trim = RGB(220, 180, 90), .extra = RGB(236, 236, 230), .extras = EX_BEADS | EX_SCARF,
-     .handle = RGB(36, 90, 70), .bladeWidth = 1.1f},
-    /* hayate: túnica açafrão de monge, contas de madeira, chapéu de palha. */
-    {.coat = RGB(226, 160, 60), .sleeve = RGB(226, 160, 60), .pants = RGB(200, 140, 60), .skin = RGB(215, 165, 125),
-     .hair = RGB(40, 30, 26), .blade = RGB(215, 220, 225), .hat = HAT_KASA, .size = 1.05f, .bladeLen = 21,
-     .robe = 2, .flare = 0.4f, .extra = RGB(90, 50, 30), .extras = EX_BEADS, .handle = RGB(230, 210, 170), .bladeWidth = 1},
-    /* yoru: caçadora de capuz, cachecol vermelho, lâmina negra. */
-    {.coat = RGB(30, 30, 46), .sleeve = RGB(30, 30, 46), .pants = RGB(20, 20, 30), .skin = RGB(200, 190, 210),
-     .hair = RGB(22, 22, 36), .blade = RGB(70, 60, 96), .hat = HAT_HOOD, .size = 1, .bladeLen = 20,
-     .robe = 0.6f, .trim = RGB(120, 40, 60), .extra = RGB(150, 34, 44), .extras = EX_SCARF,
-     .handle = RGB(20, 20, 28), .bladeWidth = 0.9f},
-    /* magna: ferreira de braços de fora e avental de couro, lâmina larga e em brasa. */
-    {.coat = RGB(160, 50, 30), .sleeve = RGB(210, 150, 110), .pants = RGB(40, 32, 30), .skin = RGB(210, 150, 110),
-     .hair = RGB(205, 72, 32), .blade = RGB(255, 170, 110), .hat = HAT_NONE, .size = 1.15f, .bladeLen = 22,
-     .extra = RGB(110, 70, 40), .extras = EX_APRON, .handle = RGB(60, 40, 30), .bladeWidth = 1.7f},
-    /* sombra: o reflexo de ren em roxo. */
-    {.coat = RGB(52, 42, 72), .sleeve = RGB(72, 62, 96), .pants = RGB(22, 22, 32), .skin = RGB(84, 84, 104),
-     .hair = RGB(12, 12, 22), .blade = RGB(130, 110, 170), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 20, .hairTail = true,
-     .handle = RGB(40, 30, 60), .bladeWidth = 1},
-    /* oboro: armadura com ombreiras, capa carmim, kabuto e nodachi. */
-    {.coat = RGB(60, 30, 70), .sleeve = RGB(34, 22, 44), .pants = RGB(22, 16, 28), .skin = RGB(220, 200, 190),
-     .hair = RGB(20, 16, 24), .blade = RGB(245, 225, 225), .hat = HAT_KABUTO, .size = 1.25f, .bladeLen = 28,
-     .robe = 1.1f, .flare = 0.4f, .pantsWidth = 1.4f, .trim = RGB(200, 160, 80), .extra = RGB(120, 30, 50),
-     .extras = EX_PAULDRONS | EX_CAPE, .handle = RGB(30, 20, 30), .bladeWidth = 1.2f},
+    /* raijin: gi marrom, ombreiras, hakama larga e uma odachi enorme. */
+    {.coat = RGB(92, 58, 40), .sleeve = RGB(200, 188, 168), .pants = RGB(40, 36, 44), .skin = RGB(222, 176, 136),
+     .hair = RGB(24, 20, 20), .blade = RGB(232, 232, 238), .hat = HAT_NONE, .size = 1.2f, .bladeLen = 30,
+     .robe = 0.6f, .flare = 0.3f, .pantsWidth = 1.6f, .trim = RGB(150, 110, 60), .extra = RGB(96, 96, 106), .extras = EX_PAULDRONS,
+     .handle = RGB(110, 30, 30), .bladeWidth = 1.25f},
+    /* shizuku: quimono azul-claro até o chão, cabelo longo, florete fino. */
+    {.coat = RGB(150, 190, 214), .sleeve = RGB(230, 236, 240), .pants = RGB(70, 90, 120), .skin = RGB(240, 206, 180),
+     .hair = RGB(30, 30, 50), .blade = RGB(240, 244, 255), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 26,
+     .robe = 2, .flare = 0.6f, .trim = RGB(236, 240, 246), .handle = RGB(190, 196, 210), .bladeWidth = 0.5f},
+    /* kage: capuz e roupa de noite, cachecol vinho, duas adagas. */
+    {.coat = RGB(28, 28, 40), .sleeve = RGB(28, 28, 40), .pants = RGB(18, 18, 26), .skin = RGB(200, 186, 176),
+     .hair = RGB(20, 20, 32), .blade = RGB(200, 204, 220), .hat = HAT_HOOD, .size = 1, .bladeLen = 10,
+     .robe = 0.4f, .extra = RGB(120, 26, 36), .extras = EX_SCARF, .handle = RGB(20, 20, 26), .bladeWidth = 0.9f,
+     .offhand = OFF_DAGGER},
+    /* daichi: cores de terra, chapéu de palha, hakama e espada pesada. */
+    {.coat = RGB(120, 92, 58), .sleeve = RGB(150, 120, 80), .pants = RGB(70, 56, 40), .skin = RGB(214, 164, 120),
+     .hair = RGB(60, 40, 26), .blade = RGB(196, 196, 196), .hat = HAT_KASA, .size = 1.15f, .bladeLen = 22,
+     .robe = 0.5f, .pantsWidth = 1.5f, .handle = RGB(90, 60, 36), .bladeWidth = 1.8f},
+    /* hayate: jaqueta curta verde-água e cachecol branco ao vento, katana leve. */
+    {.coat = RGB(60, 150, 140), .sleeve = RGB(220, 230, 220), .pants = RGB(40, 50, 56), .skin = RGB(226, 184, 150),
+     .hair = RGB(40, 30, 30), .blade = RGB(236, 244, 244), .hat = HAT_NONE, .size = 1, .bladeLen = 19,
+     .robe = 0.3f, .trim = RGB(220, 240, 230), .extra = RGB(236, 236, 230), .extras = EX_SCARF,
+     .handle = RGB(40, 80, 76), .bladeWidth = 0.8f},
+    /* genbu: velho de túnica verde-musgo e contas, escudo e espada curta. */
+    {.coat = RGB(96, 110, 86), .sleeve = RGB(170, 170, 150), .pants = RGB(60, 64, 52), .skin = RGB(214, 170, 136),
+     .hair = RGB(186, 186, 186), .blade = RGB(220, 224, 228), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 13,
+     .robe = 1.2f, .flare = 0.3f, .extra = RGB(90, 60, 36), .extras = EX_BEADS, .handle = RGB(60, 70, 50), .bladeWidth = 1.1f,
+     .offhand = OFF_SHIELD},
+    /* enjin: vermelho com dourado, braços de fora, sabre em brasa. */
+    {.coat = RGB(170, 40, 26), .sleeve = RGB(214, 150, 110), .pants = RGB(40, 26, 24), .skin = RGB(214, 150, 110),
+     .hair = RGB(200, 70, 30), .blade = RGB(255, 184, 124), .hat = HAT_NONE, .size = 1.05f, .bladeLen = 21,
+     .trim = RGB(220, 170, 70), .handle = RGB(50, 30, 24), .bladeWidth = 1.1f},
+    /* suiren: azul-marinho com acabamento verde-água, cabelo longo, lança. */
+    {.coat = RGB(40, 60, 110), .sleeve = RGB(200, 214, 230), .pants = RGB(30, 40, 70), .skin = RGB(226, 186, 154),
+     .hair = RGB(20, 30, 50), .blade = RGB(226, 236, 246), .hat = HAT_LONG_HAIR, .size = 1.05f, .bladeLen = 34,
+     .robe = 0.9f, .trim = RGB(90, 200, 190), .weapon = WEAPON_SPEAR, .bladeWidth = 1},
+    /* karasu: sobretudo preto com capa de penas, espada e adaga. */
+    {.coat = RGB(24, 24, 30), .sleeve = RGB(24, 24, 30), .pants = RGB(20, 20, 26), .skin = RGB(220, 190, 170),
+     .hair = RGB(14, 14, 18), .blade = RGB(210, 214, 226), .hat = HAT_NONE, .size = 1, .bladeLen = 20,
+     .robe = 1.1f, .trim = RGB(70, 70, 96), .extra = RGB(30, 30, 46), .extras = EX_CAPE, .handle = RGB(30, 30, 40),
+     .bladeWidth = 1, .offhand = OFF_DAGGER},
+    /* arashi: violeta e prata, ombreiras, cabelo branco, duas espadas. */
+    {.coat = RGB(84, 70, 110), .sleeve = RGB(60, 50, 84), .pants = RGB(30, 26, 40), .skin = RGB(236, 204, 184),
+     .hair = RGB(232, 232, 240), .blade = RGB(236, 236, 250), .hat = HAT_NONE, .size = 1.05f, .bladeLen = 19,
+     .robe = 1, .pantsWidth = 1.3f, .trim = RGB(200, 200, 216), .extra = RGB(170, 170, 186), .extras = EX_PAULDRONS,
+     .handle = RGB(60, 50, 84), .bladeWidth = 0.9f, .offhand = OFF_SWORD},
+    /* jinshi: monge da montanha, túnica longa, chapéu de palha, cajado de ferro. */
+    {.coat = RGB(110, 96, 80), .sleeve = RGB(110, 96, 80), .pants = RGB(80, 70, 60), .skin = RGB(210, 164, 126),
+     .hair = RGB(40, 30, 26), .blade = RGB(90, 92, 100), .hat = HAT_KASA, .size = 1.1f, .bladeLen = 30,
+     .robe = 1.6f, .flare = 0.3f, .extra = RGB(60, 36, 24), .extras = EX_BEADS, .weapon = WEAPON_STAFF, .bladeWidth = 1},
+    /* oboro: o uniforme da escola em preto e roxo, cabelo solto, capa, a katana de hanzo. */
+    {.coat = RGB(26, 20, 30), .sleeve = RGB(60, 34, 80), .pants = RGB(20, 16, 24), .skin = RGB(226, 200, 188),
+     .hair = RGB(16, 12, 20), .blade = RGB(200, 200, 220), .hat = HAT_LONG_HAIR, .size = 1.15f, .bladeLen = 22,
+     .robe = 1.1f, .flare = 0.3f, .pantsWidth = 1.3f, .trim = RGB(130, 80, 170), .extra = RGB(80, 40, 110),
+     .extras = EX_PAULDRONS | EX_CAPE, .handle = RGB(30, 20, 30), .bladeWidth = 1},
 };
 
 static KatanaStyle katana_style(const Look *l) {
@@ -162,8 +161,13 @@ static struct {
     Font ui, uiBold;
     Texture2D parch;
     Shader post;
-    int locAberr, locRes;
+    int locAberr, locRes, locDesat, locDuo;
     float aberr;              /* aberração cromática (px), decai sozinha */
+    float desat;              /* quebra de postura: tela sem cor e bordas escuras */
+    float duo;                /* execução: a tela em duas cores */
+    float slash;              /* execução: o traço de corte atravessando a tela */
+    float crack;              /* rachadura branca no mestre */
+    float silence;            /* a trilha some por um instante */
     struct { Rig rig; float life; Color color; } ghosts[GHOST_MAX];
     int ghostHead;
     float ghostTimer;
@@ -555,6 +559,9 @@ static void start_disarm(void) {
 
     audio_play(SND_SWING, 1, 1.4f);
     fx_popup(&G.fx, "desarmado", (Vector2){160, 44}, 1.2f, PAPER);
+    G.duo = 0.3f;
+    G.slash = 0.35f;
+    G.silence = 1.0f;
     G.slowmo = 0.3f;
     G.slowmoTime = 1.0f;
     set_state(ST_FINISHER);
@@ -582,10 +589,35 @@ static void update_sword(float dt) {
     }
 }
 
+/* Posição da arma voando: centro, direção e as duas pontas. */
+static void fly_ends(const FlySword *s, Vector2 *butt, Vector2 *tip) {
+    float wobble = s->stuck ? sinf(s->stuckTime * 38) * expf(-s->stuckTime * 5) * 7 : 0;
+    float a = (s->angle + wobble) * DEG2RAD;
+    Vector2 dir = {cosf(a), sinf(a)};
+    Vector2 c = s->pos;
+    if (s->stuck) {
+        Vector2 t = {s->pos.x + cosf(s->target * DEG2RAD) * s->len / 2, s->pos.y + sinf(s->target * DEG2RAD) * s->len / 2};
+        c = (Vector2){t.x - dir.x * s->len / 2, t.y - dir.y * s->len / 2};
+    }
+    *butt = (Vector2){c.x - dir.x * s->len / 2, c.y - dir.y * s->len / 2};
+    *tip = (Vector2){c.x + dir.x * s->len / 2, c.y + dir.y * s->len / 2};
+}
+
+/* Lança e cajado voando: haste desenhada em 2D. */
+static void draw_pole_flying(void) {
+    FlySword *s = &G.sword;
+    if (!s->active || G.boss.look.weapon == WEAPON_KATANA) return;
+    Vector2 b, t;
+    fly_ends(s, &b, &t);
+    bool spear = G.boss.look.weapon == WEAPON_SPEAR;
+    DrawLineEx(b, t, 1.8f, spear ? (Color){116, 80, 48, 255} : (Color){70, 72, 80, 255});
+    if (spear) DrawCircleV(t, 1.8f, G.boss.look.blade);
+}
+
 /* A espada do desarme em 3D: gira no ar e no próprio eixo, e crava pela ponta. */
 static void draw_sword_3d(Color light) {
     FlySword *s = &G.sword;
-    if (!s->active) return;
+    if (!s->active || G.boss.look.weapon != WEAPON_KATANA) return;
     float wobble = s->stuck ? sinf(s->stuckTime * 38) * expf(-s->stuckTime * 5) * 7 : 0;
     float a = (s->angle + wobble) * DEG2RAD;
     Vector2 dir = {cosf(a), sinf(a)};
@@ -658,6 +690,7 @@ static void on_impact(const DuelEvent *e) {
             fx_burst(&G.fx, P_SPARK, at, 26, 170, 1.2f, -0.5f, (Color){255, 255, 230, 255}, (Color){255, 200, 90, 255});
             fx_burst(&G.fx, P_SPARK, at, 12, 130, 0.9f, 3.14f + 0.5f, (Color){255, 240, 200, 255}, (Color){255, 180, 60, 255});
             fx_ring(&G.fx, at, 180, 0.3f, 2, (Color){255, 245, 210, 230});
+            fx_star(&G.fx, at, 16, 0.12f);
             fx_flash(&G.fx, (Color){255, 250, 235, 90}, 1);
             fx_kick(&G.fx, 1.5f, 0.1f);
             rig_pose(r, POSE_DEFLECT, 0.05f, EASE_OUT);
@@ -703,9 +736,10 @@ static void on_impact(const DuelEvent *e) {
     }
     if (e->flag) {
         G.aberr = 3.5f;
-        /* Quebra final: vitória suave; selo do oboro: estalo mais contido. */
-        if (G.duel.phase == PH_FINISHED) audio_play(SND_VICTORY, 0.9f, 1);
-        else audio_play(SND_BREAK, 0.45f, 1);
+        G.desat = 1;
+        G.crack = 0.14f;
+        G.silence = 0.5f;
+        audio_play(SND_BREAK, 0.9f, 1); /* cerâmica rachando e taiko; depois, meio segundo de silêncio */
         Vector2 c = {b->x, GROUND_LOW - 30};
         fx_burst(&G.fx, P_SHARD, c, 20, 160, 1.4f, -1.57f, (Color){230, 230, 255, 255}, (Color){180, 140, 255, 255});
         fx_ring(&G.fx, c, 320, 0.5f, 3, WHITE);
@@ -717,6 +751,31 @@ static void on_impact(const DuelEvent *e) {
         G.slowmo = 0.3f;
         G.slowmoTime = 0.8f;
     }
+}
+
+/* Sinal próprio de cada vilão no começo de cada sequência: nunca dois iguais. */
+static void tell_fx(void) {
+    Rig *b = &G.boss;
+    Vector2 butt, tip;
+    rig_sword_line(b, &butt, &tip);
+    Vector2 mid = {(butt.x + tip.x) / 2, (butt.y + tip.y) / 2};
+    Vector2 feet = {b->x + b->offsetX - 9 * b->look.size, GROUND_LOW - 1};
+    static const float pitch[ROSTER_SIZE] = {0.6f, 1.5f, 1.2f, 0.7f, 1.4f, 0.8f, 1.1f, 1.3f, 1.25f, 1.6f, 0.65f, 0.9f};
+    switch (G.m->id) {
+        case 1: fx_burst(&G.fx, P_SPARK, feet, 10, 70, 0.6f, -1.2f, (Color){255, 190, 110, 255}, (Color){255, 140, 60, 255}); break;
+        case 2: fx_burst(&G.fx, P_GEM, tip, 8, 40, 1.2f, 1.57f, (Color){200, 236, 255, 255}, (Color){120, 190, 240, 255}); break;
+        case 3: fx_burst(&G.fx, P_DUST, mid, 10, 20, 3.14f, 0, (Color){60, 40, 80, 170}, (Color){30, 20, 40, 150}); break;
+        case 4: fx_burst(&G.fx, P_DUST, feet, 14, 50, 0.8f, -1.57f, (Color){170, 130, 90, 170}, (Color){110, 80, 50, 150}); break;
+        case 5: fx_burst(&G.fx, P_PETAL, (Vector2){b->x + 20, GROUND_LOW - 40}, 10, 90, 0.4f, 3.14f, (Color){236, 240, 230, 220}, (Color){180, 220, 200, 200}); break;
+        case 6: fx_burst(&G.fx, P_GEM, (Vector2){mid.x + 6, mid.y + 8}, 8, 30, 3.14f, 0, (Color){200, 230, 170, 255}, (Color){140, 170, 110, 255}); break;
+        case 7: fx_burst(&G.fx, P_EMBER, mid, 16, 30, 3.14f, -1.57f, (Color){255, 190, 80, 255}, (Color){255, 90, 30, 255}); break;
+        case 8: fx_burst(&G.fx, P_GEM, tip, 10, 50, 0.9f, -1.57f, (Color){170, 230, 240, 255}, (Color){90, 170, 220, 255}); break;
+        case 9: fx_burst(&G.fx, P_PETAL, (Vector2){b->x, GROUND_LOW - 44}, 8, 50, 3.14f, -1.57f, (Color){30, 30, 40, 230}, (Color){60, 60, 80, 230}); break;
+        case 10: fx_burst(&G.fx, P_SPARK, tip, 12, 90, 3.14f, 0, (Color){210, 190, 255, 255}, (Color){140, 110, 255, 255}); break;
+        case 11: fx_burst(&G.fx, P_SHARD, feet, 10, 60, 0.7f, -1.57f, (Color){150, 146, 140, 255}, (Color){100, 96, 90, 255}); break;
+        default: fx_burst(&G.fx, P_DUST, mid, 18, 16, 3.14f, 0, (Color){150, 90, 200, 150}, (Color){90, 50, 130, 130}); break;
+    }
+    audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
 }
 
 static void handle_events(void) {
@@ -735,7 +794,10 @@ static void handle_events(void) {
                 G.staggerTime = 0;
                 /* A preparação leva exatamente o tempo até a partida da lâmina.
                  * Cada tipo de sequência tem sua preparação: é assim que se lê o moveset. */
-                if (G.duel.comboStrike == 0) rig_pose(b, windup_pose(strike_look()), G.windupLen, EASE_INOUT);
+                if (G.duel.comboStrike == 0) {
+                    rig_pose(b, windup_pose(strike_look()), G.windupLen, EASE_INOUT);
+                    tell_fx();
+                }
                 else rig_pose(b, rearm_pose(strike_look()), G.windupLen, EASE_OUT);
                 G.blackoutTarget = G.duel.blackout ? 1 : 0;
                 if (m->arena == ARENA_PORTO) { audio_play(SND_DRUM, 0.9f, 1); G.ctx.beat = 1; }
@@ -867,6 +929,11 @@ static void update_actors(float dt) {
         b->hopY = 0;
     }
     update_ghosts(dt);
+    /* O cansaço segue a postura de cada um. */
+    if (G.state == ST_DUEL || G.state == ST_INTRO) {
+        r->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.renPosture / G.settings.renPosture, 0, 1) : 0;
+        b->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.bossPosture / G.m->posture, 0, 1) : 0;
+    }
     G.renKnock *= expf(-dt * 9);
     G.bossKnock *= expf(-dt * 7);
     r->offsetX = -G.renKnock;
@@ -875,12 +942,7 @@ static void update_actors(float dt) {
 
 static void update_ctx(float dt) {
     G.ctx.t += dt;
-    if (G.m->arena == ARENA_RAVE) {
-        float ph = fmodf(G.ctx.t * 128 / 60.0f, 1);
-        G.ctx.beat = fmaxf(G.ctx.beat * expf(-dt * 8), ph < 0.08f ? 1 : 0);
-    } else {
-        G.ctx.beat *= expf(-dt * 6);
-    }
+    G.ctx.beat *= expf(-dt * 6);
     G.ctx.blackout += (G.blackoutTarget - G.ctx.blackout) * (1 - expf(-dt * (G.blackoutTarget > G.ctx.blackout ? 5 : 3)));
     G.ctx.lightning = fmaxf(0, G.ctx.lightning - dt * 3);
     if (G.m->arena == ARENA_CIDADELA && G.ctx.seal >= 1) {
@@ -912,10 +974,10 @@ static void update_duel(float dtReal) {
         G.hitstop -= dtReal;
         if (press) duel_press(&G.duel);
         handle_events();
-        audio_music_duck(0.6f);
+        audio_music_duck(G.silence > 0 ? 1 : 0.6f);
         return;
     }
-    audio_music_duck(0);
+    audio_music_duck(G.silence > 0 ? 1 : 0);
     if (press) {
         /* O clique chegou em algum ponto do último quadro: aplicamos no meio. */
         duel_tick(&G.duel, dt * 0.5);
@@ -998,6 +1060,17 @@ static void draw_rigs(Color light) {
     }
     draw_fighter(&G.boss, light, rim, dark);
     draw_fighter(&G.ren, light, rim, false);
+    draw_pole_flying();
+    if (G.crack > 0) {
+        /* Rachadura branca atravessando o mestre de cima a baixo. */
+        float x = G.boss.x + G.boss.offsetX, top = GROUND_LOW - 56 * G.boss.look.size;
+        Vector2 prev = {x - 4, top};
+        for (int k = 1; k <= 7; k++) {
+            Vector2 p = {x + ((k % 2) ? 4.0f : -4.0f) + (k * 7 % 3) - 1, top + k * (GROUND_LOW - 4 - top) / 7};
+            DrawLineEx(prev, p, 1.4f, (Color){255, 255, 255, 240});
+            prev = p;
+        }
+    }
     EndMode2D();
     if (katana3d_ready()) {
         katana3d_begin(LOW_W, LOW_H);
@@ -1005,7 +1078,15 @@ static void draw_rigs(Color light) {
         /* Quem olha para a direita segura com meia volta: fio para baixo, ponta subindo. */
         KatanaStyle bs = katana_style(&G.boss.look), rs = katana_style(&G.ren.look);
         Color bossLight = dark ? (Color){40, 34, 54, 255} : light;
-        if (!G.boss.noSword) { rig_sword_line(&G.boss, &butt, &tip); katana3d_draw(butt, tip, G.boss.faceLeft ? 0 : 180, &bs, bossLight); }
+        if (!G.boss.noSword && G.boss.look.weapon == WEAPON_KATANA) {
+            rig_sword_line(&G.boss, &butt, &tip);
+            katana3d_draw(butt, tip, G.boss.faceLeft ? 0 : 180, &bs, bossLight);
+        }
+        if (rig_offhand_line(&G.boss, &butt, &tip)) {
+            KatanaStyle os = bs;
+            os.width *= 0.9f;
+            katana3d_draw(butt, tip, G.boss.faceLeft ? 0 : 180, &os, bossLight);
+        }
         rig_sword_line(&G.ren, &butt, &tip);
         katana3d_draw(butt, tip, G.ren.faceLeft ? 0 : 180, &rs, light);
         draw_sword_3d(light);
@@ -1179,7 +1260,7 @@ static void ui_text_band(const char *textStr, int visible) {
     Rectangle r = {80, 512, UI_W - 160, 180};
     parchment(r, 1);
     scroll_rods(r, 1);
-    ink_wrapped(textStr, r.x + 36, r.y + 30, r.width - 72, 28, INK_TEXT, visible);
+    ink_wrapped(textStr, r.x + 36, r.y + 22, r.width - 72, 26, INK_TEXT, visible);
 }
 
 
@@ -1237,8 +1318,8 @@ static void ui_narration(void) {
 static void ui_title(void) {
     DrawRectangleGradientV(0, 360, UI_W, 360, fadec(INK, 0), fadec(INK, 0.5f));
     float bob = sinf(G.time * 1.2f) * 4;
-    draw_text_f(G.uiBold, "apara", UI_W / 2.0f - ui_width_f(G.uiBold, "apara", 130) / 2, 96 + bob, 130, (Color){238, 214, 170, 255}, true);
-    ui_center("a trilha dos doze mestres", UI_W / 2.0f, 250, 26, (Color){236, 220, 190, 230});
+    draw_text_f(G.uiBold, "aparar", UI_W / 2.0f - ui_width_f(G.uiBold, "aparar", 130) / 2, 96 + bob, 130, (Color){238, 214, 170, 255}, true);
+    ui_center("a trilha dos doze aprendizes", UI_W / 2.0f, 250, 26, (Color){236, 220, 190, 230});
     int options = G.hasSave ? 3 : 2;
     Rectangle w = {UI_W / 2.0f - 220, 396, 440, 40 + options * 60.0f};
     parchment(w, 1);
@@ -1276,7 +1357,7 @@ static void ui_trail(void) {
     parchment(r, 1);
     scroll_rods(r, 1);
     if (m->isBigBoss) snprintf(buf, sizeof buf, "último duelo");
-    else snprintf(buf, sizeof buf, "mestre %d de %d", m->id, MASTER_COUNT);
+    else snprintf(buf, sizeof buf, "aprendiz %d de %d", m->id, MASTER_COUNT);
     ink(buf, r.x + 36, r.y + 22, 22, INK_SOFT);
     ink_bold(lower(m->name), r.x + 36, r.y + 50, 48, m->isBigBoss ? SEAL_RED : (Color){160, 66, 22, 255});
     ink(lower(m->title), r.x + 36, r.y + 118, 24, INK_TEXT);
@@ -1317,17 +1398,18 @@ static void ui_cleared(void) {
     Rectangle r = {UI_W / 2.0f - 300, 200, 600, 220};
     parchment(r, a);
     scroll_rods(r, a);
-    ink_bold_center("mestre vencido", UI_W / 2.0f, r.y + 34, 50, fadec(INK_TEXT, a));
+    ink_bold_center("aprendiz vencido", UI_W / 2.0f, r.y + 34, 50, fadec(INK_TEXT, a));
     ink_bold_center(lower(G.m->name), UI_W / 2.0f, r.y + 104, 34, fadec((Color){160, 66, 22, 255}, a));
     if (G.stateTime > 1.0f)
-        ink_center(campaign_big_boss_open(&G.camp) ? "os doze caíram. oboro espera no castelo." : "clique para seguir a trilha",
+        ink_center(campaign_big_boss_open(&G.camp) ? "os onze caíram. oboro espera no dojo de hanzo." : "clique para seguir a trilha",
                    UI_W / 2.0f, r.y + 162, 24, fadec(INK_SOFT, a));
 }
 
 
 static const char *ENDING_TEXT =
-    "Oboro caiu de joelhos, sem espada, e pela primeira vez entendeu o que o velho ensinava. Musashi subiu a serra "
-    "e devolveu a espada ao mestre de um braço só. Hanzo a recebeu sem dizer nada. Não precisava.";
+    "Oboro caiu de joelhos, sem a katana de Hanzo. Pela primeira vez entendeu que aquela abertura não fora a derrota "
+    "do mestre, e sim a última lição, a que ele se recusou a aprender. Musashi subiu a serra e devolveu a katana a "
+    "Hanzo. O velho a recebeu sem dizer nada. Não precisava.";
 
 static void ui_pause(void) {
     DrawRectangle(0, 0, UI_W, UI_H, fadec(INK, 0.6f));
@@ -1340,6 +1422,16 @@ static void ui_pause(void) {
     for (int i = 0; i < 5; i++) ink_center(items[i], UI_W / 2.0f, r.y + 120 + i * 44.0f, 26, INK_SOFT);
 }
 
+
+/* Execução: um traço branco atravessa a tela na diagonal. */
+static void ui_slash(void) {
+    if (G.slash <= 0) return;
+    float t = 1 - G.slash / 0.35f, a = clampf(G.slash / 0.15f, 0, 1);
+    Vector2 p0 = {-60, UI_H * 0.78f}, p1 = {UI_W + 60, UI_H * 0.2f};
+    Vector2 head = {p0.x + (p1.x - p0.x) * fminf(1, t * 3), p0.y + (p1.y - p0.y) * fminf(1, t * 3)};
+    DrawLineEx(p0, head, 10 * a, fadec(WHITE, 0.25f * a));
+    DrawLineEx(p0, head, 3 * a, fadec(WHITE, a));
+}
 
 static void draw_ui(void) {
     switch (G.state) {
@@ -1360,6 +1452,7 @@ static void draw_ui(void) {
         default:
             if (G.state == ST_DUEL || G.state == ST_DEFEAT || G.state == ST_FINISHER) ui_hud();
             fx_draw_popups(&G.fx, G.ui, UNIT);
+            ui_slash();
             if (G.state == ST_INTRO || G.state == ST_OUTRO) ui_dialogue(G.m->venue);
             if (G.state == ST_DEFEAT) ui_defeat();
             if (G.state == ST_CLEARED) ui_cleared();
@@ -1456,7 +1549,7 @@ static void outro_done(void) {
         return;
     }
     set_state(ST_CLEARED);
-    audio_play(SND_UI, 0.6f, 0.8f);
+    audio_play(SND_VICTORY, 0.8f, 1);
 }
 
 static void start_sensei(void) {
@@ -1590,7 +1683,7 @@ int main(int argc, char **argv) {
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
     SetTraceLogLevel(LOG_WARNING);
-    InitWindow(UI_W, UI_H, "APARA - A Trilha dos Doze Mestres");
+    InitWindow(UI_W, UI_H, "aparar - a trilha dos doze aprendizes");
     SetExitKey(KEY_NULL);
     SetWindowMinSize(LOW_W, LOW_H);
     ChangeDirectory(GetApplicationDirectory());
@@ -1603,6 +1696,8 @@ int main(int argc, char **argv) {
     G.post = LoadShaderFromMemory(NULL, POST_FS);
     G.locAberr = GetShaderLocation(G.post, "aberr");
     G.locRes = GetShaderLocation(G.post, "res");
+    G.locDesat = GetShaderLocation(G.post, "desat");
+    G.locDuo = GetShaderLocation(G.post, "duo");
     katana3d_load("assets/katana");
     G.ui = load_font("assets/fonts/Montserrat-Medium.ttf", 96);
     G.uiBold = load_font("assets/fonts/Montserrat-SemiBold.ttf", 96);
@@ -1660,6 +1755,11 @@ int main(int argc, char **argv) {
         G.stateTime += dtReal;
         G.bannerTime = fmaxf(0, G.bannerTime - dtReal);
         G.aberr = fmaxf(0, G.aberr - dtReal * 6);
+        G.desat = fmaxf(0, G.desat - dtReal * 1.4f);
+        G.duo = fmaxf(0, G.duo - dtReal);
+        G.slash = fmaxf(0, G.slash - dtReal);
+        G.crack = fmaxf(0, G.crack - dtReal);
+        if (G.silence > 0) { G.silence -= dtReal; audio_music_duck(G.silence > 0 ? 1 : 0); }
         if (!G.paused) step(dtReal);
         draw_world();
 
@@ -1677,6 +1777,9 @@ int main(int argc, char **argv) {
         float res[2] = {LOW_W, LOW_H}; /* scanlines e aberração na escala dos lutadores */
         SetShaderValue(G.post, G.locAberr, &G.aberr, SHADER_UNIFORM_FLOAT);
         SetShaderValue(G.post, G.locRes, res, SHADER_UNIFORM_VEC2);
+        float desat = clampf(G.desat, 0, 1), duo = clampf(G.duo * 3, 0, 1);
+        SetShaderValue(G.post, G.locDesat, &desat, SHADER_UNIFORM_FLOAT);
+        SetShaderValue(G.post, G.locDuo, &duo, SHADER_UNIFORM_FLOAT);
         BeginShaderMode(G.post);
         DrawTexturePro(G.scene.texture, (Rectangle){0, 0, RW, -RH}, dst, (Vector2){0, 0}, 0, WHITE);
         EndShaderMode();

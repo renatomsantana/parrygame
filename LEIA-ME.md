@@ -10,7 +10,8 @@ Versão 0.5.0, em duas plataformas com as mesmas regras:
 | `c_game/` | **C + raylib (nova versão)** | `make -C c_game test` |
 
 > **A versão em C é a nova base.** Ela muda as regras: não há vida, só
-> postura; são doze mestres e o BIG BOSS (Oboro), com lore de abertura.
+> postura; chama-se **aparar — a trilha dos doze aprendizes**: onze aprendizes
+> de Hanzo e Oboro no fim, com lore em `aparar_lore.md`.
 > Veja `c_game/LEIA-ME.md`. O resto deste arquivo descreve as versões
 > Unity e RPG Maker, que seguem com as regras antigas.
 

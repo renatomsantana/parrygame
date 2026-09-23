@@ -58,35 +58,36 @@ static float s_cue_feint(float t, float d, float *st) {
     float env = expf(-t * 22) * fminf(1, t * 400);
     return (sinf(TAU * 1320 * t) + 0.4f * sinf(TAU * 2640 * t)) * env;
 }
+/* Perfeito: "clang" agudo e forte, com cauda longa e um sino leve por baixo. */
 static float s_perfect(float t, float d, float *st) {
     (void)d;
     static const float f[] = {1180, 1873, 2644, 3911, 5230};
     static const float k[] = {6, 7, 9, 11, 3};
     float v = 0;
     for (int i = 0; i < 5; i++) v += sinf(TAU * f[i] * t) * expf(-t * k[i]) / (1 + i * 0.4f);
+    float bell = (sinf(TAU * 784 * t) + 0.5f * sinf(TAU * 784 * 2.76f * t)) * expf(-t * 1.6f) * 0.35f;
     float click = lp(&st[0], nrand(), 0.6f) * expf(-t * 90);
-    return v + click * 1.5f;
+    return v + bell + click * 1.5f;
 }
+/* Bom: "tink" metálico curto, sem eco. */
 static float s_good(float t, float d, float *st) {
     (void)d;
-    float v = sinf(TAU * 920 * t) * expf(-t * 22) + 0.6f * sinf(TAU * 1460 * t) * expf(-t * 30);
-    return v + lp(&st[0], nrand(), 0.5f) * expf(-t * 120);
+    float v = sinf(TAU * 1480 * t) * expf(-t * 45) + 0.5f * sinf(TAU * 2310 * t) * expf(-t * 60);
+    return v + lp(&st[0], nrand(), 0.5f) * expf(-t * 150) * 0.6f;
 }
+/* Levar golpe: batida seca de madeira, como um bokken. */
 static float s_bad(float t, float d, float *st) {
     (void)d;
-    float f = 55 + 90 * expf(-t * 25);
-    st[1] += TAU * f / RATE;
-    float body = sinf(st[1]) * expf(-t * 9);
-    float n = lp(&st[0], nrand(), 0.08f) * expf(-t * 14) * 3;
-    return body + n;
+    float wood = sinf(TAU * 520 * t) * expf(-t * 38) + 0.7f * sinf(TAU * 830 * t) * expf(-t * 55);
+    float body = sinf(TAU * (90 + 60 * expf(-t * 30)) * t) * expf(-t * 18);
+    return wood * 0.8f + body + lp(&st[0], nrand(), 0.4f) * expf(-t * 120);
 }
+/* Postura quebrando: cerâmica rachando e um taiko grave. */
 static float s_break(float t, float d, float *st) {
     (void)d;
-    static const float f[] = {98, 147, 233, 311, 466};
-    float v = 0;
-    for (int i = 0; i < 5; i++) v += sinf(TAU * f[i] * t + sinf(t * 3) * 0.3f) * expf(-t * (1.2f + i * 0.8f));
-    float shatter = (nrand() - lp(&st[0], nrand(), 0.2f)) * expf(-t * 7) * 0.8f;
-    return v + shatter;
+    float crack = (nrand() - lp(&st[0], nrand(), 0.3f)) * expf(-t * 18) * (0.6f + 0.4f * sinf(t * 900));
+    float taiko = sinf(TAU * (52 + 40 * expf(-t * 10)) * t) * expf(-t * 3.2f);
+    return crack * 0.9f + taiko * 1.2f;
 }
 static float s_swing(float t, float d, float *st) {
     float x = t / d;
@@ -227,12 +228,11 @@ typedef struct {
     float noiseAmp, noiseCut; /* vento, água, multidão */
 } Style;
 
-static const Style STYLES[16] = {
+static const Style STYLES[15] = {
     /* DOJO      */ {72, {110, 164.8f, 0}, 0.05f, 0.015f, 0.02f},
-    /* RAVE      */ {128, {55, 0, 0}, 0.04f, 0.0f, 0.1f},
+    /* SERRA     */ {62, {98, 146.8f, 196}, 0.04f, 0.05f, 0.012f},
     /* CELEIRO   */ {80, {98, 146.8f, 196}, 0.045f, 0.01f, 0.03f},
     /* COBERTURA */ {90, {73.4f, 110, 138.6f}, 0.05f, 0.03f, 0.015f},
-    /* GALERIA   */ {66, {103.8f, 155.6f, 207.6f}, 0.05f, 0.0f, 0.02f},
     /* PORTO     */ {100, {82.4f, 123.5f, 0}, 0.04f, 0.03f, 0.03f},
     /* SALAO     */ {138, {130.8f, 196, 261.6f}, 0.035f, 0.0f, 0.02f},
     /* TREM      */ {150, {61.7f, 92.5f, 0}, 0.04f, 0.06f, 0.05f},
@@ -255,11 +255,9 @@ static void sequencer_step(int style, int step, float intensity) {
         case 0: /* dojo: koto esparso */
             if (bar16 % 4 == 0 && mrand() < 0.45f) voice(V_PLUCK, note(PENTA[(int)(mrand() * 8)]) , 0.10f, 4, 0);
             break;
-        case 1: /* rave: bumbo 4/4, chimbal, baixo no contratempo */
-            if (bar16 % 4 == 0) voice(V_KICK, 50, 0.55f, 8, 0);
-            if (bar16 % 4 == 2) { voice(V_NOISE, 0, 0.05f, 40, 0.9f); voice(V_TONE, 55 * (step % 64 < 32 ? 1 : 1.189f), 0.12f, 9, 0); }
-            if (bar16 % 2 == 1) voice(V_NOISE, 0, 0.025f, 70, 0.95f);
-            if (bar16 == 14 && mrand() < 0.5f) voice(V_PLUCK, note(PENTA[(int)(mrand() * 8)] + 12), 0.06f, 7, 0);
+        case 1: /* serra: shakuhachi esparso e vento */
+            if (bar16 == 0 && mrand() < 0.5f) voice(V_TONE, note(PENTA[(int)(mrand() * 6)] + 12), 0.05f, 0.7f, 0);
+            if (bar16 == 8 && mrand() < 0.3f) voice(V_PLUCK, note(PENTA[(int)(mrand() * 5)]), 0.07f, 2.5f, 0);
             break;
         case 2: /* celeiro: grilos e violão */
             if (mrand() < 0.35f) voice(V_BELL, 4200 + mrand() * 600, 0.012f, 30, 0);
@@ -269,45 +267,42 @@ static void sequencer_step(int style, int step, float intensity) {
             if (bar16 % 8 == 0) voice(V_TONE, 73.4f, 0.09f, 2.5f, 0);
             if (bar16 == 6 && mrand() < 0.5f) voice(V_BELL, 880 * (mrand() < 0.5f ? 1 : 1.5f), 0.03f, 5, 0);
             break;
-        case 4: /* galeria: caixinha de música desafinada */
-            if (bar16 % 2 == 0 && mrand() < 0.6f) voice(V_BELL, note(PENTA[(int)(mrand() * 8)] + 12) * (1 + (mrand() - 0.5f) * 0.03f), 0.04f, 3, 0);
-            break;
-        case 5: /* porto: tambores taiko */
+        case 4: /* porto: tambores taiko */
             if (bar16 == 0 || bar16 == 6 || bar16 == 10) voice(V_KICK, 70, 0.45f, 6, 0);
             if (bar16 == 12 || bar16 == 14) voice(V_KICK, 95, 0.3f, 9, 0);
             if (bar16 % 4 == 2) voice(V_NOISE, 0, 0.03f, 50, 0.4f);
             break;
-        case 6: /* salão: valsa (3 tempos) */
+        case 5: /* salão: valsa (3 tempos) */
             if (step % 12 == 0) voice(V_PLUCK, note(-12), 0.12f, 3, 0);
             if (step % 12 == 4 || step % 12 == 8) { voice(V_PLUCK, note(3), 0.05f, 6, 0); voice(V_PLUCK, note(7), 0.05f, 6, 0); }
             if (step % 24 == 0) voice(V_TONE, note(PENTA[(int)(mrand() * 6)] + 12), 0.05f, 1.5f, 0);
             break;
-        case 7: /* trem: tec-tec dos trilhos */
+        case 6: /* trem: tec-tec dos trilhos */
             if (bar16 == 0 || bar16 == 2 || bar16 == 8 || bar16 == 10) voice(V_NOISE, 0, 0.12f, 45, 0.35f);
             if (bar16 % 8 == 4) voice(V_KICK, 60, 0.2f, 12, 0);
             break;
-        case 8: /* cachoeira: quase só água */
+        case 7: /* cachoeira: quase só água */
             if (bar16 == 0 && mrand() < 0.3f) voice(V_TONE, 196, 0.03f, 1, 0);
             break;
-        case 9: /* bambuzal: grilos e flauta */
+        case 8: /* bambuzal: grilos e flauta */
             if (mrand() < 0.3f) voice(V_BELL, 3800 + mrand() * 800, 0.01f, 35, 0);
             if (bar16 == 0 && mrand() < 0.5f) voice(V_TONE, note(PENTA[(int)(mrand() * 8)] + 12), 0.05f, 1.2f, 0);
             break;
-        case 10: /* forja: bigorna */
+        case 9: /* forja: bigorna */
             if (bar16 == 0 || bar16 == 3) voice(V_BELL, 1650, 0.08f, 9, 0);
             if (bar16 == 8) voice(V_KICK, 45, 0.3f, 5, 0);
             break;
-        case 11: /* jardim de vidro: sinos */
+        case 10: /* jardim de vidro: sinos */
             if (bar16 % 4 == 0 && mrand() < 0.7f) voice(V_BELL, note(PENTA[(int)(mrand() * 8)] + 24), 0.035f, 2, 0);
             break;
-        case 12: /* cidadela: tambores que crescem com os selos */
+        case 11: /* cidadela: tambores que crescem com os selos */
             if (bar16 == 0 || bar16 == 8) voice(V_KICK, 55, 0.5f, 5, 0);
             if (intensity > 0.3f && (bar16 == 4 || bar16 == 12)) voice(V_KICK, 80, 0.35f, 8, 0);
             if (intensity > 0.6f && bar16 % 2 == 1) voice(V_NOISE, 0, 0.04f, 40, 0.7f);
             if (bar16 == 0 && step % 64 == 0) voice(V_TONE, 146.8f, 0.07f, 0.8f, 0);
             break;
-        case 13: /* lore */
-        case 14: /* título */
+        case 12: /* lore */
+        case 13: /* título */
             if (bar16 % 8 == 0 && mrand() < 0.7f) voice(V_PLUCK, note(PENTA[(int)(mrand() * 8)]), 0.08f, 2.5f, 0);
             if (bar16 == 0 && mrand() < 0.3f) voice(V_TONE, note(PENTA[(int)(mrand() * 5)] + 12), 0.03f, 0.8f, 0);
             break;
@@ -371,7 +366,7 @@ static void music_callback(void *buffer, unsigned int frames) {
         } else if (M.gain < 1) {
             M.gain += 1.0f / (RATE * 1.2f);
         }
-        const Style *st = &STYLES[M.style < 16 ? M.style : 15];
+        const Style *st = &STYLES[M.style < 15 ? M.style : 14];
         float intensity = M.intensity;
 
         M.stepPos += st->bpm * 4 / 60.0f / RATE;
@@ -389,7 +384,7 @@ static void music_callback(void *buffer, unsigned int frames) {
             if (M.dronePhase[k] > TAU) M.dronePhase[k] -= TAU;
             s += (sinf(M.dronePhase[k]) + 0.2f * sinf(M.dronePhase[k] * 2)) * st->droneAmp * (0.7f + 0.3f * sinf(t * 0.4f + k));
         }
-        if (M.style == 12) s *= 1 + intensity * 0.8f;
+        if (M.style == 11) s *= 1 + intensity * 0.8f;
 
         float n = mrand() * 2 - 1;
         M.noiseLp += (n - M.noiseLp) * st->noiseCut;
