@@ -1,0 +1,12 @@
+# Samurai do espadão (chapéu de palha) da Mattz Art: corpo do Raizo. As tiras (PNG) não vão para o git.
+# Uma tira por animação, quadros de 98 x 64 lado a lado, virada para a direita.
+cell 98 64
+anim IDLE          loop
+anim ATTACK_1      hold 1  contact 2
+anim ATTACK_2      hold 1  contact 2
+anim ATTACK_3      hold 2  contact 3
+anim DEFEND        contact 1
+anim HURT
+anim DEATH         stop 8
+anim RUN           loop
+anim JUMP

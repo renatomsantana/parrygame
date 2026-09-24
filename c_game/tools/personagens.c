@@ -1,6 +1,6 @@
 /*
  * personagens.c - gera os lutadores do aparar a partir das pranchas do Samurai #3
- * (o corpo do Kojiro) e dos packs próprios de Shizuku, Arashi e Oboro.
+ * (o corpo do Kojiro) e dos packs próprios de Raizo, Shizuku, Arashi e Oboro.
  *
  * Não é só troca de paleta:
  *   - tira o chapéu (só o Daichi fica com um) e desenha a cabeça: coque, rabo de
@@ -722,6 +722,7 @@ typedef struct {
     bool ecos;                              /* Oboro: cada ataque em cada uma das onze posturas, e o grito */
     bool pack_par;                          /* o pack já vem com uma arma em cada mão */
     bool pack_sem_camisa;                   /* o pack não tem roupa branca: todo branco grosso é rastro */
+    bool pack_arma;                         /* a arma do pack fica como é (só ganha a cor e o brilho do elemento) */
     bool sem_arma;                          /* Hanzo: não luta mais; sem espada, sem golpes */
 } Char;
 
@@ -765,7 +766,12 @@ static Char CHARS[] = {
      .destaque = {HEX(0xffd23c), HEX(0xc08a14)}, .obi = HEX(0xffd23c),
      .saya = HEX(0x3a2412), .cabo = HEX(0x7a4a14),
      .rastro = {HEX(0xfff4c8), HEX(0xffd84a), HEX(0xc89a2a)}, .elemento = EL_OURO, .largura = 2,
-     .especial = SP_SALTO, .efeito = FX_CHOQUE},
+     .especial = SP_SALTO, .efeito = FX_CHOQUE,
+     /* corpo do samurai do espadão (chapéu de palha): o espadão e o chapéu ficam como vêm,
+        a roupa preta vira marrom; o corpo largo da lâmina não é camisa nem rastro */
+     .pack = "espadao", .pack_arma = true, .pack_sem_camisa = true,
+     .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x657392), '?'}, {HEX(0x424c6e), '?'}},
+     .troca = {{HEX(0x131313), HEX(0x24160e)}, {HEX(0x272727), HEX(0x4a3020)}, {HEX(0x3d3d3d), HEX(0x74502e)}}},
     /* 2. Água. Florete. Azul claro e ciano. */
     {.id = "shizuku", .titulo = "Shizuku", .arma = {.kind = W_FLORETE, .escala = 1.15}, .cabeca = "rabo",
      .camisa = {HEX(0xeef8ff), HEX(0xbfe2f6), HEX(0x86bde6), HEX(0x5a8cc4)},
@@ -1794,6 +1800,10 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
     for (int bi = 0; bi < s->nblades; bi++) {
         const Blade *b = &s->blades[bi];
         double full = b->farthest;
+        if (ch->pack && ch->pack_arma) {
+            for (int i = 0; i < b->n; i++) mark(cv, b->x[i], b->y[i]);
+            continue;
+        }
         if (full < 5) continue;
         bool skip_pair = false;
         /* só a lâmina que sai da mão cresce ou vira outra arma; pedaço solto (a

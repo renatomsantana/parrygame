@@ -5,9 +5,10 @@
 
 Os 15 personagens (o protagonista Kojiro, os 12 aprendizes, Oboro e Hanzo) saem
 de quatro corpos da Mattz Art, e não são só troca de cor. A maioria usa o corpo
-do pack A (o Samurai #3). Três têm corpo próprio, de outro pack: **Shizuku**
-(Samurai #4), **Arashi** (Samurai #5, o de duas espadas) e **Oboro** (o Demon,
-de máscara oni). Ver [Corpos de outros packs](#corpos-de-outros-packs-shizuku-arashi-e-oboro).
+do pack A (o Samurai #3). Quatro têm corpo próprio, de outro pack: **Raizo**
+(o samurai do espadão, de chapéu de palha), **Shizuku** (Samurai #4), **Arashi**
+(Samurai #5, o de duas espadas) e **Oboro** (o Demon, de máscara oni). Ver
+[Corpos de outros packs](#corpos-de-outros-packs-raizo-shizuku-arashi-e-oboro).
 O programa `c_game/tools/personagens.c` (C com raylib, igual ao jogo) pega cada
 quadro das pranchas e:
 
@@ -37,7 +38,7 @@ mesmos pixels.
 | # | Personagem | Arma | Cabeça e corpo | Cores | Rastro e aura |
 |---:|---|---|---|---|---|
 | — | **Kojiro** | katana | sem chapéu e **sem máscara**: coque solto no alto da cabeça com fita vermelha, mechas na testa, barba rala | original (branco e preto) | branco, sem aura |
-| 1 | **Raizo** (touro) | **espadão**: odachi 1,45× a katana, bem mais larga | dois tufos de chifre, faixa amarela; 2 px mais largo | marrom, amarelo | ouro, fagulhas subindo |
+| 1 | **Raizo** (touro) | **espadão** do próprio pack, do jeito que vem | **corpo do samurai do espadão**, chapéu de palha; a roupa preta virou marrom | marrom, amarelo | ouro, fagulhas subindo |
 | 2 | **Shizuku** (água) | florete com copo ciano, **estoca** | **corpo do Samurai #4**, cabelo roxo virou azul petróleo | azul claro, ciano, hakama azul | água, bolhas |
 | 3 | **Yoru** (noite) | **uma adaga em cada mão**, brilho roxo | capuz ninja, fitas roxas; 1 px mais estreito | preto azulado e roxo | corte duplo, fumaça roxa |
 | 4 | **Daichi** (terra) | espada pesada, lâmina larga | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
@@ -280,15 +281,16 @@ O perfeito dura 1,6 s e o bom 0,5 s, mais seco. Perfeito, bom, erro e o
 do anterior. O bom varia um pouco de tom a cada vez, para não soar repetido.
 Sem placa de som o jogo segue mudo, como antes.
 
-## Corpos de outros packs: Shizuku, Arashi e Oboro
+## Corpos de outros packs: Raizo, Shizuku, Arashi e Oboro
 
-Três personagens usam o corpo de outro pack da Mattz Art, que já vem com os
+Quatro personagens usam o corpo de outro pack da Mattz Art, que já vem com os
 próprios golpes animados. O programa lê esse pack, separa as partes do mesmo
 jeito e aplica o personagem por cima: troca exata de cores, a arma dele, o
 rastro e a aura do elemento, o golpe especial.
 
 | Personagem | Pack | Pasta | Quadro | O que muda |
 |---|---|---|---|---|
+| **Raizo** | samurai do espadão (chapéu de palha) | `_packs/espadao/` | 98 × 64 | roupa preta → marrom; o espadão e o chapéu ficam como vêm, com rastro dourado e fagulhas de ouro |
 | **Shizuku** | Samurai #4 (moça de rabo de cavalo) | `_packs/samurai4/` | 96 × 96 | cabelo roxo → azul petróleo, camisa azul clara, hakama azul, faixa ciano, olhos ciano; a katana vira **florete** e o ATTACK_1 vira estocada |
 | **Arashi** | Samurai #5 (mascarado, duas espadas) | `_packs/samurai5/` | 96 × 64 | roupa verde → preta, cinto e botas azul elétrico, cabelo prateado, olhos de raio; as **duas espadas** do pack ficam, com raios nas lâminas e rastro azul |
 | **Oboro** | Demon (máscara oni) | `_packs/demon/` | 128 × 108 | cores do pack; ganha os ecos das posturas dos outros e a cena do grito |
@@ -298,6 +300,8 @@ Como montar a pasta (os PNGs são do pack pago e ficam fora do git; os
 
 ```
 c_game/assets/sprites/_packs/
+  espadao/   sprite.txt  IDLE.png ATTACK_1.png ATTACK_2.png ATTACK_3.png DEFEND.png
+             HURT.png DEATH.png RUN.png JUMP.png
   samurai4/  sprite.txt  IDLE.png ATTACK_1.png ATTACK_2.png ATTACK_3.png DEFEND.png
              HURT.png DEATH.png RUN.png JUMP.png THROW.png
   samurai5/  sprite.txt  IDLE.png ATTACK_1.png ATTACK_2.png ATTACK_3.png DEFEND.png
@@ -322,7 +326,10 @@ No `CHARS` do programa, os campos do pack são:
   mesmo do cabo do #3, então ali ele não é cabo);
 - **`pack_par`**: o pack já tem uma arma em cada mão (não desenha a segunda);
 - **`pack_sem_camisa`**: o pack não tem roupa branca, então todo branco grosso
-  é rastro.
+  é rastro;
+- **`pack_arma`**: a arma do pack fica exatamente como vem (o espadão do Raizo);
+  só ganha o brilho do elemento. Na `leitura`, o azul-acinzentado do corpo largo
+  do espadão fica marcado como "nem camisa nem rastro".
 
 Nesses packs a lâmina tem 2 ou 3 px de largura (no #3, 1 px). O separador trata
 como camisa só o branco que tem miolo de 3 × 3 e fica dentro do corpo; o que é
@@ -331,7 +338,7 @@ do corpo é rastro. A `deteccao_<nome>.png` das folhas mostra o resultado.
 
 Nesses corpos o florete e a lança não viram estocada: o golpe é o corte do
 próprio pack, com a arma e o rastro novos (a estocada em cima do corte deles
-ficava estranha). O golpe especial desses três sai de um golpe do próprio pack (ATTACK_1 para
+ficava estranha). O golpe especial desses quatro sai de um golpe do próprio pack (ATTACK_1 para
 investida e estocada, ATTACK_3 para o salto, ATTACK_2 para o ascendente): a
 preparação fica segurada um quadro a mais, um passo para trás antes do bote, e
 o avanço no contato, com o efeito do elemento.
@@ -366,7 +373,9 @@ que ela sai com as cores e a aura do Oboro como as outras.
 - O Hanzo sai das pranchas do Samurai #3 sem a espada: nas poses em que o
   corpo segurava a katana, as mãos ficam na mesma posição, vazias.
 - Os packs novos não têm todas as animações do #3 (não há DASH nem
-  DASH_ATTACK), e o Demon não tem DEATH. O que o jogo pedir e o pack não tiver
+  DASH_ATTACK), e o Demon não tem DEATH. Do pack do espadão chegaram só
+  ATTACK_1, ATTACK_2, ATTACK_3, DEFEND e DEATH; IDLE, RUN, JUMP e HURT entram
+  quando forem para a pasta `_packs/espadao/`. O que o jogo pedir e o pack não tiver
   precisa de um substituto no carregador (por exemplo, HURT segurado).
 - A estocada usa os quadros do corte horizontal: o braço é o mesmo, só a arma e
   o rastro mudam. Uma estocada com o braço esticando de verdade pediria
@@ -378,12 +387,12 @@ que ela sai com as cores e a aura do Oboro como as outras.
 ## Outros samurais da Mattz Art
 
 As capas com a marca "PREVIEW" não servem de sprite, mas os packs comprados
-viram corpo de verdade. Já estão encaixados o Samurai #4 (Shizuku), o #5
-(Arashi) e o Demon (Oboro). Os que ainda podem entrar:
+viram corpo de verdade. Já estão encaixados o do espadão (Raizo), o Samurai #4
+(Shizuku), o #5 (Arashi) e o Demon (Oboro). Os que ainda podem entrar:
 
 | Pack | Visual | Personagem |
 |---|---|---|
-| Samurai #2 | armadura vermelha, kabuto com chifres dourados | Raizo (touro) |
+| Samurai #2 | armadura vermelha, kabuto com chifres dourados | Daichi ou Jinshi |
 | Samurai #6 | chapéu de palha, corte largo | Daichi |
 
 Para encaixar mais um: pôr as tiras em `_packs/<nome>/` com um `sprite.txt`
