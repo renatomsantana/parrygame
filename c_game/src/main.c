@@ -85,34 +85,39 @@ static const Look REN_LOOK = {
     .handle = RGB(96, 52, 28), .bladeWidth = 1};
 
 static const Look MASTER_LOOKS[ROSTER_SIZE] = {
-    /* raijin: gi marrom, ombreiras, hakama larga e uma odachi enorme. */
+    /* daichi: cores de terra, chapéu de palha, hakama e espada pesada. */
+    {.coat = RGB(120, 92, 58), .sleeve = RGB(150, 120, 80), .pants = RGB(70, 56, 40), .skin = RGB(214, 164, 120),
+     .hair = RGB(60, 40, 26), .blade = RGB(196, 196, 196), .hat = HAT_KASA, .size = 1.15f, .bladeLen = 22,
+     .robe = 0.5f, .pantsWidth = 1.5f, .handle = RGB(90, 60, 36), .bladeWidth = 1.8f},
+    /* genbu: velho de túnica verde-musgo e contas, escudo e espada curta. */
+    {.coat = RGB(96, 110, 86), .sleeve = RGB(170, 170, 150), .pants = RGB(60, 64, 52), .skin = RGB(214, 170, 136),
+     .hair = RGB(186, 186, 186), .blade = RGB(220, 224, 228), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 13,
+     .robe = 1.2f, .flare = 0.3f, .extra = RGB(90, 60, 36), .extras = EX_BEADS, .handle = RGB(60, 70, 50), .bladeWidth = 1.1f,
+     .offhand = OFF_SHIELD},
+    /* raizo: gi marrom, ombreiras, chapéu de palha, hakama larga e um espadão enorme. */
     {.coat = RGB(92, 58, 40), .sleeve = RGB(200, 188, 168), .pants = RGB(40, 36, 44), .skin = RGB(222, 176, 136),
-     .hair = RGB(24, 20, 20), .blade = RGB(232, 232, 238), .hat = HAT_NONE, .size = 1.2f, .bladeLen = 30,
+     .hair = RGB(24, 20, 20), .blade = RGB(232, 232, 238), .hat = HAT_KASA, .size = 1.2f, .bladeLen = 30,
      .robe = 0.6f, .flare = 0.3f, .pantsWidth = 1.6f, .trim = RGB(150, 110, 60), .extra = RGB(96, 96, 106), .extras = EX_PAULDRONS,
      .handle = RGB(110, 30, 30), .bladeWidth = 1.25f},
     /* shizuku: quimono azul-claro até o chão, cabelo longo, florete fino. */
     {.coat = RGB(150, 190, 214), .sleeve = RGB(230, 236, 240), .pants = RGB(70, 90, 120), .skin = RGB(240, 206, 180),
      .hair = RGB(30, 30, 50), .blade = RGB(240, 244, 255), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 26,
      .robe = 2, .flare = 0.6f, .trim = RGB(236, 240, 246), .handle = RGB(190, 196, 210), .bladeWidth = 0.5f},
-    /* kage: capuz e roupa de noite, cachecol vinho, duas adagas. */
-    {.coat = RGB(28, 28, 40), .sleeve = RGB(28, 28, 40), .pants = RGB(18, 18, 26), .skin = RGB(200, 186, 176),
-     .hair = RGB(20, 20, 32), .blade = RGB(200, 204, 220), .hat = HAT_HOOD, .size = 1, .bladeLen = 10,
-     .robe = 0.4f, .extra = RGB(120, 26, 36), .extras = EX_SCARF, .handle = RGB(20, 20, 26), .bladeWidth = 0.9f,
-     .offhand = OFF_DAGGER},
-    /* daichi: cores de terra, chapéu de palha, hakama e espada pesada. */
-    {.coat = RGB(120, 92, 58), .sleeve = RGB(150, 120, 80), .pants = RGB(70, 56, 40), .skin = RGB(214, 164, 120),
-     .hair = RGB(60, 40, 26), .blade = RGB(196, 196, 196), .hat = HAT_KASA, .size = 1.15f, .bladeLen = 22,
-     .robe = 0.5f, .pantsWidth = 1.5f, .handle = RGB(90, 60, 36), .bladeWidth = 1.8f},
-    /* hayate: jaqueta curta verde-água e cachecol branco ao vento, katana leve. */
+    /* garfiel: o tigre; roupa preta com detalhes vermelhos, cabelo loiro, uma garra em cada mão. */
+    {.coat = RGB(34, 30, 38), .sleeve = RGB(44, 40, 48), .pants = RGB(24, 22, 28), .skin = RGB(234, 186, 146),
+     .hair = RGB(232, 184, 60), .blade = RGB(250, 246, 236), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 9,
+     .robe = 0.4f, .pantsWidth = 1.3f, .trim = RGB(200, 40, 40), .extra = RGB(200, 40, 40), .extras = EX_SCARF,
+     .handle = RGB(40, 40, 46), .bladeWidth = 1.3f, .offhand = OFF_DAGGER},
+    /* karasu: sobretudo preto com capa de penas, espada e adaga. */
+    {.coat = RGB(24, 24, 30), .sleeve = RGB(24, 24, 30), .pants = RGB(20, 20, 26), .skin = RGB(220, 190, 170),
+     .hair = RGB(14, 14, 18), .blade = RGB(210, 214, 226), .hat = HAT_NONE, .size = 1, .bladeLen = 20,
+     .robe = 1.1f, .trim = RGB(70, 70, 96), .extra = RGB(30, 30, 46), .extras = EX_CAPE, .handle = RGB(30, 30, 40),
+     .bladeWidth = 1, .offhand = OFF_DAGGER},
+    /* hayate: jaqueta curta verde-água e cachecol branco ao vento, uma foice em cada mão. */
     {.coat = RGB(60, 150, 140), .sleeve = RGB(220, 230, 220), .pants = RGB(40, 50, 56), .skin = RGB(226, 184, 150),
-     .hair = RGB(40, 30, 30), .blade = RGB(236, 244, 244), .hat = HAT_NONE, .size = 1, .bladeLen = 19,
+     .hair = RGB(40, 30, 30), .blade = RGB(236, 244, 244), .hat = HAT_NONE, .size = 1, .bladeLen = 13,
      .robe = 0.3f, .trim = RGB(220, 240, 230), .extra = RGB(236, 236, 230), .extras = EX_SCARF,
-     .handle = RGB(40, 80, 76), .bladeWidth = 0.8f},
-    /* genbu: velho de túnica verde-musgo e contas, escudo e espada curta. */
-    {.coat = RGB(96, 110, 86), .sleeve = RGB(170, 170, 150), .pants = RGB(60, 64, 52), .skin = RGB(214, 170, 136),
-     .hair = RGB(186, 186, 186), .blade = RGB(220, 224, 228), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 13,
-     .robe = 1.2f, .flare = 0.3f, .extra = RGB(90, 60, 36), .extras = EX_BEADS, .handle = RGB(60, 70, 50), .bladeWidth = 1.1f,
-     .offhand = OFF_SHIELD},
+     .handle = RGB(110, 80, 50), .bladeWidth = 1.1f, .offhand = OFF_DAGGER},
     /* enjin: vermelho com dourado, braços de fora, sabre em brasa. */
     {.coat = RGB(170, 40, 26), .sleeve = RGB(214, 150, 110), .pants = RGB(40, 26, 24), .skin = RGB(214, 150, 110),
      .hair = RGB(200, 70, 30), .blade = RGB(255, 184, 124), .hat = HAT_NONE, .size = 1.05f, .bladeLen = 21,
@@ -121,16 +126,16 @@ static const Look MASTER_LOOKS[ROSTER_SIZE] = {
     {.coat = RGB(40, 60, 110), .sleeve = RGB(200, 214, 230), .pants = RGB(30, 40, 70), .skin = RGB(226, 186, 154),
      .hair = RGB(20, 30, 50), .blade = RGB(226, 236, 246), .hat = HAT_LONG_HAIR, .size = 1.05f, .bladeLen = 34,
      .robe = 0.9f, .trim = RGB(90, 200, 190), .weapon = WEAPON_SPEAR, .bladeWidth = 1},
-    /* karasu: sobretudo preto com capa de penas, espada e adaga. */
-    {.coat = RGB(24, 24, 30), .sleeve = RGB(24, 24, 30), .pants = RGB(20, 20, 26), .skin = RGB(220, 190, 170),
-     .hair = RGB(14, 14, 18), .blade = RGB(210, 214, 226), .hat = HAT_NONE, .size = 1, .bladeLen = 20,
-     .robe = 1.1f, .trim = RGB(70, 70, 96), .extra = RGB(30, 30, 46), .extras = EX_CAPE, .handle = RGB(30, 30, 40),
-     .bladeWidth = 1, .offhand = OFF_DAGGER},
     /* arashi: violeta e prata, ombreiras, cabelo branco, duas espadas. */
     {.coat = RGB(84, 70, 110), .sleeve = RGB(60, 50, 84), .pants = RGB(30, 26, 40), .skin = RGB(236, 204, 184),
      .hair = RGB(232, 232, 240), .blade = RGB(236, 236, 250), .hat = HAT_NONE, .size = 1.05f, .bladeLen = 19,
      .robe = 1, .pantsWidth = 1.3f, .trim = RGB(200, 200, 216), .extra = RGB(170, 170, 186), .extras = EX_PAULDRONS,
      .handle = RGB(60, 50, 84), .bladeWidth = 0.9f, .offhand = OFF_SWORD},
+    /* yoru: capuz e roupa de noite, cachecol vinho, duas adagas. */
+    {.coat = RGB(28, 28, 40), .sleeve = RGB(28, 28, 40), .pants = RGB(18, 18, 26), .skin = RGB(200, 186, 176),
+     .hair = RGB(20, 20, 32), .blade = RGB(200, 204, 220), .hat = HAT_HOOD, .size = 1, .bladeLen = 10,
+     .robe = 0.4f, .extra = RGB(120, 26, 36), .extras = EX_SCARF, .handle = RGB(20, 20, 26), .bladeWidth = 0.9f,
+     .offhand = OFF_DAGGER},
     /* jinshi: monge da montanha, túnica longa, chapéu de palha, cajado de ferro. */
     {.coat = RGB(110, 96, 80), .sleeve = RGB(110, 96, 80), .pants = RGB(80, 70, 60), .skin = RGB(210, 164, 126),
      .hair = RGB(40, 30, 26), .blade = RGB(90, 92, 100), .hat = HAT_KASA, .size = 1.1f, .bladeLen = 30,
@@ -760,7 +765,8 @@ static void tell_fx(void) {
     rig_sword_line(b, &butt, &tip);
     Vector2 mid = {(butt.x + tip.x) / 2, (butt.y + tip.y) / 2};
     Vector2 feet = {b->x + b->offsetX - 9 * b->look.size, GROUND_LOW - 1};
-    static const float pitch[ROSTER_SIZE] = {0.6f, 1.5f, 1.2f, 0.7f, 1.4f, 0.8f, 1.1f, 1.3f, 1.25f, 1.6f, 0.65f, 0.9f};
+    /* tom do gesto de cada mestre, na ordem da trilha */
+    static const float pitch[ROSTER_SIZE] = {0.7f, 0.8f, 0.6f, 1.5f, 1.0f, 1.25f, 1.4f, 1.1f, 1.3f, 1.6f, 1.2f, 0.65f, 0.9f};
     switch (G.m->id) {
         case 1: fx_burst(&G.fx, P_SPARK, feet, 10, 70, 0.6f, -1.2f, (Color){255, 190, 110, 255}, (Color){255, 140, 60, 255}); break;
         case 2: fx_burst(&G.fx, P_GEM, tip, 8, 40, 1.2f, 1.57f, (Color){200, 236, 255, 255}, (Color){120, 190, 240, 255}); break;
@@ -1401,7 +1407,7 @@ static void ui_cleared(void) {
     ink_bold_center("aprendiz vencido", UI_W / 2.0f, r.y + 34, 50, fadec(INK_TEXT, a));
     ink_bold_center(lower(G.m->name), UI_W / 2.0f, r.y + 104, 34, fadec((Color){160, 66, 22, 255}, a));
     if (G.stateTime > 1.0f)
-        ink_center(campaign_big_boss_open(&G.camp) ? "os onze caíram. oboro espera no dojo de hanzo." : "clique para seguir a trilha",
+        ink_center(campaign_big_boss_open(&G.camp) ? "os doze caíram. oboro espera no dojo de hanzo." : "clique para seguir a trilha",
                    UI_W / 2.0f, r.y + 162, 24, fadec(INK_SOFT, a));
 }
 

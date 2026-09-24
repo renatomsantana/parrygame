@@ -10,9 +10,9 @@ typedef enum {
 } SoundId;
 
 /* Trilhas: uma por cenário (ArenaId) e duas extras. */
-#define MUSIC_LORE 12
-#define MUSIC_TITLE 13
-#define MUSIC_SILENCE 14
+#define MUSIC_LORE 13       /* 0..12 são as trilhas dos cenários (ArenaId) */
+#define MUSIC_TITLE 14
+#define MUSIC_SILENCE 15
 
 void audio_init(void);
 void audio_shutdown(void);

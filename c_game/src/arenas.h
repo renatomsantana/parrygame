@@ -1,5 +1,5 @@
 /*
- * arenas.h - os treze cenários, desenhados em código e animados.
+ * arenas.h - os catorze cenários, desenhados em código e animados.
  * Tudo é pintado em 320 x 180 e ampliado por número inteiro, sem filtro.
  * A frente (chuva, névoa, brasas) vai por cima dos lutadores.
  */

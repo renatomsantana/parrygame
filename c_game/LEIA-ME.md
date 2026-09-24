@@ -20,10 +20,10 @@ O progresso fica em `apara_save.txt`, ao lado do executável.
 
 ## História
 
-Hattori Hanzo criou a Arte do Aparar e reuniu doze aprendizes em busca de um
+Hattori Hanzo criou a Arte do Aparar e reuniu treze aprendizes em busca de um
 sucessor. Oboro, o mais promissor, venceu o mestre depois de incontáveis
 desafios e tomou o dojo, como manda a tradição, mas percebeu que Hanzo lhe
-concedera a abertura. Passou anos aprendendo as posturas dos outros onze.
+concedera a abertura. Passou anos aprendendo as posturas dos outros doze.
 Anos depois, Hanzo encontra Musashi, e Musashi sobe a trilha para mostrar que o
 estilo do mestre é inabalável. A abertura é narrada sobre o pôr do sol da serra
 (segurar Esc enche um anel e pula; segurar o clique acelera).
@@ -51,18 +51,24 @@ e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
 
 | # | Aprendiz | Postura | Arma | Cenário | Postura dele | Perfeito / Bom | Erros até cair |
 |---:|---|---|---|---|---:|---:|---:|
-| 1 | raijin | touro | odachi | Pátio do dojo | 300 | 90 / 220 ms | 50 |
-| 2 | shizuku | água | florete | Cachoeira | 300 | 85 / 210 ms | 40 |
-| 3 | kage | noite (apagões) | duas adagas | Bambuzal | 330 | 80 / 200 ms | 35 |
-| 4 | daichi | terra | espada pesada | Celeiro | 330 | 75 / 190 ms | 30 |
-| 5 | hayate | vento (ritmo quebrado) | katana leve | Trem | 360 | 72 / 185 ms | 25 |
-| 6 | genbu | tartaruga | escudo e espada curta | Jardim | 360 | 70 / 180 ms | 22 |
-| 7 | enjin | chama | sabre curvo | Forja | 390 | 65 / 170 ms | 20 |
-| 8 | suiren | mar (acelerando) | lança | Porto | 390 | 62 / 165 ms | 18 |
-| 9 | karasu | corvo | espada e adaga | Cobertura | 420 | 60 / 160 ms | 15 |
-| 10 | arashi | tempestade | duas espadas | Salão de espelhos | 420 | 58 / 155 ms | 12 |
-| 11 | jinshi | montanha (sem som) | cajado de ferro | Encosta da serra | 450 | 55 / 150 ms | 10 |
-| 12 | **oboro** | as onze, trocando a cada duas sequências | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
+| 1 | daichi | terra | espada pesada | Celeiro | 300 | 90 / 220 ms | 50 |
+| 2 | genbu | tartaruga | escudo e espada curta | Jardim | 300 | 87 / 215 ms | 45 |
+| 3 | raizo | touro | espadão | Pátio do dojo | 330 | 84 / 208 ms | 40 |
+| 4 | shizuku | água | florete | Cachoeira | 330 | 80 / 200 ms | 35 |
+| 5 | garfiel | tigre | garras nas duas mãos | Portão do tigre branco | 360 | 76 / 192 ms | 30 |
+| 6 | karasu | corvo | espada e adaga | Cobertura | 360 | 72 / 185 ms | 25 |
+| 7 | hayate | vento (ritmo quebrado) | duas foices | Trem | 390 | 69 / 178 ms | 22 |
+| 8 | enjin | chama | sabre curvo | Forja | 390 | 66 / 172 ms | 20 |
+| 9 | suiren | mar (acelerando) | lança | Porto | 420 | 63 / 166 ms | 18 |
+| 10 | arashi | tempestade | duas espadas | Salão de espelhos | 420 | 60 / 160 ms | 15 |
+| 11 | yoru | noite (apagões) | uma adaga em cada mão | Bambuzal | 450 | 58 / 155 ms | 12 |
+| 12 | jinshi | montanha (sem som) | cajado de ferro | Encosta da serra | 450 | 55 / 150 ms | 10 |
+| 13 | **oboro** | as doze, trocando a cada duas sequências | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
+
+A dificuldade é da posição na trilha, não do personagem: postura, erros até
+cair e janelas apertam a cada passo, e do 5º em diante acertar devolve postura
+ao adversário. O que é de cada um (golpes, cenário, apagões, ritmo quebrado,
+ondas acelerando, silêncio) vai junto quando ele muda de lugar.
 
 ## Moveset
 
@@ -74,16 +80,17 @@ na lâmina, brasas, penas, névoa…). Os três primeiros têm só dois golpes.
 
 | Aprendiz | Sequências (golpes: intervalos em s) |
 |---|---|
-| raijin | corte do touro (1) · investida dupla (2: 0,85) |
-| shizuku | gota (1) · correnteza (2: 0,50) |
-| kage | sombra (1) · presas (2: 0,45) |
-| daichi | rocha (1) · desabamento (2: 1,00) · terremoto (3: 0,80 0,50) |
+| daichi | rocha (1) · desabamento (2: 1,00) |
+| genbu | casco (1) · mordida (2: 0,42) |
+| raizo | corte do touro (1) · investida dupla (2: 0,85) |
+| shizuku | gota (1) · correnteza (2: 0,50) · queda d'água (3: 0,50 0,45) |
+| garfiel | patada (1) · garras cruzadas (2: 0,40) · bote do tigre (3: 0,40 0,85) |
+| karasu | bicada (1) · garra (2: 0,55) · revoada (3: 0,50 0,90) |
 | hayate | rajada (1) · redemoinho (2: 0,45) · vendaval (3: 0,50 0,90) |
-| genbu | casco (1) · mordida (2: 0,42) · carapaça (3: 0,90 0,42) |
 | enjin | brasa (2: 0,50) · labareda (3: 0,45 0,45) · incêndio (4: 0,45 0,45 0,80) |
 | suiren | onda (1) · ressaca (2: 0,50) · maremoto (4: 0,55 0,50 0,45) |
-| karasu | bicada (1) · garra (2: 0,55) · revoada (3: 0,50 0,90) |
 | arashi | faísca (1) · trovoada (2: 0,45) · tormenta (3: 0,40 0,40) |
+| yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) |
 | jinshi | pedra (1) · avalanche (3: 0,60 0,60) · cordilheira (4: 0,50 0,50 0,90) |
 | oboro | um eco de cada aprendiz, na postura dele · doze posturas (5, terceiro selo) |
 
@@ -114,11 +121,11 @@ de um botão só) e o visual índigo do Musashi (fica o laranja escuro).
 | Arquivo | O quê |
 |---|---|
 | `src/core.c`, `core.h` | Regras puras: relógio, tentativa, postura, selos, moveset, trilha. Sem raylib. |
-| `src/roster.c` | Os doze lutadores, falas, conselhos de hanzo e a lore. **Balanceamento é aqui.** |
+| `src/roster.c` | Os treze lutadores (doze aprendizes e oboro), falas, conselhos de hanzo e a lore. **Balanceamento é aqui.** |
 | `src/main.c` | Telas, coreografia, interface, visuais de cada lutador (`MASTER_LOOKS`) |
 | `src/rig.c` | Bonecos: poses, passos, cansaço, roupas, armas |
 | `src/katana3d.c` | A katana 3D dentro do mundo em pixel |
-| `src/arenas.c` | Os doze cenários |
+| `src/arenas.c` | Os treze cenários dos duelos (e o do título) |
 | `src/lore.c` | Tela de título, trilha, final e a cena do sensei |
 | `src/fx.c` | Faíscas, estrela, anéis, arcos, flash, tremor |
 | `src/audio.c` | Efeitos e trilha ambiente sintetizados |

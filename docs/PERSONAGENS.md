@@ -3,7 +3,8 @@
 > Substitui a seção 4 (troca de paleta) do brief visual v2. Pode colar este
 > arquivo inteiro no Claude Code.
 
-Os 15 personagens (o protagonista Kojiro, os 12 aprendizes, Oboro e Hanzo) saem
+Os 15 personagens (o protagonista Kojiro, os 12 aprendizes na ordem da trilha,
+Oboro e Hanzo) saem
 de quatro corpos da Mattz Art, e não são só troca de cor. A maioria usa o corpo
 do pack A (o Samurai #3). Quatro têm corpo próprio, de outro pack: **Raizo**
 (o samurai do espadão, de chapéu de palha), **Shizuku** (Samurai #4), **Arashi**
@@ -38,18 +39,18 @@ mesmos pixels.
 | # | Personagem | Arma | Cabeça e corpo | Cores | Rastro e aura |
 |---:|---|---|---|---|---|
 | — | **Kojiro** | katana | sem chapéu e **sem máscara**: coque solto no alto da cabeça com fita vermelha, mechas na testa, barba rala | original (branco e preto) | branco, sem aura |
-| 1 | **Raizo** (touro) | **espadão** do próprio pack, do jeito que vem | **corpo do samurai do espadão**, chapéu de palha; a roupa preta virou marrom | marrom, amarelo | ouro, fagulhas subindo |
-| 2 | **Shizuku** (água) | florete com copo ciano, **estoca** | **corpo do Samurai #4**, cabelo roxo virou azul petróleo | azul claro, ciano, hakama azul | água, bolhas |
-| 3 | **Yoru** (noite) | **uma adaga em cada mão**, brilho roxo | capuz ninja, fitas roxas; 1 px mais estreito | preto azulado e roxo | corte duplo, fumaça roxa |
-| 4 | **Daichi** (terra) | espada pesada, lâmina larga | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
-| 5 | **Hayate** (vento) | **duas foices** (kama), uma em cada mão | cabelo espetado, cachecol limão | verde claro, limão | vento; no golpe, **cortes de vento** voam para a frente |
-| 6 | **Genbu** (tartaruga) | espada curta + casco nas costas | careca, barbicha; atarracado | verde musgo | verde, esporos |
-| 7 | **Enjin** (chama) | espada de fogo | cabelo em chamas; 1 px mais largo | vermelho e amarelo | fogo, labaredas e brasas |
-| 8 | **Suiren** (mar) | lança de água, **estoca** | cabelo curto, faixa turquesa | azul mar, turquesa | água, bolhas |
-| 9 | **Karasu** (corvo) | **espada e lâmina curta** (12 px, a da outra mão) | cabelo em penas, olho vermelho, trapo; magro e alto | preto e vermelho | eco da segunda lâmina, penas caindo |
+| 1 | **Daichi** (terra) | espada pesada, lâmina larga | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
+| 2 | **Genbu** (tartaruga) | espada curta + casco nas costas | careca, barbicha; atarracado | verde musgo | verde, esporos |
+| 3 | **Raizo** (touro) | **espadão** do próprio pack, do jeito que vem | **corpo do samurai do espadão**, chapéu de palha; a roupa preta virou marrom | marrom, amarelo | ouro, fagulhas subindo |
+| 4 | **Shizuku** (água) | florete com copo ciano, **estoca** | **corpo do Samurai #4**, cabelo roxo virou azul petróleo | azul claro, ciano, hakama azul | água, bolhas |
+| 5 | **Garfiel** (tigre branco, Byakko) | **garras nas duas mãos** (três lâminas em cada) | cabelo loiro espetado com listras pretas, roupa preta listrada de vermelho, cauda; 1 px mais largo | preto e vermelho, cabelo loiro | terra, três riscos de garra |
+| 6 | **Karasu** (corvo) | **espada e lâmina curta** (12 px, a da outra mão) | cabelo em penas, olho vermelho, trapo; magro e alto | preto e vermelho | eco da segunda lâmina, penas caindo |
+| 7 | **Hayate** (vento) | **duas foices** (kama), uma em cada mão | cabelo espetado, cachecol limão | verde claro, limão | vento; no golpe, **cortes de vento** voam para a frente |
+| 8 | **Enjin** (chama) | espada de fogo | cabelo em chamas; 1 px mais largo | vermelho e amarelo | fogo, labaredas e brasas |
+| 9 | **Suiren** (mar) | lança de água, **estoca** | cabelo curto, faixa turquesa | azul mar, turquesa | água, bolhas |
 | 10 | **Arashi** (tempestade) | duas espadas com raios | **corpo do Samurai #5**, cabelo prateado, olhos de raio | preto, azul elétrico | raios nas lâminas e no corpo |
-| 11 | **Jinshi** (montanha) | cajado de ferro, ponteiras de osso | cabelo grisalho comprido, barba; mais alto | cinza pedra, branco osso | rastro grosso, pedrisco caindo |
-| 12 | **Garfiel** (tigre branco, Byakko) | **garras nas duas mãos** (três lâminas em cada) | cabelo branco espetado com listras, roupa listrada, cauda; 1 px mais largo | branco, preto e âmbar | terra, três riscos de garra |
+| 11 | **Yoru** (noite) | **uma adaga em cada mão**, brilho roxo | capuz ninja, fitas roxas; 1 px mais estreito | preto azulado e roxo | corte duplo, fumaça roxa |
+| 12 | **Jinshi** (montanha) | cajado de ferro, ponteiras de osso | cabelo grisalho comprido, barba; mais alto | cinza pedra, branco osso | rastro grosso, pedrisco caindo |
 | — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon** (máscara oni), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
 | — | **Hanzo** | **nenhuma**: um velho que não luta mais | coque branco, **sem barba**; mais baixo | azul escuro | sem rastro nem aura |
 

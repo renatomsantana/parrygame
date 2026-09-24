@@ -290,7 +290,7 @@ typedef struct {
     float noiseAmp, noiseCut; /* vento, água, multidão */
 } Style;
 
-static const Style STYLES[15] = {
+static const Style STYLES[MUSIC_SILENCE + 1] = {
     /* DOJO      */ {72, {110, 164.8f, 0}, 0.05f, 0.015f, 0.02f},
     /* SERRA     */ {62, {98, 146.8f, 196}, 0.04f, 0.05f, 0.012f},
     /* CELEIRO   */ {80, {98, 146.8f, 196}, 0.045f, 0.01f, 0.03f},
@@ -303,6 +303,7 @@ static const Style STYLES[15] = {
     /* FORJA     */ {84, {46.2f, 69.3f, 92.5f}, 0.06f, 0.035f, 0.01f},
     /* JARDIM    */ {70, {174.6f, 261.6f, 349.2f}, 0.035f, 0.005f, 0.05f},
     /* CIDADELA  */ {96, {73.4f, 87.3f, 110}, 0.06f, 0.03f, 0.012f},
+    /* TEMPLO    */ {66, {87.3f, 130.8f, 174.6f}, 0.04f, 0.02f, 0.03f},
     /* LORE      */ {60, {110, 146.8f, 220}, 0.04f, 0.008f, 0.02f},
     /* TITLE     */ {70, {82.4f, 123.5f, 164.8f}, 0.045f, 0.01f, 0.02f},
     /* SILENCE   */ {60, {0, 0, 0}, 0, 0, 0.02f},
@@ -363,8 +364,14 @@ static void sequencer_step(int style, int step, float intensity) {
             if (intensity > 0.6f && bar16 % 2 == 1) voice(V_NOISE, 0, 0.04f, 40, 0.7f);
             if (bar16 == 0 && step % 64 == 0) voice(V_TONE, 146.8f, 0.07f, 0.8f, 0);
             break;
-        case 12: /* lore */
-        case 13: /* título */
+        case 12: /* templo do tigre: sino grave e taiko espaçado */
+            if (bar16 == 0) voice(V_KICK, 58, 0.4f, 5, 0);
+            if (bar16 == 10) voice(V_KICK, 74, 0.25f, 8, 0);
+            if (bar16 == 0 && step % 32 == 0) voice(V_BELL, 220, 0.06f, 1.2f, 0);
+            if (bar16 % 8 == 4 && mrand() < 0.4f) voice(V_PLUCK, note(PENTA[(int)(mrand() * 6)] + 12), 0.05f, 3, 0);
+            break;
+        case MUSIC_LORE:
+        case MUSIC_TITLE:
             if (bar16 % 8 == 0 && mrand() < 0.7f) voice(V_PLUCK, note(PENTA[(int)(mrand() * 8)]), 0.08f, 2.5f, 0);
             if (bar16 == 0 && mrand() < 0.3f) voice(V_TONE, note(PENTA[(int)(mrand() * 5)] + 12), 0.03f, 0.8f, 0);
             break;
@@ -428,7 +435,7 @@ static void music_callback(void *buffer, unsigned int frames) {
         } else if (M.gain < 1) {
             M.gain += 1.0f / (RATE * 1.2f);
         }
-        const Style *st = &STYLES[M.style < 15 ? M.style : 14];
+        const Style *st = &STYLES[M.style <= MUSIC_SILENCE ? M.style : MUSIC_SILENCE];
         float intensity = M.intensity;
 
         M.stepPos += st->bpm * 4 / 60.0f / RATE;

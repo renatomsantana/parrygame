@@ -756,7 +756,31 @@ static const Char ORIG = {
 static Char CHARS[] = {
     /* O protagonista: sem chapéu e sem máscara, coque solto no alto da cabeça, katana. */
     {.id = "kojiro", .titulo = "Kojiro", .arma = {.kind = W_KATANA}, .cabeca = "coque"},
-    /* 1. Touro. Espadão: odachi mais comprida e bem mais larga. Marrom e amarelo. */
+    /* 1. Terra. Espada pesada. Chapéu de palha, verde oliva e ocre, barba. */
+    {.id = "daichi", .titulo = "Daichi",
+     .arma = {.kind = W_PESADA, .escala = 1.15, .largura = 2, .cor_largura = HEX(0x8a8676)},
+     .chapeu = 1, .chapeu_cor = {HEX(0xe0bc72), HEX(0xb48c48), HEX(0x7c5c2c)}, .rosto = "barba",
+     .camisa = {HEX(0xc4c48a), HEX(0x9a9a5e), HEX(0x72743e), HEX(0x50522a)},
+     .hakama = {HEX(0x6a5238), HEX(0x503c28), HEX(0x3a2c1e), HEX(0x2a2016), HEX(0x1c150e)},
+     .pele = {HEX(0xd49468), HEX(0xac6c46), HEX(0x78462e)},
+     .cabelo = {HEX(0x2a1c10), HEX(0x4a3420), HEX(0x6c5034)},
+     .destaque = {HEX(0xe0a030), HEX(0xa06c18)}, .obi = HEX(0xc08a2a),
+     .saya = HEX(0x3a2c1e), .cabo = HEX(0x6a4a1c),
+     .lamina = {HEX(0xd8d8cc), HEX(0x9c9a8a)},
+     .rastro = {HEX(0xfbf0d0), HEX(0xe0b868), HEX(0xa47a3a)}, .elemento = EL_TERRA, .largura = 1,
+     .especial = SP_SALTO, .efeito = FX_PEDRAS},
+    /* 2. Tartaruga. Espada curta e o casco nas costas (escudo). Verde. */
+    {.id = "genbu", .titulo = "Genbu", .arma = {.kind = W_CURTA, .comprimento = 11}, .cabeca = "careca",
+     .acessorios = {AC_CASCO},
+     .camisa = {HEX(0xb6d0a0), HEX(0x88ac74), HEX(0x5e8452), HEX(0x3e5e38)},
+     .hakama = {HEX(0x3e5a40), HEX(0x2e4632), HEX(0x223424), HEX(0x18261a), HEX(0x101a12)},
+     .pele = {HEX(0xd8a078), HEX(0xb07852), HEX(0x7a4c36)},
+     .cabelo = {HEX(0x8a8a86), HEX(0xb8b8b2), HEX(0xdcdcd6)},
+     .destaque = {HEX(0x4c9a3c), HEX(0x22502a)}, .destaque2 = HEX(0x8ad06a), .obi = HEX(0x2e6a2a),
+     .saya = HEX(0x22502a), .cabo = HEX(0x2e4632),
+     .rastro = {HEX(0xeaffdc), HEX(0x8ee070), HEX(0x3e9a3a)}, .elemento = EL_MUSGO, .largura = 1, .altura = -1,
+     .especial = SP_ASCENDENTE, .efeito = FX_CASCO},
+    /* 3. Touro. Espadão: odachi mais comprida e bem mais larga. Marrom e amarelo. */
     {.id = "raizo", .titulo = "Raizo",
      .arma = {.kind = W_ODACHI, .escala = 1.45, .largura = 3, .cor_largura = HEX(0xb8b4a8)}, .cabeca = "touro",
      .camisa = {HEX(0xa8703e), HEX(0x82522a), HEX(0x5e381c), HEX(0x402412)},
@@ -772,7 +796,7 @@ static Char CHARS[] = {
      .pack = "espadao", .pack_arma = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x657392), '?'}, {HEX(0x424c6e), '?'}},
      .troca = {{HEX(0x131313), HEX(0x24160e)}, {HEX(0x272727), HEX(0x4a3020)}, {HEX(0x3d3d3d), HEX(0x74502e)}}},
-    /* 2. Água. Florete. Azul claro e ciano. */
+    /* 4. Água. Florete. Azul claro e ciano. */
     {.id = "shizuku", .titulo = "Shizuku", .arma = {.kind = W_FLORETE, .escala = 1.15}, .cabeca = "rabo",
      .camisa = {HEX(0xeef8ff), HEX(0xbfe2f6), HEX(0x86bde6), HEX(0x5a8cc4)},
      .hakama = {HEX(0x4a78b0), HEX(0x36609a), HEX(0x284a7c), HEX(0x1d3862), HEX(0x142848)},
@@ -791,82 +815,20 @@ static Char CHARS[] = {
                {HEX(0x657392), HEX(0x5a8cc4)},
                {HEX(0x1a1932), HEX(0x14264a)}, {HEX(0x2a2f4e), HEX(0x1f3f70)}, {HEX(0x424c6e), HEX(0x3462a0)},
                {HEX(0x571c27), HEX(0x1a86b0)}, {HEX(0x891e2b), HEX(0x58e0ff)}, {HEX(0x5ac54f), HEX(0x7ae8ff)}}},
-    /* 3. Noite. Uma adaga em cada mão, que brilham roxo. Ninja preto e roxo. */
-    {.id = "yoru", .titulo = "Yoru",
-     .arma = {.kind = W_ADAGA, .comprimento = 8, .par = true, .cor_par = HEX(0xd8b0ff), .guarda = HEX(0x4a1c7a)},
-     .cabeca = "capuz",
-     .camisa = {HEX(0x4a4660), HEX(0x34324a), HEX(0x252438), HEX(0x1a1a28)},
-     .hakama = {HEX(0x343044), HEX(0x26243a), HEX(0x1c1a2c), HEX(0x141322), HEX(0x0d0c18)},
-     .pele = {HEX(0xe0a47c), HEX(0xb87a56), HEX(0x7e4c36)},
-     .cabelo = {HEX(0x141320), HEX(0x26243a), HEX(0x3c3a56)},
-     .mascara = {HEX(0x141320), HEX(0x2a2840)}, .olho = HEX(0xe8c8ff),
-     .destaque = {HEX(0xb45cff), HEX(0x6e2cb4)}, .obi = HEX(0x8a3ce0),
-     .sem_saya = true, .cabo = HEX(0x4a1c7a),
-     .lamina = {HEX(0xf4e0ff), HEX(0xb45cff)},
-     .rastro = {HEX(0xf6e6ff), HEX(0xc88cff), HEX(0x7a3cd8)}, .elemento = EL_ROXO, .largura = -1,
-     .especial = SP_INVESTIDA, .efeito = FX_X},
-    /* 4. Terra. Espada pesada. Chapéu de palha, verde oliva e ocre, barba. */
-    {.id = "daichi", .titulo = "Daichi",
-     .arma = {.kind = W_PESADA, .escala = 1.15, .largura = 2, .cor_largura = HEX(0x8a8676)},
-     .chapeu = 1, .chapeu_cor = {HEX(0xe0bc72), HEX(0xb48c48), HEX(0x7c5c2c)}, .rosto = "barba",
-     .camisa = {HEX(0xc4c48a), HEX(0x9a9a5e), HEX(0x72743e), HEX(0x50522a)},
-     .hakama = {HEX(0x6a5238), HEX(0x503c28), HEX(0x3a2c1e), HEX(0x2a2016), HEX(0x1c150e)},
-     .pele = {HEX(0xd49468), HEX(0xac6c46), HEX(0x78462e)},
-     .cabelo = {HEX(0x2a1c10), HEX(0x4a3420), HEX(0x6c5034)},
-     .destaque = {HEX(0xe0a030), HEX(0xa06c18)}, .obi = HEX(0xc08a2a),
-     .saya = HEX(0x3a2c1e), .cabo = HEX(0x6a4a1c),
-     .lamina = {HEX(0xd8d8cc), HEX(0x9c9a8a)},
-     .rastro = {HEX(0xfbf0d0), HEX(0xe0b868), HEX(0xa47a3a)}, .elemento = EL_TERRA, .largura = 1,
-     .especial = SP_SALTO, .efeito = FX_PEDRAS},
-    /* 5. Vento. Duas foices (kama), uma em cada mão, e cortes de vento. Verde claro e limão, cachecol. */
-    {.id = "hayate", .titulo = "Hayate",
-     .arma = {.kind = W_FOICE, .comprimento = 9, .par = true, .haste = {HEX(0x8a6a44), HEX(0x5a4228)}},
-     .cabeca = "vento", .acessorios = {AC_CACHECOL}, .sem_saya = true,
-     .camisa = {HEX(0xeefce0), HEX(0xc2eca8), HEX(0x8ccc78), HEX(0x5c9c54)},
-     .hakama = {HEX(0x4a6448), HEX(0x384e38), HEX(0x283a2a), HEX(0x1c2a1e), HEX(0x131e15)},
+    /* 5. Tigre (Byakko). Garras nas duas mãos, cauda. Cabelo loiro listrado, roupa preta com detalhes vermelhos. */
+    {.id = "garfiel", .titulo = "Garfiel", .arma = {.kind = W_GARRAS, .comprimento = 10, .par = true}, .cabeca = "tigre",
+     .acessorios = {AC_CAUDA, AC_LISTRAS},
+     .camisa = {HEX(0x54505c), HEX(0x3a3642), HEX(0x28252e), HEX(0x1a181e)},
+     .hakama = {HEX(0x34303a), HEX(0x28252c), HEX(0x1e1c22), HEX(0x151318), HEX(0x0d0c10)},
      .pele = {HEX(0xeab088), HEX(0xc6845e), HEX(0x8c5640)},
-     .cabelo = {HEX(0x16261a), HEX(0x2c4a30), HEX(0x4c7a4c)},
-     .destaque = {HEX(0xc8ff3c), HEX(0x7cc81c)},
-     .saya = HEX(0x2c4a30), .cabo = HEX(0x5c9c1c),
-     .lamina = {HEX(0xf4fff0), HEX(0xbce8b0)},
-     .rastro = {HEX(0xf6ffe8), HEX(0xd4ff7a), HEX(0x8ad04a)}, .elemento = EL_VENTO,
-     .especial = SP_ASCENDENTE, .efeito = FX_VORTICE},
-    /* 6. Tartaruga. Espada curta e o casco nas costas (escudo). Verde. */
-    {.id = "genbu", .titulo = "Genbu", .arma = {.kind = W_CURTA, .comprimento = 11}, .cabeca = "careca",
-     .acessorios = {AC_CASCO},
-     .camisa = {HEX(0xb6d0a0), HEX(0x88ac74), HEX(0x5e8452), HEX(0x3e5e38)},
-     .hakama = {HEX(0x3e5a40), HEX(0x2e4632), HEX(0x223424), HEX(0x18261a), HEX(0x101a12)},
-     .pele = {HEX(0xd8a078), HEX(0xb07852), HEX(0x7a4c36)},
-     .cabelo = {HEX(0x8a8a86), HEX(0xb8b8b2), HEX(0xdcdcd6)},
-     .destaque = {HEX(0x4c9a3c), HEX(0x22502a)}, .destaque2 = HEX(0x8ad06a), .obi = HEX(0x2e6a2a),
-     .saya = HEX(0x22502a), .cabo = HEX(0x2e4632),
-     .rastro = {HEX(0xeaffdc), HEX(0x8ee070), HEX(0x3e9a3a)}, .elemento = EL_MUSGO, .largura = 1, .altura = -1,
-     .especial = SP_ASCENDENTE, .efeito = FX_CASCO},
-    /* 7. Chama. Espada de fogo. Vermelho e amarelo. */
-    {.id = "enjin", .titulo = "Enjin", .arma = {.kind = W_KATANA}, .cabeca = "chamas",
-     .camisa = {HEX(0xf0584a), HEX(0xc02a2e), HEX(0x861a24), HEX(0x58101c)},
-     .hakama = {HEX(0x4a1a16), HEX(0x361210), HEX(0x280d0c), HEX(0x1c0909), HEX(0x130606)},
-     .pele = {HEX(0xe6a078), HEX(0xc07650), HEX(0x864a34)},
-     .cabelo = {HEX(0xb0200c), HEX(0xff6a1c), HEX(0xffd048)},
-     .destaque = {HEX(0xffb020), HEX(0xd8501a)}, .obi = HEX(0xffb020),
-     .saya = HEX(0x1c0909), .cabo = HEX(0xa82a1e),
-     .lamina = {HEX(0xfff0b0), HEX(0xff9030)},
-     .rastro = {HEX(0xfff4b8), HEX(0xffa030), HEX(0xe04420)}, .elemento = EL_FOGO, .largura = 1,
-     .especial = SP_SALTO, .efeito = FX_FOGO},
-    /* 8. Mar. Lança de água. Azul mar e turquesa. */
-    {.id = "suiren", .titulo = "Suiren",
-     .arma = {.kind = W_LANCA, .escala = 1.2, .atras = 14, .ponta = 5, .haste = {HEX(0x5a9cc0), HEX(0x24506e)}},
-     .cabeca = "faixa",
-     .camisa = {HEX(0x9ed8f0), HEX(0x4aa0d4), HEX(0x2a70b0), HEX(0x1c4c84)},
-     .hakama = {HEX(0x1e3c64), HEX(0x172e50), HEX(0x11223c), HEX(0x0c182c), HEX(0x08101e)},
-     .pele = {HEX(0xdca07a), HEX(0xb47654), HEX(0x7e4c38)},
-     .cabelo = {HEX(0x0e1c34), HEX(0x1e3a64), HEX(0x3a64a0)},
-     .destaque = {HEX(0x3cf0d8), HEX(0x14a8a0)}, .obi = HEX(0x3cf0d8),
-     .sem_saya = true, .cabo = HEX(0x14a8a0),
-     .lamina = {HEX(0xd8fffa), HEX(0x3cf0d8)},
-     .rastro = {HEX(0xe0fffc), HEX(0x5cf0e0), HEX(0x1c9cc8)}, .elemento = EL_AGUA,
-     .especial = SP_ESTOCADA, .efeito = FX_ONDA},
-    /* 9. Corvo. Espada e uma segunda lâmina mais curta na outra mão. Preto e vermelho. */
+     .cabelo = {HEX(0xe8b83c), HEX(0xb88428), HEX(0xfff0a0)},
+     .mascara = {HEX(0x18161a), HEX(0x2c2a30)}, .olho = HEX(0xffb020),
+     .destaque = {HEX(0xe0302c), HEX(0xa01820)}, .obi = HEX(0xd02828),
+     .sem_saya = true, .cabo = HEX(0x2c2c32),
+     .lamina = {HEX(0xfffaf0), HEX(0xc89040)},
+     .rastro = {HEX(0xfff6e0), HEX(0xffc860), HEX(0xc08030)}, .elemento = EL_TERRA, .largura = 1,
+     .especial = SP_INVESTIDA, .efeito = FX_GARRA},
+    /* 6. Corvo. Espada e uma segunda lâmina mais curta na outra mão. Preto e vermelho. */
     {.id = "karasu", .titulo = "Karasu",
      .arma = {.kind = W_KATANA, .par = true, .par_comprimento = 12, .cor_par = HEX(0xece4e6), .guarda = HEX(0x8c1018)},
      .cabeca = "corvo",
@@ -881,6 +843,43 @@ static Char CHARS[] = {
      .lamina = {HEX(0xf4eef0), HEX(0x7a1820)},
      .rastro = {HEX(0xffe0e0), HEX(0xff4a4a), HEX(0xa01020)}, .elemento = EL_PENA, .largura = -1, .altura = 1,
      .especial = SP_INVESTIDA, .efeito = FX_X},
+    /* 7. Vento. Duas foices (kama), uma em cada mão, e cortes de vento. Verde claro e limão, cachecol. */
+    {.id = "hayate", .titulo = "Hayate",
+     .arma = {.kind = W_FOICE, .comprimento = 9, .par = true, .haste = {HEX(0x8a6a44), HEX(0x5a4228)}},
+     .cabeca = "vento", .acessorios = {AC_CACHECOL}, .sem_saya = true,
+     .camisa = {HEX(0xeefce0), HEX(0xc2eca8), HEX(0x8ccc78), HEX(0x5c9c54)},
+     .hakama = {HEX(0x4a6448), HEX(0x384e38), HEX(0x283a2a), HEX(0x1c2a1e), HEX(0x131e15)},
+     .pele = {HEX(0xeab088), HEX(0xc6845e), HEX(0x8c5640)},
+     .cabelo = {HEX(0x16261a), HEX(0x2c4a30), HEX(0x4c7a4c)},
+     .destaque = {HEX(0xc8ff3c), HEX(0x7cc81c)},
+     .saya = HEX(0x2c4a30), .cabo = HEX(0x5c9c1c),
+     .lamina = {HEX(0xf4fff0), HEX(0xbce8b0)},
+     .rastro = {HEX(0xf6ffe8), HEX(0xd4ff7a), HEX(0x8ad04a)}, .elemento = EL_VENTO,
+     .especial = SP_ASCENDENTE, .efeito = FX_VORTICE},
+    /* 8. Chama. Espada de fogo. Vermelho e amarelo. */
+    {.id = "enjin", .titulo = "Enjin", .arma = {.kind = W_KATANA}, .cabeca = "chamas",
+     .camisa = {HEX(0xf0584a), HEX(0xc02a2e), HEX(0x861a24), HEX(0x58101c)},
+     .hakama = {HEX(0x4a1a16), HEX(0x361210), HEX(0x280d0c), HEX(0x1c0909), HEX(0x130606)},
+     .pele = {HEX(0xe6a078), HEX(0xc07650), HEX(0x864a34)},
+     .cabelo = {HEX(0xb0200c), HEX(0xff6a1c), HEX(0xffd048)},
+     .destaque = {HEX(0xffb020), HEX(0xd8501a)}, .obi = HEX(0xffb020),
+     .saya = HEX(0x1c0909), .cabo = HEX(0xa82a1e),
+     .lamina = {HEX(0xfff0b0), HEX(0xff9030)},
+     .rastro = {HEX(0xfff4b8), HEX(0xffa030), HEX(0xe04420)}, .elemento = EL_FOGO, .largura = 1,
+     .especial = SP_SALTO, .efeito = FX_FOGO},
+    /* 9. Mar. Lança de água. Azul mar e turquesa. */
+    {.id = "suiren", .titulo = "Suiren",
+     .arma = {.kind = W_LANCA, .escala = 1.2, .atras = 14, .ponta = 5, .haste = {HEX(0x5a9cc0), HEX(0x24506e)}},
+     .cabeca = "faixa",
+     .camisa = {HEX(0x9ed8f0), HEX(0x4aa0d4), HEX(0x2a70b0), HEX(0x1c4c84)},
+     .hakama = {HEX(0x1e3c64), HEX(0x172e50), HEX(0x11223c), HEX(0x0c182c), HEX(0x08101e)},
+     .pele = {HEX(0xdca07a), HEX(0xb47654), HEX(0x7e4c38)},
+     .cabelo = {HEX(0x0e1c34), HEX(0x1e3a64), HEX(0x3a64a0)},
+     .destaque = {HEX(0x3cf0d8), HEX(0x14a8a0)}, .obi = HEX(0x3cf0d8),
+     .sem_saya = true, .cabo = HEX(0x14a8a0),
+     .lamina = {HEX(0xd8fffa), HEX(0x3cf0d8)},
+     .rastro = {HEX(0xe0fffc), HEX(0x5cf0e0), HEX(0x1c9cc8)}, .elemento = EL_AGUA,
+     .especial = SP_ESTOCADA, .efeito = FX_ONDA},
     /* 10. Tempestade. Duas espadas com raios. Preto com o chapéu do Raiden. */
     {.id = "arashi", .titulo = "Arashi", .arma = {.kind = W_DUPLA, .par = true, .cor_par = HEX(0x7cc0ff)},
      .chapeu = 2, .chapeu_cor = {HEX(0xf2eee0), HEX(0xcfc6a8), HEX(0x948a6e)}, .rosto = "olho_raio",
@@ -901,7 +900,21 @@ static Char CHARS[] = {
      .troca = {{HEX(0x1e6f50), HEX(0x3a4056)}, {HEX(0x134c4c), HEX(0x252a3a)}, {HEX(0x0c2e44), HEX(0x14161f)},
                {HEX(0x391f21), HEX(0x1a4cc0)}, {HEX(0x5d2c28), HEX(0x3ca8ff)},
                {HEX(0x272727), HEX(0x8e9ab4)}, {HEX(0x3d3d3d), HEX(0xd4def0)}, {HEX(0x5ac54f), HEX(0xb4f0ff)}}},
-    /* 11. Montanha. Cajado de ferro. Cinza pedra e branco osso. */
+    /* 11. Noite. Uma adaga em cada mão, que brilham roxo. Ninja preto e roxo. */
+    {.id = "yoru", .titulo = "Yoru",
+     .arma = {.kind = W_ADAGA, .comprimento = 8, .par = true, .cor_par = HEX(0xd8b0ff), .guarda = HEX(0x4a1c7a)},
+     .cabeca = "capuz",
+     .camisa = {HEX(0x4a4660), HEX(0x34324a), HEX(0x252438), HEX(0x1a1a28)},
+     .hakama = {HEX(0x343044), HEX(0x26243a), HEX(0x1c1a2c), HEX(0x141322), HEX(0x0d0c18)},
+     .pele = {HEX(0xe0a47c), HEX(0xb87a56), HEX(0x7e4c36)},
+     .cabelo = {HEX(0x141320), HEX(0x26243a), HEX(0x3c3a56)},
+     .mascara = {HEX(0x141320), HEX(0x2a2840)}, .olho = HEX(0xe8c8ff),
+     .destaque = {HEX(0xb45cff), HEX(0x6e2cb4)}, .obi = HEX(0x8a3ce0),
+     .sem_saya = true, .cabo = HEX(0x4a1c7a),
+     .lamina = {HEX(0xf4e0ff), HEX(0xb45cff)},
+     .rastro = {HEX(0xf6e6ff), HEX(0xc88cff), HEX(0x7a3cd8)}, .elemento = EL_ROXO, .largura = -1,
+     .especial = SP_INVESTIDA, .efeito = FX_X},
+    /* 12. Montanha. Cajado de ferro. Cinza pedra e branco osso. */
     {.id = "jinshi", .titulo = "Jinshi",
      .arma = {.kind = W_CAJADO, .escala = 1.05, .atras = 16, .haste = {HEX(0x70747e), HEX(0x3a3c44)},
               .ponteira = HEX(0xece6d4)},
@@ -914,20 +927,7 @@ static Char CHARS[] = {
      .sem_saya = true, .cabo = HEX(0x4a4c54),
      .rastro = {HEX(0xfbf8ee), HEX(0xe2dccb), HEX(0xa49e8c)}, .elemento = EL_POEIRA, .altura = 1,
      .especial = SP_SALTO, .efeito = FX_AVALANCHE},
-    /* Tigre branco (Byakko). Garras nas duas mãos, cauda. Branco, preto e âmbar. */
-    {.id = "garfiel", .titulo = "Garfiel", .arma = {.kind = W_GARRAS, .comprimento = 10, .par = true}, .cabeca = "tigre",
-     .acessorios = {AC_CAUDA, AC_LISTRAS},
-     .camisa = {HEX(0xfbf8f0), HEX(0xe0dccf), HEX(0xb8b2a2), HEX(0x8a8474)},
-     .hakama = {HEX(0x3a3a40), HEX(0x2c2c32), HEX(0x202026), HEX(0x16161a), HEX(0x0e0e12)},
-     .pele = {HEX(0xeab088), HEX(0xc6845e), HEX(0x8c5640)},
-     .cabelo = {HEX(0xe6e2d6), HEX(0xc2bcac), HEX(0xfffdf6)},
-     .mascara = {HEX(0x18181c), HEX(0x2c2c32)}, .olho = HEX(0xffb020),
-     .destaque = {HEX(0xffb020), HEX(0xc07010)}, .obi = HEX(0xffb020),
-     .sem_saya = true, .cabo = HEX(0x2c2c32),
-     .lamina = {HEX(0xfffaf0), HEX(0xc89040)},
-     .rastro = {HEX(0xfff6e0), HEX(0xffc860), HEX(0xc08030)}, .elemento = EL_TERRA, .largura = 1,
-     .especial = SP_INVESTIDA, .efeito = FX_GARRA},
-    /* 12. Oboro. Katana de Hanzo. Roxo escuro e dourado. */
+    /* Oboro, o último da trilha. Katana de Hanzo. Roxo escuro e dourado. */
     {.id = "oboro", .titulo = "Oboro", .arma = {.kind = W_KATANA}, .cabeca = "rabo_longo",
      .camisa = {HEX(0x8a6ab0), HEX(0x5e4488), HEX(0x3e2c62), HEX(0x281c42)},
      .hakama = {HEX(0x2a2030), HEX(0x201826), HEX(0x18121c), HEX(0x110d14), HEX(0x0b080d)},
@@ -1020,9 +1020,9 @@ static const Head HEADS[] = {
     {"faixa", {{4, 5, "HHhH"}, {5, 4, "HHHhiiH"}, {6, 4, "AAAAAAAA"}, {7, 4, "HHHHHHHF"}, {8, 4, "HHHfFFeF"}},
      {{{6, 2, "aA"}, {7, 0, "aA"}, {8, -1, "a"}},
       {{6, 2, "aA"}, {7, 1, "aa"}, {8, 0, "a"}, {8, -2, "a"}}}},
-    /* Garfiel: cabelo branco espetado de tigre, listras pretas, olho âmbar. */
-    {"tigre", {{2, 5, "i"}, {2, 9, "i"}, {3, 4, "iHi.iHi"}, {4, 4, "HKHHHKHH"}, {5, 3, "HHKHHHKHi"},
-               {6, 3, "HHKHHHKHHi"}, {7, 4, "HHKKHHHF"}, {8, 4, "HHHfFFeF"}}},
+    /* Garfiel: cabelo loiro espetado de tigre, listras pretas, olho âmbar. */
+    {"tigre", {{2, 5, "i"}, {2, 9, "i"}, {3, 4, "iHi.iHi"}, {4, 4, "HHKHHHKH"}, {5, 3, "HHKHHHKHHi"},
+               {6, 3, "HHHHHHHHHi"}, {7, 4, "HHHHHhHF"}, {8, 4, "HHHfFFeF"}}},
     /* Karasu: cabelo em penas para trás, olho vermelho. */
     {"corvo", {{4, 5, "HHHH"}, {5, 2, "HH.HHHhiH"}, {6, 0, "HHHHHHHHhiH"}, {7, 2, "HHHHHHHHHF"},
                {8, 3, "HHHHfFeF"}, {9, 2, "HH"}}},
@@ -1492,18 +1492,18 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                     }
                 break;
             case AC_CAUDA:
-                /* cauda de tigre saindo da cintura, branca com a ponta preta */
+                /* cauda de tigre saindo da cintura, da cor do cabelo, com a ponta preta */
                 ribbon(cv, s->ox + 3, s->oy + 21, 11, ch->cabelo[0], ch->cabelo[1], idx, -0.25, 1.3, 2, 1.1);
                 cv_behind(cv, s->ox + 3 - 10, s->oy + 21 - 3, ch->mascara[0]);
                 cv_behind(cv, s->ox + 3 - 9, s->oy + 21 - 3, ch->mascara[0]);
                 break;
             case AC_LISTRAS:
-                /* listras de tigre na roupa, presas ao corpo (contadas a partir da cabeça) */
+                /* listras de tigre na roupa, no vermelho de destaque, presas ao corpo (contadas a partir da cabeça) */
                 for (int y = 0; y < CH; y++)
                     for (int x = 0; x < CW; x++) {
                         if (s->lab[y][x] != SHIRT) continue;
                         int rx = x - s->ox + 64, ry = y - s->oy + 64;
-                        if ((rx * 2 + ry) % 9 < 2 && (ry / 3) % 2 == 0) set_rgb(cv, x, y, ch->mascara[0]);
+                        if ((rx * 2 + ry) % 9 < 2 && (ry / 3) % 2 == 0) set_rgb(cv, x, y, ch->destaque[1]);
                     }
                 break;
             case AC_TRAPO:

@@ -4,7 +4,7 @@
 
 Hattori Hanzo foi o criador da Arte do Aparar, uma técnica de espada baseada em observação, paciência e contra-ataques perfeitos.
 
-Ao envelhecer, fundou um dojo e reuniu doze aprendizes na esperança de encontrar um sucessor.
+Ao envelhecer, fundou um dojo e reuniu treze aprendizes na esperança de encontrar um sucessor.
 
 Entre todos eles, um se destacava.
 
@@ -40,33 +40,9 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ---
 
-## Os 12 Aprendizes
+## Os 12 Aprendizes, na ordem da trilha
 
-### 1. Raijin | Postura do Touro
-
-- **Arma:** Odachi gigante
-- **Personalidade:** Honrado, direto e obstinado
-- **Visão sobre Oboro:** Acredita que Oboro conquistou tudo o que possui
-- **Visão sobre Hanzo:** Respeita Hanzo, mas acredita que ele exigia demais de Oboro
-- **Visão sobre Musashi:** Acha que será derrotado rapidamente
-
-### 2. Shizuku | Postura da Água
-
-- **Arma:** Florete
-- **Personalidade:** Serena e analítica
-- **Visão sobre Oboro:** Acredita que ele mudou após assumir o dojo
-- **Visão sobre Hanzo:** Nunca conseguiu entender completamente o mestre
-- **Visão sobre Musashi:** Curiosa para ver até onde ele chegará
-
-### 3. Kage | Postura da Noite
-
-- **Arma:** Duas adagas
-- **Personalidade:** Desconfiado e silencioso
-- **Visão sobre Oboro:** Suspeita que existe algo oculto sobre a vitória contra Hanzo
-- **Visão sobre Hanzo:** Acredita que ele escondia algo de todos
-- **Visão sobre Musashi:** Enxerga potencial
-
-### 4. Daichi | Postura da Terra
+### 1. Daichi | Postura da Terra
 
 - **Arma:** Espada pesada
 - **Personalidade:** Firme e tradicional
@@ -74,15 +50,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Visão sobre Hanzo:** Continua sendo seu verdadeiro mestre
 - **Visão sobre Musashi:** Só vai respeitar se ele provar seu valor
 
-### 5. Hayate | Postura do Vento
-
-- **Arma:** Katana leve
-- **Personalidade:** Impulsivo e competitivo
-- **Visão sobre Oboro:** Sempre o admirou
-- **Visão sobre Hanzo:** Acredita que Hanzo foi injusto
-- **Visão sobre Musashi:** Quer testar sua força
-
-### 6. Genbu | Postura da Tartaruga
+### 2. Genbu | Postura da Tartaruga
 
 - **Arma:** Escudo e espada curta
 - **Personalidade:** Paciente e sábio
@@ -90,7 +58,47 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Visão sobre Hanzo:** Acredita que Hanzo tentou ajudá-lo até o fim
 - **Visão sobre Musashi:** Torce secretamente por ele
 
-### 7. Enjin | Postura da Chama
+### 3. Raizo | Postura do Touro
+
+- **Arma:** Espadão (odachi gigante)
+- **Personalidade:** Honrado, direto e obstinado
+- **Visão sobre Oboro:** Acredita que Oboro conquistou tudo o que possui
+- **Visão sobre Hanzo:** Respeita Hanzo, mas acredita que ele exigia demais de Oboro
+- **Visão sobre Musashi:** Acha que será derrotado rapidamente
+
+### 4. Shizuku | Postura da Água
+
+- **Arma:** Florete
+- **Personalidade:** Serena e analítica
+- **Visão sobre Oboro:** Acredita que ele mudou após assumir o dojo
+- **Visão sobre Hanzo:** Nunca conseguiu entender completamente o mestre
+- **Visão sobre Musashi:** Curiosa para ver até onde ele chegará
+
+### 5. Garfiel | Postura do Tigre
+
+- **Arma:** Garras, uma em cada mão
+- **Personalidade:** Feroz, leal e barulhento; o tigre branco que guarda o portão do oeste
+- **Visão sobre Oboro:** Segue a tradição que deu o dojo a ele, mas não confia em quem não sangra junto
+- **Visão sobre Hanzo:** Deve a ele o portão que guarda
+- **Visão sobre Musashi:** Respeita quem cai e levanta
+
+### 6. Karasu | Postura do Corvo
+
+- **Arma:** Espada e adaga
+- **Personalidade:** Sarcástico e oportunista
+- **Visão sobre Oboro:** Segue-o apenas porque venceu
+- **Visão sobre Hanzo:** Nunca confiou totalmente nele
+- **Visão sobre Musashi:** Não acredita que ele chegará ao fim
+
+### 7. Hayate | Postura do Vento
+
+- **Arma:** Duas foices (kama) e o vento
+- **Personalidade:** Impulsivo e competitivo
+- **Visão sobre Oboro:** Sempre o admirou
+- **Visão sobre Hanzo:** Acredita que Hanzo foi injusto
+- **Visão sobre Musashi:** Quer testar sua força
+
+### 8. Enjin | Postura da Chama
 
 - **Arma:** Sabre curvo
 - **Personalidade:** Explosivo e agressivo
@@ -98,21 +106,13 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Visão sobre Hanzo:** Acredita que ele deveria ter impedido Oboro
 - **Visão sobre Musashi:** Deseja que ele o derrube
 
-### 8. Suiren | Postura do Mar
+### 9. Suiren | Postura do Mar
 
 - **Arma:** Lança
 - **Personalidade:** Leal e gentil
 - **Visão sobre Oboro:** Era seu melhor amigo
 - **Visão sobre Hanzo:** Respeita profundamente
 - **Visão sobre Musashi:** Vê semelhanças com o antigo Oboro
-
-### 9. Karasu | Postura do Corvo
-
-- **Arma:** Espada e adaga
-- **Personalidade:** Sarcástico e oportunista
-- **Visão sobre Oboro:** Segue-o apenas porque venceu
-- **Visão sobre Hanzo:** Nunca confiou totalmente nele
-- **Visão sobre Musashi:** Não acredita que ele chegará ao fim
 
 ### 10. Arashi | Postura da Tempestade
 
@@ -122,7 +122,15 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Visão sobre Hanzo:** Acredita que envelheceu e foi superado
 - **Visão sobre Musashi:** Subestima completamente
 
-### 11. Jinshi | Postura da Montanha
+### 11. Yoru | Postura da Noite
+
+- **Arma:** Uma adaga em cada mão
+- **Personalidade:** Desconfiado e silencioso
+- **Visão sobre Oboro:** Suspeita que existe algo oculto sobre a vitória contra Hanzo
+- **Visão sobre Hanzo:** Acredita que ele escondia algo de todos
+- **Visão sobre Musashi:** Enxerga potencial
+
+### 12. Jinshi | Postura da Montanha
 
 - **Arma:** Cajado de ferro
 - **Personalidade:** Reservado e reflexivo
@@ -132,7 +140,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ---
 
-## 12. Oboro | O Mestre das Doze Posturas
+## 13. Oboro | O Mestre das Doze Posturas
 
 - **Arma principal:** Katana de Hattori Hanzo
 - **Personalidade:** Obcecado, orgulhoso, frustrado e consumido pela inveja
@@ -147,7 +155,7 @@ Quando finalmente venceu, percebeu que a abertura decisiva havia sido concedida.
 
 Desde então vive tentando provar para si mesmo que mereceu aquela vitória.
 
-Secretamente estudou cada uma das onze posturas restantes.
+Secretamente estudou cada uma das doze posturas restantes.
 
 No confronto final, revela dominar todas elas.
 
@@ -170,5 +178,5 @@ Para Oboro, Musashi recebeu gratuitamente aquilo pelo qual ele sacrificou a pró
 - Nome do Enjin (em japonês soa como "engine", motor)
 - Motivo de Jinshi nunca ter perdoado Oboro
 - Qual semelhança Suiren vê entre Musashi e o jovem Oboro
-- Ordem da trilha e qual fragmento da história cada aprendiz revela
+- Qual fragmento da história cada aprendiz revela
 - Final: o que acontece com Oboro, Hanzo e o dojo depois da luta

@@ -1,5 +1,5 @@
 /*
- * arenas.c - treze cenários em pixel art procedural.
+ * arenas.c - catorze cenários em pixel art procedural.
  * Tudo é determinístico a partir do relógio: nada guarda estado.
  */
 #include "arenas.h"
@@ -724,6 +724,87 @@ static void serra(const ArenaCtx *c) {
     }
 }
 
+/* ------------------------------------------------------------------ */
+/* Portão do tigre branco                                              */
+/* ------------------------------------------------------------------ */
+/* Tigre de pedra sentado num pedestal, virado para o centro. */
+static void stone_tiger(float x, float base, float dir) {
+    Color light = C(214, 210, 198), mid = C(170, 166, 156), dark = C(110, 106, 100), stripe = C(60, 58, 60);
+    rect(x - 10, base - 10, 20, 10, dark);
+    rect(x - 11, base - 12, 22, 3, mid);
+    float bx = x - dir * 2;
+    DrawEllipse((int)bx, (int)(base - 19), 8, 7, mid);                       /* corpo sentado */
+    DrawEllipse((int)(bx - dir * 1.5f), (int)(base - 20), 5, 5, light);
+    DrawCircleV((Vector2){x + dir * 5, base - 30}, 5, light);                /* cabeça */
+    DrawTriangle((Vector2){x + dir * 2, base - 35}, (Vector2){x + dir * 4, base - 38}, (Vector2){x + dir * 6, base - 35}, mid);
+    DrawTriangle((Vector2){x + dir * 6, base - 35}, (Vector2){x + dir * 8, base - 38}, (Vector2){x + dir * 9, base - 34}, mid);
+    for (int k = 0; k < 3; k++) line(bx - 5 + k * 4, base - 24, bx - 3 + k * 4, base - 15, 0.7f, stripe);
+    line(x + dir * 3, base - 32, x + dir * 5, base - 29, 0.6f, stripe);
+    rect(x + dir * 1 - 1, base - 14, 2.5f, 3, light);                        /* patas */
+    rect(x + dir * 5 - 1, base - 14, 2.5f, 3, light);
+    line(bx - dir * 8, base - 14, bx - dir * 12, base - 26, 1.2f, mid);     /* cauda */
+}
+
+static void templo(const ArenaCtx *c) {
+    float t = c->t;
+    vgrad(0, 0, LOW_W, GROUND_LOW, C(18, 16, 34), C(86, 70, 92));
+    stars(60, 53, 90, 1.0f, t);
+    /* Lua cheia do oeste. */
+    glow(250, 38, 40, C(255, 236, 200));
+    DrawCircleV((Vector2){250, 38}, 13, C(250, 244, 226));
+    DrawCircleV((Vector2){246, 35}, 3, C(232, 224, 204));
+    DrawCircleV((Vector2){254, 42}, 2, C(236, 228, 208));
+    /* Serra ao fundo e bordos de outono. */
+    for (int i = 0; i < 6; i++) {
+        float x = i * 64 - 10, h = 36 + hash1(i + 9) * 22;
+        DrawTriangle((Vector2){x - 50, 118}, (Vector2){x + 70, 118}, (Vector2){x + 10, 118 - h}, C(40, 34, 56));
+    }
+    for (int i = 0; i < 7; i++) {
+        float x = 10 + i * 48 + hash1(i + 2) * 12, y = 96 + hash1(i + 5) * 10;
+        rect(x - 1, y, 2.5f, 26, C(50, 34, 30));
+        DrawCircleV((Vector2){x, y - 2}, 11 + hash1(i) * 4, C(150, 52, 36));
+        DrawCircleV((Vector2){x - 5, y + 1}, 7, C(186, 76, 40));
+        DrawCircleV((Vector2){x + 5, y - 4}, 6, C(210, 110, 50));
+    }
+    /* Muro baixo do templo. */
+    rect(0, 118, LOW_W, 14, C(88, 80, 84));
+    rect(0, 116, LOW_W, 3, C(120, 110, 112));
+    for (int x = 0; x < LOW_W; x += 16) line(x, 119, x, 132, 0.4f, C(60, 54, 60));
+    /* O portão de pedra clara (torii do oeste). */
+    Color stone = C(222, 218, 206), shade = C(170, 164, 152);
+    hgrad(122, 40, 7, 92, shade, stone);
+    hgrad(191, 40, 7, 92, shade, stone);
+    vgrad(110, 38, 100, 5, stone, shade);
+    DrawTriangle((Vector2){106, 38}, (Vector2){112, 33}, (Vector2){112, 38}, stone);
+    DrawTriangle((Vector2){208, 33}, (Vector2){214, 38}, (Vector2){208, 38}, stone);
+    rect(112, 33, 96, 5, C(236, 232, 222));
+    rect(116, 52, 88, 4, shade);
+    vgrad(151, 44, 18, 14, C(40, 34, 40), C(28, 24, 30));                    /* placa com o tigre */
+    line(155, 48, 165, 48, 0.8f, C(230, 220, 190));
+    line(157, 51, 163, 55, 0.8f, C(230, 220, 190));
+    line(163, 51, 157, 55, 0.8f, C(230, 220, 190));
+    /* Tigres de pedra e lanternas de pedra. */
+    stone_tiger(88, 140, 1);
+    stone_tiger(232, 140, -1);
+    for (int l = 0; l < 2; l++) {
+        float lx = l ? 284 : 36;
+        rect(lx - 2, 118, 4, 22, C(120, 114, 110));
+        rect(lx - 6, 110, 12, 8, C(150, 144, 138));
+        rect(lx - 4, 112, 8, 4, C(255, 196, 120));
+        DrawTriangle((Vector2){lx - 8, 110}, (Vector2){lx + 8, 110}, (Vector2){lx, 104}, C(110, 104, 100));
+        glow(lx, 114, 14 * (0.85f + 0.15f * sinf(t * 7 + l * 2)), C(255, 170, 80));
+    }
+    /* Pátio de lajes claras sob a lua. */
+    floor_shade(C(150, 144, 150), C(70, 64, 74));
+    for (int i = 0; i < 12; i++) line(i * 32 - 16 + 16, GROUND_LOW - 6, i * 32 - 60, LOW_H, 0.5f, C(96, 90, 100));
+    line(0, 160, LOW_W, 160, 0.5f, C(96, 90, 100));
+    line(0, 172, LOW_W, 172, 0.5f, C(96, 90, 100));
+    for (int i = 0; i < 16; i++) {
+        float x = hash1(i + 40) * LOW_W, y = GROUND_LOW + hash1(i + 41) * 28;
+        DrawEllipse((int)x, (int)y, 1.5f, 0.8f, hash1(i) < 0.5f ? C(170, 64, 40) : C(206, 110, 50));
+    }
+}
+
 void arena_draw_back(ArenaId id, const ArenaCtx *c) {
     switch (id) {
         case ARENA_DOJO: dojo(c); break;
@@ -738,6 +819,7 @@ void arena_draw_back(ArenaId id, const ArenaCtx *c) {
         case ARENA_FORJA: forja(c); break;
         case ARENA_JARDIM: jardim(c); break;
         case ARENA_CIDADELA: cidadela(c); break;
+        case ARENA_TEMPLO: templo(c); break;
         default: ClearBackground(BLACK); break;
     }
     /* Apagão genérico (qualquer cenário pode escurecer). */
@@ -826,6 +908,14 @@ void arena_draw_front(ArenaId id, const ArenaCtx *c) {
             }
             EndBlendMode();
             break;
+        case ARENA_TEMPLO:
+            /* Folhas de bordo caindo, girando, por cima dos lutadores. */
+            for (int i = 0; i < 18; i++) {
+                float x = fract(hash1(i) + t * 0.015f + sinf(t * 0.7f + i) * 0.01f) * LOW_W;
+                float y = fract(hash1(i + 1) + t * (0.05f + hash1(i + 2) * 0.04f)) * LOW_H;
+                DrawPoly((Vector2){x, y}, 4, 1.4f, t * 90 + i * 40, hash1(i + 5) < 0.5f ? CA(200, 80, 44, 200) : CA(230, 140, 60, 200));
+            }
+            break;
         case ARENA_JARDIM:
             for (int i = 0; i < 12; i++) {
                 float x = hash1(i) * LOW_W + sinf(t * 0.3f + i) * 15, y = fract(hash1(i + 1) + t * 0.02f) * LOW_H;
@@ -864,6 +954,7 @@ Color arena_light(ArenaId id, const ArenaCtx *c) {
         case ARENA_BAMBUZAL: base = C(190, 200, 225); break;
         case ARENA_FORJA: base = C(255, 200, 160); break;
         case ARENA_JARDIM: base = C(215, 225, 255); break;
+        case ARENA_TEMPLO: base = C(236, 230, 240); break;
         case ARENA_CIDADELA: base = c->seal == 2 ? C(255, 180, 160) : C(220, 200, 235); break;
         default: base = WHITE; break;
     }
@@ -880,6 +971,7 @@ Color arena_rim(ArenaId id) {
         {120, 255, 210, 255}, /* trem */      {190, 240, 255, 255}, /* cachoeira */
         {170, 255, 140, 255}, /* bambuzal */  {255, 120, 40, 255},  /* forja */
         {160, 210, 255, 255}, /* jardim */    {255, 90, 120, 255},  /* cidadela */
+        {255, 236, 200, 255}, /* templo */
     };
     return (id >= 0 && id < ARENA_COUNT) ? rim[id] : WHITE;
 }
@@ -896,6 +988,7 @@ float arena_reflection(ArenaId id) {
 
 const char *arena_name(ArenaId id) {
     static const char *names[ARENA_COUNT] = {
-        "Dojo", "Serra", "Celeiro", "Cobertura", "Porto", "Salão", "Trem", "Cachoeira", "Bambuzal", "Forja", "Jardim", "Cidadela"};
+        "Dojo", "Serra", "Celeiro", "Cobertura", "Porto", "Salão", "Trem", "Cachoeira", "Bambuzal", "Forja", "Jardim", "Cidadela",
+        "Templo"};
     return (id >= 0 && id < ARENA_COUNT) ? names[id] : "";
 }
