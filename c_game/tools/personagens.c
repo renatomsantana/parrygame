@@ -1,9 +1,9 @@
 /*
- * personagens.c - gera os lutadores do aparar a partir das pranchas do Musashi.
+ * personagens.c - gera os lutadores do aparar a partir das pranchas do Samurai #3
+ * (o corpo do Kojiro) e dos packs próprios de Shizuku, Arashi e Oboro.
  *
- * Cada personagem sai do mesmo corpo (pack A, Samurai #3), mas não é só troca
- * de paleta:
- *   - tira o chapéu (só dois ficam com um) e desenha a cabeça: coque, rabo de
+ * Não é só troca de paleta:
+ *   - tira o chapéu (só o Daichi fica com um) e desenha a cabeça: coque, rabo de
  *     cavalo, capuz, careca, cabelo em chamas...
  *   - troca a arma seguindo a reta da katana em cada quadro;
  *   - pinta o rastro do golpe com o elemento de cada um;
@@ -16,13 +16,13 @@
  * Uso (de dentro de c_game/):
  *     make personagens
  *     ./personagens                   todas as pranchas, todos os personagens
- *     ./personagens --so enjin kage   só alguns
+ *     ./personagens --so enjin yoru   só alguns
  *     ./personagens --folhas          também as folhas de conferência
  *     ./personagens --lista           quem é quem
  *
  * Entrada: assets/sprites/_original/ (tiras de quadros 106 x 84 viradas para a
- *          direita). Na primeira vez é copiada de assets/sprites/musashi/, que
- *          passa a receber o Musashi sem chapéu.
+ *          direita). Na primeira vez é copiada de assets/sprites/musashi/ (onde
+ *          fica o pack original); o protagonista gerado sai em kojiro/.
  * Saída:   assets/sprites/<personagem>/<ANIM>.png e sprite.txt (com o alcance
  *          do golpe), e assets/sprites/_folhas/ com as folhas.
  * Detalhes e o elenco em docs/PERSONAGENS.md.
@@ -668,14 +668,14 @@ static double blade_dist(const Blade *b, int x, int y, double def) {
 /* ------------------------------------------------------------------------ */
 /* Personagens                                                               */
 /* ------------------------------------------------------------------------ */
-typedef enum { W_KATANA, W_DUPLA, W_ODACHI, W_PESADA, W_FLORETE, W_ADAGA, W_CURTA, W_LANCA, W_CAJADO, W_GARRAS } WeaponKind;
-static const char *WEAPON_NAMES[] = {"katana", "dupla", "odachi", "pesada", "florete", "adaga", "curta", "lanca", "cajado", "garras"};
+typedef enum { W_KATANA, W_DUPLA, W_ODACHI, W_PESADA, W_FLORETE, W_ADAGA, W_CURTA, W_LANCA, W_CAJADO, W_GARRAS, W_FOICE } WeaponKind;
+static const char *WEAPON_NAMES[] = {"katana", "dupla", "odachi", "pesada", "florete", "adaga", "curta", "lanca", "cajado", "garras", "foice"};
 
 typedef enum {
     EL_NONE, EL_FOGO, EL_AGUA, EL_RAIO, EL_ROXO, EL_PENA, EL_TERRA, EL_VENTO, EL_OURO, EL_SOMBRA, EL_MUSGO, EL_POEIRA
 } Element;
 
-typedef enum { AC_NONE, AC_CACHECOL, AC_CASCO, AC_TRAPO } Accessory;
+typedef enum { AC_NONE, AC_CACHECOL, AC_CASCO, AC_TRAPO, AC_CAUDA, AC_LISTRAS } Accessory;
 
 /* Golpe especial: a coreografia (de que quadros do pack ele é montado) e o
    efeito grande do elemento no ponto do impacto. */
@@ -692,6 +692,7 @@ typedef struct {
     int largura;        /* espada pesada: 2 ou 3 */
     Rgb cor_largura;
     bool par;           /* uma segunda arma na outra mão */
+    double par_comprimento; /* katana: a segunda é uma lâmina mais curta, deste tamanho em px */
     Rgb cor_par;
     Rgb guarda;
     int atras, ponta;   /* lança e cajado: px atrás da mão, px da ponta */
@@ -715,12 +716,13 @@ typedef struct {
     int largura, altura; /* colunas e linhas a mais (ou a menos) no corpo */
     SpecialMove especial;
     SpecialFx efeito;
-    const char *pack;                       /* corpo próprio: pasta em _packs/ (sem isso, o do Musashi) */
+    const char *pack;                       /* corpo próprio: pasta em _packs/ (sem isso, o Samurai #3) */
     struct { Rgb de, para; } troca[24];     /* troca exata de cor no corpo do pack */
     struct { Rgb cor; char classe; } leitura[8]; /* como o separador lê as cores próprias do pack */
     bool ecos;                              /* Oboro: cada ataque em cada uma das onze posturas, e o grito */
     bool pack_par;                          /* o pack já vem com uma arma em cada mão */
     bool pack_sem_camisa;                   /* o pack não tem roupa branca: todo branco grosso é rastro */
+    bool sem_arma;                          /* Hanzo: não luta mais; sem espada, sem golpes */
 } Char;
 
 static bool pack_no_shirt(void) {
@@ -751,11 +753,11 @@ static const Char ORIG = {
 };
 
 static Char CHARS[] = {
-    /* O protagonista: sem chapéu, coque com fita vermelha, katana. */
-    {.id = "musashi", .titulo = "Musashi", .arma = {.kind = W_KATANA}, .cabeca = "coque"},
-    /* 1. Touro. Espadão (odachi gigante e larga). Marrom e amarelo. */
-    {.id = "raijin", .titulo = "Raijin",
-     .arma = {.kind = W_ODACHI, .escala = 1.85, .largura = 2, .cor_largura = HEX(0xb8b4a8)}, .cabeca = "touro",
+    /* O protagonista: sem chapéu e sem máscara, coque solto no alto da cabeça, katana. */
+    {.id = "kojiro", .titulo = "Kojiro", .arma = {.kind = W_KATANA}, .cabeca = "coque"},
+    /* 1. Touro. Espadão: odachi mais comprida e bem mais larga. Marrom e amarelo. */
+    {.id = "raizo", .titulo = "Raizo",
+     .arma = {.kind = W_ODACHI, .escala = 1.45, .largura = 3, .cor_largura = HEX(0xb8b4a8)}, .cabeca = "touro",
      .camisa = {HEX(0xa8703e), HEX(0x82522a), HEX(0x5e381c), HEX(0x402412)},
      .hakama = {HEX(0x4a3a2c), HEX(0x382c22), HEX(0x2a2019), HEX(0x1f1712), HEX(0x150f0c)},
      .pele = {HEX(0xe8a878), HEX(0xc07a4e), HEX(0x84503a)},
@@ -765,7 +767,7 @@ static Char CHARS[] = {
      .rastro = {HEX(0xfff4c8), HEX(0xffd84a), HEX(0xc89a2a)}, .elemento = EL_OURO, .largura = 2,
      .especial = SP_SALTO, .efeito = FX_CHOQUE},
     /* 2. Água. Florete. Azul claro e ciano. */
-    {.id = "shizuku", .titulo = "Shizuku", .arma = {.kind = W_FLORETE, .escala = 1.25}, .cabeca = "rabo",
+    {.id = "shizuku", .titulo = "Shizuku", .arma = {.kind = W_FLORETE, .escala = 1.15}, .cabeca = "rabo",
      .camisa = {HEX(0xeef8ff), HEX(0xbfe2f6), HEX(0x86bde6), HEX(0x5a8cc4)},
      .hakama = {HEX(0x4a78b0), HEX(0x36609a), HEX(0x284a7c), HEX(0x1d3862), HEX(0x142848)},
      .pele = {HEX(0xf2c29c), HEX(0xd69a74), HEX(0xa86a4e)},
@@ -784,7 +786,7 @@ static Char CHARS[] = {
                {HEX(0x1a1932), HEX(0x14264a)}, {HEX(0x2a2f4e), HEX(0x1f3f70)}, {HEX(0x424c6e), HEX(0x3462a0)},
                {HEX(0x571c27), HEX(0x1a86b0)}, {HEX(0x891e2b), HEX(0x58e0ff)}, {HEX(0x5ac54f), HEX(0x7ae8ff)}}},
     /* 3. Noite. Uma adaga em cada mão, que brilham roxo. Ninja preto e roxo. */
-    {.id = "kage", .titulo = "Kage",
+    {.id = "yoru", .titulo = "Yoru",
      .arma = {.kind = W_ADAGA, .comprimento = 8, .par = true, .cor_par = HEX(0xd8b0ff), .guarda = HEX(0x4a1c7a)},
      .cabeca = "capuz",
      .camisa = {HEX(0x4a4660), HEX(0x34324a), HEX(0x252438), HEX(0x1a1a28)},
@@ -810,8 +812,10 @@ static Char CHARS[] = {
      .lamina = {HEX(0xd8d8cc), HEX(0x9c9a8a)},
      .rastro = {HEX(0xfbf0d0), HEX(0xe0b868), HEX(0xa47a3a)}, .elemento = EL_TERRA, .largura = 1,
      .especial = SP_SALTO, .efeito = FX_PEDRAS},
-    /* 5. Vento. Katana leve. Verde claro e verde limão, cachecol. */
-    {.id = "hayate", .titulo = "Hayate", .arma = {.kind = W_KATANA}, .cabeca = "vento", .acessorios = {AC_CACHECOL},
+    /* 5. Vento. Duas foices (kama), uma em cada mão, e cortes de vento. Verde claro e limão, cachecol. */
+    {.id = "hayate", .titulo = "Hayate",
+     .arma = {.kind = W_FOICE, .comprimento = 9, .par = true, .haste = {HEX(0x8a6a44), HEX(0x5a4228)}},
+     .cabeca = "vento", .acessorios = {AC_CACHECOL}, .sem_saya = true,
      .camisa = {HEX(0xeefce0), HEX(0xc2eca8), HEX(0x8ccc78), HEX(0x5c9c54)},
      .hakama = {HEX(0x4a6448), HEX(0x384e38), HEX(0x283a2a), HEX(0x1c2a1e), HEX(0x131e15)},
      .pele = {HEX(0xeab088), HEX(0xc6845e), HEX(0x8c5640)},
@@ -856,8 +860,10 @@ static Char CHARS[] = {
      .lamina = {HEX(0xd8fffa), HEX(0x3cf0d8)},
      .rastro = {HEX(0xe0fffc), HEX(0x5cf0e0), HEX(0x1c9cc8)}, .elemento = EL_AGUA,
      .especial = SP_ESTOCADA, .efeito = FX_ONDA},
-    /* 9. Corvo. Garras nas duas mãos. Preto e vermelho. */
-    {.id = "karasu", .titulo = "Karasu", .arma = {.kind = W_GARRAS, .comprimento = 10, .par = true}, .cabeca = "corvo",
+    /* 9. Corvo. Espada e uma segunda lâmina mais curta na outra mão. Preto e vermelho. */
+    {.id = "karasu", .titulo = "Karasu",
+     .arma = {.kind = W_KATANA, .par = true, .par_comprimento = 12, .cor_par = HEX(0xece4e6), .guarda = HEX(0x8c1018)},
+     .cabeca = "corvo",
      .acessorios = {AC_TRAPO},
      .camisa = {HEX(0x5a5058), HEX(0x3e363e), HEX(0x2a242a), HEX(0x1c181c)},
      .hakama = {HEX(0x3a2a2e), HEX(0x2c1e22), HEX(0x201518), HEX(0x170f11), HEX(0x0f0a0b)},
@@ -868,7 +874,7 @@ static Char CHARS[] = {
      .sem_saya = true, .cabo = HEX(0x3a2a2e),
      .lamina = {HEX(0xf4eef0), HEX(0x7a1820)},
      .rastro = {HEX(0xffe0e0), HEX(0xff4a4a), HEX(0xa01020)}, .elemento = EL_PENA, .largura = -1, .altura = 1,
-     .especial = SP_INVESTIDA, .efeito = FX_GARRA},
+     .especial = SP_INVESTIDA, .efeito = FX_X},
     /* 10. Tempestade. Duas espadas com raios. Preto com o chapéu do Raiden. */
     {.id = "arashi", .titulo = "Arashi", .arma = {.kind = W_DUPLA, .par = true, .cor_par = HEX(0x7cc0ff)},
      .chapeu = 2, .chapeu_cor = {HEX(0xf2eee0), HEX(0xcfc6a8), HEX(0x948a6e)}, .rosto = "olho_raio",
@@ -902,6 +908,19 @@ static Char CHARS[] = {
      .sem_saya = true, .cabo = HEX(0x4a4c54),
      .rastro = {HEX(0xfbf8ee), HEX(0xe2dccb), HEX(0xa49e8c)}, .elemento = EL_POEIRA, .altura = 1,
      .especial = SP_SALTO, .efeito = FX_AVALANCHE},
+    /* Tigre branco (Byakko). Garras nas duas mãos, cauda. Branco, preto e âmbar. */
+    {.id = "garfiel", .titulo = "Garfiel", .arma = {.kind = W_GARRAS, .comprimento = 10, .par = true}, .cabeca = "tigre",
+     .acessorios = {AC_CAUDA, AC_LISTRAS},
+     .camisa = {HEX(0xfbf8f0), HEX(0xe0dccf), HEX(0xb8b2a2), HEX(0x8a8474)},
+     .hakama = {HEX(0x3a3a40), HEX(0x2c2c32), HEX(0x202026), HEX(0x16161a), HEX(0x0e0e12)},
+     .pele = {HEX(0xeab088), HEX(0xc6845e), HEX(0x8c5640)},
+     .cabelo = {HEX(0xe6e2d6), HEX(0xc2bcac), HEX(0xfffdf6)},
+     .mascara = {HEX(0x18181c), HEX(0x2c2c32)}, .olho = HEX(0xffb020),
+     .destaque = {HEX(0xffb020), HEX(0xc07010)}, .obi = HEX(0xffb020),
+     .sem_saya = true, .cabo = HEX(0x2c2c32),
+     .lamina = {HEX(0xfffaf0), HEX(0xc89040)},
+     .rastro = {HEX(0xfff6e0), HEX(0xffc860), HEX(0xc08030)}, .elemento = EL_TERRA, .largura = 1,
+     .especial = SP_INVESTIDA, .efeito = FX_GARRA},
     /* 12. Oboro. Katana de Hanzo. Roxo escuro e dourado. */
     {.id = "oboro", .titulo = "Oboro", .arma = {.kind = W_KATANA}, .cabeca = "rabo_longo",
      .camisa = {HEX(0x8a6ab0), HEX(0x5e4488), HEX(0x3e2c62), HEX(0x281c42)},
@@ -916,8 +935,8 @@ static Char CHARS[] = {
      /* corpo do Demon (oni), com as cores dele; ataca em cada postura dos onze e tem a cena do grito */
      .pack = "demon", .ecos = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}}},
-    /* Hanzo: não luta; cabelo branco, sem barba, azul escuro e bainha vermelha. */
-    {.id = "hanzo", .titulo = "Hanzo", .arma = {.kind = W_KATANA}, .cabeca = "mestre",
+    /* Hanzo: um velho que não luta mais. Sem espada; cabelo branco, sem barba, azul escuro. */
+    {.id = "hanzo", .titulo = "Hanzo", .arma = {.kind = W_KATANA}, .cabeca = "mestre", .sem_arma = true, .sem_saya = true,
      .camisa = {HEX(0x8ca0c8), HEX(0x5a70a0), HEX(0x3c4e7c), HEX(0x283658)},
      .hakama = {HEX(0x2a3450), HEX(0x20283e), HEX(0x181e30), HEX(0x121624), HEX(0x0c0f18)},
      .pele = {HEX(0xe0a67e), HEX(0xb87c5a), HEX(0x82543e)},
@@ -958,9 +977,13 @@ typedef struct {
 } Head;
 
 static const Head HEADS[] = {
-    /* Musashi: coque no alto da nuca, preso com fita vermelha. */
-    {"coque", {{2, 5, "HH"}, {3, 4, "HhiH"}, {4, 5, "aA"}, {5, 5, "HHhiH"}, {6, 4, "HHHHhiH"},
-               {7, 4, "HHHHHHHF"}, {8, 4, "HHHfFFeF"}}},
+    /* Kojiro: coque solto no alto da cabeça, preso com fita vermelha, mechas caindo na
+       testa e na frente da orelha, rosto à mostra (sem a máscara do pack) e barba rala. */
+    {"coque", {{-1, 5, "H.H"}, {0, 4, "HHiH"}, {1, 4, "HhhiH"}, {2, 5, "HhH"}, {3, 5, "aA"},
+               {4, 4, "HHHhiH"}, {5, 3, "HHHHHhiH"}, {6, 3, "HHHHHHHiH"}, {7, 4, "HHHHHhHF"},
+               {8, 4, "HHHHfFeF"}, {9, 7, "HfFFF"}, {10, 7, "HFkF"}},
+     {{{-2, 4, "H"}, {-1, 3, "HH"}, {0, 2, "H"}, {5, 2, "H"}, {6, 1, "HH"}, {7, 2, "H"}, {8, 3, "H"}},
+      {{-2, 6, "H"}, {-1, 2, "HH"}, {0, 3, "H"}, {5, 1, "HH"}, {6, 2, "H"}, {7, 1, "H"}, {8, 2, "H"}}}},
     /* Hanzo: coque grande de cabelo branco, testa alta, sem barba. */
     {"mestre", {{1, 4, "HHH"}, {2, 3, "HhiiH"}, {3, 4, "HhhH"}, {4, 5, "aA"}, {5, 5, "HHhiH"},
                 {6, 4, "HHHhiiF"}, {7, 4, "HHHhFFFF"}, {8, 4, "HHHfFkeF"}}},
@@ -991,6 +1014,9 @@ static const Head HEADS[] = {
     {"faixa", {{4, 5, "HHhH"}, {5, 4, "HHHhiiH"}, {6, 4, "AAAAAAAA"}, {7, 4, "HHHHHHHF"}, {8, 4, "HHHfFFeF"}},
      {{{6, 2, "aA"}, {7, 0, "aA"}, {8, -1, "a"}},
       {{6, 2, "aA"}, {7, 1, "aa"}, {8, 0, "a"}, {8, -2, "a"}}}},
+    /* Garfiel: cabelo branco espetado de tigre, listras pretas, olho âmbar. */
+    {"tigre", {{2, 5, "i"}, {2, 9, "i"}, {3, 4, "iHi.iHi"}, {4, 4, "HKHHHKHH"}, {5, 3, "HHKHHHKHi"},
+               {6, 3, "HHKHHHKHHi"}, {7, 4, "HHKKHHHF"}, {8, 4, "HHHfFFeF"}}},
     /* Karasu: cabelo em penas para trás, olho vermelho. */
     {"corvo", {{4, 5, "HHHH"}, {5, 2, "HH.HHHhiH"}, {6, 0, "HHHHHHHHhiH"}, {7, 2, "HHHHHHHHHF"},
                {8, 3, "HHHHfFeF"}, {9, 2, "HH"}}},
@@ -1319,8 +1345,8 @@ static void smear_style(Canvas *cv, const Char *ch) {
         for (int y = 0; y < CH; y++)
             for (int x = 0; x < CW; x++)
                 if (g[y][x] && !m[y][x] && cv->a[y][x].a == 0) cv_put(cv, x, y, ch->rastro[2]);
-    } else if (k == W_DUPLA) {
-        /* eco da segunda espada, atrás e um pouco abaixo */
+    } else if (k == W_DUPLA || k == W_FOICE || (k == W_KATANA && ch->arma.par && !ch->pack_par)) {
+        /* eco da segunda arma, atrás e um pouco abaixo */
         cv->pen = T_WEAPON;
         for (int y = CH - 1; y >= 0; y--)
             for (int x = 0; x < CW; x++) {
@@ -1459,6 +1485,21 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                         cv_behind(cv, s->ox - 6 + rx, s->oy + 10 + ry, c);
                     }
                 break;
+            case AC_CAUDA:
+                /* cauda de tigre saindo da cintura, branca com a ponta preta */
+                ribbon(cv, s->ox + 3, s->oy + 21, 11, ch->cabelo[0], ch->cabelo[1], idx, -0.25, 1.3, 2, 1.1);
+                cv_behind(cv, s->ox + 3 - 10, s->oy + 21 - 3, ch->mascara[0]);
+                cv_behind(cv, s->ox + 3 - 9, s->oy + 21 - 3, ch->mascara[0]);
+                break;
+            case AC_LISTRAS:
+                /* listras de tigre na roupa, presas ao corpo (contadas a partir da cabeça) */
+                for (int y = 0; y < CH; y++)
+                    for (int x = 0; x < CW; x++) {
+                        if (s->lab[y][x] != SHIRT) continue;
+                        int rx = x - s->ox + 64, ry = y - s->oy + 64;
+                        if ((rx * 2 + ry) % 9 < 2 && (ry / 3) % 2 == 0) set_rgb(cv, x, y, ch->mascara[0]);
+                    }
+                break;
             case AC_TRAPO:
                 ribbon(cv, s->ox + 4, s->oy + 10, 10, ch->destaque[0], ch->destaque[1], idx, 0.35, 1.2, 2, 1.3);
                 for (int k = 0; k < 3; k++)
@@ -1531,7 +1572,7 @@ static void stroke(Canvas *cv, const Blade *b, double t0, double t1, Rgb core, c
     }
 }
 
-/* A outra mão: no corpo do Musashi as duas mãos ficam juntas no cabo, então a
+/* A outra mão: no corpo do Samurai #3 as duas mãos ficam juntas no cabo, então a
    segunda arma sai do mesmo punho, um pouco mais para dentro e mais baixo, e
    abre em leque (empunhada ao contrário), desenhada atrás do corpo. */
 static Blade other_hand(const Blade *b, double open) {
@@ -1566,6 +1607,34 @@ static void claws(Canvas *cv, const Blade *b, double size, Rgb core, Rgb edge, b
                 cv_put(cv, x, y, i < 2 ? edge : core);
                 mark(cv, x, y);
             }
+        }
+    }
+}
+
+/* Foice (kama): cabo de madeira saindo do punho e, na ponta, a lâmina curva de
+   lado, virada para a frente (para baixo quando o cabo está deitado). */
+static void kama(Canvas *cv, const Blade *b, double len, const Weapon *w, Rgb core, Rgb edge, bool behind) {
+    static Pts p;
+    Rgb wood = rgb_set(w->haste[0]) ? w->haste[0] : (Rgb){138, 106, 68};
+    double tx = b->hilt[0] + b->u[0] * len, ty = b->hilt[1] + b->u[1] * len;
+    double n[2] = {-b->u[1], b->u[0]};
+    if (n[0] < -1e-9 || (fabs(n[0]) < 1e-9 && n[1] < 0)) { n[0] = -n[0]; n[1] = -n[1]; }
+    line_pts(&p, b->hilt[0] - b->u[0], b->hilt[1] - b->u[1], tx, ty);
+    for (int i = 0; i < p.n; i++) {
+        int x = p.x[i], y = p.y[i];
+        bool ok = behind ? empty_orig(cv, x, y) && cv->a[y][x].a == 0
+                         : cv_ok(x, y) && (lab_at(cv, x, y) == NONE || lab_at(cv, x, y) == BLADE || cv->a[y][x].a == 0);
+        if (ok) { cv_put(cv, x, y, wood); mark(cv, x, y); }
+    }
+    for (int i = 0; i <= 6; i++) {
+        double bend = i * i * 0.09;  /* a ponta volta em direção à mão */
+        for (int e = 0; e < 2; e++) {
+            if (e && i > 4) break;
+            double x = tx + n[0] * i - b->u[0] * (bend + e), y = ty + n[1] * i - b->u[1] * (bend + e);
+            int xi = pyround(x), yi = pyround(y);
+            bool ok = behind ? empty_orig(cv, xi, yi) && cv->a[yi][xi].a == 0
+                             : cv_ok(xi, yi) && (lab_at(cv, xi, yi) == NONE || lab_at(cv, xi, yi) == BLADE || cv->a[yi][xi].a == 0);
+            if (ok) { cv_put(cv, xi, yi, e ? edge : core); mark(cv, xi, yi); }
         }
     }
 }
@@ -1612,7 +1681,7 @@ static void blade_fx(Canvas *cv, const Char *ch, const char *anim, int idx) {
 /* Lança e florete não cortam em arco no golpe reto: estocam. A arma fica na
    horizontal na altura das mãos, recua na preparação e avança no contato. */
 static bool thrust_anim(const Char *ch, const char *anim) {
-    return (ch->arma.kind == W_LANCA || ch->arma.kind == W_FLORETE) &&
+    return (ch->arma.kind == W_LANCA || ch->arma.kind == W_FLORETE) && !ch->pack &&
            (!strcmp(anim, "ATTACK_1") || !strcmp(anim, "DASH_ATTACK"));
 }
 
@@ -1819,9 +1888,22 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                 }
                 break;
             }
+            case W_FOICE: {
+                for (int i = 0; i < b->n; i++) erase_px(cv, b->x[i], b->y[i]);
+                skip_pair = true;
+                if (b->nearest > 3 || b->loose) break;
+                double len = w->comprimento > 0 ? w->comprimento : 9;
+                kama(cv, b, len, w, core, edge, false);
+                /* a outra foice na mão esquerda */
+                if (w->par) {
+                    Blade o = other_hand(b, 0.8);
+                    kama(cv, &o, len - 1, w, rgb_set(w->cor_par) ? w->cor_par : core, edge, true);
+                }
+                break;
+            }
             case W_GARRAS: {
                 for (int i = 0; i < b->n; i++) erase_px(cv, b->x[i], b->y[i]);
-                if (b->nearest > 3) { skip_pair = true; break; }
+                if (b->nearest > 3 || b->loose) { skip_pair = true; break; }
                 double size = w->comprimento > 0 ? w->comprimento : 8;
                 claws(cv, b, size, core, edge, false);
                 /* garras também na mão esquerda */
@@ -1834,7 +1916,13 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
             }
         }
         /* segunda arma na outra mão: cópia paralela, atrás do corpo */
-        if (!skip_pair && w->par && !ch->pack_par && (w->kind == W_DUPLA || w->kind == W_ADAGA || w->kind == W_KATANA) && b->nearest <= 3 && !b->loose) {
+        if (!skip_pair && w->par && w->par_comprimento > 0 && !ch->pack_par && at_hand && b->nearest <= 3) {
+            /* espada e lâmina mais curta: a segunda sai da outra mão, aberta para baixo */
+            Blade o = other_hand(b, 0.6);
+            Rgb guard = rgb_set(w->guarda) ? w->guarda : ch->destaque[1];
+            draw_short_blade(cv, &o, 0, 0, w->par_comprimento, rgb_set(w->cor_par) ? w->cor_par : core, edge, guard,
+                             ch->cabo, true);
+        } else if (!skip_pair && w->par && !ch->pack_par && (w->kind == W_DUPLA || w->kind == W_ADAGA || w->kind == W_KATANA) && b->nearest <= 3 && !b->loose) {
             double n[2];
             perp(b->u, n);
             double keep = w->comprimento > 0 ? w->comprimento : KATANA * escala;
@@ -2072,7 +2160,7 @@ static int lunge(const Char *ch, const Ctx *ctx) {
     switch (ch->arma.kind) {
         case W_LANCA: c = 3; r = 1; break;
         case W_FLORETE: c = 2; r = 1; break;
-        case W_ADAGA: case W_GARRAS: c = 2; r = 1; break;
+        case W_ADAGA: case W_GARRAS: case W_FOICE: c = 2; r = 1; break;
         case W_ODACHI: case W_PESADA: c = 1; break;
         default: break;
     }
@@ -2153,7 +2241,11 @@ static void special_fx(Canvas *cv, const Char *ch, SpecialFx fx, int ax, int rdx
                 for (int dx = -r; dx <= r; dx++) {
                     double k = 1 - (double)(dx * dx) / (r * r);
                     int h = (int)floor(sqrt(k > 0 ? k : 0) * r * 0.35 + 0.5);
-                    if (age == 3 && (dx & 1)) continue;
+                    /* no fim a onda já baixou: só a poeira assentando no chão */
+                    if (age == 3) {
+                        if (dx % 3 == 0 && abs(dx) > r / 3) fx_px(cv, tx + dx, gy - (h > 1), (Rgb){176, 160, 136});
+                        continue;
+                    }
                     /* poeira clara na base e o brilho do elemento na crista */
                     fx_px(cv, tx + dx, gy - h, age <= 1 ? (Rgb){236, 226, 206} : (Rgb){176, 160, 136});
                     if (age < 3) fx_px(cv, tx + dx, gy - h - 1, age == 0 ? (Rgb){255, 255, 255} : c0);
@@ -2373,10 +2465,62 @@ static int grito(const Strip *idle, const Strip *fury, const Char *ch, Canvas *c
     return n;
 }
 
+/* ----- corte de vento (Hayate) ---------------------------------------------- */
+/* No contato e nos dois quadros seguintes, uma meia-lua de vento sai da ponta da
+   arma e voa para a frente, abrindo. É efeito: não entra no alcance do parry. */
+static void wind_slash(Canvas *cv, const Char *ch, const Ctx *ctx) {
+    if (ctx->contact < 0 || ctx->idx < ctx->contact || ctx->idx > ctx->contact + 2) return;
+    int age = ctx->idx - ctx->contact, xm = -1;
+    for (int x = CW - 1; x >= 0 && xm < 0; x--)
+        for (int y = 0; y < CH; y++)
+            if (cv->tag[y][x] == T_WEAPON && cv->a[y][x].a) { xm = x; break; }
+    if (xm < 0) return;
+    double sy = 0;
+    int n = 0;
+    for (int x = xm - 3; x <= xm; x++)
+        for (int y = 0; y < CH; y++)
+            if (cv_ok(x, y) && cv->tag[y][x] == T_WEAPON && cv->a[y][x].a) { sy += y; n++; }
+    int cx = xm + 2 + age * 8, cy = (int)floor(sy / n + 0.5), r = 5 + age * 2;
+    cv->pen = T_FX;
+    for (int k = -12; k <= 12; k++) {
+        double t = k * 0.11;
+        for (int e = 0; e < (age < 2 ? 2 : 1); e++) {
+            double rr = r - e;
+            int x = cx + (int)floor(cos(t) * rr * 0.55 + 0.5), y = cy + (int)floor(sin(t) * rr + 0.5);
+            if (x >= cellw || !cv_ok(x, y) || cv->a[y][x].a) continue;
+            cv_put(cv, x, y, e ? ch->rastro[1] : abs(k) > 9 ? ch->rastro[2] : ch->rastro[0]);
+        }
+    }
+    for (int k = -1; k <= 1; k += 2) {
+        int y = cy + k * (r / 2);
+        for (int x = cx - 6 - age * 2; x < cx - 2; x++)
+            if (((x + age) & 1) && cv_ok(x, y) && cv->a[y][x].a == 0) cv_put(cv, x, y, ch->rastro[2]);
+    }
+}
+
+/* Hanzo não luta mais: some a espada, o rastro e o cabo; as mãos ficam vazias. */
+static void no_weapon(Canvas *cv, const Char *ch) {
+    const Seg *s = cv->seg;
+    static const int d[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            int lb = s->lab[y][x];
+            if (lb == BLADE || lb == SMEAR) {
+                erase_px(cv, x, y);
+            } else if (lb == HANDLE) {
+                bool hand = false;
+                for (int i = 0; i < 4 && !hand; i++)
+                    hand = cv_ok(x + d[i][0], y + d[i][1]) && s->lab[y + d[i][1]][x + d[i][0]] == SKIN;
+                if (hand) set_rgb(cv, x, y, ch->pele[1]);
+                else erase_px(cv, x, y);
+            }
+        }
+}
+
 /* Tempo de cada quadro dos golpes: leves rápidos, pesados lentos. */
 static int frame_ms(const Char *ch) {
     switch (ch->arma.kind) {
-        case W_ADAGA: case W_GARRAS: case W_FLORETE: return 60;
+        case W_ADAGA: case W_GARRAS: case W_FLORETE: case W_FOICE: return 60;
         case W_ODACHI: case W_PESADA: case W_CAJADO: return 100;
         default: return 80;
     }
@@ -2410,18 +2554,23 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
             draw_head(cv, ch, idx);
         }
     }
-    weapons(cv, ch, ctx);
-    cv->pen = T_FX;
-    paint_smear(cv, ch, anim, idx);
-    smear_style(cv, ch);
-    aura(cv, ch, ctx);
+    if (ch->sem_arma) {
+        no_weapon(cv, ch);
+    } else {
+        weapons(cv, ch, ctx);
+        cv->pen = T_FX;
+        paint_smear(cv, ch, anim, idx);
+        smear_style(cv, ch);
+        aura(cv, ch, ctx);
+        if (ch->elemento == EL_VENTO) wind_slash(cv, ch, ctx);
+    }
     for (int i = 0; i < seg->nerase; i++)
         for (int y = seg->erase[i][1] < 0 ? 0 : seg->erase[i][1]; y <= seg->erase[i][3] && y < CH; y++)
             for (int x = seg->erase[i][0] < 0 ? 0 : seg->erase[i][0]; x <= seg->erase[i][2] && x < CW; x++) {
                 cv->a[y][x] = (Color){0, 0, 0, 0};
                 cv->tag[y][x] = T_NONE;
             }
-    /* o corpo do Musashi ganha largura, altura e passo; os packs próprios já vêm animados */
+    /* o corpo do Samurai #3 ganha largura, altura e passo; os packs próprios já vêm animados */
     if (!ch->pack) {
         resize_body(cv, seg->ox + 8, seg->oy + 19, ch->largura, ch->altura);
         translate(cv, lunge(ch, ctx));
@@ -2653,6 +2802,15 @@ static void out_dir(char *d, const char *root, const char *name, const char *src
     }
     make_dir(d);
     path_join(mark, d, MARK);
+    /* pasta do programa: tira as tiras da rodada anterior (uma animação que deixou
+       de existir, como os golpes do Hanzo, não fica para trás) */
+    if (FileExists(mark)) {
+        FilePathList fl = LoadDirectoryFiles(d);
+        for (unsigned i = 0; i < fl.count; i++)
+            if (IsPathFile(fl.paths[i]) && (IsFileExtension(fl.paths[i], ".png") || IsFileExtension(fl.paths[i], ".PNG")))
+                remove(fl.paths[i]);
+        UnloadDirectoryFiles(fl);
+    }
     SaveFileText(mark, (char *)MARK_TEXT);
 }
 
@@ -2970,9 +3128,14 @@ static void sheet_reach(const char *title, const Rendered *r, int nr, const int 
 /* ------------------------------------------------------------------------ */
 /* Programa                                                                  */
 /* ------------------------------------------------------------------------ */
+/* Quem não luta (Hanzo) não ganha as pranchas de golpe nem de guarda. */
+static bool skip_strip(const Char *ch, const char *name) {
+    return ch->sem_arma && (strstr(name, "ATTACK") || strstr(name, "DEFEND") || strstr(name, "THROW") || strstr(name, "DASH"));
+}
+
 static void write_manifest(const char *path, Manifest *m, const Strip *st, int ns, const int *contact,
                            const int (*reachv)[2], const bool *has_reach, int ax, int ay, const int *guard, int ms,
-                           int cw, int ch) {
+                           int cw, int ch, const Char *who) {
     FILE *f = fopen(path, "w");
     if (!f) return;
     fprintf(f, "# Gerado por tools/personagens.c a partir do sprite.txt das pranchas de origem.\n");
@@ -2996,6 +3159,7 @@ static void write_manifest(const char *path, Manifest *m, const Strip *st, int n
         }
     for (int oi = 0; oi < ns; oi++) {
         int i = order[oi];
+        if (skip_strip(who, st[i].name)) continue;
         AnimInfo *a = find_anim(m, st[i].name);
         char line[512];
         int p = snprintf(line, sizeof line, "anim %-13s", st[i].name);
@@ -3048,7 +3212,7 @@ static int pack_special_steps(const Strip *strips, int ns, Manifest *man, Specia
 }
 
 /* ------------------------------------------------------------------------ */
-/* Fontes das pranchas: o Samurai #3 do Musashi e os packs próprios           */
+/* Fontes das pranchas: o Samurai #3 (corpo do Kojiro) e os packs próprios   */
 /* ------------------------------------------------------------------------ */
 #define MAX_PACKS 8
 
@@ -3064,7 +3228,7 @@ static Source *SOURCES[MAX_PACKS + 1];
 static int NSOURCES;
 
 /* Lê as tiras de uma pasta e separa as partes de cada quadro. `pack_ch` é o
-   personagem dono do pack (as cores próprias dele), ou NULL para o Musashi. */
+   personagem dono do pack (as cores próprias dele), ou NULL para o Samurai #3. */
 static bool load_source(Source *s, const char *dir, int cw, int ch, const Char *pack_ch) {
     memset(s, 0, sizeof *s);
     snprintf(s->dir, sizeof s->dir, "%s", dir);
@@ -3174,7 +3338,7 @@ static void free_sources(void) {
             free(s->strips[i].frames);
             free(s->strips[i].segs);
         }
-        if (j > 0) free(s);  /* a primeira é a do Musashi, estática */
+        if (j > 0) free(s);  /* a primeira é a do Samurai #3, estática */
     }
     NSOURCES = 0;
 }
@@ -3206,8 +3370,9 @@ int main(int argc, char **argv) {
     for (int i = 0; i < NCHARS; i++) fill_defaults(&CHARS[i]);
     if (lista) {
         for (int i = 0; i < NCHARS; i++)
-            printf("%-9s %-8s %s\n", CHARS[i].id, WEAPON_NAMES[CHARS[i].arma.kind],
-                   CHARS[i].chapeu == 1 ? "chapéu palha" : CHARS[i].chapeu == 2 ? "chapéu raiden" : CHARS[i].cabeca);
+            printf("%-9s %-8s %s%s%s\n", CHARS[i].id, CHARS[i].sem_arma ? "nenhuma" : WEAPON_NAMES[CHARS[i].arma.kind],
+                   CHARS[i].pack ? "corpo do pack " : CHARS[i].chapeu == 1 ? "chapéu palha" : CHARS[i].cabeca,
+                   CHARS[i].pack ? CHARS[i].pack : "", CHARS[i].arma.par ? " (uma em cada mão)" : "");
         return 0;
     }
     char src[PATHLEN];
@@ -3221,7 +3386,7 @@ int main(int argc, char **argv) {
             char mark[PATHLEN];
             path_join(mark, legacy, MARK);
             SaveFileText(mark, (char *)MARK_TEXT);
-            printf("guardei as pranchas originais em %s; musashi/ agora recebe o Musashi sem chapéu\n", src);
+            printf("guardei as pranchas originais em %s; o protagonista gerado sai em kojiro/\n", src);
             printf("  (daqui em diante, edite o manifesto em _original/sprite.txt)\n");
         }
     }
@@ -3238,7 +3403,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < NCHARS; i++) sel[nsel++] = i;
     }
 
-    /* De onde vêm as pranchas de cada personagem: o Musashi (pack A) ou um pack próprio. */
+    /* De onde vêm as pranchas de cada personagem: o Samurai #3 (pack A) ou um pack próprio. */
     static Source base;
     if (!load_source(&base, src, SRC_W, SRC_H, NULL)) return 1;
     char packs_dir[PATHLEN];
@@ -3273,7 +3438,7 @@ int main(int argc, char **argv) {
             path_join(pd, packs_dir, ch->pack);
             sc = get_pack(pd, ch);
             if (!sc) {
-                printf("  %s: falta o pack em %s (usando o corpo do Musashi)\n", ch->id, pd);
+                printf("  %s: falta o pack em %s (usando o corpo do Samurai #3)\n", ch->id, pd);
                 Char *mut = &CHARS[sel[si]];
                 mut->pack = NULL;
                 mut->pack_par = false;
@@ -3335,6 +3500,11 @@ int main(int argc, char **argv) {
                 guard[0] = reachv[nr][0];
                 guard[1] = reachv[nr][1];
             }
+            if (skip_strip(ch, st->name)) {
+                has_reach[nr] = false;
+                nr++;
+                continue;
+            }
             snprintf(fn, sizeof fn, "%.63s.png", st->name);
             path_join(p, d, fn);
             save_strip(p, r->frames, r->n, sc->cw, sc->ch);
@@ -3342,8 +3512,8 @@ int main(int argc, char **argv) {
         }
         path_join(p, d, "sprite.txt");
         write_manifest(p, &sc->man, sc->strips, sc->ns, contact, (const int (*)[2])reachv, has_reach, ax, ay,
-                       has_guard ? guard : NULL, frame_ms(ch), sc->cw, sc->ch);
-        if (!strcmp(ch->id, "musashi")) {
+                       has_guard ? guard : NULL, frame_ms(ch), sc->cw, sc->ch, ch);
+        if (!strcmp(ch->id, "kojiro")) {
             for (int i = 0; i < sc->ns && i < MAX_STRIPS; i++) {
                 base_has[i] = has_reach[i];
                 base_reach[i][0] = reachv[i][0];
@@ -3355,7 +3525,7 @@ int main(int argc, char **argv) {
 
         /* golpe especial: montado dos quadros do pack, um contato só */
         Step steps[16];
-        int nst = ch->pack ? pack_special_steps(sc->strips, sc->ns, &sc->man, ch->especial, steps)
+        int nst = ch->sem_arma ? 0 : ch->pack ? pack_special_steps(sc->strips, sc->ns, &sc->man, ch->especial, steps)
                            : special_steps(ch->especial, steps), stripi[16];
         for (int k = 0; k < nst; k++) {
             stripi[k] = -1;
@@ -3382,12 +3552,17 @@ int main(int argc, char **argv) {
                 bool dash = ch->especial == SP_INVESTIDA || ch->especial == SP_ESTOCADA;
                 if (dash && (cx.phase == PH_CONTACT || (ci >= 0 && k == ci + 1))) {
                     cv.pen = T_FX;
+                    /* fantasma: o contorno, e a mais próxima meio preenchida em xadrez */
                     for (int j = 2; j >= 1; j--) {
                         if (k - j < 0) continue;
                         Rgb c = j == 1 ? ch->rastro[1] : ch->rastro[2];
-                        for (int y = 0; y < CH; y++)
-                            for (int x = 0; x < CW; x++)
-                                if (sil[(k - j) % 3][y][x] && cv.a[y][x].a == 0) cv_put(&cv, x, y, c);
+                        bool (*g)[CW] = sil[(k - j) % 3];
+                        for (int y = 1; y < CH - 1; y++)
+                            for (int x = 1; x < CW - 1; x++) {
+                                if (!g[y][x] || cv.a[y][x].a) continue;
+                                bool edge = !(g[y][x - 1] && g[y][x + 1] && g[y - 1][x] && g[y + 1][x]);
+                                if (edge || (j == 1 && ((x + y) & 1) == 0)) cv_put(&cv, x, y, c);
+                            }
                     }
                 }
                 if (cx.phase == PH_STRIKE) hold = k;
@@ -3417,12 +3592,11 @@ int main(int argc, char **argv) {
             static const char *atk[] = {"ATTACK_1", "ATTACK_2", "ATTACK_3"};
             for (int a = 0; a < NCHARS; a++) {
                 const Char *ap = &CHARS[a];
-                if (!strcmp(ap->id, "musashi") || !strcmp(ap->id, "hanzo") || !strcmp(ap->id, ch->id)) continue;
+                if (!strcmp(ap->id, "kojiro") || ap->sem_arma || !strcmp(ap->id, ch->id)) continue;
+                /* a espada é a dele; só a aura, o rastro e o brilho do elemento são do aprendiz */
                 Char tmp = *ch;
                 tmp.elemento = ap->elemento;
                 memcpy(tmp.rastro, ap->rastro, sizeof tmp.rastro);
-                memcpy(tmp.lamina, ap->lamina, sizeof tmp.lamina);
-                tmp.arma = ap->arma;
                 tmp.destaque[0] = ap->destaque[0];
                 tmp.destaque[1] = ap->destaque[1];
                 tmp.ecos = false;
@@ -3521,13 +3695,22 @@ int main(int argc, char **argv) {
                       titles, nsel, p);
         printf("folhas em %s\n", fol);
     }
-    printf("distância entre as âncoras dos dois no quadro de contato = alcance do golpe + guarda do Musashi:\n");
+    printf("distância entre as âncoras dos dois no quadro de contato = alcance do golpe + guarda do Kojiro:\n");
     for (int i = 0; i < base.ns; i++) {
         if (!base_has[i] || !strcmp(base.strips[i].name, "DEFEND")) continue;
         if (guard_ok)
             printf("  %-14s %d px + %d = %d px\n", base.strips[i].name, base_reach[i][0], guard_mi[0], base_reach[i][0] + guard_mi[0]);
         else
             printf("  %-14s %d px + guarda (falta a prancha DEFEND)\n", base.strips[i].name, base_reach[i][0]);
+    }
+    /* pastas geradas com os nomes antigos ficam paradas: avisa (não apaga nada) */
+    static const char *old_names[] = {"raijin", "kage"};
+    for (size_t i = 0; i < sizeof old_names / sizeof old_names[0]; i++) {
+        char od[PATHLEN], om[PATHLEN];
+        path_join(od, saida, old_names[i]);
+        path_join(om, od, MARK);
+        if (DirectoryExists(od) && FileExists(om))
+            printf("%s é de antes da troca de nomes (gerada pelo programa); pode apagar\n", od);
     }
     for (int si = 0; si < nsel; si++)
         for (int i = 0; i < nrend[si]; i++) free(rend[si][i].frames);

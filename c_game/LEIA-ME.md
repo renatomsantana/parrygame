@@ -123,7 +123,7 @@ de um botão só) e o visual índigo do Musashi (fica o laranja escuro).
 | `src/fx.c` | Faíscas, estrela, anéis, arcos, flash, tremor |
 | `src/audio.c` | Efeitos e trilha ambiente sintetizados |
 | `tests/core_test.c` | Verificações do núcleo (`make test`) |
-| `tools/personagens.c` | Gera os 14 lutadores (cabeça, arma, corpo, rastro, aura, golpe especial) a partir das pranchas do Musashi e dos packs de `assets/sprites/_packs/` (Shizuku, Arashi, Oboro com as onze posturas e o grito): `make sprites`; ver `../docs/PERSONAGENS.md` |
+| `tools/personagens.c` | Gera os 15 lutadores (cabeça, arma, corpo, rastro, aura, golpe especial), uma pasta por nome (kojiro, raizo, yoru, garfiel...), a partir do Samurai #3 e dos packs de `assets/sprites/_packs/` (Shizuku, Arashi, Oboro com as posturas dos outros e o grito): `make sprites`; ver `../docs/PERSONAGENS.md` |
 
 Para testar sem jogar: `./apara --master 12 --duel --demo` põe um robô aparando
 contra oboro; `--shot arquivo.png 5` salva uma captura depois de 5 segundos.

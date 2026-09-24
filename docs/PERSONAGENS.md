@@ -3,17 +3,17 @@
 > Substitui a seção 4 (troca de paleta) do brief visual v2. Pode colar este
 > arquivo inteiro no Claude Code.
 
-Os 14 personagens (Musashi, os 11 aprendizes, Oboro e Hanzo) saem de quatro
-corpos da Mattz Art, e não são só troca de cor. Onze usam o corpo do pack A (o
-Samurai #3 do Musashi). Três têm corpo próprio, de outro pack: **Shizuku**
+Os 15 personagens (o protagonista Kojiro, os 12 aprendizes, Oboro e Hanzo) saem
+de quatro corpos da Mattz Art, e não são só troca de cor. A maioria usa o corpo
+do pack A (o Samurai #3). Três têm corpo próprio, de outro pack: **Shizuku**
 (Samurai #4), **Arashi** (Samurai #5, o de duas espadas) e **Oboro** (o Demon,
 de máscara oni). Ver [Corpos de outros packs](#corpos-de-outros-packs-shizuku-arashi-e-oboro).
 O programa `c_game/tools/personagens.c` (C com raylib, igual ao jogo) pega cada
 quadro das pranchas e:
 
 - **tira o chapéu** e desenha a cabeça no lugar (coque, rabo de cavalo, capuz,
-  careca, cabelo em chamas...). Só o Daichi fica de chapéu (palha). O Musashi
-  fica **sem chapéu, de coque**;
+  careca, cabelo em chamas...). Só o Daichi fica de chapéu (palha). O Kojiro
+  fica **sem chapéu e sem máscara, de coque solto**;
 - **troca a arma** seguindo a reta da katana em cada quadro, sempre do mesmo
   tamanho, e lança e florete passam a **estocar** no golpe reto em vez de
   cortar em arco;
@@ -36,38 +36,40 @@ mesmos pixels.
 
 | # | Personagem | Arma | Cabeça e corpo | Cores | Rastro e aura |
 |---:|---|---|---|---|---|
-| — | **Musashi** | katana | sem chapéu, coque com fita vermelha | original (branco e preto) | branco, sem aura |
-| 1 | **Raijin** (touro) | **espadão**: odachi 1,85× a katana, lâmina larga | dois tufos de chifre, faixa amarela; 2 px mais largo | marrom, amarelo | ouro, fagulhas subindo |
+| — | **Kojiro** | katana | sem chapéu e **sem máscara**: coque solto no alto da cabeça com fita vermelha, mechas na testa, barba rala | original (branco e preto) | branco, sem aura |
+| 1 | **Raizo** (touro) | **espadão**: odachi 1,45× a katana, bem mais larga | dois tufos de chifre, faixa amarela; 2 px mais largo | marrom, amarelo | ouro, fagulhas subindo |
 | 2 | **Shizuku** (água) | florete com copo ciano, **estoca** | **corpo do Samurai #4**, cabelo roxo virou azul petróleo | azul claro, ciano, hakama azul | água, bolhas |
-| 3 | **Kage** (noite) | **uma adaga em cada mão**, brilho roxo | capuz ninja, fitas roxas; 1 px mais estreito | preto azulado e roxo | corte duplo, fumaça roxa |
+| 3 | **Yoru** (noite) | **uma adaga em cada mão**, brilho roxo | capuz ninja, fitas roxas; 1 px mais estreito | preto azulado e roxo | corte duplo, fumaça roxa |
 | 4 | **Daichi** (terra) | espada pesada, lâmina larga | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
-| 5 | **Hayate** (vento) | katana leve | cabelo espetado, cachecol limão | verde claro, limão | vento, rajadas passando |
+| 5 | **Hayate** (vento) | **duas foices** (kama), uma em cada mão | cabelo espetado, cachecol limão | verde claro, limão | vento; no golpe, **cortes de vento** voam para a frente |
 | 6 | **Genbu** (tartaruga) | espada curta + casco nas costas | careca, barbicha; atarracado | verde musgo | verde, esporos |
 | 7 | **Enjin** (chama) | espada de fogo | cabelo em chamas; 1 px mais largo | vermelho e amarelo | fogo, labaredas e brasas |
 | 8 | **Suiren** (mar) | lança de água, **estoca** | cabelo curto, faixa turquesa | azul mar, turquesa | água, bolhas |
-| 9 | **Karasu** (corvo) | **garras nas duas mãos** (três lâminas em cada) | cabelo em penas, olho vermelho, trapo; magro e alto | preto e vermelho | três riscos, penas caindo |
+| 9 | **Karasu** (corvo) | **espada e lâmina curta** (12 px, a da outra mão) | cabelo em penas, olho vermelho, trapo; magro e alto | preto e vermelho | eco da segunda lâmina, penas caindo |
 | 10 | **Arashi** (tempestade) | duas espadas com raios | **corpo do Samurai #5**, cabelo prateado, olhos de raio | preto, azul elétrico | raios nas lâminas e no corpo |
 | 11 | **Jinshi** (montanha) | cajado de ferro, ponteiras de osso | cabelo grisalho comprido, barba; mais alto | cinza pedra, branco osso | rastro grosso, pedrisco caindo |
-| 12 | **Oboro** | katana de Hanzo, dourada | **corpo do Demon** (máscara oni), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
-| — | **Hanzo** | katana, bainha vermelha | coque branco, **sem barba**; mais baixo | azul escuro | branco, sem aura |
+| 12 | **Garfiel** (tigre branco, Byakko) | **garras nas duas mãos** (três lâminas em cada) | cabelo branco espetado com listras, roupa listrada, cauda; 1 px mais largo | branco, preto e âmbar | terra, três riscos de garra |
+| — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon** (máscara oni), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
+| — | **Hanzo** | **nenhuma**: um velho que não luta mais | coque branco, **sem barba**; mais baixo | azul escuro | sem rastro nem aura |
 
-As armas do pedido caíram assim: garras → Karasu, espada maior → Raijin
-(odachi), florete → Shizuku, adagas roxas → Kage, espadas com raios → Arashi,
+As armas do pedido caíram assim: garras → Garfiel, espada maior → Raizo
+(odachi), florete → Shizuku, adagas roxas → Yoru, espada e lâmina curta →
+Karasu, duas foices → Hayate, espadas com raios → Arashi,
 espada de fogo → Enjin, lança de água → Suiren.
 
-**Nomes:** Raijin quer dizer "deus do trovão", mas na lore quem tem duas espadas
-e azul elétrico é o Arashi, então o raio ficou com ele. Se preferir o trovão no
-Raijin, é só trocar os nomes das duas entradas em `CHARS` no programa.
-
-Nos pedidos mais novos apareceram outros nomes: **Kojiro** (o protagonista, aqui
-`musashi`), **Garfiel** (garras, aqui `karasu`), **Yoru** (adagas, aqui `kage`)
-e **Raizo** (o do espadão, aqui `raijin`). O `id` é o nome da pasta e das tiras
-(`ATTACK_1_ECO_KARASU`); o `titulo` é o que aparece nas folhas. Para renomear,
-troque os dois em `CHARS`.
+**Nomes e pastas:** cada personagem tem uma pasta com o nome atual: `kojiro`,
+`raizo`, `shizuku`, `yoru`, `daichi`, `hayate`, `genbu`, `enjin`, `suiren`,
+`karasu`, `arashi`, `jinshi`, `garfiel`, `oboro` e `hanzo`. O `id` em `CHARS` é
+o nome da pasta e das tiras (`ATTACK_1_ECO_KARASU`); o `titulo` é o que aparece
+nas folhas. As pastas geradas com os nomes antigos (`raijin/`, `kage/`) ficam
+paradas; o programa avisa e elas podem ser apagadas. Os diálogos do jogo ainda
+chamam o protagonista de `musashi` (não mexi no jogo).
 
 **Hanzo:** o pedido era o Hanzo do pack B sem a barba. Esse sprite não estava
 aqui, então o Hanzo saiu do corpo do pack A, de coque branco e sem barba. Assim
-ele também combina com o resto. O programa **não** apaga o Hanzo do pack B: se
+ele também combina com o resto. Ele **não luta mais**: não tem espada, bainha, rastro nem aura, e só
+ganha as pranchas que não são de luta (IDLE, RUN, HURT, DEATH, JUMP...; os
+ATTACK, DEFEND, THROW e DASH ficam de fora). O programa **não** apaga o Hanzo do pack B: se
 `assets/sprites/hanzo/` já tiver pranchas de outro pack, o gerado vai para
 `hanzo_gerado/`.
 
@@ -79,14 +81,15 @@ make sprites          # compila tools/personagens.c e gera tudo, com as folhas
 ```
 
 Ou em partes: `make personagens` e depois `./personagens` (opções `--so enjin
-kage`, `--folhas`, `--lista`, `--entrada`, `--saida`). Não abre janela: usa só
+yoru`, `--folhas`, `--lista`, `--entrada`, `--saida`). Não abre janela: usa só
 as funções de imagem e de arquivo da raylib.
 
 Na primeira vez, o programa copia `assets/sprites/musashi/` (o pack original)
 para `assets/sprites/_original/` e passa a ler dali. Depois grava uma pasta por
 personagem em `assets/sprites/<nome>/`, cada uma com as mesmas pranchas e um
-`sprite.txt` próprio. O `musashi/` passa a ter o Musashi sem chapéu, então o
-jogo pega a versão nova sem mudar o carregador.
+`sprite.txt` próprio; o protagonista sai em `kojiro/`. Numa pasta gerada, as
+tiras da rodada anterior são apagadas antes (uma animação que deixou de existir,
+como os golpes do Hanzo, não fica para trás).
 
 - Pastas com o arquivo `.gerado` são do programa e podem ser sobrescritas; as
   outras ele não toca.
@@ -97,7 +100,7 @@ jogo pega a versão nova sem mudar o carregador.
 
 | Arquivo | Para quê |
 |---|---|
-| `elenco.png`, `elenco_pb.png` | Os 14 lado a lado, no tamanho do jogo e ampliados; a versão em preto e branco confere se dá para distinguir pela forma |
+| `elenco.png`, `elenco_pb.png` | Os 15 lado a lado, no tamanho do jogo e ampliados; a versão em preto e branco confere se dá para distinguir pela forma |
 | `golpes.png` | O quadro de contato de cada golpe, um personagem por linha |
 | `<nome>.png` | Todas as pranchas do personagem, quadro a quadro, com o número embaixo |
 | `alcance_<nome>.png` | Quadro de contato com a âncora dos pés (vermelho) e a ponta do golpe (ciano) |
@@ -121,18 +124,25 @@ HURT 2 chapeu 44 41            # o chapéu está com o canto em (44, 41)
 Na prancha, a katana aparece cortada em alguns quadros (atrás do corpo, borrada
 no movimento). O programa mede o comprimento da katana do pack (a mediana das
 vezes em que ela aparece inteira: 16,6 px do cabo à ponta) e desenha cada arma
-com um comprimento fixo a partir dele: espadão do Raijin 1,85× (e uma fileira a
-mais de largura), lança 1,2× mais 14 px de haste atrás da mão, florete 1,25×,
-adaga 8 px, espada curta 11 px, garras 10 px. Adaga e espada curta são
+com um comprimento fixo a partir dele: espadão do Raizo 1,45× (e duas fileiras a
+mais de largura), lança 1,2× mais 14 px de haste atrás da mão, florete 1,15×,
+adaga 8 px, espada curta 11 px, a lâmina curta do Karasu 12 px, garras 10 px,
+foice 9 px de cabo com a lâmina curva na ponta. Só a lâmina que sai da mão é
+trocada ou alongada; um pedaço solto dela aparecendo no meio do rastro fica como
+está. Adaga e espada curta são
 desenhadas inteiras (cabo, guarda e lâmina). Cada pack tem a sua katana medida
 (o Demon, por exemplo, tem uma katana bem mais comprida), então a mesma arma
 fica proporcional ao corpo que a segura.
 
-**Arma na outra mão.** No corpo do Musashi as duas mãos ficam juntas no cabo.
-A adaga do Kage e as garras do Karasu da mão esquerda saem do mesmo punho, um
-pouco mais para dentro e mais baixo, abertas em leque (empunhadas ao contrário)
-e atrás do corpo: dá para ver uma arma em cada mão em todos os golpes, inclusive
-quando o Oboro usa a postura deles.
+**Arma na outra mão.** No corpo do Samurai #3 as duas mãos ficam juntas no
+cabo. A segunda adaga do Yoru, as garras da mão esquerda do Garfiel, a segunda
+foice do Hayate e a lâmina curta do Karasu saem do mesmo punho, um pouco mais
+para dentro e mais baixo, abertas em leque e atrás do corpo: dá para ver uma
+arma em cada mão em todos os golpes.
+
+**Poder do vento (Hayate).** No contato e nos dois quadros seguintes, uma
+meia-lua de vento sai da ponta da foice e voa para a frente, abrindo. É efeito,
+não entra no alcance do parry (o parry continua sendo contra a foice).
 
 ## O golpe especial
 
@@ -143,19 +153,20 @@ preparação (mais longa e mais legível) e o impacto.
 
 | Coreografia | Quadros | Quem usa |
 |---|---|---|
-| Salto pesado | ATTACK_3: ergue a arma, segura no alto, desce com tudo | Raijin, Daichi, Enjin, Jinshi |
-| Investida | DASH_ATTACK: agacha, risca a tela e corta; imagens do corpo ficando para trás | Kage, Karasu, Arashi, Oboro |
+| Salto pesado | ATTACK_3: ergue a arma, segura no alto, desce com tudo | Raizo, Daichi, Enjin, Jinshi |
+| Investida | DASH_ATTACK: agacha, risca a tela e corta; o contorno do corpo ficando para trás | Yoru, Karasu, Garfiel, Arashi, Oboro |
 | Estocada longa | DASH_ATTACK agachado e a estocada do ATTACK_1 disparada de longe | Shizuku, Suiren |
 | Golpe subindo | ATTACK_2: abaixa a guarda e corta para cima | Hayate, Genbu |
 
 | Personagem | Efeito no impacto |
 |---|---|
-| Raijin | onda de choque de poeira com brilho dourado |
+| Raizo | onda de choque de poeira com brilho dourado |
 | Daichi | onda de choque, chão rachando e pedras voando |
 | Jinshi | pedras caindo do alto |
 | Enjin | pilar de fogo que sobe e apaga |
-| Kage | corte em X roxo |
-| Karasu | três riscos de garra e penas |
+| Yoru | corte em X roxo |
+| Karasu | corte em X vermelho (as duas lâminas) |
+| Garfiel | três riscos de garra |
 | Arashi | raio caindo do céu |
 | Oboro | corte em X de sombra com fagulhas de ouro |
 | Shizuku | coroa de água no ponto da estocada |
@@ -227,12 +238,12 @@ armas novas os números mudam por personagem (a estocada da Suiren chega a 52),
 e cada `sprite.txt` traz os seus.
 
 Regra para o duelo: **no quadro de contato, a distância entre as âncoras dos
-dois é `alcance do golpe + guarda do Musashi`.** Como o alcance muda por golpe
+dois é `alcance do golpe + guarda do Kojiro`.** Como o alcance muda por golpe
 e por personagem, o mestre se posiciona a cada golpe:
 
 ```c
-/* Mestre olha para a esquerda; Musashi para a direita. */
-int alvo = musashi_x + musashi_guarda_dx + anim_do_golpe->alcance_dx;
+/* Mestre olha para a esquerda; Kojiro para a direita. */
+int alvo = kojiro_x + kojiro_guarda_dx + anim_do_golpe->alcance_dx;
 
 /* Durante a antecipação: anda até o alvo em passos inteiros (ex.: 2 px por
    quadro) ou encaixa direto no hold se a preparação for curta. Durante o
@@ -240,7 +251,7 @@ int alvo = musashi_x + musashi_guarda_dx + anim_do_golpe->alcance_dx;
    frente das armas já estão desenhados e contados no alcance. */
 
 /* A faísca do parry vai no ponto de encontro: */
-Vector2 faisca = {musashi_x + musashi_guarda_dx, chao_y + musashi_guarda_dy};
+Vector2 faisca = {kojiro_x + kojiro_guarda_dx, chao_y + kojiro_guarda_dy};
 ```
 
 Ao espelhar quem olha para a esquerda, a âncora dentro do quadro também espelha:
@@ -280,7 +291,7 @@ rastro e a aura do elemento, o golpe especial.
 |---|---|---|---|---|
 | **Shizuku** | Samurai #4 (moça de rabo de cavalo) | `_packs/samurai4/` | 96 × 96 | cabelo roxo → azul petróleo, camisa azul clara, hakama azul, faixa ciano, olhos ciano; a katana vira **florete** e o ATTACK_1 vira estocada |
 | **Arashi** | Samurai #5 (mascarado, duas espadas) | `_packs/samurai5/` | 96 × 64 | roupa verde → preta, cinto e botas azul elétrico, cabelo prateado, olhos de raio; as **duas espadas** do pack ficam, com raios nas lâminas e rastro azul |
-| **Oboro** | Demon (máscara oni) | `_packs/demon/` | 128 × 108 | cores do pack; ganha os ecos das onze posturas e a cena do grito |
+| **Oboro** | Demon (máscara oni) | `_packs/demon/` | 128 × 108 | cores do pack; ganha os ecos das posturas dos outros e a cena do grito |
 
 Como montar a pasta (os PNGs são do pack pago e ficam fora do git; os
 `sprite.txt` já estão no repositório):
@@ -299,7 +310,7 @@ c_game/assets/sprites/_packs/
 
 Cada PNG é uma tira de quadros na horizontal, na altura do quadro do pack (o
 `cell` do `sprite.txt`). O nome do arquivo é o nome da animação. Se a pasta do
-pack não existir, o personagem sai do corpo do Musashi, como antes.
+pack não existir, o personagem sai do corpo do Samurai #3, como antes.
 
 No `CHARS` do programa, os campos do pack são:
 
@@ -318,21 +329,23 @@ como camisa só o branco que tem miolo de 3 × 3 e fica dentro do corpo; o que �
 comprido e fino, ou encosta numa lâmina, é lâmina; o que é grosso e fica fora
 do corpo é rastro. A `deteccao_<nome>.png` das folhas mostra o resultado.
 
-O golpe especial desses três sai de um golpe do próprio pack (ATTACK_1 para
+Nesses corpos o florete e a lança não viram estocada: o golpe é o corte do
+próprio pack, com a arma e o rastro novos (a estocada em cima do corte deles
+ficava estranha). O golpe especial desses três sai de um golpe do próprio pack (ATTACK_1 para
 investida e estocada, ATTACK_3 para o salto, ATTACK_2 para o ascendente): a
 preparação fica segurada um quadro a mais, um passo para trás antes do bote, e
 o avanço no contato, com o efeito do elemento.
 
-### Oboro: as onze posturas e o grito
+### Oboro: as posturas dos outros e o grito
 
 O Oboro passou anos estudando as posturas dos outros. Além dos golpes do Demon,
 o programa gera **cada ataque dele na postura de cada aprendiz**:
-`ATTACK_1_ECO_RAIJIN`, `ATTACK_2_ECO_SHIZUKU`, ... até `ATTACK_3_ECO_JINSHI`
-(33 tiras). Em cada uma, o corpo e o movimento são do Oboro, mas a arma, o
-rastro, a cor da lâmina, a aura e o tempo (`ms`) são do aprendiz: o espadão do
-Raijin, o florete da Shizuku estocando, uma adaga em cada mão como o Kage,
-garras nas duas mãos como o Karasu, a lança do Suiren, as espadas com raios do
-Arashi... Cada eco tem o próprio `alcance` no `sprite.txt`, para o parry.
+`ATTACK_1_ECO_RAIZO`, `ATTACK_2_ECO_SHIZUKU`, ... até `ATTACK_3_ECO_GARFIEL`
+(36 tiras). A **espada continua a dele** (a katana dourada do Demon, do mesmo
+tamanho e no mesmo tempo); o que muda é a aura: o rastro, o brilho na lâmina e
+as partículas do elemento de cada aprendiz (fogo do Enjin, raios do Arashi,
+água da Shizuku, os cortes de vento do Hayate...). Cada eco tem o próprio
+`alcance` no `sprite.txt`, para o parry.
 
 As versões de **fúria** do pack (`*_FURIA`: lâmina vermelha, rastro de sangue)
 são a fase 2. O rastro vermelho tem as mesmas cores da máscara, então o alcance
@@ -347,16 +360,18 @@ que ela sai com as cores e a aura do Oboro como as outras.
 
 ## Limites conhecidos
 
-- No corpo do Musashi, a arma da mão esquerda (Kage, Karasu) sai do mesmo
-  punho da primeira, porque as duas mãos ficam juntas no cabo; o braço
-  esquerdo não se estica sozinho.
+- No corpo do Samurai #3, a arma da mão esquerda (Yoru, Karasu, Hayate,
+  Garfiel) sai do mesmo punho da primeira, porque as duas mãos ficam juntas no
+  cabo; o braço esquerdo não se estica sozinho.
+- O Hanzo sai das pranchas do Samurai #3 sem a espada: nas poses em que o
+  corpo segurava a katana, as mãos ficam na mesma posição, vazias.
 - Os packs novos não têm todas as animações do #3 (não há DASH nem
   DASH_ATTACK), e o Demon não tem DEATH. O que o jogo pedir e o pack não tiver
   precisa de um substituto no carregador (por exemplo, HURT segurado).
 - A estocada usa os quadros do corte horizontal: o braço é o mesmo, só a arma e
   o rastro mudam. Uma estocada com o braço esticando de verdade pediria
   desenho novo.
-- No DASH, a bainha que o Musashi segura na mão de trás continua aparecendo
+- No DASH, a bainha que o Kojiro segura na mão de trás continua aparecendo
   para quem não usa bainha (é desenhada com as cores da hakama).
 - As pranchas têm que estar viradas para a direita, como vêm no pack.
 
@@ -368,7 +383,7 @@ viram corpo de verdade. Já estão encaixados o Samurai #4 (Shizuku), o #5
 
 | Pack | Visual | Personagem |
 |---|---|---|
-| Samurai #2 | armadura vermelha, kabuto com chifres dourados | Raijin (touro) |
+| Samurai #2 | armadura vermelha, kabuto com chifres dourados | Raizo (touro) |
 | Samurai #6 | chapéu de palha, corte largo | Daichi |
 
 Para encaixar mais um: pôr as tiras em `_packs/<nome>/` com um `sprite.txt`
@@ -377,7 +392,7 @@ personagem em `CHARS` e conferir a `deteccao_<nome>.png`.
 
 **Hanzo:** o pack B (a versão grátis, com o Hanzo de barba branca) já é seu. Com
 as pranchas dele (`assets/sprites/hanzo/*.png`), a barba sai do sprite original
-em vez de o Hanzo vir do corpo do Musashi.
+em vez de o Hanzo vir do corpo do Samurai #3.
 
 ## Arte e repositório
 
