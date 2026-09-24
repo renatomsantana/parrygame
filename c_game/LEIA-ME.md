@@ -123,6 +123,7 @@ de um botão só) e o visual índigo do Musashi (fica o laranja escuro).
 | `src/fx.c` | Faíscas, estrela, anéis, arcos, flash, tremor |
 | `src/audio.c` | Efeitos e trilha ambiente sintetizados |
 | `tests/core_test.c` | Verificações do núcleo (`make test`) |
+| `tools/personagens.py` | Gera os 14 lutadores (cabeça, arma, cores, rastro) a partir das pranchas do Musashi; ver `../docs/PERSONAGENS.md` |
 
 Para testar sem jogar: `./apara --master 12 --duel --demo` põe um robô aparando
 contra oboro; `--shot arquivo.png 5` salva uma captura depois de 5 segundos.

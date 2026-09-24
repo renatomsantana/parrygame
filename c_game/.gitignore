@@ -2,3 +2,8 @@ apara
 core_test
 apara_save.txt
 *.dSYM/
+# Pranchas de sprite: o pack da Mattz Art é pago e o repositório é público.
+# Os PNGs gerados por tools/personagens.py saem dele e também ficam só na máquina.
+assets/sprites/**/*.png
+assets/sprites/_folhas/
+assets/sprites/**/.gerado
