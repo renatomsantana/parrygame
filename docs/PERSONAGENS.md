@@ -11,8 +11,11 @@ pranchas do Musashi e:
 - **tira o chapéu** e desenha a cabeça no lugar (coque, rabo de cavalo, capuz,
   careca, cabelo em chamas...). Só **dois** ficam de chapéu: Daichi (palha) e
   Arashi (o chapéu largo do Raiden). O Musashi fica **sem chapéu, de coque**;
-- **troca a arma** seguindo a reta da katana em cada quadro, e lança e florete
-  passam a **estocar** no golpe reto em vez de cortar em arco;
+- **troca a arma** seguindo a reta da katana em cada quadro, sempre do mesmo
+  tamanho, e lança e florete passam a **estocar** no golpe reto em vez de
+  cortar em arco;
+- **monta um golpe especial** para cada aprendiz (`ESPECIAL.png`), com
+  preparação própria e um efeito grande do elemento no impacto;
 - **muda o corpo**: mais largo, mais estreito, mais alto ou mais baixo, e um
   passo à frente no contato conforme a arma;
 - **dá ao rastro o formato da arma** (adaga corta duplo, garra deixa três
@@ -103,6 +106,59 @@ DEATH 7 semchapeu              # a cabeça está sem chapéu neste quadro
 DEATH 8 apaga 60 50 80 60      # apaga um retângulo (ex.: o chapéu caindo)
 HURT 2 chapeu 44 41            # o chapéu está com o canto em (44, 41)
 ```
+
+### A arma é do mesmo tamanho em todos os quadros
+
+Na prancha, a katana aparece cortada em alguns quadros (atrás do corpo, borrada
+no movimento). O programa mede o comprimento da katana do pack (a mediana das
+vezes em que ela aparece inteira: 16,6 px do cabo à ponta) e desenha cada arma
+com um comprimento fixo a partir dele: odachi 1,5×, lança 1,2× mais 14 px de
+haste atrás da mão, florete 1,25×, adaga 8 px, espada curta 11 px, garras 10 px.
+Adaga e espada curta são desenhadas inteiras (cabo, guarda e lâmina), e a
+segunda adaga do Kage fica 4 px atrás da primeira.
+
+## O golpe especial
+
+Cada aprendiz ganha um `ESPECIAL.png`, montado com os quadros do pack. É **um
+golpe só**: num jogo de parry, cada golpe que aparece tem que bater com um
+contato do núcleo, senão o jogador não sabe o que aparar. O que muda é a
+preparação (mais longa e mais legível) e o impacto.
+
+| Coreografia | Quadros | Quem usa |
+|---|---|---|
+| Salto pesado | ATTACK_3: ergue a arma, segura no alto, desce com tudo | Raijin, Daichi, Enjin, Jinshi |
+| Investida | DASH_ATTACK: agacha, risca a tela e corta; imagens do corpo ficando para trás | Kage, Karasu, Arashi, Oboro |
+| Estocada longa | DASH_ATTACK agachado e a estocada do ATTACK_1 disparada de longe | Shizuku, Suiren |
+| Golpe subindo | ATTACK_2: abaixa a guarda e corta para cima | Hayate, Genbu |
+
+| Personagem | Efeito no impacto |
+|---|---|
+| Raijin | onda de choque de poeira com brilho dourado |
+| Daichi | onda de choque, chão rachando e pedras voando |
+| Jinshi | pedras caindo do alto |
+| Enjin | pilar de fogo que sobe e apaga |
+| Kage | corte em X roxo |
+| Karasu | três riscos de garra e penas |
+| Arashi | raio caindo do céu |
+| Oboro | corte em X de sombra com fagulhas de ouro |
+| Shizuku | coroa de água no ponto da estocada |
+| Suiren | onda de água rolando para a frente |
+| Hayate | redemoinho de vento |
+| Genbu | escudo de casco que se abre e racha |
+
+O quadro de 106 px não chega até o adversário, então o efeito fica no caminho
+da lâmina (os de chão a 3/4 do alcance, os de ar um pouco antes da ponta).
+
+No `sprite.txt` sai uma linha como as outras:
+
+```
+anim ESPECIAL       hold 3  contact 4  alcance 50 -18  ms 60
+```
+
+Para usar: quando o núcleo sortear o golpe especial (`specialChance`), tocar
+`ESPECIAL` no lugar de `STRONG_ATTACK` se a pasta do personagem tiver o
+arquivo. A sincronia é a mesma dos outros golpes: o `hold` estica até faltar o
+tempo do golpe, e o `contact` cai no quadro do contato do núcleo.
 
 ## O `sprite.txt` de cada personagem
 
@@ -204,6 +260,29 @@ Sem placa de som o jogo segue mudo, como antes.
 - No DASH, a bainha que o Musashi segura na mão de trás continua aparecendo
   para quem não usa bainha (é desenhada com as cores da hakama).
 - As pranchas têm que estar viradas para a direita, como vêm no pack.
+
+## Outros samurais da Mattz Art
+
+As referências mandadas (Samurai #2, #4, #5, #6, o de máscara oni) são capas e
+vitrines de packs pagos, algumas com a marca "PREVIEW" por cima: não dá para
+recortar e usar. Mas são do **mesmo artista e da mesma escala** do Samurai #3,
+então, comprados, cada um vira um corpo de verdade, com animações e armas
+próprias, e combina com o resto. Sugestão de quem fica com qual:
+
+| Pack | Visual | Personagem |
+|---|---|---|
+| Samurai #2 | armadura vermelha, kabuto com chifres dourados | Raijin (touro) |
+| máscara oni | armadura azul e vermelha, máscara de demônio, espada curva | Oboro |
+| Samurai #4 | moça de rabo de cavalo | Shizuku |
+| Samurai #5 | mascarado, duas espadas | Arashi ou Kage |
+| Samurai #6 | chapéu de palha, corte largo | Daichi |
+
+Para encaixar um pack novo, o programa precisa das pranchas em PNG (tiras de
+quadros, como as do #3) para aprender a paleta e as partes daquele corpo.
+
+**Hanzo:** o pack B (a versão grátis, com o Hanzo de barba branca) já é seu. Com
+as pranchas dele (`assets/sprites/hanzo/*.png`), a barba sai do sprite original
+em vez de o Hanzo vir do corpo do Musashi.
 
 ## Arte e repositório
 

@@ -513,6 +513,24 @@ static void find_blades(Seg *s) {
     }
 }
 
+/* Comprimento da katana do pack, do cabo à ponta (a mediana das lâminas que
+   aparecem inteiras). Toda arma nova usa este número, então tem o mesmo tamanho
+   em todos os quadros, por mais que a katana apareça cortada em algum deles. */
+static double KATANA = 16.6;
+
+static void measure_katana(const Seg *const *segs, int n) {
+    double v[1024];
+    int m = 0;
+    for (int i = 0; i < n; i++)
+        for (int b = 0; b < segs[i]->nblades && m < 1024; b++)
+            if (segs[i]->blades[b].nearest <= 3 && segs[i]->blades[b].farthest >= 8) v[m++] = segs[i]->blades[b].farthest;
+    if (m < 3) return;
+    for (int i = 0; i < m; i++)
+        for (int j = i + 1; j < m; j++)
+            if (v[j] < v[i]) { double t = v[i]; v[i] = v[j]; v[j] = t; }
+    KATANA = v[m / 2];
+}
+
 static double blade_dist(const Blade *b, int x, int y, double def) {
     for (int i = 0; i < b->n; i++)
         if (b->x[i] == x && b->y[i] == y) return b->dist[i];
@@ -530,6 +548,14 @@ typedef enum {
 } Element;
 
 typedef enum { AC_NONE, AC_CACHECOL, AC_CASCO, AC_TRAPO } Accessory;
+
+/* Golpe especial: a coreografia (de que quadros do pack ele é montado) e o
+   efeito grande do elemento no ponto do impacto. */
+typedef enum { SP_NENHUM, SP_SALTO, SP_INVESTIDA, SP_ESTOCADA, SP_ASCENDENTE } SpecialMove;
+typedef enum {
+    FX_NADA, FX_CHOQUE, FX_PEDRAS, FX_AVALANCHE, FX_FOGO, FX_RAIO, FX_ONDA, FX_GOTA, FX_X, FX_GARRA, FX_VORTICE,
+    FX_CASCO, FX_SOMBRA
+} SpecialFx;
 
 typedef struct {
     WeaponKind kind;
@@ -559,6 +585,8 @@ typedef struct {
     Element elemento;
     Accessory acessorios[3];
     int largura, altura; /* colunas e linhas a mais (ou a menos) no corpo */
+    SpecialMove especial;
+    SpecialFx efeito;
 } Char;
 
 static const Char ORIG = {
@@ -586,7 +614,8 @@ static Char CHARS[] = {
      .cabelo = {HEX(0x1c140e), HEX(0x3a2a1c), HEX(0x5e4630)},
      .destaque = {HEX(0xffd23c), HEX(0xc08a14)}, .obi = HEX(0xffd23c),
      .saya = HEX(0x3a2412), .cabo = HEX(0x7a4a14),
-     .rastro = {HEX(0xfff4c8), HEX(0xffd84a), HEX(0xc89a2a)}, .elemento = EL_OURO, .largura = 2},
+     .rastro = {HEX(0xfff4c8), HEX(0xffd84a), HEX(0xc89a2a)}, .elemento = EL_OURO, .largura = 2,
+     .especial = SP_SALTO, .efeito = FX_CHOQUE},
     /* 2. Água. Florete. Azul claro e ciano. */
     {.id = "shizuku", .titulo = "Shizuku", .arma = {.kind = W_FLORETE, .escala = 1.25}, .cabeca = "rabo",
      .camisa = {HEX(0xeef8ff), HEX(0xbfe2f6), HEX(0x86bde6), HEX(0x5a8cc4)},
@@ -596,10 +625,11 @@ static Char CHARS[] = {
      .destaque = {HEX(0x58f0ff), HEX(0x1aa6c8)}, .obi = HEX(0x58f0ff),
      .saya = HEX(0xdff4ff), .cabo = HEX(0x1aa6c8),
      .lamina = {HEX(0xf4fbff), HEX(0xa8d8f0)},
-     .rastro = {HEX(0xf0fdff), HEX(0x9ff0ff), HEX(0x4ac0e8)}, .elemento = EL_AGUA, .largura = -1},
+     .rastro = {HEX(0xf0fdff), HEX(0x9ff0ff), HEX(0x4ac0e8)}, .elemento = EL_AGUA, .largura = -1,
+     .especial = SP_ESTOCADA, .efeito = FX_GOTA},
     /* 3. Noite. Duas adagas que brilham roxo. Ninja preto e roxo. */
     {.id = "kage", .titulo = "Kage",
-     .arma = {.kind = W_ADAGA, .comprimento = 8, .par = true, .cor_par = HEX(0x9a48f0), .guarda = HEX(0x4a1c7a)},
+     .arma = {.kind = W_ADAGA, .comprimento = 8, .par = true, .cor_par = HEX(0xd8b0ff), .guarda = HEX(0x4a1c7a)},
      .cabeca = "capuz",
      .camisa = {HEX(0x4a4660), HEX(0x34324a), HEX(0x252438), HEX(0x1a1a28)},
      .hakama = {HEX(0x343044), HEX(0x26243a), HEX(0x1c1a2c), HEX(0x141322), HEX(0x0d0c18)},
@@ -609,7 +639,8 @@ static Char CHARS[] = {
      .destaque = {HEX(0xb45cff), HEX(0x6e2cb4)}, .obi = HEX(0x8a3ce0),
      .sem_saya = true, .cabo = HEX(0x4a1c7a),
      .lamina = {HEX(0xf4e0ff), HEX(0xb45cff)},
-     .rastro = {HEX(0xf6e6ff), HEX(0xc88cff), HEX(0x7a3cd8)}, .elemento = EL_ROXO, .largura = -1},
+     .rastro = {HEX(0xf6e6ff), HEX(0xc88cff), HEX(0x7a3cd8)}, .elemento = EL_ROXO, .largura = -1,
+     .especial = SP_INVESTIDA, .efeito = FX_X},
     /* 4. Terra. Espada pesada. Chapéu de palha, verde oliva e ocre, barba. */
     {.id = "daichi", .titulo = "Daichi",
      .arma = {.kind = W_PESADA, .escala = 1.15, .largura = 2, .cor_largura = HEX(0x8a8676)},
@@ -621,7 +652,8 @@ static Char CHARS[] = {
      .destaque = {HEX(0xe0a030), HEX(0xa06c18)}, .obi = HEX(0xc08a2a),
      .saya = HEX(0x3a2c1e), .cabo = HEX(0x6a4a1c),
      .lamina = {HEX(0xd8d8cc), HEX(0x9c9a8a)},
-     .rastro = {HEX(0xfbf0d0), HEX(0xe0b868), HEX(0xa47a3a)}, .elemento = EL_TERRA, .largura = 1},
+     .rastro = {HEX(0xfbf0d0), HEX(0xe0b868), HEX(0xa47a3a)}, .elemento = EL_TERRA, .largura = 1,
+     .especial = SP_SALTO, .efeito = FX_PEDRAS},
     /* 5. Vento. Katana leve. Verde claro e verde limão, cachecol. */
     {.id = "hayate", .titulo = "Hayate", .arma = {.kind = W_KATANA}, .cabeca = "vento", .acessorios = {AC_CACHECOL},
      .camisa = {HEX(0xeefce0), HEX(0xc2eca8), HEX(0x8ccc78), HEX(0x5c9c54)},
@@ -631,7 +663,8 @@ static Char CHARS[] = {
      .destaque = {HEX(0xc8ff3c), HEX(0x7cc81c)},
      .saya = HEX(0x2c4a30), .cabo = HEX(0x5c9c1c),
      .lamina = {HEX(0xf4fff0), HEX(0xbce8b0)},
-     .rastro = {HEX(0xf6ffe8), HEX(0xd4ff7a), HEX(0x8ad04a)}, .elemento = EL_VENTO},
+     .rastro = {HEX(0xf6ffe8), HEX(0xd4ff7a), HEX(0x8ad04a)}, .elemento = EL_VENTO,
+     .especial = SP_ASCENDENTE, .efeito = FX_VORTICE},
     /* 6. Tartaruga. Espada curta e o casco nas costas (escudo). Verde. */
     {.id = "genbu", .titulo = "Genbu", .arma = {.kind = W_CURTA, .comprimento = 11}, .cabeca = "careca",
      .acessorios = {AC_CASCO},
@@ -641,7 +674,8 @@ static Char CHARS[] = {
      .cabelo = {HEX(0x8a8a86), HEX(0xb8b8b2), HEX(0xdcdcd6)},
      .destaque = {HEX(0x4c9a3c), HEX(0x22502a)}, .destaque2 = HEX(0x8ad06a), .obi = HEX(0x2e6a2a),
      .saya = HEX(0x22502a), .cabo = HEX(0x2e4632),
-     .rastro = {HEX(0xeaffdc), HEX(0x8ee070), HEX(0x3e9a3a)}, .elemento = EL_MUSGO, .largura = 1, .altura = -1},
+     .rastro = {HEX(0xeaffdc), HEX(0x8ee070), HEX(0x3e9a3a)}, .elemento = EL_MUSGO, .largura = 1, .altura = -1,
+     .especial = SP_ASCENDENTE, .efeito = FX_CASCO},
     /* 7. Chama. Espada de fogo. Vermelho e amarelo. */
     {.id = "enjin", .titulo = "Enjin", .arma = {.kind = W_KATANA}, .cabeca = "chamas",
      .camisa = {HEX(0xf0584a), HEX(0xc02a2e), HEX(0x861a24), HEX(0x58101c)},
@@ -651,7 +685,8 @@ static Char CHARS[] = {
      .destaque = {HEX(0xffb020), HEX(0xd8501a)}, .obi = HEX(0xffb020),
      .saya = HEX(0x1c0909), .cabo = HEX(0xa82a1e),
      .lamina = {HEX(0xfff0b0), HEX(0xff9030)},
-     .rastro = {HEX(0xfff4b8), HEX(0xffa030), HEX(0xe04420)}, .elemento = EL_FOGO, .largura = 1},
+     .rastro = {HEX(0xfff4b8), HEX(0xffa030), HEX(0xe04420)}, .elemento = EL_FOGO, .largura = 1,
+     .especial = SP_SALTO, .efeito = FX_FOGO},
     /* 8. Mar. Lança de água. Azul mar e turquesa. */
     {.id = "suiren", .titulo = "Suiren",
      .arma = {.kind = W_LANCA, .escala = 1.2, .atras = 14, .ponta = 5, .haste = {HEX(0x5a9cc0), HEX(0x24506e)}},
@@ -663,9 +698,10 @@ static Char CHARS[] = {
      .destaque = {HEX(0x3cf0d8), HEX(0x14a8a0)}, .obi = HEX(0x3cf0d8),
      .sem_saya = true, .cabo = HEX(0x14a8a0),
      .lamina = {HEX(0xd8fffa), HEX(0x3cf0d8)},
-     .rastro = {HEX(0xe0fffc), HEX(0x5cf0e0), HEX(0x1c9cc8)}, .elemento = EL_AGUA},
+     .rastro = {HEX(0xe0fffc), HEX(0x5cf0e0), HEX(0x1c9cc8)}, .elemento = EL_AGUA,
+     .especial = SP_ESTOCADA, .efeito = FX_ONDA},
     /* 9. Corvo. Garras. Preto e vermelho. */
-    {.id = "karasu", .titulo = "Karasu", .arma = {.kind = W_GARRAS, .comprimento = 8}, .cabeca = "corvo",
+    {.id = "karasu", .titulo = "Karasu", .arma = {.kind = W_GARRAS, .comprimento = 10}, .cabeca = "corvo",
      .acessorios = {AC_TRAPO},
      .camisa = {HEX(0x5a5058), HEX(0x3e363e), HEX(0x2a242a), HEX(0x1c181c)},
      .hakama = {HEX(0x3a2a2e), HEX(0x2c1e22), HEX(0x201518), HEX(0x170f11), HEX(0x0f0a0b)},
@@ -675,7 +711,8 @@ static Char CHARS[] = {
      .destaque = {HEX(0xe0202c), HEX(0x8c1018)}, .obi = HEX(0xc0182a),
      .sem_saya = true, .cabo = HEX(0x3a2a2e),
      .lamina = {HEX(0xf4eef0), HEX(0x7a1820)},
-     .rastro = {HEX(0xffe0e0), HEX(0xff4a4a), HEX(0xa01020)}, .elemento = EL_PENA, .largura = -1, .altura = 1},
+     .rastro = {HEX(0xffe0e0), HEX(0xff4a4a), HEX(0xa01020)}, .elemento = EL_PENA, .largura = -1, .altura = 1,
+     .especial = SP_INVESTIDA, .efeito = FX_GARRA},
     /* 10. Tempestade. Duas espadas com raios. Preto com o chapéu do Raiden. */
     {.id = "arashi", .titulo = "Arashi", .arma = {.kind = W_DUPLA, .par = true, .cor_par = HEX(0x7cc0ff)},
      .chapeu = 2, .chapeu_cor = {HEX(0xf2eee0), HEX(0xcfc6a8), HEX(0x948a6e)}, .rosto = "olho_raio",
@@ -687,7 +724,8 @@ static Char CHARS[] = {
      .destaque = {HEX(0x3ca8ff), HEX(0x1a5ad0)}, .obi = HEX(0x3ca8ff),
      .saya = HEX(0x111219), .cabo = HEX(0x1a5ad0),
      .lamina = {HEX(0xeef8ff), HEX(0x5cb4ff)},
-     .rastro = {HEX(0xf4faff), HEX(0x7cc8ff), HEX(0x2a6cf0)}, .elemento = EL_RAIO},
+     .rastro = {HEX(0xf4faff), HEX(0x7cc8ff), HEX(0x2a6cf0)}, .elemento = EL_RAIO,
+     .especial = SP_INVESTIDA, .efeito = FX_RAIO},
     /* 11. Montanha. Cajado de ferro. Cinza pedra e branco osso. */
     {.id = "jinshi", .titulo = "Jinshi",
      .arma = {.kind = W_CAJADO, .escala = 1.05, .atras = 16, .haste = {HEX(0x70747e), HEX(0x3a3c44)},
@@ -699,7 +737,8 @@ static Char CHARS[] = {
      .cabelo = {HEX(0x5c5a58), HEX(0x8a8884), HEX(0xb8b6b0)},
      .destaque = {HEX(0xece6d4), HEX(0xa8a292)}, .obi = HEX(0xece6d4),
      .sem_saya = true, .cabo = HEX(0x4a4c54),
-     .rastro = {HEX(0xfbf8ee), HEX(0xe2dccb), HEX(0xa49e8c)}, .elemento = EL_POEIRA, .altura = 1},
+     .rastro = {HEX(0xfbf8ee), HEX(0xe2dccb), HEX(0xa49e8c)}, .elemento = EL_POEIRA, .altura = 1,
+     .especial = SP_SALTO, .efeito = FX_AVALANCHE},
     /* 12. Oboro. Katana de Hanzo. Roxo escuro e dourado. */
     {.id = "oboro", .titulo = "Oboro", .arma = {.kind = W_KATANA}, .cabeca = "rabo_longo",
      .camisa = {HEX(0x8a6ab0), HEX(0x5e4488), HEX(0x3e2c62), HEX(0x281c42)},
@@ -709,7 +748,8 @@ static Char CHARS[] = {
      .destaque = {HEX(0xffcc40), HEX(0xb08018)}, .destaque2 = HEX(0xffcc40), .obi = HEX(0xffcc40),
      .saya = HEX(0x18121c), .cabo = HEX(0xb08018),
      .lamina = {HEX(0xfffbe8), HEX(0xe8c060)},
-     .rastro = {HEX(0xfff6dc), HEX(0xb48cff), HEX(0x6a3cc0)}, .elemento = EL_SOMBRA, .altura = 1},
+     .rastro = {HEX(0xfff6dc), HEX(0xb48cff), HEX(0x6a3cc0)}, .elemento = EL_SOMBRA, .altura = 1,
+     .especial = SP_INVESTIDA, .efeito = FX_SOMBRA},
     /* Hanzo: não luta; cabelo branco, sem barba, azul escuro e bainha vermelha. */
     {.id = "hanzo", .titulo = "Hanzo", .arma = {.kind = W_KATANA}, .cabeca = "mestre",
      .camisa = {HEX(0x8ca0c8), HEX(0x5a70a0), HEX(0x3c4e7c), HEX(0x283658)},
@@ -771,7 +811,7 @@ static const Head HEADS[] = {
     /* Kage: capuz ninja, só a fresta dos olhos, fitas roxas atrás. */
     {"capuz", {{3, 6, "KK"}, {4, 5, "KKmK"}, {5, 4, "KKKKmK"}, {6, 4, "KKKKKmmK"}, {7, 4, "KAAAAAAA"},
                {8, 4, "KKKKFeFF"}, {9, 8, "KKKK"}, {10, 8, "KKK"}},
-     {{{0}}}, {{7, 3, 11}, {8, 3, 8}}},
+     {{{0}}}, {{7, 3, 9}, {8, 3, 6}}},
     /* Hayate: cabelo espetado varrido pelo vento. */
     {"vento", {{3, 7, "H"}, {4, 5, "HHhH"}, {5, 2, "HH.HHHhiH"}, {6, 1, "HHHHHHHhiHH"}, {7, 3, "HH.HHHHHHF"},
                {8, 4, "HHHfFFeF"}}},
@@ -865,7 +905,8 @@ typedef struct { int n; int x[512], y[512]; } Pts;
 /* Pontos inteiros de uma reta, um por passo no eixo maior. */
 static void line_pts(Pts *p, double x0, double y0, double x1, double y1) {
     p->n = 0;
-    int n = (int)fmax(fabs(x1 - x0), fabs(y1 - y0));
+    /* arredonda o número de passos para cima: com menos passos que pixels a reta pula linhas */
+    int n = (int)ceil(fmax(fabs(x1 - x0), fabs(y1 - y0)) - 1e-9);
     if (n == 0) {
         p->x[0] = pyround(x0); p->y[0] = pyround(y0); p->n = 1;
         return;
@@ -1163,7 +1204,7 @@ static void draw_head(Canvas *cv, const Char *ch, int idx) {
     Pal pal;
     head_palette(ch, &pal);
     for (int i = 0; i < 3 && hd->fitas[i].n; i++)
-        ribbon(cv, cv->seg->ox + hd->fitas[i].x, cv->seg->oy + hd->fitas[i].y, hd->fitas[i].n, ch->destaque[0],
+        ribbon(cv, cv->seg->ox + hd->fitas[i].x, cv->seg->oy + hd->fitas[i].y, hd->fitas[i].n, ch->destaque[1],
                ch->destaque[1], idx + hd->fitas[i].y, 0.2, 1.1, 1, 1.3);
     int nv = (hd->atras[0][0].t != NULL) + (hd->atras[1][0].t != NULL);
     if (nv) paint_rows(cv, hd->atras[(idx / 2) % nv], 14, &pal, true);
@@ -1265,6 +1306,24 @@ static void perp(const double u[2], double n[2]) {
 
 static void mark(Canvas *cv, int x, int y) { if (cv_ok(x, y)) cv->wpx[y][x] = true; }
 
+static void stroke(Canvas *cv, const Blade *b, double t0, double t1, Rgb core, const Rgb *edge, double offx,
+                   double offy, int every, bool only_empty);
+
+/* Adaga ou espada curta desenhada do zero: cabo escuro atrás da mão, guarda
+   atravessada, lâmina com fio claro e a ponta mais clara ainda. */
+static void draw_short_blade(Canvas *cv, const Blade *b, double offx, double offy, double len, Rgb core, Rgb edge,
+                             Rgb guard, Rgb grip, bool only_empty) {
+    stroke(cv, b, -2, 0, grip, NULL, offx, offy, 2, only_empty);
+    stroke(cv, b, 1, len, core, &edge, offx, offy, 1, only_empty);
+    double n[2];
+    perp(b->u, n);
+    double gx = b->hilt[0] + offx + b->u[0] * 0.8, gy = b->hilt[1] + offy + b->u[1] * 0.8;
+    for (int k = -1; k <= 1; k += 2) {
+        int x = pyround(gx + n[0] * k), y = pyround(gy + n[1] * k);
+        if (cv_ok(x, y) && (only_empty ? empty_orig(cv, x, y) : weapon_ok(cv, x, y) || cv->a[y][x].a == 0)) cv_put(cv, x, y, guard);
+    }
+}
+
 /* Reta ao longo da lâmina, de t0 a t1 (distância a partir do cabo). */
 static void stroke(Canvas *cv, const Blade *b, double t0, double t1, Rgb core, const Rgb *edge, double offx,
                    double offy, int every, bool only_empty) {
@@ -1314,7 +1373,7 @@ static void blade_fx(Canvas *cv, const Char *ch, const char *anim, int idx) {
                 static const int d[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
                 for (int i = 0; i < 4; i++) {
                     int dx = d[i][0], dy = d[i][1];
-                    if (hsh6("g", anim, idx, x, y, dx, dy) < 0.16 && cv_is_empty(cv, x + dx, y + dy))
+                    if (hsh6("g", anim, idx, x, y, dx, dy) < 0.08 && cv_is_empty(cv, x + dx, y + dy))
                         cv_put(cv, x + dx, y + dy, (Rgb){96, 40, 160});
                 }
             } else if (el == EL_AGUA) {
@@ -1450,15 +1509,15 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
         switch (w->kind) {
             case W_KATANA: case W_DUPLA:
                 for (int i = 0; i < b->n; i++) mark(cv, b->x[i], b->y[i]);
-                if (escala > 1.0) stroke(cv, b, full, full * escala, core, &edge, 0, 0, 2, false);
+                if (escala > 1.0) stroke(cv, b, full, fmax(full, KATANA * escala), core, &edge, 0, 0, 2, false);
                 break;
             case W_ODACHI:
                 for (int i = 0; i < b->n; i++) mark(cv, b->x[i], b->y[i]);
-                stroke(cv, b, full - 1, full * escala, core, &edge, 0, 0, 2, false);
+                stroke(cv, b, full - 1, fmax(full, KATANA * escala), core, &edge, 0, 0, 2, false);
                 break;
             case W_PESADA: {
                 for (int i = 0; i < b->n; i++) mark(cv, b->x[i], b->y[i]);
-                stroke(cv, b, full - 1, full * escala, core, &edge, 0, 0, 2, false);
+                stroke(cv, b, full - 1, fmax(full, KATANA * escala), core, &edge, 0, 0, 2, false);
                 /* lâmina larga: uma fileira a mais do lado do fio */
                 double n[2];
                 perp(b->u, n);
@@ -1480,7 +1539,7 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                     if (in_set(s->c[b->y[i]][b->x[i]], "Lg")) erase_px(cv, b->x[i], b->y[i]);
                     else mark(cv, b->x[i], b->y[i]);
                 }
-                stroke(cv, b, full - 1, full * escala, core, NULL, 0, 0, 2, false);
+                stroke(cv, b, full - 1, fmax(full, KATANA * escala), core, NULL, 0, 0, 2, false);
                 /* copo da empunhadura */
                 double n[2];
                 perp(b->u, n);
@@ -1494,26 +1553,23 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                 break;
             }
             case W_ADAGA: case W_CURTA: {
+                /* a lâmina curta é desenhada inteira: cabo, guarda e lâmina */
                 double keep = w->comprimento > 0 ? w->comprimento : 7;
-                for (int i = 0; i < b->n; i++) {
-                    if (b->dist[i] > keep) erase_px(cv, b->x[i], b->y[i]);
-                    else mark(cv, b->x[i], b->y[i]);
-                }
+                for (int i = 0; i < b->n; i++) erase_px(cv, b->x[i], b->y[i]);
                 if (b->nearest > keep) { skip_pair = true; break; }
-                if (b->farthest < keep) stroke(cv, b, b->farthest, keep, core, &edge, 0, 0, 2, false);
-                if (rgb_set(w->guarda)) {
+                Rgb grip = ch->cabo, guard = rgb_set(w->guarda) ? w->guarda : ch->destaque[1];
+                draw_short_blade(cv, b, 0, 0, keep, core, edge, guard, grip, false);
+                if (w->par) {
                     double n[2];
                     perp(b->u, n);
-                    double gx = b->hilt[0] + b->u[0] * 1.0, gy = b->hilt[1] + b->u[1] * 1.0;
-                    for (int k = -1; k <= 1; k += 2) {
-                        int x = pyround(gx + n[0] * k), y = pyround(gy + n[1] * k);
-                        if (cv_ok(x, y) && (lab_at(cv, x, y) == NONE || lab_at(cv, x, y) == BLADE)) cv_put(cv, x, y, w->guarda);
-                    }
+                    Rgb c2 = rgb_set(w->cor_par) ? w->cor_par : edge;
+                    draw_short_blade(cv, b, -n[0] * 4 - b->u[0], -n[1] * 4 - b->u[1], keep - 1, c2, edge, guard, grip, true);
                 }
+                skip_pair = true;
                 break;
             }
             case W_LANCA: case W_CAJADO: {
-                double tip = full * escala;
+                double tip = KATANA * escala;
                 for (int i = 0; i < b->n; i++) erase_px(cv, b->x[i], b->y[i]);
                 int head = w->kind == W_LANCA ? (w->ponta ? w->ponta : 5) : 2;
                 int back = w->atras ? w->atras : 14;
@@ -1567,8 +1623,8 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
         if (!skip_pair && w->par && (w->kind == W_DUPLA || w->kind == W_ADAGA || w->kind == W_KATANA) && b->nearest <= 3) {
             double n[2];
             perp(b->u, n);
-            double keep = w->comprimento > 0 ? w->comprimento : full * escala;
-            stroke(cv, b, 1, fmin(keep, full * escala), rgb_set(w->cor_par) ? w->cor_par : edge, NULL,
+            double keep = w->comprimento > 0 ? w->comprimento : KATANA * escala;
+            stroke(cv, b, 1, keep, rgb_set(w->cor_par) ? w->cor_par : edge, NULL,
                    -n[0] * 3 - b->u[0] * 2, -n[1] * 3 - b->u[1] * 2, 2, true);
         }
     }
@@ -1692,8 +1748,9 @@ static void aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
         }
         case EL_ROXO:
             glow(cv, ctx, 0.16 * pw, ymid, (Rgb){150, 70, 230}, (Rgb){90, 40, 150}, false);
-            particles(cv, ctx, "fumo", (int)(5 * pw), 10, bx0, bx1, by0, ymid, -0.5, -1.3, 0.5,
-                      (Rgb){210, 150, 255}, (Rgb){150, 80, 230}, (Rgb){80, 40, 130}, 2);
+            /* a fumaça sobe do chão, para não cobrir as adagas */
+            particles(cv, ctx, "fumo", (int)(4 * pw), 10, bx0 - 2, bx1 + 2, by1 - 6, by1, -0.4, -1.2, 0.5,
+                      (Rgb){150, 80, 230}, (Rgb){110, 50, 180}, (Rgb){70, 34, 120}, 2);
             break;
         case EL_PENA:
             glow(cv, ctx, 0.07 * pw, ymid, (Rgb){200, 30, 44}, (Rgb){120, 16, 28}, false);
@@ -1808,6 +1865,240 @@ static int lunge(const Char *ch, const Ctx *ctx) {
     if (ctx->phase == PH_CONTACT) return c;
     if (ctx->phase == PH_RECOVERY && ctx->idx == ctx->contact + 1) return r;
     return 0;
+}
+
+
+/* ----- golpe especial ------------------------------------------------------ */
+/* Um golpe só, bem telegrafado: num jogo de parry cada golpe que aparece tem
+   que bater com um contato do núcleo. Muda a preparação e o impacto. */
+typedef struct { const char *anim; int frame, phase, dx; } Step;
+
+static int special_steps(SpecialMove m, Step *st) {
+    static const Step salto[] = {  /* ergue a arma, segura lá em cima e desce com tudo */
+        {"ATTACK_3", 0, PH_ANTICIPATION, 0}, {"ATTACK_3", 0, PH_ANTICIPATION, -1}, {"ATTACK_3", 1, PH_ANTICIPATION, -1},
+        {"ATTACK_3", 1, PH_STRIKE, -2}, {"ATTACK_3", 2, PH_CONTACT, 2}, {"ATTACK_3", 3, PH_RECOVERY, 2},
+        {"ATTACK_3", 3, PH_RECOVERY, 1}, {"ATTACK_3", 4, PH_RECOVERY, 0}};
+    static const Step investida[] = {  /* agacha, some num risco e corta do outro lado */
+        {"DASH_ATTACK", 0, PH_ANTICIPATION, 0}, {"DASH_ATTACK", 1, PH_ANTICIPATION, 0}, {"DASH_ATTACK", 2, PH_ANTICIPATION, -1},
+        {"DASH_ATTACK", 3, PH_STRIKE, -2}, {"DASH_ATTACK", 4, PH_CONTACT, 4}, {"DASH_ATTACK", 5, PH_RECOVERY, 3},
+        {"DASH_ATTACK", 6, PH_RECOVERY, 2}, {"DASH_ATTACK", 7, PH_RECOVERY, 1}, {"DASH_ATTACK", 8, PH_RECOVERY, 0}};
+    static const Step estocada[] = {  /* agacha e dispara uma estocada longa */
+        {"DASH_ATTACK", 0, PH_ANTICIPATION, 0}, {"DASH_ATTACK", 2, PH_ANTICIPATION, -1}, {"DASH_ATTACK", 3, PH_STRIKE, -2},
+        {"ATTACK_1", 2, PH_CONTACT, 6}, {"ATTACK_1", 3, PH_RECOVERY, 4}, {"ATTACK_1", 3, PH_RECOVERY, 2},
+        {"ATTACK_1", 4, PH_RECOVERY, 0}};
+    static const Step ascendente[] = {  /* abaixa a guarda e corta subindo */
+        {"ATTACK_2", 0, PH_ANTICIPATION, 0}, {"ATTACK_2", 0, PH_ANTICIPATION, -1}, {"ATTACK_2", 1, PH_STRIKE, -1},
+        {"ATTACK_2", 2, PH_CONTACT, 2}, {"ATTACK_2", 3, PH_RECOVERY, 2}, {"ATTACK_2", 3, PH_RECOVERY, 1},
+        {"ATTACK_2", 4, PH_RECOVERY, 0}};
+    const Step *src = NULL;
+    int n = 0;
+    switch (m) {
+        case SP_SALTO: src = salto; n = (int)(sizeof salto / sizeof salto[0]); break;
+        case SP_INVESTIDA: src = investida; n = (int)(sizeof investida / sizeof investida[0]); break;
+        case SP_ESTOCADA: src = estocada; n = (int)(sizeof estocada / sizeof estocada[0]); break;
+        case SP_ASCENDENTE: src = ascendente; n = (int)(sizeof ascendente / sizeof ascendente[0]); break;
+        default: return 0;
+    }
+    memcpy(st, src, sizeof(Step) * (size_t)n);
+    return n;
+}
+
+static void fx_px(Canvas *cv, int x, int y, Rgb c) {
+    if (!cv_ok(x, y)) return;
+    bool smear = cv->tag[y][x] == T_WEAPON && cv->seg->lab[y][x] == SMEAR;
+    if (cv->a[y][x].a == 0 || smear) cv_put(cv, x, y, c);
+}
+
+/* Linha grossa no meio e fina nas pontas (corte em X, garras). */
+static void fx_slash(Canvas *cv, double x0, double y0, double x1, double y1, Rgb core, Rgb edge) {
+    static Pts p;
+    line_pts(&p, x0, y0, x1, y1);
+    for (int i = 0; i < p.n; i++) {
+        double t = p.n > 1 ? (double)i / (p.n - 1) : 0.5;
+        fx_px(cv, p.x[i], p.y[i], core);
+        if (t > 0.2 && t < 0.8) { fx_px(cv, p.x[i] + 1, p.y[i], edge); fx_px(cv, p.x[i], p.y[i] + 1, edge); }
+    }
+}
+
+/* O efeito do elemento no impacto. O alvo de verdade fica fora do quadro de
+   106 px, então o efeito vai no caminho da lâmina: os de chão a 3/4 do alcance,
+   os de ar um pouco antes da ponta. ax é a âncora, (rdx, rdy) o alcance do
+   contato, gy a linha do chão e age os quadros desde o contato. */
+static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+static void special_fx(Canvas *cv, const Char *ch, SpecialFx fx, int ax, int rdx, int ty, int gy, int age) {
+    bool ground = fx == FX_CHOQUE || fx == FX_PEDRAS || fx == FX_AVALANCHE || fx == FX_FOGO || fx == FX_ONDA || fx == FX_RAIO;
+    int tx = ground ? clampi(ax + (int)(rdx * 0.75), 0, CW - 10) : clampi(ax + rdx - 6, 0, CW - 12);
+    cv->pen = T_FX;
+    Rgb c0 = ch->rastro[0], c1 = ch->rastro[1], c2 = ch->rastro[2];
+    switch (fx) {
+        case FX_CHOQUE: case FX_PEDRAS: case FX_AVALANCHE: {
+            /* onda de choque rasteira que abre a partir do impacto */
+            if (age <= 3) {
+                int r = 7 + age * 7;
+                for (int dx = -r; dx <= r; dx++) {
+                    double k = 1 - (double)(dx * dx) / (r * r);
+                    int h = (int)floor(sqrt(k > 0 ? k : 0) * r * 0.35 + 0.5);
+                    if (age == 3 && (dx & 1)) continue;
+                    /* poeira clara na base e o brilho do elemento na crista */
+                    fx_px(cv, tx + dx, gy - h, age <= 1 ? (Rgb){236, 226, 206} : (Rgb){176, 160, 136});
+                    if (age < 3) fx_px(cv, tx + dx, gy - h - 1, age == 0 ? (Rgb){255, 255, 255} : c0);
+                }
+                for (int k = 0; k < 8 - age * 2; k++) {
+                    int x = tx - r + (int)(hsh4("poeira", "fx", age, k, 0) * 2 * r), y = gy - (int)(hsh4("poeira", "fx", age, k, 1) * (4 + age * 2));
+                    fx_px(cv, x, y, (Rgb){176, 160, 136});
+                }
+            }
+            if (age == 0)
+                for (int y = gy - 16; y <= gy; y++) fx_px(cv, tx, y, c0);
+            if (fx == FX_PEDRAS && age <= 3) {
+                /* rachaduras no chão e pedras voando */
+                Rgb rock = {120, 96, 64}, dark = {70, 56, 40};
+                for (int k = 0; k < 6; k++) {
+                    double vx = (k - 2.5) * 1.4, vy = 5 + (k % 3) * 1.5, t = age + 1;
+                    int x = tx + (int)floor(vx * t + 0.5), y = gy - (int)floor(vy * t - 1.2 * t * t + 0.5);
+                    if (y <= gy) { fx_px(cv, x, y, rock); fx_px(cv, x + 1, y, dark); fx_px(cv, x, y - 1, rock); }
+                }
+                for (int side = -1; side <= 1; side += 2)
+                    for (int i = 1; i <= 7 + age * 2; i++) fx_px(cv, tx + side * i, gy + ((i / 2) % 2 ? -1 : 0), dark);
+            }
+            if (fx == FX_AVALANCHE && age <= 3) {
+                /* pedras caindo do alto em cima do alvo */
+                Rgb rock = {176, 170, 158}, dark = {110, 106, 98};
+                for (int k = 0; k < 6; k++) {
+                    int x = tx - 10 + k * 4 + (k % 2) * 2, y = 2 + age * 14 + (k * 5) % 11;
+                    if (y + 2 >= gy) continue;
+                    for (int j = 0; j < 3; j++)
+                        for (int i = 0; i < 3; i++)
+                            if (!(i == 2 && j == 0)) fx_px(cv, x + i, y + j, j == 2 || i == 2 ? dark : rock);
+                }
+            }
+            break;
+        }
+        case FX_FOGO: {
+            /* coluna de fogo no alvo */
+            static const int hh[] = {12, 30, 38, 22, 10};
+            if (age > 4) break;
+            int h = hh[age];
+            for (int j = 0; j < h; j++) {
+                int y = gy - j;
+                double t = (double)j / h;
+                int w = t < 0.8 ? 3 : 1;
+                for (int dx = -w; dx <= w; dx++) {
+                    double r = hsh4("pilar", "fx", age, dx, j);
+                    if (abs(dx) == w && r < 0.35) continue;
+                    Rgb c = abs(dx) <= 1 && t < 0.7 ? (Rgb){255, 244, 190} : abs(dx) <= 2 ? (Rgb){255, 150, 40} : (Rgb){214, 56, 30};
+                    fx_px(cv, tx + dx + (int)((hsh4("pilar", "x", age, j, 0) - 0.5) * 2), y, c);
+                }
+            }
+            for (int k = 0; k < 6; k++)
+                fx_px(cv, tx - 6 + (int)(hsh4("brasa", "fx", age, k, 0) * 12), gy - h - (int)(hsh4("brasa", "fx", age, k, 1) * 8),
+                      (Rgb){255, 200, 70});
+            break;
+        }
+        case FX_RAIO: {
+            /* raio caindo do céu no alvo */
+            if (age > 2) break;
+            int x = tx;
+            for (int y = 2; y <= gy; y++) {
+                if (y % 4 == 0) x += (hsh4("raio", "fx", 0, y, 0) < 0.5) ? -1 : 1;
+                if (age == 0) {
+                    fx_px(cv, x, y, (Rgb){250, 252, 255});
+                    fx_px(cv, x + 1, y, (Rgb){90, 170, 255});
+                    fx_px(cv, x - 1, y, (Rgb){60, 120, 255});
+                } else if (age == 1 && (y / 3) % 2) {
+                    fx_px(cv, x, y, (Rgb){120, 190, 255});
+                }
+                if (age == 0 && y % 13 == 0) fx_slash(cv, x, y, x + 5, y + 4, (Rgb){170, 220, 255}, (Rgb){60, 120, 255});
+            }
+            for (int dx = -(4 + age * 4); dx <= 4 + age * 4; dx += 2) fx_px(cv, tx + dx, gy - (age == 0 ? 1 : 0), (Rgb){170, 220, 255});
+            break;
+        }
+        case FX_ONDA: {
+            /* onda de água que rola para a frente a partir da lança */
+            if (age > 3) break;
+            int x0 = tx - 14 + age * 5, len = 22, top = 16 - age * 3;
+            for (int i = 0; i < len; i++) {
+                double t = (double)i / (len - 1);
+                int h = (int)floor(sin(t * 3.14159) * top + 0.5);
+                for (int j = 0; j <= h; j++)
+                    fx_px(cv, x0 + i, gy - j, j == h ? (Rgb){236, 255, 255} : j > h - 3 ? c0 : j > h / 2 ? c1 : c2);
+            }
+            for (int k = 0; k < 6; k++)
+                fx_px(cv, x0 + len - 2 + (int)(hsh4("gota", "fx", age, k, 0) * 6), gy - top - 2 - (int)(hsh4("gota", "fx", age, k, 1) * 6), c0);
+            break;
+        }
+        case FX_GOTA: {
+            /* coroa de água no ponto da estocada */
+            if (age > 3) break;
+            int r = 3 + age * 3;
+            for (int a = 0; a < 16; a++) {
+                if ((a + age) % 3 == 0) continue;
+                double ang = a * 3.14159 / 8;
+                fx_px(cv, tx + (int)floor(cos(ang) * r + 0.5), ty + (int)floor(sin(ang) * r * 0.8 + 0.5), a % 2 ? c0 : c1);
+            }
+            for (int k = 0; k < 5; k++) {
+                double ang = -1.2 - k * 0.2;
+                fx_px(cv, tx + (int)(cos(ang) * (r + 3)), ty + (int)(sin(ang) * (r + 3)) + age, (Rgb){200, 250, 255});
+            }
+            break;
+        }
+        case FX_X: case FX_SOMBRA: {
+            /* corte em X no alvo */
+            if (age > 2) break;
+            int L = 7 + age * 2;
+            Rgb core = fx == FX_SOMBRA ? (Rgb){40, 22, 64} : c0, edge = fx == FX_SOMBRA ? (Rgb){110, 70, 170} : c1;
+            if (age == 2) { core = edge; edge = c2; }
+            fx_slash(cv, tx - L, ty - L, tx + L, ty + L, core, edge);
+            fx_slash(cv, tx - L, ty + L, tx + L, ty - L, core, edge);
+            if (fx == FX_SOMBRA)
+                for (int k = 0; k < 6; k++)
+                    fx_px(cv, tx - 8 + (int)(hsh4("ouro", "fx", age, k, 0) * 16), ty - 8 + (int)(hsh4("ouro", "fx", age, k, 1) * 16),
+                          (Rgb){255, 214, 90});
+            break;
+        }
+        case FX_GARRA: {
+            /* três riscos de garra no alvo e penas soltas */
+            if (age > 2) break;
+            for (int k = -1; k <= 1; k++)
+                fx_slash(cv, tx + 6 + k * 3, ty - 8, tx - 6 + k * 3, ty + 8, age == 0 ? (Rgb){255, 240, 240} : c1, c2);
+            for (int k = 0; k < 5; k++) {
+                int x = tx - 10 + (int)(hsh4("pena", "fx", age, k, 0) * 20), y = ty - 10 + (int)(hsh4("pena", "fx", age, k, 1) * 20) + age * 2;
+                fx_px(cv, x, y, (Rgb){36, 26, 32});
+                fx_px(cv, x + 1, y - 1, (Rgb){200, 40, 50});
+            }
+            break;
+        }
+        case FX_VORTICE: {
+            /* redemoinho de vento em volta do alvo */
+            if (age > 3) break;
+            for (int ring = 0; ring < 2; ring++) {
+                int r = 5 + ring * 4 + age;
+                for (int a = 0; a < 24; a++) {
+                    double ang = a * 3.14159 / 12 + age * 0.9 + ring;
+                    if ((a + ring * 5) % 8 < 3) continue;
+                    fx_px(cv, tx + (int)floor(cos(ang) * r + 0.5), ty + (int)floor(sin(ang) * r * 0.6 + 0.5), ring ? c1 : c0);
+                }
+            }
+            break;
+        }
+        case FX_CASCO: {
+            /* escudo de casco que se abre na frente e racha */
+            if (age > 3) break;
+            static const char *hexa[] = {
+                "....aaaaa....", "..aabbbbbaa..", ".abAAaAAaAAba", "abAAaAAAaAAba", "aAAaAAAAAaAAa",
+                "aAaAAAAAAAaAa", "aAAaAAAAAaAAa", "abAAaAAAaAAba", ".abAAaAAaAAba", "..aabbbbbaa..", "....aaaaa....",
+            };
+            for (int ry = 0; ry < 11; ry++)
+                for (int rx = 0; rx < 13; rx++) {
+                    char k = hexa[ry][rx];
+                    if (k == '.' || (age >= 2 && hsh4("casco", "fx", age, rx, ry) < 0.3 * age)) continue;
+                    fx_px(cv, tx - 6 + rx, ty - 5 + ry, k == 'a' ? ch->destaque[1] : k == 'A' ? ch->destaque[0] : ch->destaque2);
+                }
+            break;
+        }
+        default: break;
+    }
 }
 
 /* Tempo de cada quadro dos golpes: leves rápidos, pesados lentos. */
@@ -2513,6 +2804,14 @@ int main(int argc, char **argv) {
         printf("\n");
     }
 
+    {
+        static const Seg *all[MAX_STRIPS * MAX_FRAMES];
+        int na = 0;
+        for (int i = 0; i < ns; i++)
+            for (int k = 0; k < strips[i].nframes; k++) all[na++] = &strips[i].segs[k];
+        measure_katana(all, na);
+        printf("  katana do pack: %.1f px do cabo à ponta\n", KATANA);
+    }
     int ref = 0;
     for (int i = 0; i < ns; i++)
         if (!strcmp(strips[i].name, "IDLE")) ref = i;
@@ -2533,7 +2832,8 @@ int main(int argc, char **argv) {
     int strike_n[NCHARS];
     static int contact[NCHARS][MAX_STRIPS], reachv[NCHARS][MAX_STRIPS][2];
     static bool has_reach[NCHARS][MAX_STRIPS];
-    static Rendered rend[NCHARS][MAX_STRIPS];
+    static Rendered rend[NCHARS][MAX_STRIPS + 1];
+    int nrend[NCHARS];
     for (int si = 0; si < nsel; si++) {
         const Char *ch = &CHARS[sel[si]];
         char d[PATHLEN];
@@ -2577,6 +2877,67 @@ int main(int argc, char **argv) {
         path_join(p, d, "sprite.txt");
         write_manifest(p, &man, strips, ns, contact[si], (const int (*)[2])reachv[si], has_reach[si], ax, ay,
                        has_guard ? guard : NULL, frame_ms(ch));
+        nrend[si] = ns;
+        /* golpe especial: montado dos quadros do pack, um contato só */
+        Step steps[16];
+        int nst = special_steps(ch->especial, steps), stripi[16];
+        for (int k = 0; k < nst; k++) {
+            stripi[k] = -1;
+            for (int i = 0; i < ns; i++)
+                if (!strcmp(strips[i].name, steps[k].anim) && steps[k].frame < strips[i].nframes) stripi[k] = i;
+            if (stripi[k] < 0) nst = 0;
+        }
+        if (nst) {
+            static bool sil[3][CH][CW];
+            Rendered *r = &rend[si][ns];
+            r->name = "ESPECIAL";
+            r->n = nst;
+            r->frames = calloc((size_t)nst, sizeof(Frame));
+            int hold = -1, ci = -1, ty = 0, rdx = 0, rdy = 0;
+            bool hr = false;
+            for (int k = 0; k < nst; k++) {
+                Strip *st = &strips[stripi[k]];
+                AnimInfo *info = find_anim(&man, st->name);
+                Ctx cx = make_ctx(st->name, steps[k].frame, st->nframes, info, contact_frame(st->name, info, st));
+                cx.phase = steps[k].phase;
+                render(&st->frames[steps[k].frame], &st->segs[steps[k].frame], ch, &cx, &cv);
+                translate(&cv, steps[k].dx);
+                /* imagens do corpo ficando para trás na investida e na estocada */
+                bool dash = ch->especial == SP_INVESTIDA || ch->especial == SP_ESTOCADA;
+                if (dash && (cx.phase == PH_CONTACT || (ci >= 0 && k == ci + 1))) {
+                    cv.pen = T_FX;
+                    for (int j = 2; j >= 1; j--) {
+                        if (k - j < 0) continue;
+                        Rgb c = j == 1 ? ch->rastro[1] : ch->rastro[2];
+                        for (int y = 0; y < CH; y++)
+                            for (int x = 0; x < CW; x++)
+                                if (sil[(k - j) % 3][y][x] && cv.a[y][x].a == 0) cv_put(&cv, x, y, c);
+                    }
+                }
+                if (cx.phase == PH_STRIKE) hold = k;
+                if (cx.phase == PH_CONTACT) {
+                    ci = k;
+                    hr = reach(&cv, ax, ay, &rdx, &rdy);
+                    ty = ay + rdy;
+                }
+                for (int y = 0; y < CH; y++)
+                    for (int x = 0; x < CW; x++) sil[k % 3][y][x] = cv.tag[y][x] == T_BODY && cv.a[y][x].a;
+                if (ci >= 0 && hr) special_fx(&cv, ch, ch->efeito, ax, rdx, ty, ay, k - ci);
+                memcpy(r->frames[k].p, cv.a, sizeof cv.a);
+            }
+            path_join(p, d, "ESPECIAL.png");
+            save_strip(p, r->frames, nst);
+            path_join(p, d, "sprite.txt");
+            FILE *mf = fopen(p, "a");
+            if (mf) {
+                fprintf(mf, "anim %-13s  hold %d  contact %d", "ESPECIAL", hold, ci);
+                if (hr) fprintf(mf, "  alcance %d %d", rdx, rdy);
+                if (frame_ms(ch) != 80) fprintf(mf, "  ms %d", frame_ms(ch));
+                fprintf(mf, "\n");
+                fclose(mf);
+            }
+            nrend[si] = ns + 1;
+        }
         int pi = ref;
         Frame *pose = &rend[si][pi].frames[0];
         for (int j = 0; j < rend[si][pi].n; j++) {
@@ -2597,7 +2958,7 @@ int main(int argc, char **argv) {
             char q[PATHLEN], fn[PATHLEN];
             snprintf(fn, sizeof fn, "%s.png", ch->id);
             path_join(q, fol, fn);
-            sheet_character(ch->titulo, rend[si], ns, q);
+            sheet_character(ch->titulo, rend[si], nrend[si], q);
             snprintf(fn, sizeof fn, "alcance_%s.png", ch->id);
             path_join(q, fol, fn);
             sheet_reach(ch->titulo, rend[si], ns, contact[si], (const int (*)[2])reachv[si], has_reach[si], ax, ay, q);
@@ -2631,7 +2992,7 @@ int main(int argc, char **argv) {
             printf("  %-14s %d px + guarda (falta a prancha DEFEND)\n", strips[i].name, reachv[mi][i][0]);
     }
     for (int si = 0; si < nsel; si++)
-        for (int i = 0; i < ns; i++) free(rend[si][i].frames);
+        for (int i = 0; i < nrend[si]; i++) free(rend[si][i].frames);
     for (int i = 0; i < ns; i++) {
         for (int k = 0; k < strips[i].nframes; k++) free_seg(&strips[i].segs[k]);
         free(strips[i].frames);
