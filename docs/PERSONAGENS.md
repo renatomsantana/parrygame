@@ -4,14 +4,23 @@
 > arquivo inteiro no Claude Code.
 
 Os 14 personagens (Musashi, os 11 aprendizes, Oboro e Hanzo) saem do mesmo
-corpo do pack A, mas não são mais só troca de cor. O script
-`c_game/tools/personagens.py` pega cada quadro das pranchas do Musashi e:
+corpo do pack A, mas não são só troca de cor. O programa
+`c_game/tools/personagens.c` (C com raylib, igual ao jogo) pega cada quadro das
+pranchas do Musashi e:
 
 - **tira o chapéu** e desenha a cabeça no lugar (coque, rabo de cavalo, capuz,
   careca, cabelo em chamas...). Só **dois** ficam de chapéu: Daichi (palha) e
   Arashi (o chapéu largo do Raiden). O Musashi fica **sem chapéu, de coque**;
-- **troca a arma** seguindo a reta da katana em cada quadro;
-- **pinta o rastro do golpe** com o elemento de cada um e solta partículas;
+- **troca a arma** seguindo a reta da katana em cada quadro, e lança e florete
+  passam a **estocar** no golpe reto em vez de cortar em arco;
+- **muda o corpo**: mais largo, mais estreito, mais alto ou mais baixo, e um
+  passo à frente no contato conforme a arma;
+- **dá ao rastro o formato da arma** (adaga corta duplo, garra deixa três
+  riscos, arma pesada abre um rastro grosso, duas espadas deixam um eco) e a cor
+  do elemento;
+- **põe uma aura do elemento** em volta do corpo: labaredas, bolhas, raios,
+  fumaça, penas, vento, poeira, fagulhas de ouro. Ela fica mais forte na
+  preparação e no contato;
 - **acrescenta acessórios atrás do corpo**: cachecol, casco, fitas, rabo de cavalo.
 
 Tudo é pixel inteiro, sem escala nem rotação, e o mesmo comando sempre gera os
@@ -19,22 +28,22 @@ mesmos pixels.
 
 ## O elenco
 
-| # | Personagem | Arma | Cabeça | Cores | Rastro |
+| # | Personagem | Arma | Cabeça e corpo | Cores | Rastro e aura |
 |---:|---|---|---|---|---|
-| — | **Musashi** | katana | sem chapéu, coque com fita vermelha | original (branco e preto) | branco |
-| 1 | **Raijin** (touro) | odachi, 1,5× a katana | dois tufos de chifre, faixa amarela | marrom, destaque amarelo | ouro |
-| 2 | **Shizuku** (água) | florete fino com copo ciano | franja e rabo de cavalo | azul claro, destaque ciano | água |
-| 3 | **Kage** (noite) | duas adagas que brilham roxo | capuz ninja, fresta dos olhos, fitas roxas | preto azulado e roxo | roxo |
-| 4 | **Daichi** (terra) | espada pesada, lâmina larga | **chapéu de palha**, barba | verde oliva, ocre | terra |
-| 5 | **Hayate** (vento) | katana leve | cabelo espetado pelo vento, cachecol limão | verde claro, limão | vento |
-| 6 | **Genbu** (tartaruga) | espada curta + casco nas costas (escudo) | careca, barbicha grisalha | verde musgo | verde |
-| 7 | **Enjin** (chama) | espada de fogo | cabelo em chamas | vermelho e amarelo | fogo com brasas |
-| 8 | **Suiren** (mar) | lança de água | cabelo curto, faixa turquesa | azul mar, turquesa | água |
-| 9 | **Karasu** (corvo) | garras (três lâminas na mão) | cabelo em penas, olho vermelho, trapo vermelho | preto e vermelho | penas |
-| 10 | **Arashi** (tempestade) | duas espadas com raios | **chapéu do Raiden**, olhos brilhando | preto, azul elétrico | raio |
-| 11 | **Jinshi** (montanha) | cajado de ferro, ponteiras de osso | cabelo grisalho comprido, barba | cinza pedra, branco osso | osso |
-| 12 | **Oboro** | katana de Hanzo, dourada | rabo de cavalo longo com anel de ouro | roxo escuro, dourado | roxo e ouro |
-| — | **Hanzo** | katana, bainha vermelha | coque branco, **sem barba** | azul escuro | branco |
+| — | **Musashi** | katana | sem chapéu, coque com fita vermelha | original (branco e preto) | branco, sem aura |
+| 1 | **Raijin** (touro) | odachi, 1,5× a katana | dois tufos de chifre, faixa amarela; 2 px mais largo | marrom, amarelo | ouro, fagulhas subindo |
+| 2 | **Shizuku** (água) | florete com copo ciano, **estoca** | franja e rabo de cavalo; 1 px mais estreita | azul claro, ciano | água, bolhas |
+| 3 | **Kage** (noite) | duas adagas que brilham roxo | capuz ninja, fitas roxas; 1 px mais estreito | preto azulado e roxo | corte duplo, fumaça roxa |
+| 4 | **Daichi** (terra) | espada pesada, lâmina larga | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
+| 5 | **Hayate** (vento) | katana leve | cabelo espetado, cachecol limão | verde claro, limão | vento, rajadas passando |
+| 6 | **Genbu** (tartaruga) | espada curta + casco nas costas | careca, barbicha; atarracado | verde musgo | verde, esporos |
+| 7 | **Enjin** (chama) | espada de fogo | cabelo em chamas; 1 px mais largo | vermelho e amarelo | fogo, labaredas e brasas |
+| 8 | **Suiren** (mar) | lança de água, **estoca** | cabelo curto, faixa turquesa | azul mar, turquesa | água, bolhas |
+| 9 | **Karasu** (corvo) | garras (três lâminas na mão) | cabelo em penas, olho vermelho, trapo; magro e alto | preto e vermelho | três riscos, penas caindo |
+| 10 | **Arashi** (tempestade) | duas espadas com raios | **chapéu do Raiden**, olhos brilhando | preto, azul elétrico | eco da segunda espada, raios |
+| 11 | **Jinshi** (montanha) | cajado de ferro, ponteiras de osso | cabelo grisalho comprido, barba; mais alto | cinza pedra, branco osso | rastro grosso, pedrisco caindo |
+| 12 | **Oboro** | katana de Hanzo, dourada | rabo de cavalo longo, anel de ouro; mais alto | roxo escuro, dourado | sombra e fagulhas de ouro |
+| — | **Hanzo** | katana, bainha vermelha | coque branco, **sem barba**; mais baixo | azul escuro | branco, sem aura |
 
 As armas do pedido caíram assim: garras → Karasu, espada maior → Raijin
 (odachi), florete → Shizuku, adagas roxas → Kage, espadas com raios → Arashi,
@@ -43,34 +52,35 @@ espada de fogo → Enjin, lança de água → Suiren.
 **Nomes:** Raijin quer dizer "deus do trovão", mas na lore quem tem duas espadas
 e azul elétrico é o Arashi, então o raio e o chapéu do Raiden ficaram com ele.
 Se preferir o trovão no Raijin, é só trocar os nomes das duas entradas em
-`CHARS` no script.
+`CHARS` no programa.
 
 **Hanzo:** o pedido era o Hanzo do pack B sem a barba. Esse sprite não estava
 aqui, então o Hanzo saiu do corpo do pack A, de coque branco e sem barba. Assim
-ele também combina com o resto. O script **não** apaga o Hanzo do pack B: se
+ele também combina com o resto. O programa **não** apaga o Hanzo do pack B: se
 `assets/sprites/hanzo/` já tiver pranchas de outro pack, o gerado vai para
 `hanzo_gerado/`.
 
-## Como rodar (no PC)
+## Como rodar
 
 ```sh
 cd c_game
-pip install pillow numpy
-python3 tools/personagens.py --folhas
+make sprites          # compila tools/personagens.c e gera tudo, com as folhas
 ```
 
-Na primeira vez, o script copia `assets/sprites/musashi/` (o pack original)
+Ou em partes: `make personagens` e depois `./personagens` (opções `--so enjin
+kage`, `--folhas`, `--lista`, `--entrada`, `--saida`). Não abre janela: usa só
+as funções de imagem e de arquivo da raylib.
+
+Na primeira vez, o programa copia `assets/sprites/musashi/` (o pack original)
 para `assets/sprites/_original/` e passa a ler dali. Depois grava uma pasta por
 personagem em `assets/sprites/<nome>/`, cada uma com as mesmas pranchas e um
 `sprite.txt` próprio. O `musashi/` passa a ter o Musashi sem chapéu, então o
 jogo pega a versão nova sem mudar o carregador.
 
-- `--so enjin kage`: gera só alguns.
-- `--lista`: mostra quem é quem.
-- Pastas com o arquivo `.gerado` são do script e podem ser sobrescritas; as
+- Pastas com o arquivo `.gerado` são do programa e podem ser sobrescritas; as
   outras ele não toca.
 - Daqui em diante, os números de `hold` e `contact` se editam em
-  `_original/sprite.txt`, e o script copia para todos.
+  `_original/sprite.txt`, e o programa copia para todos.
 
 ### Folhas de conferência (`assets/sprites/_folhas/`)
 
@@ -80,9 +90,9 @@ jogo pega a versão nova sem mudar o carregador.
 | `golpes.png` | O quadro de contato de cada golpe, um personagem por linha |
 | `<nome>.png` | Todas as pranchas do personagem, quadro a quadro, com o número embaixo |
 | `alcance_<nome>.png` | Quadro de contato com a âncora dos pés (vermelho) e a ponta do golpe (ciano) |
-| `deteccao.png` | O que o script achou em cada quadro, em cor chapada: chapéu (azul), camisa (rosa), hakama (cinza), pele, bainha (roxo), cabo, lâmina (ciano), rastro (amarelo) |
+| `deteccao.png` | O que o programa achou em cada quadro, em cor chapada: chapéu (azul), camisa (rosa), hakama (cinza), pele, bainha (roxo), cabo, lâmina (ciano), rastro (amarelo) |
 
-**Olhe a `deteccao.png` depois da primeira rodada.** O script foi afinado nas
+**Olhe a `deteccao.png` depois da primeira rodada.** O programa foi afinado nas
 pranchas ATTACK_1, ATTACK_2, ATTACK_3, DASH_ATTACK e DASH. IDLE, DEFEND, HURT,
 DEATH, STRONG_ATTACK, THROW, RUN e JUMP ele processa do mesmo jeito, mas ainda
 não foram vistos. Se algum quadro sair errado, dá para corrigir sem mexer no
@@ -94,9 +104,38 @@ DEATH 8 apaga 60 50 80 60      # apaga um retângulo (ex.: o chapéu caindo)
 HURT 2 chapeu 44 41            # o chapéu está com o canto em (44, 41)
 ```
 
+## O `sprite.txt` de cada personagem
+
+```
+cell 106 84
+ancora 54 74                   # pés do IDLE quadro 0 deste personagem
+guarda dx dy                   # ponta da lâmina do DEFEND no contato (aparece quando houver DEFEND.png)
+anim ATTACK_1  hold 1  contact 2  alcance 38 -21  ms 100
+```
+
+- **`alcance dx dy`**: ponta da arma ou do rastro no quadro de contato, a partir
+  da âncora (dy negativo = acima dos pés).
+- **`ms`**: duração de cada quadro do golpe. Sem `ms`, 80. Adaga, garra e
+  florete usam 60 (golpe seco e rápido); odachi, espada pesada e cajado usam
+  100 (peso). O `hold` continua esticando até o contato do núcleo; o `ms` muda
+  a preparação antes do hold, o golpe entre o hold e o contato e a volta.
+- A **âncora** é de cada personagem, porque o corpo muda de largura.
+
+### Como o corpo se move no golpe
+
+- **Lança e florete** estocam no ATTACK_1 (o golpe reto, `LOOK_THRUST`) e no
+  DASH_ATTACK: a arma fica na horizontal na altura das mãos, recua no `hold` e
+  dispara no contato com um rastro reto. Nos golpes de cima e de baixo eles
+  giram a arma como os outros.
+- **Passo à frente** no quadro de contato, já desenhado: lança 3 px, florete,
+  adaga e garra 2 px, odachi e espada pesada 1 px. No quadro seguinte ainda
+  fica 1 px à frente (menos nas pesadas), e depois volta ao lugar.
+- **Armas pesadas** levantam poeira no chão no contato.
+
 ## A espada que não encontra a outra no parry
 
-A causa está nas pranchas. Cada golpe chega a uma distância diferente dos pés:
+A causa está nas pranchas. Cada golpe chega a uma distância diferente dos pés.
+Com a katana:
 
 | Golpe | Contato | Alcance (px à frente da âncora) | Altura (px acima dos pés) |
 |---|---:|---:|---:|
@@ -108,28 +147,22 @@ A causa está nas pranchas. Cada golpe chega a uma distância diferente dos pés
 Além disso, no ATTACK_3 o pé da frente **avança uns 20 px dentro do quadro**,
 e o DASH_ATTACK **começa 18 px atrás** da âncora (agachado) e dispara para a
 frente. Com os dois lutadores a uma distância fixa, o ATTACK_2 não alcança e o
-ATTACK_3 passa do ponto. É o "às vezes está atacando longe demais".
-
-O script mede isso e escreve no `sprite.txt` de cada personagem:
-
-```
-ancora 53 74
-guarda dx dy                   # ponta da lâmina do DEFEND no contato (aparece quando houver DEFEND.png)
-anim ATTACK_1  hold 1  contact 2  alcance 35 -21
-```
+ATTACK_3 passa do ponto. É o "às vezes está atacando longe demais". Com as
+armas novas os números mudam por personagem (a estocada da Suiren chega a 52),
+e cada `sprite.txt` traz os seus.
 
 Regra para o duelo: **no quadro de contato, a distância entre as âncoras dos
-dois é `alcance do golpe + guarda do Musashi`.** Como o alcance muda por golpe,
-o mestre se posiciona a cada golpe:
+dois é `alcance do golpe + guarda do Musashi`.** Como o alcance muda por golpe
+e por personagem, o mestre se posiciona a cada golpe:
 
 ```c
 /* Mestre olha para a esquerda; Musashi para a direita. */
 int alvo = musashi_x + musashi_guarda_dx + anim_do_golpe->alcance_dx;
 
 /* Durante a antecipação: anda até o alvo em passos inteiros (ex.: 2 px por
-   quadro de 0,08 s) ou encaixa direto no hold se a preparação for curta.
-   Durante o golpe, não mexe: o passo do ATTACK_3 e o avanço do DASH_ATTACK
-   já estão desenhados e contados no alcance. */
+   quadro) ou encaixa direto no hold se a preparação for curta. Durante o
+   golpe, não mexe: o passo do ATTACK_3, o avanço do DASH_ATTACK e o passo à
+   frente das armas já estão desenhados e contados no alcance. */
 
 /* A faísca do parry vai no ponto de encontro: */
 Vector2 faisca = {musashi_x + musashi_guarda_dx, chao_y + musashi_guarda_dy};
@@ -138,13 +171,36 @@ Vector2 faisca = {musashi_x + musashi_guarda_dx, chao_y + musashi_guarda_dy};
 Ao espelhar quem olha para a esquerda, a âncora dentro do quadro também espelha:
 `x_desenho = x_mundo - (virado ? cell_w - 1 - ancora_x : ancora_x)`.
 
+## O som do parry
+
+O som já toca no instante do contato do núcleo (`EV_IMPACT`, em `on_impact`
+no `main.c`). Para ele cair **exatamente quando as lâminas se chocam**, o que
+falta é o quadro `contact` da prancha aparecer no mesmo quadro de jogo desse
+evento (regra do `hold` do brief visual). Com isso, som, faísca e desenho saem
+juntos.
+
+O choque foi refeito em `src/audio.c`, em camadas que começam todas no primeiro
+milissegundo:
+
+- **estalo**: ruído agudo de poucos milissegundos, o "tchk" do contato;
+- **metal**: os modos de vibração de uma lâmina (1 : 2,76 : 5,40 : 8,93) em duas
+  lâminas um pouco desafinadas entre si, o que faz o brilho pulsar;
+- **baque**: um grave que cai de tom e dá peso;
+- **faíscas**: estalinhos soltos que vão rareando;
+- **nota longa**, só no perfeito: um agudo com vibrato leve e um pouco de sala.
+
+O perfeito dura 1,6 s e o bom 0,5 s, mais seco. Perfeito, bom, erro e o
+"whoosh" do golpe têm quatro vozes cada: num combo, um parry não corta a cauda
+do anterior. O bom varia um pouco de tom a cada vez, para não soar repetido.
+Sem placa de som o jogo segue mudo, como antes.
+
 ## Limites conhecidos
 
-- O rastro tem o formato do rastro da katana em todo mundo, só muda a cor. Para
-  adaga e garra ele fica maior que a arma; no clima do Katana Zero isso passa
-  como efeito.
 - A segunda arma (Kage e Arashi) é uma cópia paralela da primeira, desenhada
   atrás do corpo. O sprite não mostra a outra mão segurando nada.
+- A estocada usa os quadros do corte horizontal: o braço é o mesmo, só a arma e
+  o rastro mudam. Uma estocada com o braço esticando de verdade pediria
+  desenho novo.
 - No DASH, a bainha que o Musashi segura na mão de trás continua aparecendo
   para quem não usa bainha (é desenhada com as cores da hakama).
 - As pranchas têm que estar viradas para a direita, como vêm no pack.
@@ -153,4 +209,4 @@ Ao espelhar quem olha para a esquerda, a âncora dentro do quadro também espelh
 
 O repositório é público e as pranchas são do pack pago da Mattz Art, então os
 PNGs de `c_game/assets/sprites/` (os originais e os gerados, que saem deles)
-estão no `.gitignore`. O script e os `sprite.txt` vão para o git normalmente.
+estão no `.gitignore`. O programa e os `sprite.txt` vão para o git normalmente.

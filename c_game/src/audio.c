@@ -15,6 +15,10 @@
 #define TAU 6.28318530718f
 
 static Sound sounds[SND_COUNT];
+/* Vozes extras dos golpes: num combo, um parry não corta a cauda do anterior. */
+#define FX_VOICES 4
+static Sound voices[SND_COUNT][FX_VOICES];
+static int voiceCount[SND_COUNT], voiceNext[SND_COUNT];
 static AudioStream stream;
 static float master = 0.85f;
 
@@ -26,15 +30,44 @@ static float nrand(void) { return (float)rand() / (float)RAND_MAX * 2 - 1; }
 
 typedef float (*SynthFn)(float t, float dur, float *state);
 
-static Sound make_sound(float dur, SynthFn fn, float gain) {
+/* Sala pequena (quatro pentes e dois passa-tudo, à Schroeder) para a cauda do metal. */
+static void add_room(float *data, int n, float wet) {
+    static const int comb[4] = {1116, 1277, 1422, 1557};
+    static const int allp[2] = {556, 341};
+    float *out = calloc((size_t)n, sizeof(float));
+    for (int c = 0; c < 4; c++) {
+        float *buf = calloc((size_t)comb[c], sizeof(float));
+        float damp = 0;
+        for (int i = 0, k = 0; i < n; i++, k = (k + 1) % comb[c]) {
+            float y = buf[k];
+            damp = y * 0.6f + damp * 0.4f;
+            buf[k] = data[i] + damp * 0.74f;
+            out[i] += y * 0.25f;
+        }
+        free(buf);
+    }
+    for (int a = 0; a < 2; a++) {
+        float *buf = calloc((size_t)allp[a], sizeof(float));
+        for (int i = 0, k = 0; i < n; i++, k = (k + 1) % allp[a]) {
+            float b = buf[k];
+            buf[k] = out[i] + b * 0.5f;
+            out[i] = b - out[i];
+        }
+        free(buf);
+    }
+    for (int i = 0; i < n; i++) data[i] += out[i] * wet;
+    free(out);
+}
+
+static Sound make_sound_room(float dur, SynthFn fn, float gain, float room) {
     int n = (int)(dur * RATE);
     float *data = malloc(sizeof(float) * (size_t)n);
     float state[8] = {0};
     float peak = 0.0001f;
-    for (int i = 0; i < n; i++) {
-        data[i] = fn((float)i / RATE, dur, state);
+    for (int i = 0; i < n; i++) data[i] = fn((float)i / RATE, dur, state);
+    if (room > 0) add_room(data, n, room);
+    for (int i = 0; i < n; i++)
         if (fabsf(data[i]) > peak) peak = fabsf(data[i]);
-    }
     /* Normaliza e evita estalo no fim. */
     for (int i = 0; i < n; i++) {
         float fade = fminf(1, (float)(n - i) / (RATE * 0.005f));
@@ -45,6 +78,8 @@ static Sound make_sound(float dur, SynthFn fn, float gain) {
     free(data);
     return s;
 }
+
+static Sound make_sound(float dur, SynthFn fn, float gain) { return make_sound_room(dur, fn, gain, 0); }
 
 static float lp(float *st, float x, float a) { *st += (x - *st) * a; return *st; }
 
@@ -58,22 +93,49 @@ static float s_cue_feint(float t, float d, float *st) {
     float env = expf(-t * 22) * fminf(1, t * 400);
     return (sinf(TAU * 1320 * t) + 0.4f * sinf(TAU * 2640 * t)) * env;
 }
-/* Perfeito: "clang" agudo e forte, com cauda longa e um sino leve por baixo. */
+/* Choque de duas lâminas. Todas as camadas começam no mesmo instante (o som
+   não tem ataque lento: o pico está no primeiro milissegundo):
+     estalo   ruído agudo de poucos milissegundos, o "tchk" do contato;
+     metal    os modos de vibração de uma barra (1 : 2,76 : 5,40 : 8,93) em duas
+              lâminas um pouco desafinadas entre si, o que faz o brilho pulsar;
+     baque    um grave que cai de tom, o peso do golpe;
+     faíscas  estalinhos soltos que vão rareando;
+     nota     (só no perfeito) um agudo longo com vibrato leve, que fica soando. */
+static const float BAR[4] = {1.0f, 2.756f, 5.404f, 8.933f};
+
+static float clash(float t, float *st, float fa, float fb, float decay, float thud, float sparks, float ring) {
+    float n = nrand();
+    float hp = n - lp(&st[0], n, 0.35f);
+    float click = hp * expf(-t * 700) * 1.6f;
+    static const float k[4] = {1.0f, 1.7f, 3.0f, 4.8f};
+    static const float a[4] = {1.0f, 0.7f, 0.45f, 0.3f};
+    float metal = 0;
+    for (int i = 0; i < 4; i++)
+        metal += a[i] * expf(-t * decay * k[i]) * (sinf(TAU * fa * BAR[i] * t) + 0.8f * sinf(TAU * fb * BAR[i] * t + 1.3f));
+    float f = 58 + 150 * expf(-t * 40);
+    st[1] += TAU * f / RATE;
+    float body = sinf(st[1]) * expf(-t * 22) * thud;
+    if (t < 0.2f && (float)rand() / (float)RAND_MAX < sparks * expf(-t * 16)) st[2] = 1;
+    st[2] *= 0.88f;
+    float spark = st[2] * hp * 0.9f;
+    float tone = 0;
+    if (ring > 0) {
+        float vib = 1 + 0.002f * sinf(TAU * 5.5f * t);
+        st[3] += TAU * 2637 * vib / RATE;
+        tone = sinf(st[3]) * expf(-t * 2.4f) * (1 - expf(-t * 250)) * ring;
+    }
+    return click + metal * 0.5f + body + spark + tone;
+}
+
+/* Perfeito: choque cheio, faíscas e uma nota longa que fica no ar. */
 static float s_perfect(float t, float d, float *st) {
     (void)d;
-    static const float f[] = {1180, 1873, 2644, 3911, 5230};
-    static const float k[] = {6, 7, 9, 11, 3};
-    float v = 0;
-    for (int i = 0; i < 5; i++) v += sinf(TAU * f[i] * t) * expf(-t * k[i]) / (1 + i * 0.4f);
-    float bell = (sinf(TAU * 784 * t) + 0.5f * sinf(TAU * 784 * 2.76f * t)) * expf(-t * 1.6f) * 0.35f;
-    float click = lp(&st[0], nrand(), 0.6f) * expf(-t * 90);
-    return v + bell + click * 1.5f;
+    return clash(t, st, 1180, 1321, 5.5f, 0.9f, 0.004f, 0.4f);
 }
-/* Bom: "tink" metálico curto, sem eco. */
+/* Bom: o mesmo choque, mais curto e sem a nota longa. */
 static float s_good(float t, float d, float *st) {
     (void)d;
-    float v = sinf(TAU * 1480 * t) * expf(-t * 45) + 0.5f * sinf(TAU * 2310 * t) * expf(-t * 60);
-    return v + lp(&st[0], nrand(), 0.5f) * expf(-t * 150) * 0.6f;
+    return clash(t, st, 1264, 1418, 15.0f, 0.55f, 0.0015f, 0);
 }
 /* Levar golpe: batida seca de madeira, como um bokken. */
 static float s_bad(float t, float d, float *st) {
@@ -407,8 +469,8 @@ void audio_init(void) {
     InitAudioDevice();
     sounds[SND_CUE] = make_sound(0.35f, s_cue, 0.55f);
     sounds[SND_CUE_FEINT] = make_sound(0.3f, s_cue_feint, 0.55f);
-    sounds[SND_PERFECT] = make_sound(1.2f, s_perfect, 0.9f);
-    sounds[SND_GOOD] = make_sound(0.35f, s_good, 0.7f);
+    sounds[SND_PERFECT] = make_sound_room(1.6f, s_perfect, 0.95f, 0.22f);
+    sounds[SND_GOOD] = make_sound_room(0.5f, s_good, 0.75f, 0.06f);
     sounds[SND_BAD] = make_sound(0.6f, s_bad, 0.95f);
     sounds[SND_BREAK] = make_sound(2.5f, s_break, 0.95f);
     sounds[SND_SWING] = make_sound(0.22f, s_swing, 0.55f);
@@ -422,6 +484,17 @@ void audio_init(void) {
     sounds[SND_VICTORY] = make_sound(2.2f, s_victory, 0.6f);
     sounds[SND_DEFEAT] = make_sound(2.0f, s_defeat, 0.6f);
     sounds[SND_THUD] = make_sound(0.3f, s_thud, 0.5f);
+#if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
+    static const SoundId poly[] = {SND_PERFECT, SND_GOOD, SND_BAD, SND_SWING};
+    /* sem placa de som o Sound vem vazio, e a raylib não confere isso no alias */
+    for (size_t i = 0; i < sizeof poly / sizeof poly[0] && IsAudioDeviceReady(); i++) {
+        SoundId id = poly[i];
+        if (!sounds[id].stream.buffer) continue;
+        voices[id][0] = sounds[id];
+        for (int k = 1; k < FX_VOICES; k++) voices[id][k] = LoadSoundAlias(sounds[id]);
+        voiceCount[id] = FX_VOICES;
+    }
+#endif
 
     memset(&M, 0, sizeof M);
     M.seed = 12345;
@@ -435,15 +508,26 @@ void audio_init(void) {
 void audio_shutdown(void) {
     StopAudioStream(stream);
     UnloadAudioStream(stream);
+#if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
+    for (int i = 0; i < SND_COUNT; i++)
+        for (int k = 1; k < voiceCount[i]; k++) UnloadSoundAlias(voices[i][k]);
+#endif
     for (int i = 0; i < SND_COUNT; i++) UnloadSound(sounds[i]);
     CloseAudioDevice();
 }
 
 void audio_play(SoundId id, float volume, float pitch) {
     if (volume <= 0.001f) return;
-    SetSoundVolume(sounds[id], volume * master);
-    SetSoundPitch(sounds[id], pitch);
-    PlaySound(sounds[id]);
+    Sound s = sounds[id];
+    if (voiceCount[id]) {
+        s = voices[id][voiceNext[id]];
+        voiceNext[id] = (voiceNext[id] + 1) % voiceCount[id];
+    }
+    /* o bom varia um pouco de tom para não soar repetido numa sequência */
+    if (id == SND_GOOD) pitch *= 0.97f + 0.06f * (float)rand() / (float)RAND_MAX;
+    SetSoundVolume(s, volume * master);
+    SetSoundPitch(s, pitch);
+    PlaySound(s);
 }
 
 void audio_music(int style) { M.target = style; }

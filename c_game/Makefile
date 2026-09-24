@@ -22,6 +22,13 @@ GAME := src/main.c src/rig.c src/katana3d.c src/arenas.c src/audio.c src/fx.c sr
 
 all: apara
 
+# Gera os lutadores a partir das pranchas do Musashi (ver ../docs/PERSONAGENS.md).
+personagens: tools/personagens.c
+	$(CC) $(CFLAGS) -ffp-contract=off $(RAYLIB_CFLAGS) tools/personagens.c -o $@ $(RAYLIB_LIBS) -lm
+
+sprites: personagens
+	./personagens --folhas
+
 apara: $(CORE) $(GAME) src/*.h
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(CORE) $(GAME) -o $@ $(RAYLIB_LIBS) -lm
 
@@ -35,6 +42,6 @@ run: apara
 	./apara
 
 clean:
-	rm -f apara core_test
+	rm -f apara core_test personagens
 
-.PHONY: all test run clean
+.PHONY: all test run clean sprites
