@@ -201,6 +201,7 @@ typedef struct {
     double *dist;
     double u[2], hilt[2];
     double nearest, farthest;  /* distância do cabo até o começo visível e até a ponta */
+    bool loose;                /* pack: nenhuma mão por perto (a ponta aparecendo no rastro) */
 } Blade;
 
 typedef struct {
@@ -605,9 +606,11 @@ static void find_blades(Seg *s) {
                 }
         }
         double th;
+        bool loose = false;
         if (found && best <= 20) {
             th = (bqx - mx) * u[0] + (bqy - my) * u[1];
         } else {
+            loose = g_pack;
             double bx = s->ox + 8, by = s->oy + 18;
             th = hypot(e0x - bx, e0y - by) < hypot(e1x - bx, e1y - by) ? tmin : tmax;
         }
@@ -631,6 +634,7 @@ static void find_blades(Seg *s) {
         b->hilt[0] = mx + u[0] * th; b->hilt[1] = my + u[1] * th;
         b->nearest = tmin - th;
         b->farthest = tmax - th;
+        b->loose = loose;
         free(t);
     }
 }
@@ -640,17 +644,19 @@ static void find_blades(Seg *s) {
    em todos os quadros, por mais que a katana apareça cortada em algum deles. */
 static double KATANA = 16.6;
 
-static void measure_katana(const Seg *const *segs, int n) {
+/* `q`: 0,5 é a mediana (Samurai #3). Nos packs, a lâmina meio escondida se
+   repete em vários quadros (o DEFEND), então vale o quartil de cima. */
+static void measure_katana(const Seg *const *segs, int n, double q) {
     double v[1024];
     int m = 0;
     for (int i = 0; i < n; i++)
         for (int b = 0; b < segs[i]->nblades && m < 1024; b++)
-            if (segs[i]->blades[b].nearest <= 3 && segs[i]->blades[b].farthest >= 8) v[m++] = segs[i]->blades[b].farthest;
+            if (segs[i]->blades[b].nearest <= 3 && !segs[i]->blades[b].loose && segs[i]->blades[b].farthest >= 8) v[m++] = segs[i]->blades[b].farthest;
     if (m < 3) return;
     for (int i = 0; i < m; i++)
         for (int j = i + 1; j < m; j++)
             if (v[j] < v[i]) { double t = v[i]; v[i] = v[j]; v[j] = t; }
-    KATANA = v[m / 2];
+    KATANA = v[(int)(m * q)];
 }
 
 static double blade_dist(const Blade *b, int x, int y, double def) {
@@ -1615,7 +1621,7 @@ static bool thrust_anim(const Char *ch, const char *anim) {
 static bool hand_point(const Canvas *cv, double *hx, double *hy) {
     const Seg *s = cv->seg;
     for (int i = 0; i < s->nblades; i++)
-        if (s->blades[i].nearest <= 3 && s->blades[i].farthest >= 5) {
+        if (s->blades[i].nearest <= 3 && !s->blades[i].loose && s->blades[i].farthest >= 5) {
             *hx = s->blades[i].hilt[0];
             *hy = s->blades[i].hilt[1];
             return true;
@@ -1721,14 +1727,18 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
         double full = b->farthest;
         if (full < 5) continue;
         bool skip_pair = false;
+        /* só a lâmina que sai da mão cresce ou vira outra arma; pedaço solto (a
+           ponta aparecendo no meio do rastro) fica como está */
+        bool at_hand = b->nearest <= 8 && !b->loose;
         switch (w->kind) {
             case W_KATANA: case W_DUPLA:
                 for (int i = 0; i < b->n; i++) mark(cv, b->x[i], b->y[i]);
-                if (escala > 1.0) stroke(cv, b, full, fmax(full, KATANA * escala), core, &edge, 0, 0, 2, false);
+                if (escala > 1.0 && at_hand) stroke(cv, b, full, fmax(full, KATANA * escala), core, &edge, 0, 0, 2, false);
                 break;
             case W_ODACHI:
             case W_PESADA: {
                 for (int i = 0; i < b->n; i++) mark(cv, b->x[i], b->y[i]);
+                if (!at_hand) break;
                 stroke(cv, b, full - 1, fmax(full, KATANA * escala), core, &edge, 0, 0, 2, false);
                 if (w->largura <= 0) break;
                 /* lâmina larga: uma fileira a mais do lado do fio */
@@ -1752,6 +1762,7 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                     if (in_set(s->c[b->y[i]][b->x[i]], "Lg")) erase_px(cv, b->x[i], b->y[i]);
                     else mark(cv, b->x[i], b->y[i]);
                 }
+                if (!at_hand) break;
                 stroke(cv, b, full - 1, fmax(full, KATANA * escala), core, NULL, 0, 0, 2, false);
                 /* copo da empunhadura */
                 double n[2];
@@ -1784,6 +1795,7 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
             case W_LANCA: case W_CAJADO: {
                 double tip = KATANA * escala;
                 for (int i = 0; i < b->n; i++) erase_px(cv, b->x[i], b->y[i]);
+                if (!at_hand) { skip_pair = true; break; }
                 int head = w->kind == W_LANCA ? (w->ponta ? w->ponta : 5) : 2;
                 int back = w->atras ? w->atras : 14;
                 stroke(cv, b, -back, tip - head, w->haste[0], &w->haste[1], 0, 0, 2, false);
@@ -1822,7 +1834,7 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
             }
         }
         /* segunda arma na outra mão: cópia paralela, atrás do corpo */
-        if (!skip_pair && w->par && !ch->pack_par && (w->kind == W_DUPLA || w->kind == W_ADAGA || w->kind == W_KATANA) && b->nearest <= 3) {
+        if (!skip_pair && w->par && !ch->pack_par && (w->kind == W_DUPLA || w->kind == W_ADAGA || w->kind == W_KATANA) && b->nearest <= 3 && !b->loose) {
             double n[2];
             perp(b->u, n);
             double keep = w->comprimento > 0 ? w->comprimento : KATANA * escala;
@@ -3101,6 +3113,13 @@ static bool load_source(Source *s, const char *dir, int cw, int ch, const Char *
                 strncat(nohat, b, sizeof nohat - strlen(nohat) - 1);
             }
         }
+        if (getenv("DEBUG_BLADES"))  /* lista as lâminas achadas em cada quadro */
+            for (int k = 0; k < s->strips[i].nframes; k++)
+                for (int b = 0; b < s->strips[i].segs[k].nblades; b++) {
+                    const Blade *bl = &s->strips[i].segs[k].blades[b];
+                    printf("    %s %d: n %d perto %.1f longe %.1f cabo %.0f,%.0f u %.2f,%.2f\n", s->strips[i].name, k, bl->n,
+                           bl->nearest, bl->farthest, bl->hilt[0], bl->hilt[1], bl->u[0], bl->u[1]);
+                }
         printf("  %s: %d quadros", s->strips[i].name, s->strips[i].nframes);
         if (unk || nohat[0]) {
             printf(" (");
@@ -3118,7 +3137,7 @@ static bool load_source(Source *s, const char *dir, int cw, int ch, const Char *
     for (int i = 0; i < s->ns; i++)
         for (int k = 0; k < s->strips[i].nframes; k++) all[na++] = &s->strips[i].segs[k];
     KATANA = 16.6;
-    measure_katana(all, na);
+    measure_katana(all, na, pack_ch ? 0.75 : 0.5);
     s->katana = KATANA;
     printf("  katana do pack: %.1f px do cabo à ponta\n", KATANA);
     s->ref = 0;
