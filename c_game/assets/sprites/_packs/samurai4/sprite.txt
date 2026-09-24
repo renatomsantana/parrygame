@@ -1,0 +1,13 @@
+# Samurai #4 da Mattz Art: corpo da Shizuku. As tiras (PNG) não vão para o git.
+# Uma tira por animação, quadros de 96 x 96 lado a lado, virada para a direita.
+cell 96 96
+anim IDLE          loop
+anim ATTACK_1      hold 0  contact 1
+anim ATTACK_2      hold 1  contact 2
+anim ATTACK_3      hold 0  contact 1
+anim DEFEND        contact 1
+anim HURT
+anim DEATH         stop 9
+anim RUN           loop
+anim JUMP
+anim THROW         hold 2  release 3

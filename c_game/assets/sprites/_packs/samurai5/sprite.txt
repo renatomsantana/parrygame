@@ -1,0 +1,12 @@
+# Samurai #5 da Mattz Art (duas espadas): corpo do Arashi. As tiras (PNG) não vão para o git.
+# Uma tira por animação, quadros de 96 x 64 lado a lado, virada para a direita.
+cell 96 64
+anim IDLE          loop
+anim ATTACK_1      hold 0  contact 1
+anim ATTACK_2      hold 2  contact 3
+anim ATTACK_3      hold 1  contact 2
+anim DEFEND        contact 1
+anim HURT
+anim DEATH         stop 9
+anim RUN           loop
+anim JUMP

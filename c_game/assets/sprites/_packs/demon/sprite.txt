@@ -1,0 +1,19 @@
+# Demon (máscara oni) da Mattz Art: corpo do Oboro. As tiras (PNG) não vão para o git.
+# Uma tira por animação, quadros de 128 x 108 lado a lado, virada para a direita.
+# _FURIA: as mesmas animações com a lâmina vermelha (fase 2).
+cell 128 108
+anim IDLE                 loop
+anim IDLE_FURIA           loop
+anim ATTACK_1             hold 2  contact 3
+anim ATTACK_1_FURIA       hold 2  contact 3
+anim ATTACK_2             hold 1  contact 2
+anim ATTACK_2_FURIA       hold 1  contact 2
+anim ATTACK_3             hold 2  contact 3
+anim ATTACK_3_FURIA       hold 2  contact 3
+anim STRONG_ATTACK        hold 7  contact 8
+anim STRONG_ATTACK_FURIA  hold 6  contact 7
+anim DEFEND               contact 1
+anim HURT
+anim HURT_FURIA
+anim RUN                  loop
+anim RUN_FURIA            loop
