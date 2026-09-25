@@ -48,7 +48,7 @@
 #define GHOST_MAX 10
 #define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
 #define AFTER_MAX 8           /* silhuetas que o mestre deixa nos movimentos rápidos */
-enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP };
+enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR };
 #define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
 #define PIX_LORE 41
 #define PIX_TRAIL 42
@@ -894,13 +894,13 @@ static MoveLook strike_look(void) {
     int k = G.duel.comboStrike;
     if (k == 0) return look;
     if (look == LOOK_HEAVY || look == LOOK_JUMP) return k % 2 ? LOOK_LOW : LOOK_HIGH;
-    if (look == LOOK_THRUST || look == LOOK_DASH) return k % 2 ? LOOK_HIGH : LOOK_THRUST;
+    if (look == LOOK_THRUST || look == LOOK_DASH || look == LOOK_FAR) return k % 2 ? LOOK_HIGH : LOOK_THRUST;
     if (k % 2 == 0) return look;
     return look == LOOK_HIGH ? LOOK_LOW : LOOK_HIGH;
 }
 
 /* Nos bonecos, o golpe forte e o salto usam as poses do golpe alto; a investida, as da estocada. */
-static MoveLook rig_look(MoveLook l) { return l == LOOK_DASH ? LOOK_THRUST : (l == LOOK_LOW || l == LOOK_THRUST ? l : LOOK_HIGH); }
+static MoveLook rig_look(MoveLook l) { return l == LOOK_DASH || l == LOOK_FAR ? LOOK_THRUST : (l == LOOK_LOW || l == LOOK_THRUST ? l : LOOK_HIGH); }
 static Pose windup_pose(MoveLook l) { l = rig_look(l); return l == LOOK_LOW ? POSE_WINDUP_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_WINDUP); }
 static Pose rearm_pose(MoveLook l) { l = rig_look(l); return l == LOOK_LOW ? POSE_REARM_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_REARM_HIGH); }
 static Pose contact_pose(MoveLook l) { l = rig_look(l); return l == LOOK_LOW ? POSE_CONTACT_LOW : (l == LOOK_THRUST ? POSE_CONTACT_THRUST : POSE_CONTACT); }
@@ -929,9 +929,11 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
         if (a) return a;
         look = LOOK_HIGH;
     }
+    /* as duas lâminas de uma vez: o corte cruzado */
+    if (duel_strike_dual(&G.duel) && (a = fa(f, "ATTACK_3"))) return a;
     if (mv && mv->strikes >= 3 && G.duel.comboStrike == mv->strikes - 1 && (a = fa(f, "ESPECIAL"))) return a;
-    /* a investida acaba na estocada; o salto desce com o corte alto */
-    if (look == LOOK_DASH) look = LOOK_THRUST;
+    /* a investida e a estocada de longe acabam na estocada; o salto desce com o corte alto */
+    if (look == LOOK_DASH || look == LOOK_FAR) look = LOOK_THRUST;
     if (look == LOOK_JUMP) look = LOOK_HIGH;
     if (look == LOOK_THRUST && (a = fa(f, "DASH_ATTACK"))) return a;
     const char *base = look == LOOK_LOW ? "ATTACK_2" : (look == LOOK_THRUST ? "ATTACK_1" : "ATTACK_3");
@@ -1012,6 +1014,16 @@ static void sprite_windup(void) {
     }
     /* a preparação anda devagar até o hold (cada quadro pelo menos 0,12 s) e segura */
     float antic = fmaxf((hold + 1) * a->frameTime * 1.8f, (hold + 1) * 0.12f);
+    if (first && look == LOOK_FAR) {
+        /* a lança: ele se afasta, recolhe a ponta e espera; o bote atravessa a distância */
+        G.leap = LEAP_FAR;
+        G.leapAt = 1e9f;
+        f_add(f, a, 0, hold, fminf(w * 0.5f, antic));
+        G.bossStepTo = fmaxf(G.bossStep, fminf(G.bossStrikeStep + 36, 48));
+        G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.1f, w * 0.4f);
+        boss_hop(fmaxf(0.1f, w * 0.3f), 3);
+        return;
+    }
     f_add(f, a, 0, hold, first ? fminf(w * 0.6f, antic) : fminf(w, antic));
     G.bossStepTo = G.bossStep + (G.bossStrikeStep - G.bossStep) * 0.4f;
     float stepTime = first ? fminf(0.2f, w * 0.5f) : w * 0.8f;
@@ -1025,13 +1037,14 @@ static void sprite_launch(void) {
     if (!f->set || !f->strike) return;
     const SprAnim *a = f->strike;
     int hold = anim_hold(a), c = anim_contact(a);
+    float lead = duel_strike_lead(&G.duel);
     G.bossStepTo = G.bossStrikeStep;
-    G.bossStepSpeed = fabsf(G.bossStrikeStep - G.bossStep) / fmaxf(0.05f, G.settings.attackLead - 0.02f);
+    G.bossStepSpeed = fabsf(G.bossStrikeStep - G.bossStep) / fmaxf(0.05f, lead - 0.02f);
     f_clear(f, false);
     int from = hold + 1;
     if (G.leap == LEAP_DASH) from = hold > 2 ? hold - 2 : 0;   /* da corrida direto para o golpe */
-    if (c - 1 >= from) f_add(f, a, from, c - 1, G.settings.attackLead);
-    else f_add(f, a, hold, hold, G.settings.attackLead);
+    if (c - 1 >= from) f_add(f, a, from, c - 1, lead);
+    else f_add(f, a, hold, hold, lead);
 }
 
 /* O gesto de kojiro: a guarda (DEFEND) ou um corte rápido de encontro ao golpe. */
@@ -1089,7 +1102,7 @@ static void sprite_impact(const DuelEvent *e) {
         G.leap = LEAP_NONE;
     }
     if (r->set) {
-        if (e->judgement == J_PERFEITO || e->judgement == J_BOM) {
+        if ((e->judgement == J_PERFEITO || e->judgement == J_BOM) && !(e->i & 2)) {
             const SprAnim *a = r->strike ? r->strike : fa(r, "ATTACK_1");
             int c = anim_contact(a);
             f_clear(r, true);
@@ -1117,6 +1130,8 @@ static void sprite_fall(void) {
     if (d) f_add(r, d, 0, d->stop >= 0 ? d->stop : d->frames - 1, 0);
     else if ((d = fa(r, "DASH_ATTACK"))) f_add(r, d, 0, 0, 0.1f);
 }
+
+static void second_blade(void);
 
 static void on_impact(const DuelEvent *e) {
     Vector2 at = clash_point();
@@ -1177,6 +1192,13 @@ static void on_impact(const DuelEvent *e) {
             break;
         }
     }
+    if ((e->i & 1) && e->judgement == J_PERFEITO) {
+        /* as duas lâminas aparadas: o segundo tinido e o X de faíscas */
+        audio_play(SND_PERFECT, 0.7f, 1.25f);
+        fx_burst(&G.fx, P_SPARK, at, 12, 150, 0.5f, -2.3f, (Color){230, 240, 255, 255}, (Color){160, 190, 255, 255});
+        fx_burst(&G.fx, P_SPARK, at, 12, 150, 0.5f, 2.3f, (Color){230, 240, 255, 255}, (Color){160, 190, 255, 255});
+    }
+    if ((e->i & 2) && e->judgement != J_RUIM) second_blade();
     if (e->flag) {
         G.aberr = 3.5f;
         G.desat = 1;
@@ -1262,6 +1284,32 @@ static void ren_falls(void) {
     set_state(ST_DEFEAT);
 }
 
+/* As duas lâminas vão vir juntas: brilham as duas e soa um tinido duplo. */
+static void dual_tell(void) {
+    Vector2 c = {G.boss.x + G.boss.offsetX, GROUND_LOW - 30};
+    fx_star(&G.fx, (Vector2){c.x - 7, c.y - 5}, 11, 0.2f);
+    fx_star(&G.fx, (Vector2){c.x + 3, c.y + 3}, 9, 0.2f);
+    audio_play(SND_SWING, 0.35f, 1.7f);
+    audio_play(SND_SWING, 0.3f, 1.9f);
+    G.boss.flash = 0.7f;
+    G.boss.flashColor = (Color){230, 236, 255, 255};
+}
+
+/* A segunda lâmina entrou (o parry não foi perfeito): kojiro sente o corte. */
+static void second_blade(void) {
+    Rig *r = &G.ren;
+    Vector2 hit = {r->x + r->offsetX + 4, GROUND_LOW - 24};
+    audio_play(SND_BAD, 0.9f, 1.1f);
+    fx_burst(&G.fx, P_SPARK, hit, 12, 130, 1.1f, 3.14f, (Color){255, 80, 60, 255}, (Color){255, 160, 90, 255});
+    fx_flash(&G.fx, (Color){255, 40, 30, 70}, 1);
+    vfx("71", 7, hit, false, VFX_FRONT, 28);
+    fx_kick(&G.fx, 2.5f, 0.18f);
+    r->flash = 1;
+    r->flashColor = (Color){255, 80, 60, 255};
+    G.renKnock = fmaxf(G.renKnock, 8);
+    G.hitstop = fmaxf(G.hitstop, G.settings.badHitstop);
+}
+
 static void handle_events(void) {
     DuelEvent ev[MAX_EVENTS];
     int n = duel_drain(&G.duel, ev, MAX_EVENTS);
@@ -1272,7 +1320,7 @@ static void handle_events(void) {
         switch (e->kind) {
             case EV_WINDUP:
                 G.strikeFeint = e->flag;
-                G.windupLen = fmaxf(0.1f, e->a - G.settings.attackLead);
+                G.windupLen = fmaxf(0.1f, e->a - duel_strike_lead(&G.duel));
                 G.windupTime = 0;
                 G.bossWinding = true;
                 G.staggerTime = 0;
@@ -1284,6 +1332,7 @@ static void handle_events(void) {
                 }
                 else rig_pose(b, rearm_pose(strike_look()), G.windupLen, EASE_OUT);
                 sprite_windup();
+                if (duel_strike_dual(&G.duel)) dual_tell();
                 G.blackoutTarget = G.duel.blackout ? 1 : 0;
                 if (m->arena == ARENA_PORTO) { audio_play(SND_DRUM, 0.9f, 1); G.ctx.beat = 1; }
                 break;
@@ -1303,7 +1352,7 @@ static void handle_events(void) {
             case EV_LAUNCH:
                 G.bossWinding = false;
                 /* O corte chega em POSE_CONTACT exatamente no instante do contato. */
-                rig_pose(b, contact_pose(strike_look()), G.settings.attackLead, EASE_IN);
+                rig_pose(b, contact_pose(strike_look()), duel_strike_lead(&G.duel), EASE_IN);
                 b->trail = true;
                 sprite_launch();
                 audio_play(SND_SWING, 0.9f, 1);
@@ -1383,7 +1432,7 @@ static void fighters_update(float dt) {
     if (!G.bossS.set) return;
     bool landed = G.hopT >= G.hopLen;
     /* investida e salto: depois do recuo (ou de agachar) ele arranca */
-    if (G.leap && G.bossWinding) {
+    if ((G.leap == LEAP_DASH || G.leap == LEAP_JUMP) && G.bossWinding) {
         G.leapT += dt;
         if (G.leapStage == 0 && G.leapT >= G.leapAt) {
             G.leapStage = 1;
@@ -1403,7 +1452,7 @@ static void fighters_update(float dt) {
     int squat = 0;
     if (G.leap == LEAP_JUMP && G.leapStage == 0) squat = 1 + (int)(2.99f * clampf(G.leapT / G.leapAt, 0, 1));
     else if (G.landT > 0) squat = G.landT > 0.1f ? 3 : 1;
-    else if (G.bossWinding && !G.leap && G.windupTime > G.windupLen * 0.5f) squat = 1;
+    else if (G.bossWinding && (!G.leap || G.leap == LEAP_FAR) && G.windupTime > G.windupLen * 0.5f) squat = 1;
     G.bossS.squat = squat;
     if (G.bossS.idle && !G.bossWinding && landed) {
         if (G.bossStep < -10) {

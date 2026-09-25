@@ -126,7 +126,19 @@ static int seal_total(const Duel *d) { return d->m->sealCount > 0 ? d->m->sealCo
 bool duel_under_pressure(const Duel *d) { return d->bossPosture <= d->m->posture / 2; }
 float duel_ren_damage(const Duel *d) {
     float base = d->m->hitsToFall > 0 ? d->s.renPosture / d->m->hitsToFall : d->s.badPostureDamage;
+    if (d->m->damage > 0) base *= d->m->damage;
     return d->special ? base * 2 : base;
+}
+
+bool duel_strike_dual(const Duel *d) {
+    const Move *mv = duel_move(d);
+    return mv && d->comboStrike < 32 && (mv->dual >> d->comboStrike) & 1u;
+}
+
+float duel_strike_lead(const Duel *d) {
+    const Move *mv = duel_move(d);
+    if (mv && mv->look == LOOK_FAR && d->comboStrike == 0) return d->s.attackLead * FAR_LEAD;
+    return d->s.attackLead;
 }
 
 bool duel_in_combo(const Duel *d) { return d->comboRemaining > 0 || d->comboStrike > 0; }
@@ -161,7 +173,7 @@ static void build_schedule(Duel *d) {
         push_schedule(d, d->fakeStrikeAts[i] - d->s.attackLead, SCH_FAKE_LAUNCH);
         push_schedule(d, d->fakeStrikeAts[i] - d->s.cueLead, SCH_FAKE_CUE);
     }
-    push_schedule(d, d->strikeAt - d->s.attackLead, SCH_LAUNCH);
+    push_schedule(d, d->strikeAt - duel_strike_lead(d), SCH_LAUNCH);
     push_schedule(d, d->strikeAt - d->s.cueLead, SCH_CUE);
     /* Ordenação estável por tempo (inserção: a lista é curta). */
     for (int i = 1; i < d->scheduleCount; i++) {
@@ -245,8 +257,10 @@ static void begin_attack(Duel *d) {
     if (!continuing) {
         duration *= rule->speedMultiplier;
         if (m->sealCount <= 1 && duel_under_pressure(d)) duration *= s->pressureSpeed;
+        /* a estocada de longe ganha o tempo extra da ponta viajando: a preparação não encolhe */
+        duration += duel_strike_lead(d) - s->attackLead;
     }
-    if (duration < s->attackLead + 0.1) duration = s->attackLead + 0.1;
+    if (duration < duel_strike_lead(d) + 0.1) duration = duel_strike_lead(d) + 0.1;
     d->windupDuration = (float)duration;
 
     double delay = 0;
@@ -297,6 +311,7 @@ static void resolve(Duel *d) {
     d->phaseEnd = d->clock + (d->comboRemaining > 0 ? s->comboGap : s->recovery);
     const Stance *st = duel_stance(d);
     double lead = d->attempted ? d->strikeAt - d->lastPress : -1;
+    bool dual = duel_strike_dual(d), second = false;
     Judgement j;
     if (d->attempted && lead >= 0 && lead <= st->perfectWindow + 1e-6) {
         j = J_PERFEITO;
@@ -308,10 +323,16 @@ static void resolve(Duel *d) {
         d->goods++;
         d->bossPosture -= s->goodBossDamage;
         d->renPosture = clampf(d->renPosture - s->goodRenCost, 0, s->renPosture);
+        /* duas lâminas: o bom apara uma, a outra entra */
+        if (dual) {
+            d->renPosture = clampf(d->renPosture - duel_ren_damage(d), 0, s->renPosture);
+            second = true;
+        }
     } else {
         j = J_RUIM;
         d->bads++;
-        d->renPosture = clampf(d->renPosture - duel_ren_damage(d), 0, s->renPosture);
+        d->renPosture = clampf(d->renPosture - duel_ren_damage(d) * (dual ? 2 : 1), 0, s->renPosture);
+        second = dual;
         if (d->m->healsOnHit) d->bossPosture = clampf(d->bossPosture + s->badBossRecover, 0, d->m->posture);
     }
 
@@ -320,7 +341,8 @@ static void resolve(Duel *d) {
         d->bossPosture = 0;
         d->comboRemaining = 0; /* a quebra interrompe o composto */
     }
-    emit(d, EV_IMPACT, j, (float)lead, 0, broke);
+    /* i: bit 0 = golpe de duas lâminas, bit 1 = a segunda lâmina acertou kojiro */
+    emit(d, EV_IMPACT, j, (float)lead, (dual ? 1 : 0) | (second ? 2 : 0), broke);
 
     if (broke) {
         if (d->seal + 1 < seal_total(d)) {

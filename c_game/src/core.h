@@ -74,13 +74,16 @@ typedef struct {
  * entre um contato e o próximo. É isso que o jogador estuda e decora.
  */
 #define MAX_MOVES 16
-#define MAX_CHAIN 5
+#define MAX_CHAIN 8
 
 /* Preparação que denuncia a sequência. LOOK_HEAVY é o golpe forte: o salto com a
  * pancada de cima (STRONG_ATTACK), de preparação longa e bem visível. LOOK_DASH
  * recua e vem correndo até o alcance; LOOK_JUMP salta e desce cortando, com o
- * contato no instante em que os pés tocam o chão. */
-typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST, LOOK_HEAVY, LOOK_DASH, LOOK_JUMP } MoveLook;
+ * contato no instante em que os pés tocam o chão. LOOK_FAR é a estocada de longe
+ * (a lança): o mestre fica afastado e a ponta viaja mais, então entre a lâmina
+ * partir e chegar passa mais tempo que nos outros golpes (FAR_LEAD). */
+typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST, LOOK_HEAVY, LOOK_DASH, LOOK_JUMP, LOOK_FAR } MoveLook;
+#define FAR_LEAD 1.75f            /* a estocada de longe parte 1,75 x mais cedo */
 
 typedef struct {
     const char *name;
@@ -90,6 +93,9 @@ typedef struct {
     int stance;                   /* -1 = qualquer postura */
     int minSeal;                  /* só a partir deste selo */
     MoveLook look;
+    /* Golpes de duas lâminas (bit k = o golpe k da sequência). Um parry só apara
+     * as duas se for perfeito; no bom, a segunda passa; no erro, entram as duas. */
+    unsigned dual;
 } Move;
 
 typedef enum {
@@ -112,6 +118,7 @@ typedef struct {
     float posture;                /* postura de cada selo */
     int hitsToFall;               /* erros que Ren aguenta contra este mestre (0 = padrão das Settings) */
     float specialChance;          /* golpe especial: dano dobrado (só o BIG BOSS) */
+    float damage;                 /* multiplica o dano em kojiro (0 = 1) */
     bool healsOnHit;              /* acertar ren devolve postura ao mestre (do 5º mestre em diante) */
     Stance stances[MAX_STANCES];
     int stanceCount;
@@ -223,7 +230,9 @@ const SealRule *duel_seal_rule(const Duel *d);
 bool duel_under_pressure(const Duel *d);          /* mestre com metade da postura ou menos */
 bool duel_in_combo(const Duel *d);
 const Move *duel_move(const Duel *d);             /* sequência em curso (NULL = golpe simples) */
-float duel_ren_damage(const Duel *d);            /* dano de um erro contra este mestre */
+float duel_ren_damage(const Duel *d);
+bool duel_strike_dual(const Duel *d);     /* o golpe que vem é de duas lâminas */
+float duel_strike_lead(const Duel *d);    /* segundos entre a lâmina partir e o contato */            /* dano de um erro contra este mestre */
 /* Copia e esvazia a fila de eventos. Devolve quantos. */
 int duel_drain(Duel *d, DuelEvent *out, int max);
 

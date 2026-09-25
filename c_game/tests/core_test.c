@@ -19,6 +19,7 @@ static int checks = 0, failures = 0;
 
 typedef struct {
     int impacts[4];
+    int blades;                   /* lâminas que acertaram kojiro (o duplo errado conta duas) */
     int seals, stances, combos, windups, finished, victory, feintLaunches, fakeCues, realCues;
     Judgement last;
 } Tally;
@@ -28,7 +29,12 @@ static void count(Duel *d, Tally *t) {
     int n = duel_drain(d, ev, MAX_EVENTS);
     for (int i = 0; i < n; i++) {
         switch (ev[i].kind) {
-            case EV_IMPACT: t->impacts[ev[i].judgement]++; t->last = ev[i].judgement; break;
+            case EV_IMPACT:
+                t->impacts[ev[i].judgement]++;
+                t->last = ev[i].judgement;
+                if (ev[i].judgement == J_RUIM) t->blades += (ev[i].i & 1) ? 2 : 1;
+                else if (ev[i].i & 2) t->blades++;
+                break;
             case EV_SEAL: t->seals++; break;
             case EV_STANCE: t->stances++; break;
             case EV_COMBO: t->combos++; break;
@@ -97,14 +103,17 @@ static void test_roster(const Settings *s) {
             lastGood = m->stances[0].goodWindow;
         }
     }
+    /* Sem contar quem bate mais pesado (arashi), o dano de um erro só cresce. */
     float lastDamage = 0;
     for (int i = 0; i < roster_size(); i++) {
-        Duel d;
-        duel_init(&d, s, roster_get(i), 1);
-        float dmg = duel_ren_damage(&d);
+        float dmg = s->renPosture / roster_get(i)->hitsToFall;
         CHECK(dmg >= lastDamage, "o dano de um erro não diminui ao longo da trilha (%s)", roster_get(i)->name);
         lastDamage = dmg;
     }
+    Duel da, dn;
+    duel_init(&da, s, roster_get(9), 1);
+    duel_init(&dn, s, roster_get(10), 1);
+    CHECK(roster_get(9)->damage > 1 && duel_ren_damage(&da) > duel_ren_damage(&dn), "arashi bate mais pesado que o mestre seguinte");
     static const int HITS[13] = {50, 45, 40, 35, 30, 25, 22, 20, 18, 15, 12, 10, 10};
     for (int i = 0; i < roster_size(); i++) {
         CHECK(roster_get(i)->hitsToFall == HITS[i], "Ren aguenta %d erros contra %s", HITS[i], roster_get(i)->name);
@@ -152,10 +161,12 @@ static void test_no_defense(void) {
     Tally t = play(roster_get(0), 7, -1, 120);
     CHECK(t.finished == 1 && !t.victory, "sem defesa, Ren cai");
     CHECK(t.impacts[J_RUIM] == 50, "contra o primeiro mestre, kojiro aguenta 50 erros (%d)", t.impacts[J_RUIM]);
+    /* Cada lâmina que entra tira o mesmo; o golpe duplo errado conta duas, e arashi pesa mais. */
     for (int i = 0; i < MASTER_COUNT; i++) {
-        Tally k = play(roster_get(i), 7, -1, 600);
-        CHECK(k.impacts[J_RUIM] == roster_get(i)->hitsToFall, "%s derruba Ren em %d erros (%d)", roster_get(i)->name,
-              roster_get(i)->hitsToFall, k.impacts[J_RUIM]);
+        const MasterProfile *m = roster_get(i);
+        Tally k = play(m, 7, -1, 600);
+        int need = (int)ceilf(m->hitsToFall / (m->damage > 0 ? m->damage : 1) - 1e-4f);
+        CHECK(k.blades >= need && k.blades <= need + 1, "%s derruba Ren com %d lâminas (%d)", m->name, need, k.blades);
     }
 }
 
@@ -470,11 +481,11 @@ static void test_levels(void) {
     CHECK(b.goodBossDamage > a.goodBossDamage, "o bom também cresce");
     /* Com Ren mais forte, o número de erros continua o do mestre. */
     Duel d;
-    duel_init(&d, &b, roster_get(5), 3);
+    duel_init(&d, &b, roster_get(3), 3);
     Tally t;
     memset(&t, 0, sizeof t);
     while (d.phase != PH_FINISHED && d.clock < 600) { duel_tick(&d, DT); count(&d, &t); }
-    CHECK(t.impacts[J_RUIM] == roster_get(5)->hitsToFall, "nível alto não muda quantos erros Ren aguenta (%d)", t.impacts[J_RUIM]);
+    CHECK(t.impacts[J_RUIM] == roster_get(3)->hitsToFall, "nível alto não muda quantos erros Ren aguenta (%d)", t.impacts[J_RUIM]);
     /* Menos perfeitos para quebrar o mestre quando Ren é mais forte. */
     Settings lo, hi;
     settings_default(&lo);
@@ -506,9 +517,9 @@ static void test_special(void) {
 static void test_movesets(void) {
     Settings s;
     settings_default(&s);
-    /* Os três primeiros são simples: seis sequências, nenhuma com mais de dois contatos. */
+    /* Os três primeiros são simples: sete sequências, nenhuma com mais de dois contatos. */
     for (int i = 0; i < 3; i++) {
-        CHECK(roster_get(i)->moveCount == 6, "%s tem seis sequências", roster_get(i)->name);
+        CHECK(roster_get(i)->moveCount == 7, "%s tem sete sequências", roster_get(i)->name);
         for (int k = 0; k < roster_get(i)->moveCount; k++) CHECK(roster_get(i)->moves[k].strikes <= 2, "%s: nada acima de dois contatos", roster_get(i)->name);
     }
     /* Cada golpe tem nome próprio: nenhum mestre repete o de outro. */
@@ -519,7 +530,7 @@ static void test_movesets(void) {
                     CHECK(strcmp(roster_get(a)->moves[i].name, roster_get(b)->moves[k].name) != 0, "golpe %s é só de %s", roster_get(a)->moves[i].name, roster_get(a)->name);
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
-        CHECK(m->moveCount >= 6 && (m->isBigBoss || m->moveCount <= 9), "%s tem de 6 a 9 sequências (%d)", m->name, m->moveCount);
+        CHECK(m->moveCount >= 7 && (m->isBigBoss || m->moveCount <= 10), "%s tem de 7 a 10 sequências (%d)", m->name, m->moveCount);
         CHECK(m->moveCount <= MAX_MOVES, "%s cabe no repertório", m->name);
         bool chain = false;
         for (int k = 0; k < m->moveCount; k++) {
@@ -584,6 +595,95 @@ static void test_campaign(void) {
     CHECK(campaign_defeated(&c) == 12, "cada aprendiz contado uma vez só");
 }
 
+/* Traços de cada mestre: o primeiro é de katana e lento, garfiel faz combos longos,
+ * karasu e arashi usam as duas lâminas, suiren ataca de longe e jinshi é o mais variado. */
+static void test_traits(void) {
+    const MasterProfile *daichi = roster_get(0), *genbu = roster_get(1);
+    CHECK(daichi->stances[0].windups[0] > genbu->stances[0].windups[0], "daichi prepara mais devagar que genbu");
+    int longest = 0;
+    for (int k = 0; k < roster_get(4)->moveCount; k++)
+        if (roster_get(4)->moves[k].strikes > longest) longest = roster_get(4)->moves[k].strikes;
+    CHECK(longest >= 7, "garfiel tem combo de sete golpes ou mais (%d)", longest);
+    for (int i = 5; i <= 9; i += 4) {
+        bool dual = false;
+        for (int k = 0; k < roster_get(i)->moveCount; k++) dual |= roster_get(i)->moves[k].dual != 0;
+        CHECK(dual, "%s ataca com as duas lâminas", roster_get(i)->name);
+    }
+    int arashiDual = 0, karasuDual = 0;
+    for (int k = 0; k < roster_get(9)->moveCount; k++) arashiDual += roster_get(9)->moves[k].dual != 0;
+    for (int k = 0; k < roster_get(5)->moveCount; k++) karasuDual += roster_get(5)->moves[k].dual != 0;
+    CHECK(arashiDual > karasuDual, "arashi usa as duas lâminas mais que karasu (%d x %d)", arashiDual, karasuDual);
+    bool far = false;
+    for (int k = 0; k < roster_get(8)->moveCount; k++) far |= roster_get(8)->moves[k].look == LOOK_FAR;
+    CHECK(far, "suiren ataca de longe");
+    CHECK(roster_get(10)->blackoutChance >= 0.6f, "yoru apaga as luzes quase sempre");
+    int looks = 0;
+    for (int l = LOOK_HIGH; l <= LOOK_FAR; l++) {
+        bool has = false;
+        for (int k = 0; k < roster_get(11)->moveCount; k++) has |= roster_get(11)->moves[k].look == (MoveLook)l;
+        looks += has;
+    }
+    CHECK(looks >= 6 && roster_get(11)->moveCount == 10, "jinshi tem o repertório mais variado (%d preparações)", looks);
+}
+
+/* Golpe de duas lâminas: perfeito apara as duas, bom deixa passar a segunda, erro leva as duas. */
+static void test_dual(void) {
+    Settings s;
+    settings_default(&s);
+    const MasterProfile *arashi = roster_get(9);
+    static const double LEADS[3] = {0.02, 0.12, -1};   /* perfeito, bom, sem gesto */
+    for (int c = 0; c < 3; c++) {
+        Duel d;
+        duel_init(&d, &s, arashi, 11);
+        bool seen = false;
+        for (int n = 0; n < 400 && !seen && d.phase != PH_FINISHED; n++) {
+            while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
+            bool dual = duel_strike_dual(&d);
+            float before = d.renPosture, hit = duel_ren_damage(&d);
+            while (d.phase == PH_WINDUP) {
+                if (LEADS[c] >= 0 && !d.attempted && d.strikeAt - d.clock <= LEADS[c]) duel_press(&d);
+                duel_tick(&d, DT);
+            }
+            DuelEvent ev[MAX_EVENTS];
+            int k = duel_drain(&d, ev, MAX_EVENTS), flags = -1;
+            for (int e = 0; e < k; e++) if (ev[e].kind == EV_IMPACT) flags = ev[e].i;
+            if (!dual || flags < 0) continue;
+            float lost = before - d.renPosture;
+            if (c == 0) CHECK(lost <= 0 && !(flags & 2), "perfeito apara as duas lâminas (perdeu %.1f)", lost);
+            if (c == 1) CHECK(fabsf(lost - (hit + s.goodRenCost)) < 0.01f && (flags & 2), "bom: a segunda lâmina entra (%.1f)", lost);
+            if (c == 2) CHECK(fabsf(lost - 2 * hit) < 0.01f || d.renPosture <= 0, "erro: as duas lâminas entram (%.1f)", lost);
+            seen = true;
+        }
+        CHECK(seen, "um golpe duplo de arashi foi observado (%d)", c);
+    }
+}
+
+/* Estocada de longe: a lâmina parte FAR_LEAD vezes mais cedo que nos outros golpes. */
+static void test_far_lead(void) {
+    Settings s;
+    settings_default(&s);
+    Duel d;
+    duel_init(&d, &s, roster_get(8), 5);
+    bool seen = false;
+    for (int n = 0; n < 200 && !seen; n++) {
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        const Move *mv = duel_move(&d);
+        bool far = mv && mv->look == LOOK_FAR && d.comboStrike == 0;
+        double launchAt = -1;
+        while (d.phase == PH_WINDUP) {
+            duel_tick(&d, DT);
+            DuelEvent ev[MAX_EVENTS];
+            int k = duel_drain(&d, ev, MAX_EVENTS);
+            for (int e = 0; e < k; e++) if (ev[e].kind == EV_LAUNCH) launchAt = d.clock;
+        }
+        if (!far || launchAt < 0) continue;
+        double lead = d.strikeAt - launchAt;
+        CHECK(fabs(lead - s.attackLead * FAR_LEAD) < 0.02, "a estocada de longe parte %.2f s antes (%.3f)", s.attackLead * FAR_LEAD, lead);
+        seen = true;
+    }
+    CHECK(seen, "uma estocada de longe de suiren foi observada");
+}
+
 int main(void) {
     Settings s;
     settings_default(&s);
@@ -607,6 +707,9 @@ int main(void) {
     test_determinism();
     test_every_master_beatable();
     test_movesets();
+    test_traits();
+    test_dual();
+    test_far_lead();
     test_levels();
     test_special();
     test_campaign();

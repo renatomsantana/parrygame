@@ -768,9 +768,9 @@ static const Char ORIG = {
 static Char CHARS[] = {
     /* O protagonista: sem chapéu e sem máscara, coque solto no alto da cabeça, katana. */
     {.id = "kojiro", .titulo = "Kojiro", .arma = {.kind = W_KATANA}, .cabeca = "coque"},
-    /* 1. Terra. Espada pesada. Chapéu de palha, verde oliva e ocre, barba. */
+    /* 1. Terra. Katana, devagar. Chapéu de palha, verde oliva e ocre, barba. */
     {.id = "daichi", .titulo = "Daichi",
-     .arma = {.kind = W_PESADA, .escala = 1.15, .largura = 2, .cor_largura = HEX(0x8a8676)},
+     .arma = {.kind = W_KATANA},
      .chapeu = 1, .chapeu_cor = {HEX(0xe0bc72), HEX(0xb48c48), HEX(0x7c5c2c)}, .rosto = "barba",
      .camisa = {HEX(0xc4c48a), HEX(0x9a9a5e), HEX(0x72743e), HEX(0x50522a)},
      .hakama = {HEX(0x6a5238), HEX(0x503c28), HEX(0x3a2c1e), HEX(0x2a2016), HEX(0x1c150e)},
@@ -846,9 +846,10 @@ static Char CHARS[] = {
      .troca = {{HEX(0x1e6f50), HEX(0x3a3642)}, {HEX(0x134c4c), HEX(0x28252e)}, {HEX(0x0c2e44), HEX(0x1a181e)},
                {HEX(0x391f21), HEX(0xa01820)}, {HEX(0x5d2c28), HEX(0xd02828)},
                {HEX(0x272727), HEX(0xb88428)}, {HEX(0x3d3d3d), HEX(0xe8b83c)}, {HEX(0x5ac54f), HEX(0xffb020)}}},
-    /* 6. Corvo. Wakizashi (a espada curta), uma em cada mão. Preto e vermelho. */
+    /* 6. Corvo. Katana na mão da frente e wakizashi (a curta) na outra. Preto e vermelho. */
     {.id = "karasu", .titulo = "Karasu",
-     .arma = {.kind = W_KATANA, .escala = 0.72, .par = true, .cor_par = HEX(0xece4e6), .guarda = HEX(0x8c1018)},
+     .arma = {.kind = W_KATANA, .escala = 0.95, .par = true, .par_comprimento = 13, .cor_par = HEX(0xece4e6),
+              .guarda = HEX(0x8c1018)},
      .cabeca = "corvo",
      .acessorios = {AC_TRAPO},
      .camisa = {HEX(0x5a5058), HEX(0x3e363e), HEX(0x2a242a), HEX(0x1c181c)},

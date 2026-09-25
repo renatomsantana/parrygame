@@ -44,7 +44,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 1. Daichi | Postura da Terra
 
-- **Arma:** Espada pesada
+- **Arma:** Katana (o primeiro da trilha, bem lento: cada golpe avisa muito antes)
 - **Personalidade:** Firme e tradicional
 - **Visão sobre Oboro:** Aceitou sua liderança apenas pela tradição
 - **Visão sobre Hanzo:** Continua sendo seu verdadeiro mestre
@@ -52,7 +52,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 2. Genbu | Postura da Tartaruga
 
-- **Arma:** Katana simples
+- **Arma:** Katana simples (já mais rápido que o Daichi, e com golpes diferentes)
 - **Personalidade:** Paciente e sábio
 - **Visão sobre Oboro:** Sente pena dele
 - **Visão sobre Hanzo:** Acredita que Hanzo tentou ajudá-lo até o fim
@@ -60,7 +60,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 3. Raizo | Postura do Touro
 
-- **Arma:** Espadão (odachi gigante)
+- **Arma:** Espadão (odachi gigante), o único da trilha: uma técnica completamente diferente
 - **Personalidade:** Honrado, direto e obstinado
 - **Visão sobre Oboro:** Acredita que Oboro conquistou tudo o que possui
 - **Visão sobre Hanzo:** Respeita Hanzo, mas acredita que ele exigia demais de Oboro
@@ -76,7 +76,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 5. Garfiel | Postura do Tigre
 
-- **Arma:** Garras, uma em cada mão
+- **Arma:** Garras, uma em cada mão (combos longos, de seis a oito golpes seguidos)
 - **Personalidade:** Feroz, leal e barulhento; o tigre branco que guarda o portão do oeste
 - **Visão sobre Oboro:** Segue a tradição que deu o dojo a ele, mas não confia em quem não sangra junto
 - **Visão sobre Hanzo:** Deve a ele o portão que guarda
@@ -84,7 +84,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 6. Karasu | Postura do Corvo
 
-- **Arma:** Wakizashi, uma em cada mão
+- **Arma:** Katana e wakizashi (quase sempre a longa numa mão só; de repente, as duas lâminas de uma vez)
 - **Personalidade:** Sarcástico e oportunista
 - **Visão sobre Oboro:** Segue-o apenas porque venceu
 - **Visão sobre Hanzo:** Nunca confiou totalmente nele
@@ -92,7 +92,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 7. Hayate | Postura do Vento
 
-- **Arma:** Duas foices pequenas (kama) e o vento
+- **Arma:** Duas foices pequenas (kama) e o vento (parecido com o Arashi, mas mais rápido)
 - **Personalidade:** Impulsivo e competitivo
 - **Visão sobre Oboro:** Sempre o admirou
 - **Visão sobre Hanzo:** Acredita que Hanzo foi injusto
@@ -108,7 +108,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 9. Suiren | Postura do Mar
 
-- **Arma:** Lança
+- **Arma:** Lança (ataca de longe: a ponta demora mais para chegar do que parece)
 - **Personalidade:** Leal e gentil
 - **Visão sobre Oboro:** Era seu melhor amigo
 - **Visão sobre Hanzo:** Respeita profundamente
@@ -116,7 +116,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 10. Arashi | Postura da Tempestade
 
-- **Arma:** Duas katanas
+- **Arma:** Duas katanas (golpes pesados de duas lâminas; só o parry perfeito segura as duas)
 - **Personalidade:** Arrogante e orgulhoso
 - **Visão sobre Oboro:** Ainda o considera o maior espadachim vivo
 - **Visão sobre Hanzo:** Acredita que envelheceu e foi superado
@@ -124,7 +124,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 11. Yoru | Postura da Noite
 
-- **Arma:** Duas adagas, empunhadas ao contrário
+- **Arma:** Duas adagas, empunhadas ao contrário (apaga as luzes quase sempre)
 - **Personalidade:** Desconfiado e silencioso
 - **Visão sobre Oboro:** Suspeita que existe algo oculto sobre a vitória contra Hanzo
 - **Visão sobre Hanzo:** Acredita que ele escondia algo de todos
@@ -132,7 +132,7 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 12. Jinshi | Postura da Montanha
 
-- **Arma:** Katana branca forjada com a lua
+- **Arma:** Katana branca forjada com a lua (o mais difícil: o repertório mais variado, ritmo irregular)
 - **Personalidade:** Reservado e reflexivo
 - **Visão sobre Oboro:** Nunca o perdoou
 - **Visão sobre Hanzo:** Acredita que ele falhou como mestre

@@ -66,16 +66,16 @@ e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
 
 | # | Aprendiz | Postura | Arma | Cenário | Postura dele | Perfeito / Bom | Erros até cair |
 |---:|---|---|---|---|---:|---:|---:|
-| 1 | daichi | terra | espada pesada | Celeiro | 300 | 90 / 220 ms | 50 |
+| 1 | daichi | terra (bem devagar) | katana | Celeiro | 300 | 90 / 220 ms | 50 |
 | 2 | genbu | tartaruga | katana simples | Jardim de pedras do mosteiro | 300 | 87 / 215 ms | 45 |
 | 3 | raizo | touro | espadão | Pátio do dojo | 330 | 84 / 208 ms | 40 |
 | 4 | shizuku | água | florete de esgrima | Cachoeira | 330 | 80 / 200 ms | 35 |
 | 5 | garfiel | tigre | garras nas duas mãos | Portão do tigre branco | 360 | 76 / 192 ms | 30 |
-| 6 | karasu | corvo | duas wakizashi | Telhados da vila na chuva | 360 | 72 / 185 ms | 25 |
+| 6 | karasu | corvo | katana e wakizashi | Telhados da vila na chuva | 360 | 72 / 185 ms | 25 |
 | 7 | hayate | vento (ritmo quebrado) | duas foices pequenas | Ponte de corda no desfiladeiro | 390 | 69 / 178 ms | 22 |
 | 8 | enjin | chama | katana de fogo | Forja | 390 | 66 / 172 ms | 20 |
 | 9 | suiren | mar (acelerando) | lança | Porto | 420 | 63 / 166 ms | 18 |
-| 10 | arashi | tempestade | duas katanas | Salão do castelo na tempestade | 420 | 60 / 160 ms | 15 |
+| 10 | arashi | tempestade (dano 1,5×) | duas katanas | Salão do castelo na tempestade | 420 | 60 / 160 ms | 15 |
 | 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 450 | 58 / 155 ms | 12 |
 | 12 | jinshi | montanha (sem som) | katana branca forjada com a lua | Encosta da serra | 450 | 55 / 150 ms | 10 |
 | 13 | **oboro** | as doze, trocando a cada duas sequências | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
@@ -93,27 +93,33 @@ denuncia o tipo de golpe (alto, baixo em gedan subindo, ou estocada), e cada
 vilão tem um sinal próprio no começo de cada sequência (faíscas no chão, gotas
 na lâmina, brasas, penas, névoa…). O **golpe forte** é um só: o salto com a
 pancada de cima (o STRONG_ATTACK do pack, ou o especial de quem não tem), com a
-preparação no ar, longa e bem visível. Além dele, dois jeitos de chegar que
-também se leem de longe: **correndo** (recua num pulinho, firma os pés e vem
-correndo até o alcance; o golpe sai da corrida) e **saltando** (agacha, salta e
-desce cortando; o contato é o instante em que os pés tocam o chão). Os três
-primeiros têm seis sequências, nenhuma com mais de dois contatos; do Shizuku em
-diante, de sete a nove, com combos de até cinco golpes.
+preparação no ar, longa e bem visível. Além dele, jeitos de chegar que se leem de
+longe: **correndo** (recua num pulinho, firma os pés e vem correndo até o
+alcance), **saltando** (agacha, salta e desce cortando; o contato é o pouso) e,
+só com a lança do suiren, **de longe** (ele se afasta e a ponta viaja: entre a
+lâmina partir e chegar passa 1,75 vez o tempo dos outros golpes, então quem
+aparar no susto da partida chega cedo). **⚔** é o golpe de **duas lâminas**
+(o corte cruzado, anunciado por um brilho duplo e um tinido duplo): um parry só
+segura as duas se for perfeito; no bom, a segunda entra; no erro, entram as
+duas. Todos têm de sete a dez sequências. Daichi, Genbu e Raizo nunca passam de
+dois contatos; Garfiel chega a oito golpes seguidos; arashi bate 1,5 vez mais
+forte; yoru apaga as luzes em sete de cada dez sequências; jinshi tem o
+repertório mais variado e o ritmo irregular.
 
 | Aprendiz | Sequências (golpes: intervalos em s) |
 |---|---|
-| daichi | rocha (1) · desabamento (2: 1,00) · **terremoto** (forte) · raiz (1) · arado (1) correndo · pedregulho (2: 0,90) saltando |
-| genbu | casco (1) · mordida (2: 0,42) · carapaça (2: 0,60) · bote da tartaruga (1) correndo · concha (1) · maré lenta (2: 0,75) |
-| raizo | corte do touro (1) · investida dupla (2: 0,85) · **chifrada** (forte) · estouro da boiada (1) correndo · coice (1) · pisada (2: 0,70) saltando |
-| shizuku | gota (1) · correnteza (2: 0,50) · queda d'água (3: 0,50 0,45) · garoa (2: 0,40) · **tsunami** (forte) · remanso (1) · salto do peixe (2: 0,45) saltando · corredeira (1) correndo |
-| garfiel | patada (1) · garras cruzadas (2: 0,40) · bote do tigre (3: 0,40 0,85) · **salto do tigre** (forte) · rasgo (2: 0,40) · caçada (2: 0,40) correndo · rugido (3: 0,45 0,45) · pulo do gato (2: 0,45) saltando |
-| karasu | bicada (1) · garra (2: 0,55) · revoada (3: 0,50 0,90) · **mergulho** (forte) · bando (3: 0,40 0,40) · voo rasante (1) correndo · asa quebrada (2: 0,50) saltando |
-| hayate | rajada (1) · redemoinho (2: 0,45) · vendaval (3: 0,50 0,90) · **ciclone** (forte) · brisa cortante (2: 0,40) · lufada (1) correndo · tufão (4: 0,40 0,40 0,60) · folha ao vento (2: 0,55) saltando |
+| daichi | rocha (1) · raiz (1) · sulco (1) · desabamento (2: 1,00) · arado (1) correndo · pedregulho (2: 1,10) saltando · **terremoto** (forte) |
+| genbu | casco (1) · mordida (2: 0,42) · carapaça (2: 0,60) · concha (1) · bote da tartaruga (1) correndo · maré lenta (2: 0,75) · casco fechado (2: 0,90) |
+| raizo | corte do touro (1) · investida dupla (2: 0,85) · coice (1) · marrada (2: 1,00) · estouro da boiada (1) correndo · pisada (2: 0,70) saltando · **chifrada** (forte) |
+| shizuku | gota (1) · correnteza (2: 0,45) · garoa (2: 0,40) · queda d'água (3: 0,45 0,40) · chuvisco (4: 0,40 0,40 0,40) · remanso (1) · corredeira (1) correndo · salto do peixe (2: 0,45) saltando · **tsunami** (forte) |
+| garfiel | patada (1) · garras cruzadas (2: 0,40) · rasgo (3: 0,40 0,40) · bote do tigre (3: 0,40 0,85) · fúria do tigre (6: 0,40 0,40 0,40 0,40 0,40) · caçada (7: 0,40 0,40 0,45 0,40 0,40 0,70) correndo · rugido (8: 0,40 0,40 0,40 0,40 0,40 0,40 0,80) · pulo do gato (2: 0,45) saltando · **salto do tigre** (forte) |
+| karasu | bicada (1) · garra (2: 0,55) · espreita (3: 0,60 0,60) · revoada (3: 0,50 0,90) ⚔ no 3º · bando (4: 0,45 0,45 0,45) ⚔ no 4º · duas penas (1) ⚔ · voo rasante (1) correndo · asa quebrada (2: 0,50) saltando · **mergulho** (forte) |
+| hayate | rajada (1) · redemoinho (2: 0,45) · vendaval (3: 0,50 0,90) · brisa cortante (2: 0,40) · tufão (5: 0,40 0,40 0,40 0,60) · foices gêmeas (2: 0,45) ⚔ no 2º · lufada (1) correndo · folha ao vento (2: 0,55) saltando · **ciclone** (forte) |
 | enjin | brasa (2: 0,50) · labareda (3: 0,45 0,45) · incêndio (4: 0,45 0,45 0,80) · **erupção** (forte) · fagulhas (3: 0,40 0,40) · chama viva (1) correndo · cinzas (2: 0,45) · fogo alto (3: 0,45 0,45) saltando |
-| suiren | onda (1) · ressaca (2: 0,50) · maremoto (4: 0,55 0,50 0,45) · **arpão** (forte) · maré baixa (2: 0,45) · arrebentação (3: 0,45 0,45) · espuma (1) correndo · salto da baleia (2: 0,60) saltando |
-| arashi | faísca (1) · trovoada (2: 0,45) · tormenta (3: 0,40 0,40) · **relâmpago** (forte) · granizo (4: 0,40 0,40 0,40) · trovão (1) correndo · raio duplo (2: 0,40) saltando · ventania (3: 0,40 0,70) · céu partido (5: 0,40 0,40 0,40 0,80) |
+| suiren | onda (1) · arpão (1) de longe · linha d'água (2: 0,60) de longe · maré longa (3: 0,60 0,50) de longe · maré baixa (2: 0,45) · arrebentação (3: 0,45 0,45) · maremoto (4: 0,55 0,50 0,45) · espuma (1) correndo · salto da baleia (2: 0,60) saltando · **vagalhão** (forte) |
+| arashi | faísca (1) · duas tempestades (1) ⚔ · trovoada (2: 0,45) ⚔ no 2º · tormenta (3: 0,40 0,40) ⚔ no 3º · granizo (4: 0,40 0,40 0,40) · ventania (3: 0,40 0,70) · trovão (1) correndo ⚔ · raio duplo (2: 0,40) saltando ⚔ nos dois · céu partido (5: 0,40 0,40 0,40 0,80) ⚔ no 5º · **relâmpago** (forte) ⚔ |
 | yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) · **eclipse** (forte) · vultos (3: 0,40 0,70) · breu (1) correndo · coruja (2: 0,45) saltando · meia-noite (4: 0,40 0,40 0,90) · nevoeiro (2: 0,70) |
-| jinshi | pedra (1) · avalanche (3: 0,60 0,60) · cordilheira (4: 0,50 0,50 0,90) · **deslizamento** (forte) · rocha rolante (2: 0,80) · desfiladeiro (1) correndo · cume (2: 0,70) saltando · tremor (3: 0,60 0,60) · monte (5: 0,50 0,50 0,50 0,90) |
+| jinshi | pedra (1) · avalanche (3: 0,60 0,60) · cordilheira (4: 0,50 0,50 0,90) · tremor (3: 0,45 1,00) · monte (5: 0,50 0,50 0,50 0,90) · lua branca (6: 0,40 0,90 0,45 0,45 1,00) · neve eterna (4: 1,00 0,40 0,40) · desfiladeiro (1) correndo · cume (2: 0,70) saltando · **deslizamento** (forte) |
 | oboro | um eco de cada aprendiz, na postura dele · doze posturas (5, terceiro selo) · passo de hanzo (1) correndo · queda da lua (1) saltando |
 
 ## Visual e som
