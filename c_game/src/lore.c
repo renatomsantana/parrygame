@@ -228,9 +228,39 @@ void lore_draw_ending(float t) {
     }
 }
 
-/* Tela de título: noite na serra. No pico mais alto, o dojo de Hanzo com as
- * janelas acesas e as lanternas da trilha subindo o morro; névoa no vale; em
- * primeiro plano, o morro onde Kojiro para e olha (lore_draw_title_hero). */
+/* Tela de título: noite na serra. No pico mais alto, pequeno, o dojo de Hanzo
+ * com as janelas acesas; névoa no vale; em primeiro plano, o morro onde Kojiro
+ * para, de costas, e olha para ele (lore_draw_title_hero). */
+
+/* Desenho em pixel: uma letra por pixel, '.' é vazio. */
+typedef struct { char c; Color col; } Ink;
+static void art(const char *const *rows, int n, float x0, float y0, const Ink *pal) {
+    for (int y = 0; y < n; y++)
+        for (int x = 0; rows[y][x]; x++)
+            for (const Ink *p = pal; p->c; p++)
+                if (p->c == rows[y][x]) { rect(x0 + x, y0 + y, 1, 1, p->col); break; }
+}
+
+/* Dois telhados curvos de pontas erguidas, janelas acesas e a varanda. */
+static const char *const DOJO[] = {
+    ".........k.........",
+    "......kkkrkkk......",
+    "....krrrrrrrrrk....",
+    "..kkRRRRRRRRRRRkk..",
+    ".k..kmLmLmLmLmk..k.",
+    "....kmLmLmLmLmk....",
+    "..rrrrrrrrrrrrrrr..",
+    "kkRRRRRRRRRRRRRRRkk",
+    "k.kmmLLmLLmLLmmk..k",
+    "..kmmLfmLfmLfmmk...",
+    ".vvvvvvvvvvvvvvvv..",
+    ".k.k...........k.k.",
+};
+static const Ink DOJO_PAL[] = {
+    {'k', {22, 20, 36, 255}}, {'R', {30, 26, 46, 255}}, {'r', {72, 74, 116, 255}},
+    {'m', {50, 38, 44, 255}}, {'L', {255, 200, 120, 255}}, {'f', {176, 112, 60, 255}},
+    {'v', {60, 58, 88, 255}}, {0, {0, 0, 0, 0}},
+};
 static float hill_y(float x) { float d = (x - 70) / 88; return 124 + d * d * 34; }
 
 void lore_draw_title(float t) {
@@ -276,37 +306,23 @@ void lore_draw_title(float t) {
         float x = 250 + i * 8 + hash1(i + 60) * 4, y = 76 + (x - 230) * 0.5f;
         DrawTriangle((Vector2){x, y - 7}, (Vector2){x - 3, y + 1}, (Vector2){x + 3, y + 1}, C(18, 20, 40));
     }
-    /* A trilha de pedra subindo em zigue-zague, com as lanternas acesas. */
-    static const float path[][2] = {{226, 64}, {214, 74}, {228, 84}, {206, 96}, {222, 108}, {196, 120}, {214, 132}, {186, 144}};
-    for (int k = 0; k + 1 < 8; k++) DrawLine((int)path[k][0], (int)path[k][1], (int)path[k + 1][0], (int)path[k + 1][1], C(40, 40, 70));
-    for (int k = 1; k < 8; k++) {
-        float fl = 0.8f + 0.2f * sinf(t * 6 + k * 1.7f);
-        glow(path[k][0], path[k][1] - 1, 5 * fl, C(255, 170, 80));
-        rect(path[k][0], path[k][1] - 2, 1, 2, C(255, 200, 120));
+    /* O dojo de Hanzo no pico, pequeno, sobre uma base de pedra e entre pinheiros. */
+    for (int x = 219; x <= 240; x++) {
+        float d = x - 230, ground = 60 + (d < 0 ? -d * 0.78f : d * 0.5f);
+        rect(x, 60, 1, ground - 59, C(34, 32, 58));
+        if ((x + (int)ground) % 4 == 0) rect(x, 62 + (x % 3), 1, 1, C(26, 24, 46));
     }
-    /* O dojo de Hanzo no pico: dois telhados curvos, a varanda e as janelas acesas. */
-    glow(230, 50, 16, C(255, 160, 70));
-    rect(212, 57, 36, 3, C(58, 56, 84));
-    rect(216, 47, 28, 10, C(46, 34, 40));
-    for (int k = 0; k < 4; k++) rect(218 + k * 7, 49, 4, 5, C(255, 202, 122));
-    for (int k = 0; k < 4; k++) rect(220 + k * 7, 49, 1, 5, C(170, 110, 60));
-    DrawTriangle((Vector2){208, 47}, (Vector2){252, 47}, (Vector2){240, 40}, C(28, 24, 42));
-    DrawTriangle((Vector2){208, 47}, (Vector2){240, 40}, (Vector2){220, 40}, C(28, 24, 42));
-    rect(207, 46, 2, 1, C(28, 24, 42));
-    rect(251, 46, 2, 1, C(28, 24, 42));
-    rect(206, 45, 1, 1, C(28, 24, 42));
-    rect(253, 45, 1, 1, C(28, 24, 42));
-    rect(222, 34, 16, 6, C(46, 34, 40));
-    rect(226, 36, 8, 3, C(255, 196, 116));
-    DrawTriangle((Vector2){217, 34}, (Vector2){243, 34}, (Vector2){235, 28}, C(28, 24, 42));
-    DrawTriangle((Vector2){217, 34}, (Vector2){235, 28}, (Vector2){225, 28}, C(28, 24, 42));
-    rect(224, 27, 12, 1, C(60, 56, 90));
-    rect(215, 40, 30, 1, C(66, 64, 104));                   /* luar no telhado */
-    /* Torii no começo da trilha. */
-    rect(180, 140, 2, 12, C(120, 36, 36));
-    rect(190, 140, 2, 12, C(120, 36, 36));
-    rect(177, 139, 18, 2, C(140, 44, 40));
-    rect(179, 143, 14, 1, C(110, 34, 34));
+    rect(219, 60, 22, 1, C(70, 70, 108));
+    static const float pines[] = {205, 211, 216, 244, 249, 255};
+    for (int i = 0; i < 6; i++) {
+        float x = pines[i], d = x - 230, y = 60 + (d < 0 ? -d * 0.78f : d * 0.5f) + 1;
+        float h = 6 + hash1(i + 40) * 3;
+        DrawTriangle((Vector2){x, y - h}, (Vector2){x - 2.5f, y + 1}, (Vector2){x + 2.5f, y + 1}, C(16, 20, 38));
+        rect(x, y - h + 1, 1, 1, C(56, 64, 104));
+    }
+    art(DOJO, sizeof DOJO / sizeof *DOJO, 220, 49, DOJO_PAL);
+    /* a luz das janelas no chão da varanda */
+    for (int k = 0; k < 3; k++) rect(224 + k * 3, 59, 2, 1, C(150, 104, 70));
     /* Névoa no vale, em faixas que andam. */
     for (int i = 0; i < 6; i++) {
         float w = 70 + hash1(i + 70) * 80, x = fract(hash1(i + 71) + t * 0.004f * (1 + i % 3)) * (320 + w) - w;
@@ -314,7 +330,7 @@ void lore_draw_title(float t) {
         rect(x, y, w, 2, CA(150, 150, 200, 70));
         rect(x + w * 0.15f, y - 1, w * 0.6f, 1, CA(170, 170, 220, 50));
     }
-    /* O morro em primeiro plano, com um pinheiro torto na ponta. */
+    /* O morro em primeiro plano. */
     for (int x = 0; x < 180; x++) {
         float y = hill_y(x);
         if (y < 180) {
@@ -323,12 +339,6 @@ void lore_draw_title(float t) {
         }
     }
     rect(170, 158, 150, 22, C(16, 16, 34));
-    rect(18, 108, 3, 30, C(20, 16, 26));
-    DrawTriangle((Vector2){4, 112}, (Vector2){34, 112}, (Vector2){22, 104}, C(18, 24, 36));
-    DrawTriangle((Vector2){8, 104}, (Vector2){30, 104}, (Vector2){20, 97}, C(18, 24, 36));
-    DrawTriangle((Vector2){12, 97}, (Vector2){28, 97}, (Vector2){20, 91}, C(18, 24, 36));
-    rect(22, 104, 10, 1, C(60, 70, 110));
-    rect(20, 97, 8, 1, C(60, 70, 110));
     /* Capim balançando no morro, com a ponta pegando o luar. */
     for (int i = 0; i < 70; i++) {
         float x = floorf(hash1(i + 90) * 175), y = floorf(hill_y(x) + hash1(i + 91) * 6);
@@ -343,10 +353,73 @@ void lore_draw_title(float t) {
     }
 }
 
-/* Kojiro no alto do morro, de frente para o dojo, sob o luar (desenhado depois
- * da paleta do fundo, para não perder as cores dele). */
+/* Kojiro de costas no alto do morro, a espada na bainha, olhando para o dojo sob
+ * o luar (desenhado depois da paleta do fundo, para não perder as cores dele).
+ * O vento leva os fiapos do coque e a barra da hakama. */
+static const char *const KOJIRO_COSTAS[] = {
+    "...............h...h....",
+    "..............h.h.h.....",
+    "..............kHhh......",
+    "...........h.kHHk.......",
+    "............kHHHk.......",
+    "............krrk........",
+    "...........kHHHHHk......",
+    "..........kHHHHHHhk.....",
+    "..........kHHHHHHhhk....",
+    "..........kHHHHHHHSk....",
+    "..........kHHHHHHhSk....",
+    "...........kHHHHHhk.....",
+    "............ksSSk.......",
+    "........kkkvWWWwwkkk....",
+    ".......kvWWWWWWWWwwwk...",
+    "......kvWWWWWWWWWWwwwk..",
+    "......kvWWWWWWWWWWWwwk..",
+    ".....kvvWWWvWWWWWWWwwwk.",
+    ".....kvWWWWvWWWWWWWWwwk.",
+    ".....kvWWWWvWWWWWWWWwwk.",
+    ".....kvvWWkvWWWWWkWwwwk.",
+    ".....kvvvkkkOOOOOkkwwk..",
+    "......kkkOOOOOOOOOOokk..",
+    "....bBBgkOOqPPPPqOook...",
+    "..bBBk.kPPqpPPPPpqPPpk..",
+    "bBBk..kPPPqPPPPPPqPPpk..",
+    "Bk....kPPqPPPPPPPPqPPpk.",
+    "......kPPqPPPPPPPPqPPppk.",
+    ".....kPPPqPPPPPPPPPqPPpk.",
+    ".....kPPqPPPPPPPPPPqPPppk",
+    ".....kPPqPPPPPPPPPPqPPPpk",
+    "....kPPPqPPPPPPPPPPPqPPpk",
+    "....kPPqPPPPPkPPPPPPqPPpk",
+    "....kPPqPPPPPkPPPPPPqPPppk",
+    "...kPPPqPPPPkkPPPPPPPqPPpk",
+    "...kPPqPPPPPkkPPPPPPPqPPpk",
+    "...kPPqPPPPk.kPPPPPPPqPPpk",
+    "...kkkkkkkk...kkkkkkkkkkkk",
+};
+/* os fiapos em outra posição, quando o vento sopra mais forte */
+static const char *const FIAPOS_VENTO[] = {
+    "................h..h.h..",
+    "...............hh.h.....",
+    "..............kHhh......",
+    "............hkHHk.......",
+};
+static const Ink KOJIRO_PAL[] = {
+    {'k', {14, 12, 22, 255}}, {'H', {26, 24, 40, 255}}, {'h', {92, 98, 150, 255}},
+    {'r', {150, 40, 52, 255}}, {'s', {104, 82, 90, 255}}, {'S', {166, 140, 150, 255}},
+    {'v', {80, 88, 128, 255}}, {'W', {124, 134, 176, 255}}, {'w', {182, 192, 228, 255}},
+    {'O', {34, 28, 46, 255}}, {'o', {70, 62, 96, 255}},
+    {'P', {30, 30, 48, 255}}, {'p', {62, 64, 98, 255}}, {'q', {44, 44, 68, 255}},
+    {'B', {30, 16, 28, 255}}, {'b', {110, 80, 120, 255}}, {'g', {150, 128, 84, 255}},
+    {0, {0, 0, 0, 0}},
+};
+
 void lore_draw_title_hero(float t) {
-    float x = 70, feet = hill_y(70) + 1;
-    if (!sprite_person_lit("kojiro", x, feet, false, t, C(150, 156, 200), C(170, 180, 255)))
-        person(x, feet, 40, C(12, 12, 24), true);
+    int n = sizeof KOJIRO_COSTAS / sizeof *KOJIRO_COSTAS;
+    float x = 58, feet = hill_y(70) + 1, top = feet - n;
+    bool gust = fract(t * 0.45f) < 0.35f;
+    /* respira: os ombros sobem um pixel e descem */
+    int breath = fract(t / 2.6f) < 0.5f ? 0 : 1;
+    art(KOJIRO_COSTAS + 22, n - 22, x, top + 22, KOJIRO_PAL);
+    art(KOJIRO_COSTAS + 4, 18, x, top + 4 + breath, KOJIRO_PAL);
+    art(gust ? FIAPOS_VENTO : KOJIRO_COSTAS, 4, x, top + breath, KOJIRO_PAL);
 }

@@ -35,9 +35,10 @@ sucessor. Oboro, o mais promissor, venceu o mestre depois de incontáveis
 desafios e tomou o dojo, como manda a tradição, mas percebeu que Hanzo lhe
 concedera a abertura. Passou anos aprendendo as posturas dos outros doze.
 Anos depois, Hanzo encontra Kojiro, e Kojiro sobe a trilha para mostrar que o
-estilo do mestre é inabalável. A tela de título mostra Kojiro em cima de um morro,
-à noite, olhando para o dojo de Hanzo aceso no pico da serra, com as lanternas da
-trilha subindo a montanha; a abertura é narrada sobre essa mesma serra (segurar
+estilo do mestre é inabalável. A tela de título mostra Kojiro de costas em cima de um
+morro, à noite, com a espada na bainha e o vento nos fiapos do coque, olhando
+para o dojo de Hanzo, pequeno e aceso no pico da serra (desenhado pixel a pixel
+em `src/lore.c`); a abertura é narrada sobre essa mesma serra (segurar
 Esc enche um anel e pula; segurar o clique acelera).
 
 ## Regras
