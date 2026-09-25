@@ -1,6 +1,6 @@
 /*
  * personagens.c - gera os lutadores do aparar a partir das pranchas do Samurai #3
- * (o corpo do Kojiro) e dos packs próprios de Raizo, Shizuku, Arashi e Oboro.
+ * (o corpo do Kojiro) e dos packs próprios (Raizo, Shizuku, Oboro e os de duas armas).
  *
  * Não é só troca de paleta:
  *   - tira o chapéu (só o Daichi fica com um) e desenha a cabeça: coque, rabo de
@@ -693,6 +693,7 @@ typedef struct {
     Rgb cor_largura;
     bool par;           /* uma segunda arma na outra mão */
     double par_comprimento; /* katana: a segunda é uma lâmina mais curta, deste tamanho em px */
+    bool reverso;       /* adaga empunhada ao contrário: a lâmina sai da mão para trás */
     Rgb cor_par;
     Rgb guarda;
     int atras, ponta;   /* lança e cajado: px atrás da mão, px da ponta */
@@ -827,7 +828,13 @@ static Char CHARS[] = {
      .sem_saya = true, .cabo = HEX(0x2c2c32),
      .lamina = {HEX(0xfffaf0), HEX(0xc89040)},
      .rastro = {HEX(0xfff6e0), HEX(0xffc860), HEX(0xc08030)}, .elemento = EL_TERRA, .largura = 1,
-     .especial = SP_INVESTIDA, .efeito = FX_GARRA},
+     .especial = SP_INVESTIDA, .efeito = FX_GARRA,
+     /* corpo do samurai de duas espadas (uma garra em cada mão): roupa preta listrada de vermelho, cabelo loiro */
+     .pack = "samurai5", .pack_par = true, .pack_sem_camisa = true,
+     .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
+     .troca = {{HEX(0x1e6f50), HEX(0x3a3642)}, {HEX(0x134c4c), HEX(0x28252e)}, {HEX(0x0c2e44), HEX(0x1a181e)},
+               {HEX(0x391f21), HEX(0xa01820)}, {HEX(0x5d2c28), HEX(0xd02828)},
+               {HEX(0x272727), HEX(0xb88428)}, {HEX(0x3d3d3d), HEX(0xe8b83c)}, {HEX(0x5ac54f), HEX(0xffb020)}}},
     /* 6. Corvo. Espada e uma segunda lâmina mais curta na outra mão. Preto e vermelho. */
     {.id = "karasu", .titulo = "Karasu",
      .arma = {.kind = W_KATANA, .par = true, .par_comprimento = 12, .cor_par = HEX(0xece4e6), .guarda = HEX(0x8c1018)},
@@ -842,10 +849,16 @@ static Char CHARS[] = {
      .sem_saya = true, .cabo = HEX(0x3a2a2e),
      .lamina = {HEX(0xf4eef0), HEX(0x7a1820)},
      .rastro = {HEX(0xffe0e0), HEX(0xff4a4a), HEX(0xa01020)}, .elemento = EL_PENA, .largura = -1, .altura = 1,
-     .especial = SP_INVESTIDA, .efeito = FX_X},
+     .especial = SP_INVESTIDA, .efeito = FX_X,
+     /* corpo do samurai de duas espadas: a espada na direita e a lâmina mais curta na esquerda */
+     .pack = "samurai5", .pack_par = true, .pack_sem_camisa = true,
+     .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
+     .troca = {{HEX(0x1e6f50), HEX(0x5a5058)}, {HEX(0x134c4c), HEX(0x3e363e)}, {HEX(0x0c2e44), HEX(0x1c181c)},
+               {HEX(0x391f21), HEX(0x8c1018)}, {HEX(0x5d2c28), HEX(0xc0182a)},
+               {HEX(0x272727), HEX(0x100c10)}, {HEX(0x3d3d3d), HEX(0x241c26)}, {HEX(0x5ac54f), HEX(0xff2a2a)}}},
     /* 7. Vento. Duas foices (kama), uma em cada mão, e cortes de vento. Verde claro e limão, cachecol. */
     {.id = "hayate", .titulo = "Hayate",
-     .arma = {.kind = W_FOICE, .comprimento = 9, .par = true, .haste = {HEX(0x8a6a44), HEX(0x5a4228)}},
+     .arma = {.kind = W_FOICE, .par = true, .haste = {HEX(0x8a6a44), HEX(0x5a4228)}},
      .cabeca = "vento", .acessorios = {AC_CACHECOL}, .sem_saya = true,
      .camisa = {HEX(0xeefce0), HEX(0xc2eca8), HEX(0x8ccc78), HEX(0x5c9c54)},
      .hakama = {HEX(0x4a6448), HEX(0x384e38), HEX(0x283a2a), HEX(0x1c2a1e), HEX(0x131e15)},
@@ -855,7 +868,13 @@ static Char CHARS[] = {
      .saya = HEX(0x2c4a30), .cabo = HEX(0x5c9c1c),
      .lamina = {HEX(0xf4fff0), HEX(0xbce8b0)},
      .rastro = {HEX(0xf6ffe8), HEX(0xd4ff7a), HEX(0x8ad04a)}, .elemento = EL_VENTO,
-     .especial = SP_ASCENDENTE, .efeito = FX_VORTICE},
+     .especial = SP_ASCENDENTE, .efeito = FX_VORTICE,
+     /* corpo do samurai de duas espadas (uma foice em cada mão): verde claro e limão */
+     .pack = "samurai5", .pack_par = true, .pack_sem_camisa = true,
+     .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
+     .troca = {{HEX(0x1e6f50), HEX(0x8ccc78)}, {HEX(0x134c4c), HEX(0x5c9c54)}, {HEX(0x0c2e44), HEX(0x2c4a30)},
+               {HEX(0x391f21), HEX(0x7cc81c)}, {HEX(0x5d2c28), HEX(0xc8ff3c)},
+               {HEX(0x272727), HEX(0x16261a)}, {HEX(0x3d3d3d), HEX(0x2c4a30)}, {HEX(0x5ac54f), HEX(0xc8ff3c)}}},
     /* 8. Chama. Espada de fogo. Vermelho e amarelo. */
     {.id = "enjin", .titulo = "Enjin", .arma = {.kind = W_KATANA}, .cabeca = "chamas",
      .camisa = {HEX(0xf0584a), HEX(0xc02a2e), HEX(0x861a24), HEX(0x58101c)},
@@ -902,7 +921,7 @@ static Char CHARS[] = {
                {HEX(0x272727), HEX(0x8e9ab4)}, {HEX(0x3d3d3d), HEX(0xd4def0)}, {HEX(0x5ac54f), HEX(0xb4f0ff)}}},
     /* 11. Noite. Uma adaga em cada mão, que brilham roxo. Ninja preto e roxo. */
     {.id = "yoru", .titulo = "Yoru",
-     .arma = {.kind = W_ADAGA, .comprimento = 8, .par = true, .cor_par = HEX(0xd8b0ff), .guarda = HEX(0x4a1c7a)},
+     .arma = {.kind = W_ADAGA, .comprimento = 8, .par = true, .reverso = true, .cor_par = HEX(0xd8b0ff), .guarda = HEX(0x4a1c7a)},
      .cabeca = "capuz",
      .camisa = {HEX(0x4a4660), HEX(0x34324a), HEX(0x252438), HEX(0x1a1a28)},
      .hakama = {HEX(0x343044), HEX(0x26243a), HEX(0x1c1a2c), HEX(0x141322), HEX(0x0d0c18)},
@@ -913,7 +932,13 @@ static Char CHARS[] = {
      .sem_saya = true, .cabo = HEX(0x4a1c7a),
      .lamina = {HEX(0xf4e0ff), HEX(0xb45cff)},
      .rastro = {HEX(0xf6e6ff), HEX(0xc88cff), HEX(0x7a3cd8)}, .elemento = EL_ROXO, .largura = -1,
-     .especial = SP_INVESTIDA, .efeito = FX_X},
+     .especial = SP_INVESTIDA, .efeito = FX_X,
+     /* corpo do samurai de duas espadas (uma adaga em cada mão): ninja preto e roxo */
+     .pack = "samurai5", .pack_par = true, .pack_sem_camisa = true,
+     .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
+     .troca = {{HEX(0x1e6f50), HEX(0x4a3e6a)}, {HEX(0x134c4c), HEX(0x2e2844)}, {HEX(0x0c2e44), HEX(0x1a1628)},
+               {HEX(0x391f21), HEX(0x4a1c7a)}, {HEX(0x5d2c28), HEX(0x8a3ce0)},
+               {HEX(0x272727), HEX(0x141320)}, {HEX(0x3d3d3d), HEX(0x26243a)}, {HEX(0x5ac54f), HEX(0xe8c8ff)}}},
     /* 12. Montanha. Cajado de ferro. Cinza pedra e branco osso. */
     {.id = "jinshi", .titulo = "Jinshi",
      .arma = {.kind = W_CAJADO, .escala = 1.05, .atras = 16, .haste = {HEX(0x70747e), HEX(0x3a3c44)},
@@ -1351,7 +1376,7 @@ static void smear_style(Canvas *cv, const Char *ch) {
         for (int y = 0; y < CH; y++)
             for (int x = 0; x < CW; x++)
                 if (g[y][x] && !m[y][x] && cv->a[y][x].a == 0) cv_put(cv, x, y, ch->rastro[2]);
-    } else if (k == W_DUPLA || k == W_FOICE || (k == W_KATANA && ch->arma.par && !ch->pack_par)) {
+    } else if (!ch->pack_par && (k == W_DUPLA || k == W_FOICE || (k == W_KATANA && ch->arma.par))) {
         /* eco da segunda arma, atrás e um pouco abaixo */
         cv->pen = T_WEAPON;
         for (int y = CH - 1; y >= 0; y--)
@@ -1501,7 +1526,13 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                 /* listras de tigre na roupa, no vermelho de destaque, presas ao corpo (contadas a partir da cabeça) */
                 for (int y = 0; y < CH; y++)
                     for (int x = 0; x < CW; x++) {
-                        if (s->lab[y][x] != SHIRT) continue;
+                        /* no corpo do Samurai #3, a camisa; num pack, a roupa (as duas primeiras cores de `troca`) */
+                        Color o = cv->orig->p[y][x];
+                        bool roupa = ch->pack ? s->lab[y][x] == OTHER && o.a &&
+                                                    ((o.r == ch->troca[0].de.r && o.g == ch->troca[0].de.g && o.b == ch->troca[0].de.b) ||
+                                                     (o.r == ch->troca[1].de.r && o.g == ch->troca[1].de.g && o.b == ch->troca[1].de.b))
+                                              : s->lab[y][x] == SHIRT;
+                        if (!roupa) continue;
                         int rx = x - s->ox + 64, ry = y - s->oy + 64;
                         if ((rx * 2 + ry) % 9 < 2 && (ry / 3) % 2 == 0) set_rgb(cv, x, y, ch->destaque[1]);
                     }
@@ -1535,6 +1566,10 @@ static void perp(const double u[2], double n[2]) {
 
 static void mark(Canvas *cv, int x, int y) { if (cv_ok(x, y)) cv->wpx[y][x] = true; }
 
+/* Adaga invertida na mão da frente: fica deitada por cima do antebraço, então
+   pode pintar em cima do corpo. */
+static bool g_over_body;
+
 static void stroke(Canvas *cv, const Blade *b, double t0, double t1, Rgb core, const Rgb *edge, double offx,
                    double offy, int every, bool only_empty);
 
@@ -1565,7 +1600,7 @@ static void stroke(Canvas *cv, const Blade *b, double t0, double t1, Rgb core, c
     if (sx == 0 && sy == 0) sy = -1;
     for (int i = 0; i < p.n; i++) {
         int x = p.x[i], y = p.y[i];
-        if (only_empty ? !empty_orig(cv, x, y) : !weapon_ok(cv, x, y)) continue;
+        if (only_empty ? !empty_orig(cv, x, y) : !(weapon_ok(cv, x, y) || (g_over_body && cv_ok(x, y) && cv->a[y][x].a))) continue;
         cv_put(cv, x, y, core);
         mark(cv, x, y);
         if (edge && i % every == 0) {
@@ -1797,9 +1832,35 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
         }
         return;
     }
+    /* Corpo de duas espadas com uma lâmina mais curta: a da mão de trás (a esquerda,
+       com o cabo mais atrás) fica com o tamanho da segunda arma. */
+    int front_blade = -1;
+    for (int bi = 0; bi < s->nblades; bi++) {
+        const Blade *b = &s->blades[bi];
+        if (b->nearest > 8 || b->loose || b->farthest < 5) continue;
+        if (front_blade < 0 || b->hilt[0] > s->blades[front_blade].hilt[0]) front_blade = bi;
+    }
+    int left_blade = -1;
+    if (ch->pack && ch->pack_par && w->par_comprimento > 0) {
+        int nh = 0;
+        for (int bi = 0; bi < s->nblades; bi++) {
+            const Blade *b = &s->blades[bi];
+            if (b->nearest > 8 || b->loose || b->farthest < 5) continue;
+            nh++;
+            if (left_blade < 0 || b->hilt[0] < s->blades[left_blade].hilt[0]) left_blade = bi;
+        }
+        if (nh < 2) left_blade = -1;
+    }
     for (int bi = 0; bi < s->nblades; bi++) {
         const Blade *b = &s->blades[bi];
         double full = b->farthest;
+        if (bi == left_blade) {
+            for (int i = 0; i < b->n; i++) {
+                if (b->dist[i] > w->par_comprimento) erase_px(cv, b->x[i], b->y[i]);
+                else mark(cv, b->x[i], b->y[i]);
+            }
+            continue;
+        }
         if (ch->pack && ch->pack_arma) {
             for (int i = 0; i < b->n; i++) mark(cv, b->x[i], b->y[i]);
             continue;
@@ -1861,8 +1922,12 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                 for (int i = 0; i < b->n; i++) erase_px(cv, b->x[i], b->y[i]);
                 if (b->nearest > keep) { skip_pair = true; break; }
                 Rgb grip = ch->cabo, guard = rgb_set(w->guarda) ? w->guarda : ch->destaque[1];
-                draw_short_blade(cv, b, 0, 0, keep, core, edge, guard, grip, false);
-                if (w->par) {
+                Blade rb = *b;  /* empunhadura invertida: a lâmina aponta para o outro lado do punho */
+                if (w->reverso) { rb.u[0] = -b->u[0]; rb.u[1] = -b->u[1]; }
+                g_over_body = w->reverso && bi == front_blade;
+                draw_short_blade(cv, &rb, 0, 0, keep, core, edge, guard, grip, false);
+                g_over_body = false;
+                if (w->par && !ch->pack_par) {
                     /* a outra adaga na mão esquerda, empunhada ao contrário */
                     Blade o = other_hand(b, 0.95);
                     Rgb c2 = rgb_set(w->cor_par) ? w->cor_par : edge;
@@ -1902,10 +1967,11 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                 for (int i = 0; i < b->n; i++) erase_px(cv, b->x[i], b->y[i]);
                 skip_pair = true;
                 if (b->nearest > 3 || b->loose) break;
-                double len = w->comprimento > 0 ? w->comprimento : 9;
+                /* do tamanho da espada: quase tudo é cabo, e a lâmina curva fica na ponta */
+                double len = w->comprimento > 0 ? w->comprimento : KATANA * escala - 2;
                 kama(cv, b, len, w, core, edge, false);
                 /* a outra foice na mão esquerda */
-                if (w->par) {
+                if (w->par && !ch->pack_par) {
                     Blade o = other_hand(b, 0.8);
                     kama(cv, &o, len - 1, w, rgb_set(w->cor_par) ? w->cor_par : core, edge, true);
                 }
@@ -1917,7 +1983,7 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                 double size = w->comprimento > 0 ? w->comprimento : 8;
                 claws(cv, b, size, core, edge, false);
                 /* garras também na mão esquerda */
-                if (w->par) {
+                if (w->par && !ch->pack_par) {
                     Blade o = other_hand(b, 0.8);
                     claws(cv, &o, size - 1, rgb_set(w->cor_par) ? w->cor_par : core, edge, true);
                 }
