@@ -40,7 +40,7 @@ mesmos pixels.
 
 | # | Personagem | Arma | Cabeça e corpo | Cores | Rastro e aura |
 |---:|---|---|---|---|---|
-| — | **Kojiro** | katana | sem chapéu e **sem máscara**: coque solto no alto da cabeça com fita vermelha, mechas na testa, barba rala | original (branco e preto) | branco, sem aura |
+| — | **Kojiro** | katana | sem chapéu e **sem máscara**, como o Musashi de Vagabond: cabelo puxado para trás num coque bagunçado no alto da nuca, com fiapos espetados e fita vermelha, mecha na testa, rosto de perfil à mostra, barba rala | original (branco e preto) | branco, sem aura |
 | 1 | **Daichi** (terra) | espada pesada, lâmina larga | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
 | 2 | **Genbu** (tartaruga) | katana simples + casco nas costas | careca, barbicha; atarracado | verde musgo | verde, esporos |
 | 3 | **Raizo** (touro) | **espadão** do próprio pack, do jeito que vem | **corpo do samurai do espadão**, chapéu de palha; a roupa preta virou marrom | marrom, amarelo | ouro, fagulhas subindo |
@@ -139,10 +139,12 @@ adaga 8 px (as do Yoru empunhadas ao contrário: a lâmina sai do punho para tr�
 e, na mão da frente, fica deitada por cima do antebraço), espada curta 11 px, a
 lâmina curta do Karasu 12 px, garras 10 px, foice do tamanho da espada, quase
 toda cabo (0,8× a katana), com anel de metal e a lâmina curva de 6 px na ponta;
-as garras saem de uma barra de metal sobre os nós dos dedos; a katana branca do
+as garras saem direto dos nós dos dedos, três lâminas abertas em leque; a katana branca do
 Jinshi tem um halo azulado de luar em volta da lâmina. Só a lâmina que sai da mão é
-trocada ou alongada; um pedaço solto dela aparecendo no meio do rastro fica como
-está. Adaga e espada curta são
+trocada ou alongada (também a que começa mais longe, quando a mão está no
+prolongamento dela: o chapéu ou a cabeça escondiam o pedaço de baixo, como a
+lança da Suiren erguida acima da cabeça); um pedaço solto dela aparecendo no
+meio do rastro fica como está. Adaga e espada curta são
 desenhadas inteiras (cabo, guarda e lâmina). Cada pack tem a sua katana medida
 (o Demon, por exemplo, tem uma katana bem mais comprida), então a mesma arma
 fica proporcional ao corpo que a segura.
@@ -258,7 +260,8 @@ lutador e toca as pranchas no ritmo do núcleo:
 | Selo de oboro quebrado | HURT segurado, depois o SHOUT do Demon (ou o GRITO montado), e a fúria dali em diante |
 
 A escolha do golpe segue a preparação do núcleo: alto → ATTACK_3 (desce), baixo
-→ ATTACK_2 (sobe), estocada → DASH_ATTACK (ou ATTACK_1). O último golpe das
+→ ATTACK_2 (sobe), estocada → DASH_ATTACK (ou ATTACK_1), golpe forte →
+STRONG_ATTACK (o salto com a pancada; quem não tem usa o ESPECIAL). O último golpe das
 sequências de três ou mais é o ESPECIAL; o golpe especial de oboro é o
 STRONG_ATTACK. Oboro usa `ATTACK_n_ECO_<NOME>` da postura em que está.
 

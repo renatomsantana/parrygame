@@ -17,10 +17,10 @@
 #define MASTER_COUNT 12   /* aprendizes antes de oboro */
 
 /* ------------------------------------------------------------------ */
-/* Parâmetros comuns. Não existe vida: só postura, de Ren e do mestre. */
+/* Parâmetros comuns. Kojiro ("Ren" no código) tem vida; o mestre, postura.  */
 /* ------------------------------------------------------------------ */
 typedef struct {
-    float renPosture;          /* postura inicial de Ren */
+    float renPosture;          /* vida inicial de kojiro (o nome do campo ficou) */
     float badPostureDamage;    /* ruim: Ren perde */
     float badBossRecover;      /* ruim: o mestre recupera, se tiver essa técnica */
     float goodBossDamage;      /* bom: o mestre perde */
@@ -76,7 +76,9 @@ typedef struct {
 #define MAX_MOVES 14
 #define MAX_CHAIN 5
 
-typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST } MoveLook; /* preparação que denuncia a sequência */
+/* Preparação que denuncia a sequência. LOOK_HEAVY é o golpe forte: o salto com a
+ * pancada de cima (STRONG_ATTACK), de preparação longa e bem visível. */
+typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST, LOOK_HEAVY } MoveLook;
 
 typedef struct {
     const char *name;
@@ -193,7 +195,7 @@ typedef struct {
     double lastPress;
     bool attempted, attackLaunched, feintLaunched, cuePlayed, fakeCuePlayed;
 
-    float renPosture;
+    float renPosture;             /* vida de kojiro */
     float bossPosture;
     int seal;                     /* selo atual (0..sealCount-1) */
     int stanceIndex;

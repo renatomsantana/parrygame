@@ -40,17 +40,19 @@ estilo do mestre é inabalável. A abertura é narrada sobre o pôr do sol da se
 
 ## Regras
 
-- **Não existe vida, só postura.** Kojiro e o adversário têm uma barra de postura cada.
+- **Kojiro tem vida; o adversário, postura.** Errar tira vida de kojiro; aparar
+  quebra a postura do mestre. A vida no fim faz a borda da tela pulsar.
 - Nenhum adversário finta, e o jogo não avisa os golpes: o jogador aprende o moveset.
 - Entre um gesto e outro há 0,3 s de espera, que zera a cada golpe novo.
 
-| Resultado | kojiro | Adversário |
+| Resultado | Vida de kojiro | Postura do adversário |
 |---|---:|---:|
 | Perfeito | +20 | −20 (+2 por aprendiz vencido) |
 | Bom | −4 | −6 (+0,5 por aprendiz vencido) |
 | Ruim (cedo ou sem defesa) | um "golpe" (tabela abaixo) | +20 do 5º em diante |
 
-kojiro começa com 250 de postura e ganha +25 a cada aprendiz vencido. Com
+kojiro começa com 250 de vida e ganha +25 a cada aprendiz vencido (o perfeito
+também devolve vida). Com
 metade da postura, o adversário acelera a preparação (o ritmo dentro de uma
 sequência nunca muda). Quebrar a postura **desarma**: a arma voa, crava no chão
 e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
@@ -86,22 +88,25 @@ Cada lutador tem um repertório fixo de sequências (`moves` em `src/roster.c`),
 com intervalos sempre iguais entre um contato e o próximo. A preparação
 denuncia o tipo de golpe (alto, baixo em gedan subindo, ou estocada), e cada
 vilão tem um sinal próprio no começo de cada sequência (faíscas no chão, gotas
-na lâmina, brasas, penas, névoa…). Os três primeiros têm só dois golpes.
+na lâmina, brasas, penas, névoa…). O **golpe forte** é um só: o salto com a
+pancada de cima (o STRONG_ATTACK do pack, ou o especial de quem não tem), com a
+preparação no ar, longa e bem visível. Os três primeiros têm três sequências,
+nenhuma com mais de dois contatos; do Shizuku em diante, cinco.
 
 | Aprendiz | Sequências (golpes: intervalos em s) |
 |---|---|
-| daichi | rocha (1) · desabamento (2: 1,00) |
-| genbu | casco (1) · mordida (2: 0,42) |
-| raizo | corte do touro (1) · investida dupla (2: 0,85) |
-| shizuku | gota (1) · correnteza (2: 0,50) · queda d'água (3: 0,50 0,45) |
-| garfiel | patada (1) · garras cruzadas (2: 0,40) · bote do tigre (3: 0,40 0,85) |
-| karasu | bicada (1) · garra (2: 0,55) · revoada (3: 0,50 0,90) |
-| hayate | rajada (1) · redemoinho (2: 0,45) · vendaval (3: 0,50 0,90) |
-| enjin | brasa (2: 0,50) · labareda (3: 0,45 0,45) · incêndio (4: 0,45 0,45 0,80) |
-| suiren | onda (1) · ressaca (2: 0,50) · maremoto (4: 0,55 0,50 0,45) |
-| arashi | faísca (1) · trovoada (2: 0,45) · tormenta (3: 0,40 0,40) |
-| yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) |
-| jinshi | pedra (1) · avalanche (3: 0,60 0,60) · cordilheira (4: 0,50 0,50 0,90) |
+| daichi | rocha (1) · desabamento (2: 1,00) · **terremoto** (forte) |
+| genbu | casco (1) · mordida (2: 0,42) · carapaça (2: 0,60) |
+| raizo | corte do touro (1) · investida dupla (2: 0,85) · **chifrada** (forte) |
+| shizuku | gota (1) · correnteza (2: 0,50) · queda d'água (3: 0,50 0,45) · garoa (2: 0,40) · **tsunami** (forte) |
+| garfiel | patada (1) · garras cruzadas (2: 0,40) · bote do tigre (3: 0,40 0,85) · rasgo (2: 0,40) · **salto do tigre** (forte) |
+| karasu | bicada (1) · garra (2: 0,55) · revoada (3: 0,50 0,90) · bando (3: 0,40 0,40) · **mergulho** (forte) |
+| hayate | rajada (1) · redemoinho (2: 0,45) · vendaval (3: 0,50 0,90) · brisa cortante (2: 0,40) · **ciclone** (forte) |
+| enjin | brasa (2: 0,50) · labareda (3: 0,45 0,45) · incêndio (4: 0,45 0,45 0,80) · fagulhas (3: 0,40 0,40) · **erupção** (forte) |
+| suiren | onda (1) · ressaca (2: 0,50) · maremoto (4: 0,55 0,50 0,45) · maré baixa (2: 0,45) · **arpão** (forte) |
+| arashi | faísca (1) · trovoada (2: 0,45) · tormenta (3: 0,40 0,40) · granizo (4: 0,40 0,40 0,40) · **relâmpago** (forte) |
+| yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) · vultos (3: 0,40 0,70) · **eclipse** (forte) |
+| jinshi | pedra (1) · avalanche (3: 0,60 0,60) · cordilheira (4: 0,50 0,50 0,90) · rocha rolante (2: 0,80) · **deslizamento** (forte) |
 | oboro | um eco de cada aprendiz, na postura dele · doze posturas (5, terceiro selo) |
 
 ## Visual e som

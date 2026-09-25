@@ -869,11 +869,13 @@ static MoveLook strike_look(void) {
     MoveLook look = mv ? mv->look : LOOK_HIGH;
     int k = G.duel.comboStrike;
     if (k == 0) return look;
+    if (look == LOOK_HEAVY) return k % 2 ? LOOK_LOW : LOOK_HIGH;
     if (look == LOOK_THRUST) return k % 2 ? LOOK_HIGH : LOOK_THRUST;
     if (k % 2 == 0) return look;
     return look == LOOK_HIGH ? LOOK_LOW : LOOK_HIGH;
 }
 
+/* O golpe forte usa as poses do golpe alto nos bonecos. */
 static Pose windup_pose(MoveLook l) { return l == LOOK_LOW ? POSE_WINDUP_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_WINDUP); }
 static Pose rearm_pose(MoveLook l) { return l == LOOK_LOW ? POSE_REARM_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_REARM_HIGH); }
 static Pose contact_pose(MoveLook l) { return l == LOOK_LOW ? POSE_CONTACT_LOW : (l == LOOK_THRUST ? POSE_CONTACT_THRUST : POSE_CONTACT); }
@@ -894,6 +896,14 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
         if (a) return a;
     }
     const Move *mv = duel_move(&G.duel);
+    if (look == LOOK_HEAVY) {
+        /* golpe forte: o salto com a pancada do pack; sem ele, o especial */
+        a = f->furia ? fa(f, "STRONG_ATTACK_FURIA") : NULL;
+        if (!a) a = fa(f, "STRONG_ATTACK");
+        if (!a) a = fa(f, "ESPECIAL");
+        if (a) return a;
+        look = LOOK_HIGH;
+    }
     if (mv && mv->strikes >= 3 && G.duel.comboStrike == mv->strikes - 1 && (a = fa(f, "ESPECIAL"))) return a;
     if (look == LOOK_THRUST && (a = fa(f, "DASH_ATTACK"))) return a;
     const char *base = look == LOOK_LOW ? "ATTACK_2" : (look == LOOK_THRUST ? "ATTACK_1" : "ATTACK_3");
@@ -1152,7 +1162,7 @@ static void tell_fx(void) {
     vfx(TELL[ti].fx, row, (Vector2){b->x + b->offsetX, GROUND_LOW + TELL[ti].y}, true, TELL[ti].flags, 22);
 }
 
-/* A postura de kojiro quebra: ele cai e o painel de derrota aparece. */
+/* A vida de kojiro acaba: ele cai e o painel de derrota aparece. */
 static void ren_falls(void) {
     rig_pose(&G.ren, POSE_FALLEN, 0.7f, EASE_OUT);
     sprite_fall();
@@ -1160,7 +1170,7 @@ static void ren_falls(void) {
     G.ren.breath = 0;
     G.slowmo = 0.4f;
     G.slowmoTime = 0.9f;
-    fx_popup(&G.fx, "postura quebrada", (Vector2){160, 44}, 1.2f, VERMILION);
+    fx_popup(&G.fx, "kojiro caiu", (Vector2){160, 44}, 1.2f, VERMILION);
     audio_play(SND_DEFEAT, 0.9f, 1);
     G.defeatsHere++;
     G.defeatIndex = 0;
@@ -1342,7 +1352,7 @@ static void update_actors(float dt) {
         b->hopY = 0;
     }
     update_ghosts(dt);
-    /* O cansaço segue a postura de cada um. */
+    /* O cansaço segue a vida de kojiro e a postura do mestre. */
     if (G.state == ST_DUEL || G.state == ST_INTRO) {
         r->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.renPosture / G.settings.renPosture, 0, 1) : 0;
         b->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.bossPosture / G.m->posture, 0, 1) : 0;
@@ -1591,7 +1601,7 @@ static void draw_arena(void) {
     vfx_draw(false);
     arena_draw_front(m->arena, &G.ctx);
     EndMode2D();
-    /* Postura baixa: a borda pulsa. */
+    /* Vida de kojiro no fim: a borda pulsa. */
     if (G.state == ST_DUEL && G.duel.renPosture <= G.settings.renPosture * 0.25f) {
         float p = 0.5f + 0.5f * sinf(G.time * 7);
         for (int i = 0; i < 4; i++)
@@ -1672,15 +1682,16 @@ static void ui_seal(float x, float y, bool broken) {
 
 #define SEAL_STEP 24.0f   /* distância entre os selos, em unidades da interface */
 
-/* Placa de status no jeito RPG Maker: pergaminho pequeno com nome, selos e gauge de postura. */
-static void ui_status(Rectangle r, const char *name, const char *note, int seals, int broken, float value, float ghost, float max, Color a, Color b) {
+/* Placa de status no jeito RPG Maker: pergaminho pequeno com nome, selos e o medidor
+ * (postura dos mestres, vida de kojiro). */
+static void ui_status(Rectangle r, const char *name, const char *note, const char *gauge, int seals, int broken, float value, float ghost, float max, Color a, Color b) {
     parchment(r, 0.96f);
     ink_bold(name, r.x + 18, r.y + 12, 24, INK_TEXT);
     for (int i = 0; i < seals; i++)
         ui_seal(r.x + 18 + ui_width_f(G.uiBold, name, 24) + 12 + i * SEAL_STEP, r.y + 14, i < broken);
     if (note && note[0]) ink_right(note, r.x + r.width - 18, r.y + 12, 18, INK_SOFT);
-    ink("postura", r.x + 18, r.y + 46, 16, INK_SOFT);
-    float gx = r.x + 18 + ui_width("postura", 16) + 16;   /* o medidor começa depois da palavra */
+    ink(gauge, r.x + 18, r.y + 46, 16, INK_SOFT);
+    float gx = r.x + 18 + ui_width(gauge, 16) + 16;   /* o medidor começa depois da palavra */
     ui_gauge(gx, r.y + 50, r.x + r.width - 20 - gx, value, ghost, max, a, b);
 }
 
@@ -1693,12 +1704,14 @@ static void ui_hud(void) {
     float need = 18 + ui_width_f(G.uiBold, name, 24) + (seals ? 16 + seals * SEAL_STEP : 0) + 32 + ui_width(note, 18) + 18;
     float tw = snap(fmaxf(460, need));
     Rectangle top = {snap(UI_W / 2 - tw / 2), 16, tw, 76};
-    ui_status(top, name, note, seals, G.duel.seal, G.shownBoss, G.ghostBoss, m->posture,
+    ui_status(top, name, note, "postura", seals, G.duel.seal, G.shownBoss, G.ghostBoss, m->posture,
               pressure ? (Color){150, 40, 30, 255} : (Color){78, 62, 104, 255}, pressure ? (Color){200, 80, 50, 255} : (Color){134, 108, 160, 255});
     Rectangle bot = {UI_W / 2 - 230, UI_H - 92, 460, 76};
     bool low = G.shownRen <= G.settings.renPosture * 0.25f;
-    ui_status(bot, "kojiro", NULL, 0, 0, G.shownRen, G.ghostRen, G.settings.renPosture,
-              low ? (Color){150, 40, 30, 255} : (Color){170, 76, 30, 255}, low ? (Color){210, 70, 50, 255} : (Color){226, 142, 60, 255});
+    /* kojiro não tem postura: tem vida, em vermelho, que pulsa quando está no fim */
+    float pulse = low ? 0.5f + 0.5f * sinf(G.time * 8) : 0;
+    ui_status(bot, "kojiro", NULL, "vida", 0, 0, G.shownRen, G.ghostRen, G.settings.renPosture,
+              (Color){(unsigned char)(140 + 40 * pulse), 26, 30, 255}, (Color){(unsigned char)(212 + 30 * pulse), 62, 56, 255});
 
     if (G.bannerTime > 0) {
         float a = clampf(G.bannerTime * 2, 0, 1);

@@ -10,12 +10,12 @@ Hanzo era o sensei de todos. Oboro, o mais forte dos alunos, se voltou contra el
 
 ## Regras de combate que a arte precisa mostrar
 
-- **Não existe vida, só postura.** Todo mundo (Kojiro e vilões) tem uma barra de postura. Encheu, a guarda quebra e o próximo golpe mata.
-- **Parry bom:** defendeu no tempo, mas não perfeito. Kojiro ainda perde um pouco de postura, o inimigo perde um pouco.
+- **Kojiro tem vida; os vilões, postura.** Errar tira vida de Kojiro; aparar quebra a postura do vilão. A postura quebrada abre a guarda e o próximo golpe mata.
+- **Parry bom:** defendeu no tempo, mas não perfeito. Kojiro ainda perde um pouco de vida, o inimigo perde um pouco de postura.
 - **Parry perfeito:** defendeu no frame certo. Kojiro não perde nada, o inimigo perde muito.
 - **Postura quebrada:** o personagem fica aberto por um tempo curto. Se levar golpe nessa janela, morre.
 
-Como não tem barra de vida, **a postura tem que aparecer no corpo do personagem**, não só na interface. O jogador deve olhar pro sprite e saber quem tá quase caindo.
+**A postura dos vilões tem que aparecer no corpo do personagem**, não só na interface. O jogador deve olhar pro sprite e saber quem tá quase caindo.
 
 ---
 

@@ -203,6 +203,7 @@ typedef struct {
     double u[2], hilt[2];
     double nearest, farthest;  /* distância do cabo até o começo visível e até a ponta */
     bool loose;                /* pack: nenhuma mão por perto (a ponta aparecendo no rastro) */
+    bool hand;                 /* achou a mão no prolongamento da lâmina */
 } Blade;
 
 typedef struct {
@@ -636,8 +637,15 @@ static void find_blades(Seg *s) {
         b->nearest = tmin - th;
         b->farthest = tmax - th;
         b->loose = loose;
+        b->hand = found && best <= 20;
         free(t);
     }
+}
+
+/* A lâmina sai da mão: começa perto dela, ou começa mais longe mas a mão está
+   no prolongamento (o chapéu ou a cabeça escondiam o pedaço de baixo). */
+static bool blade_at_hand(const Blade *b) {
+    return !b->loose && (b->nearest <= 8 || (b->hand && b->nearest <= 16));
 }
 
 /* Comprimento da katana do pack, do cabo à ponta (a mediana das lâminas que
@@ -1012,13 +1020,14 @@ typedef struct {
 } Head;
 
 static const Head HEADS[] = {
-    /* Kojiro: coque solto no alto da cabeça, preso com fita vermelha, mechas caindo na
-       testa e na frente da orelha, rosto à mostra (sem a máscara do pack) e barba rala. */
-    {"coque", {{-1, 5, "H.H"}, {0, 4, "HHiH"}, {1, 4, "HhhiH"}, {2, 5, "HhH"}, {3, 5, "aA"},
-               {4, 4, "HHHhiH"}, {5, 3, "HHHHHhiH"}, {6, 3, "HHHHHHHiH"}, {7, 4, "HHHHHhHF"},
-               {8, 4, "HHHHfFeF"}, {9, 7, "HfFFF"}, {10, 7, "HFkF"}},
-     {{{-2, 4, "H"}, {-1, 3, "HH"}, {0, 2, "H"}, {5, 2, "H"}, {6, 1, "HH"}, {7, 2, "H"}, {8, 3, "H"}},
-      {{-2, 6, "H"}, {-1, 2, "HH"}, {0, 3, "H"}, {5, 1, "HH"}, {6, 2, "H"}, {7, 1, "H"}, {8, 2, "H"}}}},
+    /* Kojiro (o Musashi de Vagabond): cabelo puxado para trás num coque bagunçado no
+       alto da nuca, com fiapos espetados, preso com fita vermelha de pontas soltas;
+       mecha caindo na testa, rosto à mostra e barba rala no queixo. */
+    {"coque", {{-2, 4, "h..H"}, {-1, 3, "H.HHiH"}, {0, 4, "HhhiH"}, {1, 4, "HHhhH"}, {2, 4, "aAHHH"},
+               {3, 5, "HHHHhiH"}, {4, 4, "HhHHHHhiH"}, {5, 4, "HHhHHHHhH"}, {6, 4, "HHHhHHFFH"},
+               {7, 4, "HHHHHhFeF"}, {8, 5, "HHHfFFFFf"}, {9, 7, "HkfFkf"}, {10, 8, "kkFf"}},
+     {{{-3, 6, "H"}, {-2, 2, "H"}, {0, 2, "H"}, {3, 3, "H"}, {6, 2, "H"}, {7, 2, "HH"}, {8, 3, "H"}},
+      {{-3, 5, "H"}, {-2, 3, "H"}, {0, 3, "H"}, {1, 2, "H"}, {6, 3, "H"}, {7, 1, "H"}, {8, 2, "HH"}}}},
     /* Hanzo: coque grande de cabelo branco, testa alta, sem barba. */
     {"mestre", {{1, 4, "HHH"}, {2, 3, "HhiiH"}, {3, 4, "HhhH"}, {4, 5, "aA"}, {5, 5, "HHhiH"},
                 {6, 4, "HHHhiiF"}, {7, 4, "HHHhFFFF"}, {8, 4, "HHHfFkeF"}}},
@@ -1636,18 +1645,13 @@ static Blade other_hand(const Blade *b, double open) {
 static void claws(Canvas *cv, const Blade *b, double size, Rgb core, Rgb edge, bool behind) {
     double ang = atan2(b->u[1], b->u[0]), n[2];
     perp(b->u, n);
-    /* barra de metal sobre os nós dos dedos, de onde saem as três lâminas */
-    for (int k = -2; k <= 2; k++) {
-        int x = pyround(b->hilt[0] + b->u[0] * 0.5 + n[0] * k * 0.7), y = pyround(b->hilt[1] + b->u[1] * 0.5 + n[1] * k * 0.7);
-        bool ok = behind ? empty_orig(cv, x, y) && cv->a[y][x].a == 0 : cv_ok(x, y);
-        if (ok) cv_put(cv, x, y, abs(k) == 2 ? (Rgb){70, 70, 80} : (Rgb){130, 130, 142});
-    }
-    static const double da[3] = {-0.28, 0.0, 0.28};
+    /* três lâminas saindo direto dos nós dos dedos, abertas em leque (sem barra) */
+    static const double da[3] = {-0.22, 0.0, 0.22};
     static Pts p;
     for (int j = 0; j < 3; j++) {
         double a = ang + da[j], u2x = cos(a), u2y = sin(a);
-        double p0x = b->hilt[0] + b->u[0] * 1.0 + n[0] * (j - 1) * 0.6;
-        double p0y = b->hilt[1] + b->u[1] * 1.0 + n[1] * (j - 1) * 0.6;
+        double p0x = b->hilt[0] + b->u[0] * 0.6 + n[0] * (j - 1) * 0.9;
+        double p0y = b->hilt[1] + b->u[1] * 0.6 + n[1] * (j - 1) * 0.9;
         double ln = size - (j != 1 ? 1 : 0);
         line_pts(&p, p0x, p0y, p0x + u2x * ln, p0y + u2y * ln);
         for (int i = 0; i < p.n; i++) {
@@ -1655,7 +1659,8 @@ static void claws(Canvas *cv, const Blade *b, double size, Rgb core, Rgb edge, b
             bool ok = behind ? empty_orig(cv, x, y) && cv->a[y][x].a == 0
                              : cv_ok(x, y) && (lab_at(cv, x, y) == NONE || lab_at(cv, x, y) == BLADE);
             if (ok) {
-                cv_put(cv, x, y, i < 2 ? edge : core);
+                /* a raiz fica na cor da borda (sai de dentro da mão); a ponta, clara */
+                cv_put(cv, x, y, i == 0 ? edge : core);
                 mark(cv, x, y);
             }
         }
@@ -1897,7 +1902,7 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
         bool skip_pair = false;
         /* só a lâmina que sai da mão cresce ou vira outra arma; pedaço solto (a
            ponta aparecendo no meio do rastro) fica como está */
-        bool at_hand = b->nearest <= 8 && !b->loose;
+        bool at_hand = blade_at_hand(b);
         switch (w->kind) {
             case W_KATANA: case W_DUPLA:
                 if (escala < 1.0 && at_hand) {

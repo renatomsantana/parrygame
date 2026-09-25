@@ -60,7 +60,7 @@ static Tally play(const MasterProfile *m, uint32_t seed, double lead, double lim
 static void test_settings(void) {
     Settings s;
     settings_default(&s);
-    CHECK(s.renPosture == 250, "kojiro começa com 250 de postura");
+    CHECK(s.renPosture == 250, "kojiro começa com 250 de vida");
     CHECK(s.perfectBossDamage > s.goodBossDamage, "perfeito vale mais que bom");
     CHECK(s.goodRenCost < s.badPostureDamage, "bom custa menos que ruim");
 }
@@ -506,9 +506,9 @@ static void test_special(void) {
 static void test_movesets(void) {
     Settings s;
     settings_default(&s);
-    /* Os três primeiros são simples: dois golpes, nenhum com mais de dois contatos. */
+    /* Os três primeiros são simples: três sequências, nenhuma com mais de dois contatos. */
     for (int i = 0; i < 3; i++) {
-        CHECK(roster_get(i)->moveCount == 2, "%s tem só dois golpes", roster_get(i)->name);
+        CHECK(roster_get(i)->moveCount == 3, "%s tem só três sequências", roster_get(i)->name);
         for (int k = 0; k < roster_get(i)->moveCount; k++) CHECK(roster_get(i)->moves[k].strikes <= 2, "%s: nada acima de dois contatos", roster_get(i)->name);
     }
     /* Cada golpe tem nome próprio: nenhum mestre repete o de outro. */
@@ -530,6 +530,10 @@ static void test_movesets(void) {
                 CHECK(mv->gaps[g] >= s.minChainGap - 1e-6, "%s: %s dá tempo de aparar cada golpe", m->name, mv->name);
         }
         CHECK(chain, "%s tem sequências de mais de um golpe", m->name);
+        /* do Daichi ao Jinshi, cada um tem o seu golpe forte (o salto com a pancada) */
+        bool heavy = false;
+        for (int k = 0; k < m->moveCount; k++) heavy |= m->moves[k].look == LOOK_HEAVY;
+        if (!m->isBigBoss && i != 1) CHECK(heavy, "%s tem um golpe forte", m->name);
     }
     /* O intervalo entre contatos de uma sequência é exatamente o do moveset. */
     const MasterProfile *tetsu = roster_get(0);
