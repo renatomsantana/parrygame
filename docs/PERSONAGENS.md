@@ -87,6 +87,11 @@ Ou em partes: `make personagens` e depois `./personagens` (opções `--so enjin
 yoru`, `--folhas`, `--lista`, `--entrada`, `--saida`). Não abre janela: usa só
 as funções de imagem e de arquivo da raylib.
 
+As tiras de origem vêm do zip com todas as animações dos packs: `make packs
+ZIP=arquivo.zip` (o `tools/instalar_packs.sh`) põe cada uma no lugar e com o
+nome certo, inclusive as que vêm trocadas no zip (o "ATTACK 1" do Samurai #4 e
+do #5 é o ATTACK_2 daqui, e vice-versa) e as de fúria do Demon ("FLAMING SWORD").
+
 Na primeira vez, o programa copia `assets/sprites/musashi/` (o pack original)
 para `assets/sprites/_original/` e passa a ler dali. Depois grava uma pasta por
 personagem em `assets/sprites/<nome>/`, cada uma com as mesmas pranchas e um
@@ -461,6 +466,7 @@ O Hanzo de barba branca (pack B) já está encaixado em `_packs/hanzo/`.
 
 O repositório é público e as pranchas são do pack pago da Mattz Art, então os
 PNGs de `c_game/assets/sprites/` (os originais e os gerados, que saem deles)
-estão no `.gitignore`. O programa e os `sprite.txt` das pranchas de origem
+(e os efeitos de `_fx/` e as teclas de `_ui/`, do mesmo zip) estão no
+`.gitignore`. O programa e os `sprite.txt` das pranchas de origem
 (`_original/` e `_packs/`) vão para o git; os `sprite.txt` gerados em cada pasta
 de personagem saem do `make sprites`, como as tiras.

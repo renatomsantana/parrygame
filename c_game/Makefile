@@ -29,6 +29,10 @@ personagens: tools/personagens.c
 sprites: personagens
 	./personagens --folhas
 
+# Põe o zip das animações da Mattz Art nas pastas certas: make packs ZIP=arquivo.zip
+packs:
+	tools/instalar_packs.sh "$(ZIP)"
+
 apara: $(CORE) $(GAME) src/*.h
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(CORE) $(GAME) -o $@ $(RAYLIB_LIBS) -lm
 
@@ -44,4 +48,4 @@ run: apara
 clean:
 	rm -f apara core_test personagens
 
-.PHONY: all test run clean sprites
+.PHONY: packs all test run clean sprites

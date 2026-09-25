@@ -9,17 +9,19 @@ todos código daqui. História em `../aparar_lore.md`; direção de arte em
 
 ```sh
 brew install raylib   # uma vez
-make sprites          # gera os lutadores em pixel art (precisa dos packs, abaixo)
+make packs ZIP=all_the_animations.zip   # põe as tiras dos packs nas pastas (uma vez)
+make sprites          # gera os lutadores em pixel art
 make run              # compila e abre o jogo
 make test             # regras do núcleo, sem janela
 ```
 
-Os lutadores são sprites gerados por `tools/personagens.c` a partir de packs
-pagos da Mattz Art, que não vão para o git (o repositório é público). Para ter
-os sprites no jogo, coloque as tiras PNG do Samurai #3 em
-`assets/sprites/_original/` e as dos outros packs em
-`assets/sprites/_packs/<pack>/` (os `sprite.txt` já estão lá) e rode
-`make sprites`. Sem as tiras, o jogo roda com os bonecos de `src/rig.c`.
+Os lutadores, os efeitos e as teclas vêm de packs pagos da Mattz Art, que não
+vão para o git (o repositório é público). `make packs ZIP=...` pega o zip com
+todas as animações e põe cada tira no lugar certo (`tools/instalar_packs.sh`):
+o Samurai #3 em `assets/sprites/_original/`, os outros packs em
+`assets/sprites/_packs/<pack>/` (os `sprite.txt` já estão lá), os efeitos em
+`_fx/` e as teclas em `_ui/`. Depois, `make sprites` gera os lutadores. Sem as
+tiras, o jogo roda com os bonecos de `src/rig.c` e as partículas de sempre.
 
 Controles: **clique, Espaço, J ou Enter** aparam e avançam as falas.
 Esc pausa (T volta à trilha, M volta ao menu, Q sai). Na trilha, o botão "menu"
@@ -120,7 +122,12 @@ na lâmina, brasas, penas, névoa…). Os três primeiros têm só dois golpes.
   e volta em fúria. Quem não tem prancha parada respira (o tronco desce 1 px).
 - Sem as pranchas: bonecos por articulação (`src/rig.c`), com poses interpoladas,
   IK, respiração e cansaço.
-- Parry perfeito: estrela branca e dourada, anel de choque, flash e sino.
+- Parry perfeito: estrela branca e dourada, anel de choque, flash e sino, e os
+  raios de luz da folha de efeitos atrás do choque. Bom: faíscas douradas. Erro:
+  estouro vermelho. Cada mestre abre a sequência com o efeito do elemento dele
+  (poeira, casco, respingo, garras, redemoinho, labareda, onda, raios, noite,
+  montanha; oboro, o do aprendiz da postura, em vermelho). Os efeitos de energia
+  ficam atrás dos lutadores e somam luz.
   Quebra de postura: tela sem cor, bordas escuras, rachadura branca, cerâmica e
   taiko, meio segundo de silêncio. Execução: tela em duas cores e um traço de
   corte atravessando.
@@ -132,6 +139,7 @@ na lâmina, brasas, penas, névoa…). Os três primeiros têm só dois golpes.
   layout é pensado em 1280 × 720, mas tudo cai na grade de 320 × 180.
 - As falas do duelo ficam numa caixa no alto, para os lutadores aparecerem
   inteiros; na cena de hanzo e no final, hanzo e kojiro também são os sprites.
+- Teclas de pixel na pausa e, no primeiro duelo, a dica de como aparar.
 - Trilha sonora sintetizada por cenário; vitória e derrota com sons curtos e sutis.
 
 Da direção de arte ficaram de fora os golpes imbloqueáveis e a esquiva (o jogo é
@@ -144,7 +152,7 @@ de um botão só).
 | `src/core.c`, `core.h` | Regras puras: relógio, tentativa, postura, selos, moveset, trilha. Sem raylib. |
 | `src/roster.c` | Os treze lutadores (doze aprendizes e oboro), falas, conselhos de hanzo e a lore. **Balanceamento é aqui.** |
 | `src/main.c` | Telas, coreografia, interface, visuais de cada lutador (`MASTER_LOOKS`) |
-| `src/sprites.c` | Lê as pranchas geradas (`sprite.txt` e tiras) e desenha e toca os lutadores em pixel art |
+| `src/sprites.c` | Lê as pranchas geradas (`sprite.txt` e tiras) e desenha e toca os lutadores em pixel art; efeitos em folha e teclas |
 | `src/rig.c` | Bonecos (quando faltam as pranchas): poses, passos, cansaço, roupas, armas |
 | `src/katana3d.c` | A katana 3D dentro do mundo em pixel |
 | `src/arenas.c` | Os treze cenários dos duelos (e o do título) |
@@ -152,6 +160,7 @@ de um botão só).
 | `src/fx.c` | Faíscas, estrela, anéis, arcos, flash, tremor |
 | `src/audio.c` | Efeitos e trilha ambiente sintetizados |
 | `tests/core_test.c` | Verificações do núcleo (`make test`) |
+| `tools/instalar_packs.sh` | Põe o zip das animações nas pastas do gerador e do jogo (`make packs ZIP=...`) |
 | `tools/personagens.c` | Gera os 15 lutadores (cabeça, arma, corpo, rastro, aura, golpe especial, pose desarmada), uma pasta por nome (kojiro, raizo, yoru, garfiel...), a partir do Samurai #3 e dos packs de `assets/sprites/_packs/` (Raizo com o espadão, Shizuku, Arashi, Oboro com as posturas dos outros e o grito): `make sprites`; ver `../docs/PERSONAGENS.md` |
 
 Para testar sem jogar: `./apara --master 13 --duel --demo` põe um robô aparando

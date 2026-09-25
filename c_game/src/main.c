@@ -45,6 +45,7 @@
 #define RH (LOW_H * RS)
 #define SWORD_GRAVITY 380.0f
 #define GHOST_MAX 10
+#define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
 #define SKIP_HOLD 2.0f        /* segundos segurando Esc para pular a abertura */
 
 static const char *POST_FS =
@@ -200,6 +201,7 @@ static struct {
     float bossStep, bossStepTo, bossStepSpeed; /* passo do mestre até o alcance do golpe */
     float bossStrikeStep;     /* onde ele precisa estar no contato */
     bool gritoPending;
+    struct { const SprFx *fx; int row; Vector2 pos; float t, fps; bool flip, back, glow; } vfx[VFX_MAX];
     Fx fx;
     FlySword sword;
 
@@ -591,6 +593,48 @@ static void fighter_load(Fighter *f, const char *id) {
     fighter_idle(f);
 }
 
+/* Efeitos das folhas do pack (assets/sprites/_fx): tocam uma vez. Os de energia
+ * (brilho, raios, fogo) vão atrás dos lutadores e somam luz; poeira e sangue vão
+ * na frente. Sem a folha, ficam só as partículas. */
+enum { VFX_FRONT = 0, VFX_BACK = 1, VFX_GLOW = 2 };
+
+static void vfx(const char *name, int row, Vector2 pos, bool flip, int flags, float fps) {
+    const SprFx *f = spr_fx(name);
+    if (!f) return;
+    int slot = 0;
+    for (int i = 0; i < VFX_MAX; i++) {
+        if (!G.vfx[i].fx) { slot = i; break; }
+        if (G.vfx[i].t > G.vfx[slot].t) slot = i;   /* sem vaga: troca o mais antigo */
+    }
+    G.vfx[slot].fx = f;
+    G.vfx[slot].row = row;
+    G.vfx[slot].pos = pos;
+    G.vfx[slot].t = 0;
+    G.vfx[slot].fps = fps;
+    G.vfx[slot].flip = flip;
+    G.vfx[slot].back = flags & VFX_BACK;
+    G.vfx[slot].glow = flags & VFX_GLOW;
+}
+
+static void vfx_update(float dt) {
+    for (int i = 0; i < VFX_MAX; i++) {
+        if (!G.vfx[i].fx) continue;
+        G.vfx[i].t += dt;
+        if ((int)(G.vfx[i].t * G.vfx[i].fps) >= G.vfx[i].fx->frames) G.vfx[i].fx = NULL;
+    }
+}
+
+static void vfx_draw(bool back) {
+    for (int i = 0; i < VFX_MAX; i++) {
+        if (!G.vfx[i].fx || G.vfx[i].back != back) continue;
+        if (G.vfx[i].glow) BeginBlendMode(BLEND_ADDITIVE);
+        spr_fx_draw(G.vfx[i].fx, G.vfx[i].row, (int)(G.vfx[i].t * G.vfx[i].fps), G.vfx[i].pos, G.vfx[i].flip, WHITE);
+        if (G.vfx[i].glow) EndBlendMode();
+    }
+}
+
+static void vfx_clear(void) { memset(G.vfx, 0, sizeof G.vfx); }
+
 /* Onde a lâmina de kojiro espera o golpe, a partir dos pés dele. */
 static int ren_guard_x(void) { return G.renS.set && G.renS.set->hasGuard ? G.renS.set->guardX : 12; }
 
@@ -622,6 +666,7 @@ static void start_master(int index) {
     G.defeatsHere = 0;
     setup_actors();
     fx_clear(&G.fx);
+    vfx_clear();
     memset(&G.ctx, 0, sizeof G.ctx);
     audio_music(G.m->arena);
     audio_music_intensity(0);
@@ -642,6 +687,7 @@ static void start_duel(void) {
     duel_init(&G.duel, &G.settings, G.m, (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919));
     setup_actors();
     fx_clear(&G.fx);
+    vfx_clear();
     G.shownRen = G.ghostRen = G.settings.renPosture;
     G.shownBoss = G.ghostBoss = G.m->posture;
     G.hitstop = 0;
@@ -723,6 +769,7 @@ static void update_sword(float dt) {
         s->angle = s->target;
         Vector2 tip = {s->pos.x + cosf(s->target * DEG2RAD) * s->len / 2, GROUND_LOW};
         fx_burst(&G.fx, P_DUST, tip, 10, 50, 0.9f, -1.57f, (Color){210, 190, 160, 170}, (Color){140, 120, 100, 120});
+        vfx("70", 4, (Vector2){tip.x, GROUND_LOW - 8}, false, VFX_FRONT, 20);
         fx_burst(&G.fx, P_SPARK, tip, 6, 70, 0.8f, -1.57f, (Color){255, 240, 200, 255}, (Color){255, 190, 90, 255});
         fx_kick(&G.fx, 1.5f, 0.15f);
         audio_play(SND_THUD, 0.7f, 1);
@@ -989,6 +1036,7 @@ static void on_impact(const DuelEvent *e) {
             fx_burst(&G.fx, P_SPARK, at, 12, 130, 0.9f, 3.14f + 0.5f, (Color){255, 240, 200, 255}, (Color){255, 180, 60, 255});
             fx_ring(&G.fx, at, 180, 0.3f, 2, (Color){255, 245, 210, 230});
             fx_star(&G.fx, at, 16, 0.12f);
+            vfx("652", 5, at, false, VFX_BACK | VFX_GLOW, 32);   /* raios de luz atrás do choque */
             fx_flash(&G.fx, (Color){255, 250, 235, 90}, 1);
             fx_kick(&G.fx, 1.5f, 0.1f);
             rig_pose(r, POSE_DEFLECT, 0.05f, EASE_OUT);
@@ -1005,6 +1053,7 @@ static void on_impact(const DuelEvent *e) {
             audio_play(SND_GOOD, 0.9f, 1);
             fx_burst(&G.fx, P_SPARK, at, 10, 110, 1.0f, -0.6f, (Color){255, 230, 120, 255}, (Color){255, 170, 50, 255});
             fx_flash(&G.fx, (Color){255, 230, 120, 40}, 1);
+            vfx("63", 0, at, false, VFX_GLOW, 24);                /* faíscas douradas */
             rig_pose(r, POSE_DEFLECT, 0.06f, EASE_OUT);
             rig_then(r, POSE_IDLE, 0.4f, EASE_INOUT);
             rig_pose(b, POSE_FOLLOW, 0.08f, EASE_OUT);
@@ -1020,6 +1069,7 @@ static void on_impact(const DuelEvent *e) {
             fx_burst(&G.fx, P_SPARK, hit, 14, 140, 1.1f, 3.14f, (Color){255, 80, 60, 255}, (Color){255, 160, 90, 255});
             fx_burst(&G.fx, P_DUST, (Vector2){r->x, GROUND_LOW - 1}, 6, 40, 0.6f, 3.14f, (Color){200, 180, 160, 140}, (Color){120, 100, 90, 110});
             fx_flash(&G.fx, (Color){255, 40, 30, 80}, 1);
+            vfx("71", 7, hit, false, VFX_FRONT, 28);              /* estouro vermelho em kojiro */
             fx_kick(&G.fx, 3, 0.2f);
             rig_pose(r, POSE_HURT, 0.06f, EASE_OUT);
             rig_then(r, POSE_IDLE, 0.45f, EASE_INOUT);
@@ -1041,6 +1091,7 @@ static void on_impact(const DuelEvent *e) {
         Vector2 c = {b->x, GROUND_LOW - 30};
         fx_burst(&G.fx, P_SHARD, c, 20, 160, 1.4f, -1.57f, (Color){230, 230, 255, 255}, (Color){180, 140, 255, 255});
         fx_ring(&G.fx, c, 320, 0.5f, 3, WHITE);
+        vfx("184", 5, c, false, VFX_BACK | VFX_GLOW, 24);        /* onda de choque */
         fx_flash(&G.fx, WHITE, 1);
         fx_kick(&G.fx, 4, 0.35f);
         rig_pose(b, POSE_STAGGER, 0.15f, EASE_OUT);
@@ -1075,12 +1126,37 @@ static void tell_fx(void) {
         default: fx_burst(&G.fx, P_DUST, mid, 18, 16, 3.14f, 0, (Color){150, 90, 200, 150}, (Color){90, 50, 130, 130}); break;
     }
     audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
+    /* E o efeito do pack de cada um: onde nasce (no chão ou no corpo) e a cor. Oboro
+     * usa o do aprendiz da postura em que está, em vermelho. */
+    static const struct { const char *fx; int row; float y; int flags; } TELL[ROSTER_SIZE] = {
+        {"70", 4, -8, VFX_FRONT},               /* daichi: poeira de terra */
+        {"26", 3, -30, VFX_BACK | VFX_GLOW},    /* genbu: o casco, anel verde */
+        {"14", 7, -30, VFX_BACK | VFX_GLOW},    /* raizo: rajada vermelha */
+        {"06", 2, -30, VFX_BACK},               /* shizuku: respingo */
+        {"64", 0, -30, VFX_BACK | VFX_GLOW},    /* garfiel: garras */
+        {"64", 8, -30, VFX_BACK},               /* karasu: asas escuras */
+        {"03", 3, -30, VFX_BACK | VFX_GLOW},    /* hayate: redemoinho */
+        {"69", 0, -27, VFX_BACK | VFX_GLOW},    /* enjin: labareda */
+        {"04", 2, -24, VFX_BACK},               /* suiren: onda */
+        {"195", 2, -30, VFX_BACK | VFX_GLOW},   /* arashi: raios */
+        {"197", 1, -30, VFX_BACK | VFX_GLOW},   /* yoru: estrela da noite */
+        {"665", 5, -21, VFX_BACK},              /* jinshi: o pico da montanha */
+        {"197", 7, -30, VFX_BACK | VFX_GLOW},   /* oboro */
+    };
+    int ti = (G.m->id - 1) % ROSTER_SIZE, row = TELL[ti].row;
+    if (G.m->isBigBoss) {
+        const char *stance = duel_stance(&G.duel)->name;
+        for (int i = 0; i < MASTER_COUNT && stance; i++)
+            if (!strcmp(roster_get(i)->style, stance)) { ti = i; row = 7; }
+    }
+    vfx(TELL[ti].fx, row, (Vector2){b->x + b->offsetX, GROUND_LOW + TELL[ti].y}, true, TELL[ti].flags, 22);
 }
 
 /* A postura de kojiro quebra: ele cai e o painel de derrota aparece. */
 static void ren_falls(void) {
     rig_pose(&G.ren, POSE_FALLEN, 0.7f, EASE_OUT);
     sprite_fall();
+    vfx("70", 4, (Vector2){G.ren.x + G.ren.offsetX, GROUND_LOW - 8}, false, VFX_FRONT, 20);
     G.ren.breath = 0;
     G.slowmo = 0.4f;
     G.slowmoTime = 0.9f;
@@ -1164,6 +1240,7 @@ static void handle_events(void) {
                 G.ctx.seal = e->i;
                 G.ctx.lightning = 1;
                 G.gritoPending = true;
+                vfx("197", 7, (Vector2){G.boss.x + G.boss.offsetX, GROUND_LOW - 30}, true, VFX_BACK | VFX_GLOW, 20);
                 audio_music_intensity(e->i / 2.0f);
                 break;
             }
@@ -1508,8 +1585,10 @@ static void draw_arena(void) {
     }
     draw_shadow(&G.boss);
     draw_shadow(&G.ren);
+    vfx_draw(true);
     DrawTexturePro(G.actors.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, (Rectangle){0, 0, LOW_W, LOW_H}, (Vector2){0, 0}, 0, WHITE);
     fx_draw_world(&G.fx);
+    vfx_draw(false);
     arena_draw_front(m->arena, &G.ctx);
     EndMode2D();
     /* Postura baixa: a borda pulsa. */
@@ -1813,15 +1892,44 @@ static const char *ENDING_TEXT =
     "do mestre, e sim a última lição, a que ele se recusou a aprender. Kojiro subiu a serra e devolveu a katana a "
     "Hanzo. O velho a recebeu sem dizer nada. Não precisava.";
 
+/* Tecla de pixel (a folha de teclas do pack) com o rótulo ao lado; sem a folha,
+ * a tecla vai escrita. Devolve a largura usada. */
+static float ui_key(const char *key, const char *label, float x, float y, Color c) {
+    float w = spr_key(key, x, y, PX, false, WHITE);
+    if (w <= 0) {
+        ink(lower(key), x, y + 14, 26, c);
+        w = ui_width(lower(key), 26);
+    }
+    if (!label) return w;
+    float lx = x + fmaxf(w, 64) + 24;
+    ink(label, lx, y + 14, 26, c);
+    return lx + ui_width(label, 26) - x;
+}
+
 static void ui_pause(void) {
     DrawRectangle(0, 0, UI_W, UI_H, fadec(INK, 0.6f));
-    Rectangle r = {UI_W / 2 - 250, 170, 500, 360};
+    Rectangle r = {UI_W / 2 - 250, 120, 500, 470};
     parchment(r, 1);
     scroll_rods(r, 1);
     ink_bold_center("pausa", UI_W / 2.0f, r.y + 30, 54, INK_TEXT);
-    const char *items[] = {"esc   continuar", "t   voltar à trilha", G.fx.shakeEnabled ? "f   tremor ligado" : "f   tremor desligado",
-                           "m   voltar ao menu", "q   sair"};
-    for (int i = 0; i < 5; i++) ink_center(items[i], UI_W / 2.0f, r.y + 120 + i * 44.0f, 26, INK_SOFT);
+    const char *keys[] = {"ESC", "T", "F", "M", "Q"};
+    const char *items[] = {"continuar", "voltar à trilha", G.fx.shakeEnabled ? "tremor ligado" : "tremor desligado", "voltar ao menu", "sair"};
+    for (int i = 0; i < 5; i++) ui_key(keys[i], items[i], r.x + 120, r.y + 108 + i * 68.0f, INK_SOFT);
+}
+
+/* Primeiro duelo: como se apara, até o primeiro parry que pega. */
+static void ui_first_hint(void) {
+    if (G.camp.index != 0 || G.state != ST_DUEL || G.duel.perfects + G.duel.goods > 0) return;
+    float a = clampf(G.stateTime - 1.0f, 0, 1);
+    if (a <= 0) return;
+    Color c = fadec((Color){236, 222, 192, 255}, a);
+    float w = ui_width("aparar", 26) + 24 + 128 + 24 + ui_width("ou clique", 26);
+    float x = UI_W / 2.0f - w / 2, y = 348;   /* acima das cabeças, abaixo da faixa da postura */
+    ui_text("aparar", x, y + 14, 26, c);
+    x += ui_width("aparar", 26) + 24;
+    float kw = spr_key("SPACE", x, y, PX, fmodf(G.time, 1.2f) < 0.2f, fadec(WHITE, a));
+    if (kw <= 0) { ui_text("espaço", x, y + 14, 26, c); kw = ui_width("espaço", 26); }
+    ui_text("ou clique", x + kw + 24, y + 14, 26, c);
 }
 
 
@@ -1854,6 +1962,7 @@ static void draw_ui(void) {
             break;
         default:
             if (G.state == ST_DUEL || G.state == ST_DEFEAT || G.state == ST_FINISHER) ui_hud();
+            ui_first_hint();
             fx_draw_popups(&G.fx, G.ui, UNIT);
             ui_slash();
             if (G.state == ST_INTRO || G.state == ST_OUTRO) ui_dialogue(G.m->venue, true);
@@ -2070,6 +2179,7 @@ static void step(float dtReal) {
     if (in_arena_state()) {
         update_ctx(dtReal * (G.hitstop > 0 ? 0.1f : 1));
         fx_update(&G.fx, dtReal * (G.hitstop > 0 ? 0.25f : 1));
+        vfx_update(dtReal * (G.hitstop > 0 ? 0.25f : 1));
         update_hud_values(dtReal);
     }
 }

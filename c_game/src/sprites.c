@@ -16,6 +16,13 @@ static int nsets;
 static Shader flat;
 static bool flatOk;
 
+#define MAX_FX 24
+static SprFx fxs[MAX_FX];     /* efeitos em folha, carregados na primeira vez */
+static bool fxTried[MAX_FX];
+static int nfx;
+static Texture2D keysTex[2], mouseTex;
+static bool uiTried, uiOk, mouseOk;
+
 /* Silhueta: a cor da tinta com o alfa da prancha. */
 static const char *FLAT_FS =
     "#version 330\n"
@@ -31,6 +38,12 @@ void spr_shutdown(void) {
     for (int i = 0; i < nsets; i++)
         for (int k = 0; k < sets[i].count; k++) UnloadTexture(sets[i].anims[k].tex);
     nsets = 0;
+    for (int i = 0; i < nfx; i++)
+        if (fxs[i].tex.id) UnloadTexture(fxs[i].tex);
+    nfx = 0;
+    if (uiOk) { UnloadTexture(keysTex[0]); UnloadTexture(keysTex[1]); }
+    if (mouseOk) UnloadTexture(mouseTex);
+    uiOk = mouseOk = false;
     if (flatOk) UnloadShader(flat);
     flatOk = false;
 }
@@ -151,6 +164,94 @@ void spr_draw(const SprSet *s, const SprAnim *a, int frame, Vector2 feet, SprDra
         blit(a, (Rectangle){sx, 0, (float)s->cw, (float)s->ch}, (Rectangle){x, y, (float)s->cw, (float)s->ch}, o.faceLeft, o.color);
     }
     if (o.flat && flatOk) EndShaderMode();
+}
+
+/* ------------------------------------------------------------------ */
+/* Efeitos em folha e ícones da interface                              */
+/* ------------------------------------------------------------------ */
+
+const SprFx *spr_fx(const char *name) {
+    for (int i = 0; i < nfx; i++)
+        if (!strcmp(fxs[i].name, name)) return fxTried[i] && fxs[i].frames > 0 ? &fxs[i] : NULL;
+    if (nfx >= MAX_FX) return NULL;
+    SprFx *f = &fxs[nfx];
+    fxTried[nfx++] = true;
+    memset(f, 0, sizeof *f);
+    snprintf(f->name, sizeof f->name, "%s", name);
+    char path[256];
+    snprintf(path, sizeof path, "assets/sprites/_fx/%s.png", name);
+    if (!FileExists(path)) return NULL;
+    f->tex = LoadTexture(path);
+    if (!f->tex.id) return NULL;
+    SetTextureFilter(f->tex, TEXTURE_FILTER_POINT);
+    f->cell = 64;
+    f->frames = f->tex.width / f->cell;
+    f->rows = f->tex.height / f->cell;
+    return f->frames > 0 ? f : NULL;
+}
+
+void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint) {
+    if (!f || frame < 0 || frame >= f->frames) return;
+    if (row < 0) row = 0;
+    if (row >= f->rows) row = f->rows - 1;
+    float c = (float)f->cell;
+    Rectangle src = {frame * c, row * c, flip ? -c : c, c};
+    Rectangle dst = {floorf(center.x + 0.5f) - c / 2, floorf(center.y + 0.5f) - c / 2, c, c};
+    DrawTexturePro(f->tex, src, dst, (Vector2){0, 0}, 0, tint);
+}
+
+static void ui_load(void) {
+    if (uiTried) return;
+    uiTried = true;
+    const char *k0 = "assets/sprites/_ui/buttons-spritesheet.png", *k1 = "assets/sprites/_ui/buttons-pressed-spritesheet.png";
+    const char *m = "assets/sprites/_ui/mouse-spritesheet.png";
+    if (FileExists(k0) && FileExists(k1)) {
+        keysTex[0] = LoadTexture(k0);
+        keysTex[1] = LoadTexture(k1);
+        uiOk = keysTex[0].id && keysTex[1].id;
+    }
+    if (FileExists(m)) {
+        mouseTex = LoadTexture(m);
+        mouseOk = mouseTex.id != 0;
+    }
+}
+
+/* Onde cada tecla está na folha: 16 x 16, e as largas com 24 (a barra, 32). */
+static bool key_rect(const char *k, Rectangle *r) {
+    static const struct { const char *name; int x, y, w; } WIDE[] = {
+        {"ESC", 0, 96, 16}, {"ENTER", 16, 96, 16}, {"TAB", 32, 96, 24}, {"SHIFT", 56, 96, 24},
+        {"DEL", 80, 96, 24}, {"CAPS", 104, 96, 24}, {"SPACE", 128, 96, 32},
+    };
+    for (size_t i = 0; i < sizeof WIDE / sizeof WIDE[0]; i++)
+        if (!strcmp(k, WIDE[i].name)) { *r = (Rectangle){(float)WIDE[i].x, (float)WIDE[i].y, (float)WIDE[i].w, 16}; return true; }
+    if (!k[0] || k[1]) return false;
+    char c = k[0];
+    if (c >= 'a' && c <= 'z') c = (char)(c - 32);
+    int idx;
+    if (c >= 'A' && c <= 'Z') idx = c - 'A';
+    else if (c >= '1' && c <= '9') idx = 26 + (c - '1');
+    else if (c == '0') idx = 35;
+    else return false;
+    *r = (Rectangle){(float)(idx % 12) * 16, 48 + (float)(idx / 12) * 16, 16, 16};
+    return true;
+}
+
+float spr_key(const char *key, float x, float y, float unit, bool pressed, Color tint) {
+    ui_load();
+    Rectangle r;
+    if (!uiOk || !key_rect(key, &r)) return 0;
+    Rectangle dst = {floorf(x / unit + 0.5f) * unit, floorf(y / unit + 0.5f) * unit, r.width * unit, r.height * unit};
+    DrawTexturePro(keysTex[pressed ? 1 : 0], r, dst, (Vector2){0, 0}, 0, tint);
+    return dst.width;
+}
+
+float spr_mouse(int button, float x, float y, float unit, Color tint) {
+    ui_load();
+    if (!mouseOk || button < 0 || button > 3) return 0;
+    Rectangle src = {button * 32.0f, 0, 32, 32};
+    Rectangle dst = {floorf(x / unit + 0.5f) * unit, floorf(y / unit + 0.5f) * unit, 32 * unit, 32 * unit};
+    DrawTexturePro(mouseTex, src, dst, (Vector2){0, 0}, 0, tint);
+    return dst.width;
 }
 
 void spr_play(SprPlayer *p, const SprAnim *a, int from, int to, float dur) {

@@ -68,4 +68,23 @@ void spr_loop(SprPlayer *p, const SprAnim *a);
 void spr_update(SprPlayer *p, float dt);
 bool spr_done(const SprPlayer *p);
 
+/* Efeitos em folha (assets/sprites/_fx/<número do pack>.png): quadros de 64 x 64
+ * lado a lado, uma cor por linha: 0 laranja, 1 roxo, 2 azul, 3 verde, 4 terra,
+ * 5 branco, 6 malva, 7 vermelho, 8 anil. NULL quando o arquivo não está lá. */
+typedef struct {
+    char name[16];
+    Texture2D tex;
+    int frames, rows, cell;
+} SprFx;
+
+const SprFx *spr_fx(const char *name);
+void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint);
+
+/* Teclas e mouse de pixel (assets/sprites/_ui/): "A".."Z", "0".."9", "ESC",
+ * "ENTER", "TAB", "SHIFT", "DEL", "CAPS", "SPACE"; mouse 0..3. `unit` é quantas
+ * unidades da tela valem um pixel da folha. Devolvem a largura desenhada, 0 sem
+ * a folha (quem chama escreve a tecla em texto). */
+float spr_key(const char *key, float x, float y, float unit, bool pressed, Color tint);
+float spr_mouse(int button, float x, float y, float unit, Color tint);
+
 #endif
