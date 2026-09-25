@@ -681,10 +681,11 @@ typedef enum { W_KATANA, W_DUPLA, W_ODACHI, W_PESADA, W_FLORETE, W_ADAGA, W_CURT
 static const char *WEAPON_NAMES[] = {"katana", "dupla", "odachi", "pesada", "florete", "adaga", "curta", "lanca", "cajado", "garras", "foice"};
 
 typedef enum {
-    EL_NONE, EL_FOGO, EL_AGUA, EL_RAIO, EL_ROXO, EL_PENA, EL_TERRA, EL_VENTO, EL_OURO, EL_SOMBRA, EL_MUSGO, EL_POEIRA
+    EL_NONE, EL_FOGO, EL_AGUA, EL_RAIO, EL_ROXO, EL_PENA, EL_TERRA, EL_VENTO, EL_OURO, EL_SOMBRA, EL_MUSGO, EL_POEIRA,
+    EL_LUA
 } Element;
 
-typedef enum { AC_NONE, AC_CACHECOL, AC_CASCO, AC_TRAPO, AC_CAUDA, AC_LISTRAS } Accessory;
+typedef enum { AC_NONE, AC_CACHECOL, AC_CASCO, AC_TRAPO, AC_CAUDA, AC_LISTRAS, AC_CABELO_LONGO } Accessory;
 
 /* Golpe especial: a coreografia (de que quadros do pack ele é montado) e o
    efeito grande do elemento no ponto do impacto. */
@@ -951,19 +952,28 @@ static Char CHARS[] = {
      .troca = {{HEX(0x1e6f50), HEX(0x4a3e6a)}, {HEX(0x134c4c), HEX(0x2e2844)}, {HEX(0x0c2e44), HEX(0x1a1628)},
                {HEX(0x391f21), HEX(0x4a1c7a)}, {HEX(0x5d2c28), HEX(0x8a3ce0)},
                {HEX(0x272727), HEX(0x141320)}, {HEX(0x3d3d3d), HEX(0x26243a)}, {HEX(0x5ac54f), HEX(0xe8c8ff)}}},
-    /* 12. Montanha. Katana branca forjada com a lua (lâmina com halo de luar). Cinza pedra e branco osso. */
+    /* 12. Lua. Corpo do Samurai #4 (o mesmo da Shizuku): roupa roxa com verde, o
+       cabelo roxo do pack mais comprido, caindo pelas costas, e a katana bem branca,
+       com brilho. */
     {.id = "jinshi", .titulo = "Jinshi",
-     .arma = {.kind = W_KATANA, .brilho = HEX(0xbcd0ff)},
-     .cabeca = "eremita",
-     .camisa = {HEX(0xd6d2c6), HEX(0xaaa598), HEX(0x7c786e), HEX(0x56534c)},
-     .hakama = {HEX(0x4c4a46), HEX(0x3a3936), HEX(0x2a2927), HEX(0x1e1d1c), HEX(0x141413)},
-     .pele = {HEX(0xd0a080), HEX(0xa87858), HEX(0x704e3c)},
-     .cabelo = {HEX(0x5c5a58), HEX(0x8a8884), HEX(0xb8b6b0)},
-     .destaque = {HEX(0xece6d4), HEX(0xa8a292)}, .obi = HEX(0xece6d4),
-     .saya = HEX(0xdcdce6), .cabo = HEX(0xe8e8f0),
-     .lamina = {HEX(0xffffff), HEX(0xd2e0ff)},
-     .rastro = {HEX(0xfbfcff), HEX(0xdce6ff), HEX(0x9fb0d8)}, .elemento = EL_POEIRA, .altura = 1,
-     .especial = SP_SALTO, .efeito = FX_AVALANCHE},
+     .arma = {.kind = W_KATANA, .brilho = HEX(0xe8eeff)},
+     .acessorios = {AC_CABELO_LONGO},
+     .camisa = {HEX(0xc9a6e8), HEX(0x9d74c8), HEX(0x7450a0), HEX(0x503678)},
+     .hakama = {HEX(0x2a5a3a), HEX(0x1a3e28), HEX(0x12301e), HEX(0x0e2418), HEX(0x08180f)},
+     .pele = {HEX(0xf2c29c), HEX(0xd69a74), HEX(0xa86a4e)},
+     .cabelo = {HEX(0x1c0c30), HEX(0x4e1e68), HEX(0x8040a0)},
+     .destaque = {HEX(0x6ae0a0), HEX(0x2f8a5a)}, .obi = HEX(0x5ad08a),
+     .saya = HEX(0xe8ecf4), .cabo = HEX(0x2f8a5a),
+     .lamina = {HEX(0xffffff), HEX(0xf2f5ff)},
+     .rastro = {HEX(0xffffff), HEX(0xe6ecff), HEX(0xb8c4ec)}, .elemento = EL_LUA, .largura = -1,
+     .especial = SP_SALTO, .efeito = FX_CHOQUE,
+     .pack = "samurai4",
+     .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0xf9e6cf), 'S'}},
+     .troca = {{HEX(0x0e071b), HEX(0x1c0c30)}, {HEX(0x3b1443), HEX(0x4e1e68)}, {HEX(0x622461), HEX(0x8040a0)},
+               {HEX(0xffffff), HEX(0xc9a6e8)}, {HEX(0xc7cfdd), HEX(0x9d74c8)}, {HEX(0x92a1b9), HEX(0x7450a0)},
+               {HEX(0x657392), HEX(0x503678)},
+               {HEX(0x1a1932), HEX(0x0e2418)}, {HEX(0x2a2f4e), HEX(0x1a3e28)}, {HEX(0x424c6e), HEX(0x2a5a3a)},
+               {HEX(0x571c27), HEX(0x2f8a5a)}, {HEX(0x891e2b), HEX(0x5ad08a)}, {HEX(0x5ac54f), HEX(0x7cf0a0)}}},
     /* Oboro, o último da trilha. Katana de Hanzo. Roxo escuro e dourado. */
     {.id = "oboro", .titulo = "Oboro", .arma = {.kind = W_KATANA}, .cabeca = "rabo_longo",
      .camisa = {HEX(0x8a6ab0), HEX(0x5e4488), HEX(0x3e2c62), HEX(0x281c42)},
@@ -1565,6 +1575,41 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                         if ((rx * 2 + ry) % 9 < 2 && (ry / 3) % 2 == 0) set_rgb(cv, x, y, ch->destaque[1]);
                     }
                 break;
+            case AC_CABELO_LONGO: {
+                /* a ponta do cabelo do pack (o fio mais baixo e mais para trás na cabeça)
+                   continua descendo pelas costas, em três mechas que o vento mexe */
+                int tx = -1, ty = -1;
+                double best = -1e9;
+                for (int y = 0; y < CH && y <= s->oy + 18; y++)
+                    for (int x = 0; x < CW; x++) {
+                        Color c = cv->a[y][x];
+                        if (!c.a) continue;
+                        bool hair = false;
+                        for (int h = 0; h < 3; h++)
+                            hair |= c.r == ch->cabelo[h].r && c.g == ch->cabelo[h].g && c.b == ch->cabelo[h].b;
+                        if (!hair) continue;
+                        double sc = y - x * 0.8;
+                        if (sc > best) { best = sc; tx = x; ty = y; }
+                    }
+                if (tx < 0) break;
+                /* a mecha cai quase reta, um pouco para trás, afinando; balança com o quadro */
+                int len = 16;
+                double sway = sin(idx * 0.9) * 1.2;
+                for (int i = 0; i < len; i++) {
+                    double u = (double)i / len;
+                    int w = (int)(5 - u * 4 + 0.5);
+                    int cx = tx + 1 - (int)floor(u * 5 + sway * u + 0.5), y = ty + i;
+                    for (int k = 0; k < w; k++) {
+                        Rgb c = k == 0 ? ch->cabelo[0] : (k == w - 1 && i % 3 != 2 ? ch->cabelo[2] : ch->cabelo[1]);
+                        if (k == 1 && i % 4 == 1) c = ch->cabelo[0];          /* os fios separados */
+                        cv_behind(cv, cx - w + 1 + k, y, c);
+                    }
+                }
+                /* dois fios soltos na ponta */
+                cv_behind(cv, tx - 4 - (int)(sway + 0.5), ty + len, ch->cabelo[1]);
+                cv_behind(cv, tx - 6 - (int)(sway + 0.5), ty + len + 1, ch->cabelo[0]);
+                break;
+            }
             case AC_TRAPO:
                 ribbon(cv, s->ox + 4, s->oy + 10, 10, ch->destaque[0], ch->destaque[1], idx, 0.35, 1.2, 2, 1.3);
                 for (int k = 0; k < 3; k++)
@@ -2245,6 +2290,12 @@ static void aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
             glow(cv, ctx, 0.05 * pw, ymid, (Rgb){150, 230, 110}, (Rgb){70, 140, 60}, false);
             particles(cv, ctx, "esporo", (int)(3 * pw), 12, bx0, bx1, ymid, by1, 0.2, -0.8, 1.0,
                       (Rgb){200, 255, 160}, (Rgb){140, 220, 100}, (Rgb){80, 150, 70}, 1);
+            break;
+        case EL_LUA:
+            /* luar: um halo pálido e poeira de prata subindo devagar */
+            glow(cv, ctx, 0.07 * pw, ymid, (Rgb){226, 222, 255}, (Rgb){150, 140, 200}, true);
+            particles(cv, ctx, "prata", (int)(3 * pw), 14, bx0 - 2, bx1 + 2, ymid, by1, 0, -0.7, 0.8,
+                      (Rgb){255, 255, 255}, (Rgb){214, 208, 255}, (Rgb){150, 140, 210}, 1);
             break;
         case EL_POEIRA:
             particles(cv, ctx, "pedra", (int)(3 * pw), 10, bx0 - 2, bx1 + 2, by0, ymid, -0.2, 1.4, 0.3,

@@ -77,7 +77,7 @@ e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
 | 9 | suiren | mar (acelerando) | lança | Porto | 420 | 63 / 166 ms | 18 |
 | 10 | arashi | tempestade (dano 1,5×) | duas katanas | Salão do castelo na tempestade | 420 | 60 / 160 ms | 15 |
 | 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 450 | 58 / 155 ms | 12 |
-| 12 | jinshi | montanha (sem som) | katana branca forjada com a lua | Encosta da serra | 450 | 55 / 150 ms | 10 |
+| 12 | jinshi | lua (sem som) | katana bem branca, forjada com a lua | Encosta da serra | 450 | 55 / 150 ms | 10 |
 | 13 | **oboro** | as doze, trocando a cada duas sequências | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
 
 A dificuldade é da posição na trilha, não do personagem: postura, erros até
@@ -119,7 +119,7 @@ repertório mais variado e o ritmo irregular.
 | suiren | onda (1) · arpão (1) de longe · linha d'água (2: 0,60) de longe · maré longa (3: 0,60 0,50) de longe · maré baixa (2: 0,45) · arrebentação (3: 0,45 0,45) · maremoto (4: 0,55 0,50 0,45) · espuma (1) correndo · salto da baleia (2: 0,60) saltando · **vagalhão** (forte) |
 | arashi | faísca (1) · duas tempestades (1) ⚔ · trovoada (2: 0,45) ⚔ no 2º · tormenta (3: 0,40 0,40) ⚔ no 3º · granizo (4: 0,40 0,40 0,40) · ventania (3: 0,40 0,70) · trovão (1) correndo ⚔ · raio duplo (2: 0,40) saltando ⚔ nos dois · céu partido (5: 0,40 0,40 0,40 0,80) ⚔ no 5º · **relâmpago** (forte) ⚔ |
 | yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) · **eclipse** (forte) · vultos (3: 0,40 0,70) · breu (1) correndo · coruja (2: 0,45) saltando · meia-noite (4: 0,40 0,40 0,90) · nevoeiro (2: 0,70) |
-| jinshi | pedra (1) · avalanche (3: 0,60 0,60) · cordilheira (4: 0,50 0,50 0,90) · tremor (3: 0,45 1,00) · monte (5: 0,50 0,50 0,50 0,90) · lua branca (6: 0,40 0,90 0,45 0,45 1,00) · neve eterna (4: 1,00 0,40 0,40) · desfiladeiro (1) correndo · cume (2: 0,70) saltando · **deslizamento** (forte) |
+| jinshi | crescente (1) · minguante (3: 0,60 0,60) · fases da lua (4: 0,50 0,50 0,90) · luar (3: 0,45 1,00) · lua cheia (5: 0,50 0,50 0,50 0,90) · lua branca (6: 0,40 0,90 0,45 0,45 1,00) · noite branca (4: 1,00 0,40 0,40) · reflexo no lago (1) correndo · lua alta (2: 0,70) saltando · **halo** (forte) |
 | oboro | um eco de cada aprendiz, na postura dele · doze posturas (5, terceiro selo) · passo de hanzo (1) correndo · queda da lua (1) saltando |
 
 ## Visual e som

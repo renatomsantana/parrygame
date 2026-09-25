@@ -149,10 +149,10 @@ static const Look MASTER_LOOKS[ROSTER_SIZE] = {
      .hair = RGB(20, 20, 32), .blade = RGB(200, 204, 220), .hat = HAT_HOOD, .size = 1, .bladeLen = 10,
      .robe = 0.4f, .extra = RGB(120, 26, 36), .extras = EX_SCARF, .handle = RGB(20, 20, 26), .bladeWidth = 0.9f,
      .offhand = OFF_DAGGER},
-    /* jinshi: monge da montanha, túnica longa, chapéu de palha, a katana branca forjada com a lua. */
-    {.coat = RGB(110, 96, 80), .sleeve = RGB(110, 96, 80), .pants = RGB(80, 70, 60), .skin = RGB(210, 164, 126),
-     .hair = RGB(40, 30, 26), .blade = RGB(248, 250, 255), .hat = HAT_KASA, .size = 1.1f, .bladeLen = 22,
-     .robe = 1.6f, .flare = 0.3f, .extra = RGB(60, 36, 24), .extras = EX_BEADS, .handle = RGB(226, 226, 236), .bladeWidth = 1},
+    /* jinshi: a postura da lua; roupa roxa com verde, cabelo roxo comprido, a katana bem branca. */
+    {.coat = RGB(160, 120, 210), .sleeve = RGB(200, 170, 232), .pants = RGB(30, 70, 46), .skin = RGB(242, 194, 156),
+     .hair = RGB(78, 30, 104), .blade = RGB(255, 255, 255), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 24,
+     .robe = 1.2f, .flare = 0.4f, .trim = RGB(90, 208, 138), .handle = RGB(47, 138, 90), .bladeWidth = 1},
     /* oboro: o uniforme da escola em preto e roxo, cabelo solto, capa, a katana de hanzo. */
     {.coat = RGB(26, 20, 30), .sleeve = RGB(60, 34, 80), .pants = RGB(20, 16, 24), .skin = RGB(226, 200, 188),
      .hair = RGB(16, 12, 20), .blade = RGB(200, 200, 220), .hat = HAT_LONG_HAIR, .size = 1.15f, .bladeLen = 22,
@@ -1257,7 +1257,7 @@ static void tell_fx(void) {
         {"04", 2, -24, VFX_BACK},               /* suiren: onda */
         {"195", 2, -30, VFX_BACK | VFX_GLOW},   /* arashi: raios */
         {"197", 1, -30, VFX_BACK | VFX_GLOW},   /* yoru: estrela da noite */
-        {"665", 5, -21, VFX_BACK},              /* jinshi: o pico da montanha */
+        {"665", 5, -21, VFX_BACK},              /* jinshi: o brilho branco da lua */
         {"197", 7, -30, VFX_BACK | VFX_GLOW},   /* oboro */
     };
     int ti = (G.m->id - 1) % ROSTER_SIZE, row = TELL[ti].row;

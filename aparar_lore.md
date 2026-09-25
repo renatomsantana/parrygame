@@ -130,9 +130,10 @@ Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Visão sobre Hanzo:** Acredita que ele escondia algo de todos
 - **Visão sobre Kojiro:** Enxerga potencial
 
-### 12. Jinshi | Postura da Montanha
+### 12. Jinshi | Postura da Lua
 
-- **Arma:** Katana branca forjada com a lua (o mais difícil: o repertório mais variado, ritmo irregular)
+- **Arma:** Katana bem branca, forjada com a lua (o mais difícil: o repertório mais variado, ritmo irregular)
+- **Visual:** roupa roxa com verde e cabelo roxo comprido
 - **Personalidade:** Reservado e reflexivo
 - **Visão sobre Oboro:** Nunca o perdoou
 - **Visão sobre Hanzo:** Acredita que ele falhou como mestre
@@ -173,7 +174,7 @@ Para Oboro, Kojiro recebeu gratuitamente aquilo pelo qual ele sacrificou a próp
 
 - Postura e arma de Kojiro (a katana de Hanzo está com Oboro)
 - Postura de Hanzo
-- Pares de posturas parecidas: Terra (Daichi) e Montanha (Jinshi), Água (Shizuku) e Mar (Suiren)
+- Par de posturas parecidas: Água (Shizuku) e Mar (Suiren)
 - Nome do Enjin (em japonês soa como "engine", motor)
 - Motivo de Jinshi nunca ter perdoado Oboro
 - Qual semelhança Suiren vê entre Kojiro e o jovem Oboro

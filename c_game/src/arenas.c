@@ -863,6 +863,11 @@ static void serra(const ArenaCtx *c) {
     vgrad(0, 70, LOW_W, 60, C(190, 110, 110), C(255, 176, 110));
     glow(172, 104, 80, C(255, 150, 70));
     DrawCircleGradient((Vector2){172, 104}, 22, C(255, 240, 196), C(255, 200, 130));
+    /* a lua de jinshi já nasce no céu do entardecer, pálida */
+    glow(262, 30, 22, C(230, 220, 255));
+    DrawCircleV((Vector2){262, 30}, 8, C(236, 226, 240));
+    DrawCircleV((Vector2){259, 28}, 2, C(214, 204, 226));
+    DrawCircleV((Vector2){265, 33}, 1.5f, C(218, 208, 230));
     for (int i = 0; i < 6; i++) {
         float x = fract(hash1(i) + t * 0.004f * (1 + i % 3)) * 380 - 30, y = 20 + hash1(i + 4) * 44;
         DrawEllipse((int)x, (int)y, 28 + hash1(i + 1) * 16, 3, CA(250, 180, 150, 120));
