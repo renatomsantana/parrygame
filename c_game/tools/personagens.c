@@ -1014,22 +1014,23 @@ typedef struct { int y, x; const char *t; } Row;
 typedef struct { int y, x, n; } Tape;
 typedef struct {
     const char *name;
-    Row frente[16];
+    Row frente[20];
     Row atras[2][14];
     Tape fitas[3];
 } Head;
 
 static const Head HEADS[] = {
-    /* Kojiro (o Musashi de Vagabond): cabelo rente, todo puxado para cima num coque
-       pequeno e embaraçado no alto da cabeça, com fiapos e fita vermelha; a nuca
+    /* Kojiro (o Musashi de Vagabond): cabelo rente, todo puxado para cima e amarrado
+       com fita vermelha no alto da cabeça, de onde sai um tufo desgrenhado, fiapos
+       espetados para cima e para trás (as pontas mexem com o vento); a nuca
        curta, sem cabelo descendo. Rosto liso, sem nariz nem olho, e a barba por fazer
        (b: a pele puxada para o cinza) no queixo e no maxilar. */
-    {"coque", {{-2, 9, "h"}, {-1, 6, "h.h.h"}, {0, 7, "HiHh"}, {1, 6, "hHHhH"}, {2, 7, "aAa"},
-               {3, 7, "HHhhH"}, {4, 6, "HHhHHhH"}, {5, 6, "HHHhHHH"}, {6, 5, "XHHHHfFF"},
-               {7, 5, "XHHHkfFF"}, {8, 4, "XXXHkbfbb"}, {9, 4, "XXXXkkbbX"}, {10, 4, "XXXXkkXXX"},
-               {11, 4, "XXX"}},
-     {{{-2, 6, "H"}, {0, 5, "H"}},
-      {{-2, 10, "H"}, {1, 5, "H"}}}},
+    {"coque", {{-6, 6, "h"}, {-5, 7, "h..h"}, {-4, 3, "h..hi.h.hh"}, {-3, 4, "h.h.Hhh"}, {-2, 5, "H.hHhi"},
+               {-1, 4, "hiHHHH"}, {0, 3, "h..HHiH"}, {1, 2, "h...hHHh"}, {2, 7, "aAa"}, {3, 7, "HHhhH"},
+               {4, 6, "HHhHHhH"}, {5, 6, "HHHhHHH"}, {6, 5, "XHHHHfFF"}, {7, 5, "XHHHkfFF"},
+               {8, 4, "XXXHkbfbb"}, {9, 4, "XXXXkkbbX"}, {10, 4, "XXXXkkXXX"}, {11, 4, "XXX"}},
+     {{{-5, 5, "h"}, {0, 1, "h"}},
+      {{-6, 7, "h"}, {1, 1, "h"}}}},
     /* Hanzo: coque grande de cabelo branco, testa alta, sem barba. */
     {"mestre", {{1, 4, "HHH"}, {2, 3, "HhiiH"}, {3, 4, "HhhH"}, {4, 5, "aA"}, {5, 5, "HHhiH"},
                 {6, 4, "HHHhiiF"}, {7, 4, "HHHhFFFF"}, {8, 4, "HHHfFkeF"}}},
@@ -1473,7 +1474,7 @@ static void draw_head(Canvas *cv, const Char *ch, int idx) {
             for (int x = s->ox - 2; x <= s->ox + 6; x++)
                 if (cv_ok(x, y) && s->lab[y][x] == HAIR) cv_clear(cv, x, y);
     }
-    paint_rows(cv, hd->frente, 16, &pal, false);
+    paint_rows(cv, hd->frente, 20, &pal, false);
 }
 
 static void remove_hat(Canvas *cv) {
