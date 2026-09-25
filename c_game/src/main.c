@@ -1647,14 +1647,10 @@ static void draw_world(void) {
             BeginTextureMode(G.scene);
             ClearBackground(BLACK);
             pix_draw();
-            if (katana3d_ready()) {
-                /* A katana gira devagar no próprio eixo, abaixo do título. */
-                katana3d_begin(LOW_W, LOW_H);
-                float bob = sinf(G.time * 1.3f) * 1.5f;
-                KatanaStyle ks = katana_style(&REN_LOOK);
-                katana3d_draw((Vector2){92, 86 + bob}, (Vector2){232, 80 + bob}, 180 + sinf(G.time * 0.8f) * 14, &ks, WHITE);
-                katana3d_end();
-            }
+            /* Kojiro no morro, olhando para o dojo de Hanzo no pico. */
+            begin_world((Vector2){0, 0});
+            lore_draw_title_hero(G.time);
+            EndMode2D();
             EndTextureMode();
             break;
         case ST_LORE:

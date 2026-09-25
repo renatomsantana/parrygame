@@ -8,8 +8,10 @@
 
 /* Desenha a ilustração da página (0..LORE_PAGES-1) em 320 x 180. */
 void lore_draw_scene(int page, float t);
-/* Tela de título: só a paisagem. */
+/* Tela de título: a serra à noite com o dojo no pico (o fundo)... */
 void lore_draw_title(float t);
+/* ...e Kojiro no morro olhando para ele (por cima, fora da paleta do fundo). */
+void lore_draw_title_hero(float t);
 /* Ilustração do final, depois do Oboro. */
 void lore_draw_ending(float t);
 /* Mapa da trilha em 320 x 180: a serra com os treze pontos. */

@@ -50,7 +50,7 @@ static void person(float x, float feet, float h, Color c, bool sword) {
 /* O personagem das pranchas, parado e calmo (IDLE, PARADO, o fim da corrida
  * com a lâmina baixa ou a guarda), com o contorno escuro do duelo. Sem as
  * pranchas, devolve false e a ilustração usa a silhueta. */
-static bool sprite_person(const char *id, float x, float feet, bool faceLeft, float t) {
+static bool sprite_person_lit(const char *id, float x, float feet, bool faceLeft, float t, Color tint, Color rim) {
     const SprSet *s = spr_get(id);
     if (!s) return false;
     const SprAnim *a = spr_anim(s, "IDLE");
@@ -64,10 +64,19 @@ static bool sprite_person(const char *id, float x, float feet, bool faceLeft, fl
     SprDraw o = {faceLeft, breath, true, C(24, 16, 20)};
     static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     for (int k = 0; k < 4; k++) spr_draw(s, a, frame, (Vector2){x + off[k][0], feet + off[k][1]}, o);
+    if (rim.a) {
+        /* luz de contorno do lado da frente (a lua do título) */
+        o.color = rim;
+        spr_draw(s, a, frame, (Vector2){x + (faceLeft ? -1 : 1), feet - 1}, o);
+    }
     o.flat = false;
-    o.color = WHITE;
+    o.color = tint;
     spr_draw(s, a, frame, (Vector2){x, feet}, o);
     return true;
+}
+
+static bool sprite_person(const char *id, float x, float feet, bool faceLeft, float t) {
+    return sprite_person_lit(id, x, feet, faceLeft, t, WHITE, CA(0, 0, 0, 0));
 }
 
 static void rain(float t, int n, Color c) {
@@ -219,47 +228,125 @@ void lore_draw_ending(float t) {
     }
 }
 
-/* Tela de título: só a paisagem, sem personagens. Serra em camadas ao entardecer. */
+/* Tela de título: noite na serra. No pico mais alto, o dojo de Hanzo com as
+ * janelas acesas e as lanternas da trilha subindo o morro; névoa no vale; em
+ * primeiro plano, o morro onde Kojiro para e olha (lore_draw_title_hero). */
+static float hill_y(float x) { float d = (x - 70) / 88; return 124 + d * d * 34; }
+
 void lore_draw_title(float t) {
-    sky(C(58, 40, 70), C(255, 170, 120));
-    /* Sol baixo com faixas. */
-    DrawCircle(172, 112, 30, C(255, 214, 160));
-    DrawCircle(172, 112, 24, C(255, 236, 196));
-    for (int i = 0; i < 5; i++) rect(136, 104 + i * 6, 72, 1, C(250, 170, 120));
-    /* Nuvens passando devagar. */
-    for (int i = 0; i < 6; i++) {
-        float x = fract(hash1(i) + t * 0.004f * (1 + i % 3)) * 380 - 30, y = 22 + hash1(i + 4) * 50;
-        DrawEllipse((int)x, (int)y, 26 + hash1(i + 1) * 18, 4, C(236, 170, 150));
-        DrawEllipse((int)(x + 12), (int)(y - 2), 16, 3, C(246, 196, 170));
+    DrawRectangleGradientV(0, 0, 320, 124, C(6, 8, 24), C(48, 42, 88));
+    rect(0, 124, 320, 56, C(48, 42, 88));
+    for (int i = 0; i < 80; i++) {
+        float x = floorf(hash1(i) * 320), y = floorf(hash1(i + 50) * 104);
+        float b = 0.35f + 0.65f * fabsf(sinf(t * (0.6f + hash1(i + 9)) + i));
+        rect(x, y, 1, 1, fade(C(230, 232, 255), b));
+        if (i % 13 == 0) { rect(x - 1, y, 3, 1, fade(C(200, 206, 255), b * 0.5f)); rect(x, y - 1, 1, 3, fade(C(200, 206, 255), b * 0.5f)); }
     }
-    /* Três camadas de serra, da mais clara à mais escura. */
-    mountain(90, 58, 180, C(170, 110, 120));
-    mountain(250, 72, 180, C(130, 80, 100));
+    /* Lua cheia com crateras e a borda de sombra. */
+    glow(292, 26, 38, C(170, 180, 255));
+    DrawCircle(292, 26, 12, C(238, 234, 216));
+    DrawCircle(288, 26, 11, C(226, 222, 204));
+    DrawCircle(293, 25, 10, C(240, 236, 220));
+    rect(288, 21, 3, 2, C(212, 206, 190));
+    rect(295, 28, 4, 3, C(214, 208, 192));
+    rect(290, 32, 2, 2, C(212, 206, 190));
+    rect(297, 20, 2, 2, C(220, 214, 198));
+    /* Nuvens finas cruzando a lua devagar, com a borda de cima acesa. */
+    for (int i = 0; i < 4; i++) {
+        float w = 60 + hash1(i + 20) * 50, x = fract(hash1(i) + t * 0.006f * (1 + i % 2)) * (320 + w) - w, y = floorf(22 + i * 13 + hash1(i + 30) * 6);
+        rect(x, y, w, 3, C(34, 34, 70));
+        rect(x + 6, y - 1, w - 18, 1, C(84, 84, 128));
+        rect(x + w * 0.3f, y + 3, w * 0.5f, 1, C(28, 28, 58));
+    }
+    /* Serra ao longe. */
     for (int x = 0; x < 320; x++) {
-        float y = 128 + sinf(x * 0.035f) * 7 + sinf(x * 0.11f + 1) * 3;
-        rect(x, y, 1, 60, C(80, 50, 64));
+        float y = 104 + sinf(x * 0.045f) * 8 + sinf(x * 0.13f + 2) * 3 + fabsf(sinf(x * 0.021f + 1)) * -10;
+        rect(x, y, 1, 180 - y, C(38, 38, 76));
+        rect(x, y, 1, 1, C(58, 58, 102));
     }
-    /* Pagode distante no morro. */
-    rect(74, 96, 10, 16, C(70, 40, 54));
-    for (int k = 0; k < 3; k++) {
-        float w = 18 - k * 4, y = 96 - k * 7;
-        DrawTriangle((Vector2){79 - w / 2, y}, (Vector2){79 + w / 2, y}, (Vector2){79, y - 5}, C(70, 40, 54));
+    /* A montanha do dojo: encosta da esquerda íngreme, a da direita pegando a lua. */
+    for (int x = 110; x < 320; x++) {
+        float d = x - 230, y = 60 + (d < 0 ? -d * 0.78f : d * 0.5f) + sinf(x * 0.3f) * 1.2f + (d < 0 ? sinf(x * 0.09f) * 3 : 0);
+        rect(x, y, 1, 180 - y, C(24, 24, 52));
+        if (d > 0) rect(x, y, 1, 2, C(76, 80, 128));
+        else rect(x, y, 1, 1, C(44, 44, 80));
     }
-    /* Campo em primeiro plano com capim balançando. */
-    rect(0, 150, 320, 30, C(46, 30, 36));
-    for (int i = 0; i < 90; i++) {
-        float x = hash1(i) * 320, y = 150 + hash1(i + 5) * 26;
-        float sw = sinf(t * 1.4f + x * 0.06f) * 2;
-        DrawLine((int)x, (int)y, (int)(x + sw), (int)(y - 6), C(70, 46, 50));
+    /* Pinheiros na encosta. */
+    for (int i = 0; i < 9; i++) {
+        float x = 250 + i * 8 + hash1(i + 60) * 4, y = 76 + (x - 230) * 0.5f;
+        DrawTriangle((Vector2){x, y - 7}, (Vector2){x - 3, y + 1}, (Vector2){x + 3, y + 1}, C(18, 20, 40));
     }
-    /* Pássaros e pétalas. */
-    for (int i = 0; i < 3; i++) {
-        float bx = fract(t * 0.015f + i * 0.33f) * 360 - 20, by = 40 + i * 8 + sinf(t + i) * 3, w = sinf(t * 7 + i) * 2;
-        DrawLine((int)bx - 3, (int)(by - w), (int)bx, (int)by, C(70, 40, 60));
-        DrawLine((int)bx, (int)by, (int)bx + 3, (int)(by - w), C(70, 40, 60));
+    /* A trilha de pedra subindo em zigue-zague, com as lanternas acesas. */
+    static const float path[][2] = {{226, 64}, {214, 74}, {228, 84}, {206, 96}, {222, 108}, {196, 120}, {214, 132}, {186, 144}};
+    for (int k = 0; k + 1 < 8; k++) DrawLine((int)path[k][0], (int)path[k][1], (int)path[k + 1][0], (int)path[k + 1][1], C(40, 40, 70));
+    for (int k = 1; k < 8; k++) {
+        float fl = 0.8f + 0.2f * sinf(t * 6 + k * 1.7f);
+        glow(path[k][0], path[k][1] - 1, 5 * fl, C(255, 170, 80));
+        rect(path[k][0], path[k][1] - 2, 1, 2, C(255, 200, 120));
     }
-    for (int i = 0; i < 22; i++) {
-        float x = fract(hash1(i) + t * 0.04f) * 340 - 10, y = fract(hash1(i + 3) + t * 0.06f) * 180;
-        DrawEllipse((int)x, (int)y, 2, 1, C(255, 190, 205));
+    /* O dojo de Hanzo no pico: dois telhados curvos, a varanda e as janelas acesas. */
+    glow(230, 50, 16, C(255, 160, 70));
+    rect(212, 57, 36, 3, C(58, 56, 84));
+    rect(216, 47, 28, 10, C(46, 34, 40));
+    for (int k = 0; k < 4; k++) rect(218 + k * 7, 49, 4, 5, C(255, 202, 122));
+    for (int k = 0; k < 4; k++) rect(220 + k * 7, 49, 1, 5, C(170, 110, 60));
+    DrawTriangle((Vector2){208, 47}, (Vector2){252, 47}, (Vector2){240, 40}, C(28, 24, 42));
+    DrawTriangle((Vector2){208, 47}, (Vector2){240, 40}, (Vector2){220, 40}, C(28, 24, 42));
+    rect(207, 46, 2, 1, C(28, 24, 42));
+    rect(251, 46, 2, 1, C(28, 24, 42));
+    rect(206, 45, 1, 1, C(28, 24, 42));
+    rect(253, 45, 1, 1, C(28, 24, 42));
+    rect(222, 34, 16, 6, C(46, 34, 40));
+    rect(226, 36, 8, 3, C(255, 196, 116));
+    DrawTriangle((Vector2){217, 34}, (Vector2){243, 34}, (Vector2){235, 28}, C(28, 24, 42));
+    DrawTriangle((Vector2){217, 34}, (Vector2){235, 28}, (Vector2){225, 28}, C(28, 24, 42));
+    rect(224, 27, 12, 1, C(60, 56, 90));
+    rect(215, 40, 30, 1, C(66, 64, 104));                   /* luar no telhado */
+    /* Torii no começo da trilha. */
+    rect(180, 140, 2, 12, C(120, 36, 36));
+    rect(190, 140, 2, 12, C(120, 36, 36));
+    rect(177, 139, 18, 2, C(140, 44, 40));
+    rect(179, 143, 14, 1, C(110, 34, 34));
+    /* Névoa no vale, em faixas que andam. */
+    for (int i = 0; i < 6; i++) {
+        float w = 70 + hash1(i + 70) * 80, x = fract(hash1(i + 71) + t * 0.004f * (1 + i % 3)) * (320 + w) - w;
+        float y = floorf(120 + i * 5 + hash1(i + 72) * 4);
+        rect(x, y, w, 2, CA(150, 150, 200, 70));
+        rect(x + w * 0.15f, y - 1, w * 0.6f, 1, CA(170, 170, 220, 50));
     }
+    /* O morro em primeiro plano, com um pinheiro torto na ponta. */
+    for (int x = 0; x < 180; x++) {
+        float y = hill_y(x);
+        if (y < 180) {
+            rect(x, y, 1, 180 - y, C(14, 14, 30));
+            rect(x, y, 1, 1, C(52, 56, 96));
+        }
+    }
+    rect(170, 158, 150, 22, C(16, 16, 34));
+    rect(18, 108, 3, 30, C(20, 16, 26));
+    DrawTriangle((Vector2){4, 112}, (Vector2){34, 112}, (Vector2){22, 104}, C(18, 24, 36));
+    DrawTriangle((Vector2){8, 104}, (Vector2){30, 104}, (Vector2){20, 97}, C(18, 24, 36));
+    DrawTriangle((Vector2){12, 97}, (Vector2){28, 97}, (Vector2){20, 91}, C(18, 24, 36));
+    rect(22, 104, 10, 1, C(60, 70, 110));
+    rect(20, 97, 8, 1, C(60, 70, 110));
+    /* Capim balançando no morro, com a ponta pegando o luar. */
+    for (int i = 0; i < 70; i++) {
+        float x = floorf(hash1(i + 90) * 175), y = floorf(hill_y(x) + hash1(i + 91) * 6);
+        float sw = sinf(t * 1.6f + x * 0.07f) * 2;
+        DrawLine((int)x, (int)y, (int)(x + sw), (int)(y - 5), C(26, 28, 50));
+        rect(x + sw, y - 5, 1, 1, C(84, 92, 140));
+    }
+    /* Pétalas no vento. */
+    for (int i = 0; i < 14; i++) {
+        float x = fract(hash1(i) + t * 0.035f) * 340 - 10, y = fract(hash1(i + 3) + t * 0.05f + sinf(t + i) * 0.01f) * 180;
+        rect(x, y, 2, 1, C(236, 190, 214));
+    }
+}
+
+/* Kojiro no alto do morro, de frente para o dojo, sob o luar (desenhado depois
+ * da paleta do fundo, para não perder as cores dele). */
+void lore_draw_title_hero(float t) {
+    float x = 70, feet = hill_y(70) + 1;
+    if (!sprite_person_lit("kojiro", x, feet, false, t, C(150, 156, 200), C(170, 180, 255)))
+        person(x, feet, 40, C(12, 12, 24), true);
 }
