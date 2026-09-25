@@ -1021,16 +1021,16 @@ typedef struct {
 
 static const Head HEADS[] = {
     /* Kojiro (o Musashi de Vagabond): cabelo rente, todo puxado para cima e amarrado
-       com fita vermelha no alto da cabeça, de onde sai um tufo desgrenhado, fiapos
-       espetados para cima e para trás (as pontas mexem com o vento); a nuca
+       com fita vermelha no alto da cabeça, de onde sai um tufo desgrenhado e baixo que
+       cai para trás, em fiapos (as pontas mexem com o vento); a nuca
        curta, sem cabelo descendo. Rosto liso, sem nariz nem olho, e a barba por fazer
        (b: a pele puxada para o cinza) no queixo e no maxilar. */
-    {"coque", {{-6, 6, "h"}, {-5, 7, "h..h"}, {-4, 3, "h..hi.h.hh"}, {-3, 4, "h.h.Hhh"}, {-2, 5, "H.hHhi"},
-               {-1, 4, "hiHHHH"}, {0, 3, "h..HHiH"}, {1, 2, "h...hHHh"}, {2, 7, "aAa"}, {3, 7, "HHhhH"},
-               {4, 6, "HHhHHhH"}, {5, 6, "HHHhHHH"}, {6, 5, "XHHHHfFF"}, {7, 5, "XHHHkfFF"},
-               {8, 4, "XXXHkbfbb"}, {9, 4, "XXXXkkbbX"}, {10, 4, "XXXXkkXXX"}, {11, 4, "XXX"}},
-     {{{-5, 5, "h"}, {0, 1, "h"}},
-      {{-6, 7, "h"}, {1, 1, "h"}}}},
+    {"coque", {{-2, 4, "hHHHhh"}, {-1, 3, "hH.HiHHh"}, {0, 2, "hH..HHHH.h"}, {1, 2, "h..hHHHh.h"},
+               {2, 1, "h.h...aAa"}, {3, 2, "h"}, {4, 2, "h"}, {3, 7, "HHhhH"}, {4, 6, "HHhHHhH"},
+               {5, 6, "HHHhHHH"}, {6, 5, "XHHHHfFF"}, {7, 5, "XHHHkfFF"}, {8, 4, "XXXHkbfbb"},
+               {9, 4, "XXXXkkbbX"}, {10, 4, "XXXXkkXXX"}, {11, 4, "XXX"}},
+     {{{0, 1, "h"}, {5, 2, "h"}},
+      {{-1, 2, "h"}, {5, 1, "h"}}}},
     /* Hanzo: coque grande de cabelo branco, testa alta, sem barba. */
     {"mestre", {{1, 4, "HHH"}, {2, 3, "HhiiH"}, {3, 4, "HhhH"}, {4, 5, "aA"}, {5, 5, "HHhiH"},
                 {6, 4, "HHHhiiF"}, {7, 4, "HHHhFFFF"}, {8, 4, "HHHfFkeF"}}},
