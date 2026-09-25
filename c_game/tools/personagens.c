@@ -1006,7 +1006,7 @@ static void fill_defaults(Char *ch) {
    x 7..11, y 8..10; a nuca em x 4; a gola começa em y 9.
    Cada linha é (y, x inicial, texto). Letras:
      H h i  cabelo escuro, meio, luz      F f k  pele clara, meio, escura
-     e      olho                          A a    destaque claro, escuro
+     e      olho                          A a    destaque claro, escuro        b      barba por fazer
      B      destaque 2 (ouro, anel)       K m    máscara escura, meio
      X      apaga                         .      não mexe
    'frente' pinta por cima do chapéu e do rosto; 'atras' só no vazio. */
@@ -1021,13 +1021,15 @@ typedef struct {
 
 static const Head HEADS[] = {
     /* Kojiro (o Musashi de Vagabond): cabelo rente, todo puxado para cima num coque
-       pequeno no alto da cabeça, com fiapos e fita vermelha; a nuca curta, sem cabelo
-       descendo. Rosto liso, sem nariz nem olho, e barba rala e suja no queixo. */
-    {"coque", {{-1, 7, "h.h"}, {0, 7, "HiH"}, {1, 6, "HHhH"}, {2, 6, "aAa"}, {3, 6, "HHhhHH"},
-               {4, 5, "HHhHHhHH"}, {5, 5, "HHHhHHHH"}, {6, 5, "HHHHHfFF"}, {7, 5, "HHHHkfFF"},
-               {8, 4, "XXHHkfFFh"}, {9, 4, "XXXXkkhfh"}, {10, 4, "XXXXkkXXX"}, {11, 4, "XXX"}},
+       pequeno e embaraçado no alto da cabeça, com fiapos e fita vermelha; a nuca
+       curta, sem cabelo descendo. Rosto liso, sem nariz nem olho, e a barba por fazer
+       (b: a pele puxada para o cinza) no queixo e no maxilar. */
+    {"coque", {{-2, 9, "h"}, {-1, 6, "h.h.h"}, {0, 7, "HiHh"}, {1, 6, "hHHhH"}, {2, 7, "aAa"},
+               {3, 7, "HHhhH"}, {4, 6, "HHhHHhH"}, {5, 6, "HHHhHHH"}, {6, 5, "XHHHHfFF"},
+               {7, 5, "XHHHkfFF"}, {8, 4, "XXXHkbfbb"}, {9, 4, "XXXXkkbbX"}, {10, 4, "XXXXkkXXX"},
+               {11, 4, "XXX"}},
      {{{-2, 6, "H"}, {0, 5, "H"}},
-      {{-2, 9, "H"}, {1, 5, "H"}}}},
+      {{-2, 10, "H"}, {1, 5, "H"}}}},
     /* Hanzo: coque grande de cabelo branco, testa alta, sem barba. */
     {"mestre", {{1, 4, "HHH"}, {2, 3, "HhiiH"}, {3, 4, "HhhH"}, {4, 5, "aA"}, {5, 5, "HHhiH"},
                 {6, 4, "HHHhiiF"}, {7, 4, "HHHhFFFF"}, {8, 4, "HHHfFkeF"}}},
@@ -1418,6 +1420,10 @@ static void head_palette(const Char *ch, Pal *p) {
     p->c['A'] = ch->destaque[0]; p->c['a'] = ch->destaque[1];
     p->c['B'] = ch->destaque2;
     p->c['K'] = ch->mascara[0]; p->c['m'] = ch->mascara[1];
+    /* barba por fazer: a pele clara com um terço do cabelo por cima */
+    Rgb pe = ch->pele[0], ca = ch->cabelo[1];
+    p->c['b'] = (Rgb){(unsigned char)(pe.r * 0.65 + ca.r * 0.35), (unsigned char)(pe.g * 0.65 + ca.g * 0.35),
+                      (unsigned char)(pe.b * 0.65 + ca.b * 0.35)};
 }
 
 static void paint_rows(Canvas *cv, const Row *rows, int nrows, const Pal *pal, bool behind) {
