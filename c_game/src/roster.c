@@ -31,7 +31,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                    {"hanzo", "O segundo golpe dele sempre se atrasa. Não corra atrás."}}, .senseiCount = 2,
     },
     {
-        .id = 2, .name = "genbu", .style = "postura da tartaruga", .title = "O que Tem Pena", .venue = "Jardim de pedra e vidro",
+        .id = 2, .name = "genbu", .style = "postura da tartaruga", .title = "O que Tem Pena", .venue = "Jardim de pedras do mosteiro",
         .special = "Katana simples: demora a sair do casco, sai rápido.",
         .arena = ARENA_JARDIM, .posture = 300, .hitsToFall = 45, .cueVisual = 1, .cueAudio = 1, .tint = 0xD8E0C8FF,
         .stances = {STANCE("", 0.087f, 0.215f, 1.30f, 1.20f, 1.40f)}, .stanceCount = 1,
@@ -115,9 +115,9 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                    {"hanzo", "Não recue diante do rugido. O golpe vem depois do grito."}}, .senseiCount = 2,
     },
     {
-        .id = 6, .name = "karasu", .style = "postura do corvo", .title = "O que Aposta", .venue = "Cobertura na chuva",
+        .id = 6, .name = "karasu", .style = "postura do corvo", .title = "O que Aposta", .venue = "Telhados da vila do castelo, na chuva",
         .special = "Duas wakizashi: sempre uma pausa antes do último golpe.",
-        .arena = ARENA_COBERTURA, .posture = 360, .hitsToFall = 25, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8C8D8FF,
+        .arena = ARENA_TELHADOS, .posture = 360, .hitsToFall = 25, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8C8D8FF,
         .stances = {STANCE("", 0.072f, 0.185f, 0.83f, 1.13f, 0.87f)}, .stanceCount = 1,
         .moves = {
             {"bicada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST},
@@ -136,9 +136,9 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                    {"hanzo", "Quem aposta contra você também está esperando. Espere mais que ele."}}, .senseiCount = 2,
     },
     {
-        .id = 7, .name = "hayate", .style = "postura do vento", .title = "O Impaciente", .venue = "Teto do trem noturno",
+        .id = 7, .name = "hayate", .style = "postura do vento", .title = "O Impaciente", .venue = "Ponte de corda sobre o desfiladeiro",
         .special = "Duas foices pequenas e o vento: o ritmo muda de direção sem avisar.",
-        .arena = ARENA_TREM, .posture = 390, .hitsToFall = 22, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xD0FFE8FF,
+        .arena = ARENA_PONTE, .posture = 390, .hitsToFall = 22, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xD0FFE8FF,
         .rhythmJitter = 0.12f,
         .stances = {STANCE("", 0.069f, 0.178f, 0.85f, 0.75f, 1.00f)}, .stanceCount = 1,
         .moves = {
@@ -204,7 +204,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                    {"hanzo", "Quando a onda recua, o mar respira. Respire junto."}}, .senseiCount = 2,
     },
     {
-        .id = 10, .name = "arashi", .style = "postura da tempestade", .title = "O Orgulhoso", .venue = "Salão de espelhos",
+        .id = 10, .name = "arashi", .style = "postura da tempestade", .title = "O Orgulhoso", .venue = "Salão dourado do castelo",
         .special = "Duas espadas: raios curtos e colados, três de cada vez.",
         .arena = ARENA_SALAO, .posture = 420, .hitsToFall = 15, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE0D0F0FF,
         .stances = {STANCE("", 0.060f, 0.160f, 0.80f, 0.90f, 0.75f)}, .stanceCount = 1,

@@ -294,10 +294,10 @@ static const Style STYLES[MUSIC_SILENCE + 1] = {
     /* DOJO      */ {72, {110, 164.8f, 0}, 0.05f, 0.015f, 0.02f},
     /* SERRA     */ {62, {98, 146.8f, 196}, 0.04f, 0.05f, 0.012f},
     /* CELEIRO   */ {80, {98, 146.8f, 196}, 0.045f, 0.01f, 0.03f},
-    /* COBERTURA */ {90, {73.4f, 110, 138.6f}, 0.05f, 0.03f, 0.015f},
+    /* TELHADOS  */ {90, {73.4f, 110, 138.6f}, 0.05f, 0.03f, 0.015f},
     /* PORTO     */ {100, {82.4f, 123.5f, 0}, 0.04f, 0.03f, 0.03f},
-    /* SALAO     */ {138, {130.8f, 196, 261.6f}, 0.035f, 0.0f, 0.02f},
-    /* TREM      */ {150, {61.7f, 92.5f, 0}, 0.04f, 0.06f, 0.05f},
+    /* SALAO     */ {96, {130.8f, 196, 261.6f}, 0.035f, 0.0f, 0.02f},
+    /* PONTE     */ {84, {61.7f, 92.5f, 0}, 0.04f, 0.06f, 0.05f},
     /* CACHOEIRA */ {60, {65.4f, 98, 0}, 0.04f, 0.16f, 0.12f},
     /* BAMBUZAL  */ {64, {92.5f, 138.6f, 0}, 0.035f, 0.02f, 0.015f},
     /* FORJA     */ {84, {46.2f, 69.3f, 92.5f}, 0.06f, 0.035f, 0.01f},
@@ -326,23 +326,24 @@ static void sequencer_step(int style, int step, float intensity) {
             if (mrand() < 0.35f) voice(V_BELL, 4200 + mrand() * 600, 0.012f, 30, 0);
             if (bar16 % 8 == 0) voice(V_PLUCK, note(PENTA[(int)(mrand() * 5)] - 5), 0.10f, 3, 0);
             break;
-        case 3: /* cobertura: pulso grave */
+        case 3: /* telhados na chuva: pulso grave e o sino do templo ao longe */
             if (bar16 % 8 == 0) voice(V_TONE, 73.4f, 0.09f, 2.5f, 0);
-            if (bar16 == 6 && mrand() < 0.5f) voice(V_BELL, 880 * (mrand() < 0.5f ? 1 : 1.5f), 0.03f, 5, 0);
+            if (bar16 == 6 && step % 32 == 6) voice(V_BELL, 220, 0.04f, 1.5f, 0);
             break;
         case 4: /* porto: tambores taiko */
             if (bar16 == 0 || bar16 == 6 || bar16 == 10) voice(V_KICK, 70, 0.45f, 6, 0);
             if (bar16 == 12 || bar16 == 14) voice(V_KICK, 95, 0.3f, 9, 0);
             if (bar16 % 4 == 2) voice(V_NOISE, 0, 0.03f, 50, 0.4f);
             break;
-        case 5: /* salão: valsa (3 tempos) */
-            if (step % 12 == 0) voice(V_PLUCK, note(-12), 0.12f, 3, 0);
-            if (step % 12 == 4 || step % 12 == 8) { voice(V_PLUCK, note(3), 0.05f, 6, 0); voice(V_PLUCK, note(7), 0.05f, 6, 0); }
-            if (step % 24 == 0) voice(V_TONE, note(PENTA[(int)(mrand() * 6)] + 12), 0.05f, 1.5f, 0);
+        case 5: /* salão do castelo: koto em arpejo e o trovão do taiko */
+            if (bar16 % 2 == 0) voice(V_PLUCK, note(PENTA[(step / 2) % 8]), 0.05f, 4, 0);
+            if (bar16 == 0) voice(V_KICK, 52, 0.4f, 4, 0);
+            if (bar16 == 12 && mrand() < 0.5f) voice(V_NOISE, 0, 0.05f, 4, 0.2f);
             break;
-        case 6: /* trem: tec-tec dos trilhos */
-            if (bar16 == 0 || bar16 == 2 || bar16 == 8 || bar16 == 10) voice(V_NOISE, 0, 0.12f, 45, 0.35f);
-            if (bar16 % 8 == 4) voice(V_KICK, 60, 0.2f, 12, 0);
+        case 6: /* ponte: rajadas de vento, a corda rangendo e a flauta */
+            if (bar16 == 0 || bar16 == 9) voice(V_NOISE, 0, 0.06f, 3, 0.25f);
+            if (bar16 == 5 && mrand() < 0.6f) voice(V_TONE, 92.5f + mrand() * 10, 0.05f, 6, 0);
+            if (bar16 == 0 && mrand() < 0.4f) voice(V_TONE, note(PENTA[(int)(mrand() * 6)] + 12), 0.05f, 0.8f, 0);
             break;
         case 7: /* cachoeira: quase só água */
             if (bar16 == 0 && mrand() < 0.3f) voice(V_TONE, 196, 0.03f, 1, 0);
@@ -355,7 +356,7 @@ static void sequencer_step(int style, int step, float intensity) {
             if (bar16 == 0 || bar16 == 3) voice(V_BELL, 1650, 0.08f, 9, 0);
             if (bar16 == 8) voice(V_KICK, 45, 0.3f, 5, 0);
             break;
-        case 10: /* jardim de vidro: sinos */
+        case 10: /* jardim de pedras: sininhos de vento */
             if (bar16 % 4 == 0 && mrand() < 0.7f) voice(V_BELL, note(PENTA[(int)(mrand() * 8)] + 24), 0.035f, 2, 0);
             break;
         case 11: /* cidadela: tambores que crescem com os selos */

@@ -67,15 +67,15 @@ e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
 | # | Aprendiz | Postura | Arma | Cenário | Postura dele | Perfeito / Bom | Erros até cair |
 |---:|---|---|---|---|---:|---:|---:|
 | 1 | daichi | terra | espada pesada | Celeiro | 300 | 90 / 220 ms | 50 |
-| 2 | genbu | tartaruga | katana simples | Jardim | 300 | 87 / 215 ms | 45 |
+| 2 | genbu | tartaruga | katana simples | Jardim de pedras do mosteiro | 300 | 87 / 215 ms | 45 |
 | 3 | raizo | touro | espadão | Pátio do dojo | 330 | 84 / 208 ms | 40 |
 | 4 | shizuku | água | florete de esgrima | Cachoeira | 330 | 80 / 200 ms | 35 |
 | 5 | garfiel | tigre | garras nas duas mãos | Portão do tigre branco | 360 | 76 / 192 ms | 30 |
-| 6 | karasu | corvo | duas wakizashi | Cobertura | 360 | 72 / 185 ms | 25 |
-| 7 | hayate | vento (ritmo quebrado) | duas foices pequenas | Trem | 390 | 69 / 178 ms | 22 |
+| 6 | karasu | corvo | duas wakizashi | Telhados da vila na chuva | 360 | 72 / 185 ms | 25 |
+| 7 | hayate | vento (ritmo quebrado) | duas foices pequenas | Ponte de corda no desfiladeiro | 390 | 69 / 178 ms | 22 |
 | 8 | enjin | chama | katana de fogo | Forja | 390 | 66 / 172 ms | 20 |
 | 9 | suiren | mar (acelerando) | lança | Porto | 420 | 63 / 166 ms | 18 |
-| 10 | arashi | tempestade | duas katanas | Salão de espelhos | 420 | 60 / 160 ms | 15 |
+| 10 | arashi | tempestade | duas katanas | Salão dourado do castelo | 420 | 60 / 160 ms | 15 |
 | 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 450 | 58 / 155 ms | 12 |
 | 12 | jinshi | montanha (sem som) | katana branca forjada com a lua | Encosta da serra | 450 | 55 / 150 ms | 10 |
 | 13 | **oboro** | as doze, trocando a cada duas sequências | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
@@ -121,6 +121,11 @@ diante, de sete a nove, com combos de até cinco golpes.
 - Tudo em pixel art de 320 × 180, ampliado por número inteiro e sem filtro:
   cenários, trilha, lore, final, lutadores (com contorno escuro e filete de luz na
   cor do cenário) e a interface.
+- Todos os cenários são do Japão antigo: casa de fazenda, jardim de pedras com a
+  ilha da tartaruga, pátio do dojo, cachoeira, portão do tigre, telhados da vila
+  do castelo na chuva (com os corvos na cumeeira), ponte de corda sobre o
+  desfiladeiro no vento, forja, porto dos tambores, salão dourado do castelo com
+  os biombos da tempestade, bambuzal, encosta da serra e o dojo de Hanzo.
 - Os fundos (cenários, título, lore e trilha) passam por uma paleta curta de 32
   cores, tirada da própria cena (`src/pixelize.c`): cada pixel vai para a cor mais
   perto, e só na faixa entre dois tons vizinhos um xadrez de Bayer 4 × 4 mistura
