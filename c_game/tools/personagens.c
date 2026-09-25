@@ -975,7 +975,7 @@ static Char CHARS[] = {
                {HEX(0xffffff), HEX(0xc9a6e8)}, {HEX(0xc7cfdd), HEX(0x9d74c8)}, {HEX(0x92a1b9), HEX(0x7450a0)},
                {HEX(0x657392), HEX(0x503678)},
                {HEX(0x1a1932), HEX(0x0e2418)}, {HEX(0x2a2f4e), HEX(0x1a3e28)}, {HEX(0x424c6e), HEX(0x2a5a3a)},
-               {HEX(0x571c27), HEX(0x2f8a5a)}, {HEX(0x891e2b), HEX(0x5ad08a)}, {HEX(0x5ac54f), HEX(0x7cf0a0)}}},
+               {HEX(0x571c27), HEX(0x2f8a5a)}, {HEX(0x891e2b), HEX(0x5ad08a)}, {HEX(0x5ac54f), HEX(0x1fc45a)}}},
     /* Oboro, o último da trilha. Katana de Hanzo. Roxo escuro e dourado. */
     {.id = "oboro", .titulo = "Oboro", .arma = {.kind = W_KATANA}, .cabeca = "rabo_longo",
      .camisa = {HEX(0x8a6ab0), HEX(0x5e4488), HEX(0x3e2c62), HEX(0x281c42)},
@@ -1203,7 +1203,7 @@ static void erase_px(Canvas *cv, int x, int y) {
     }
 }
 
-static void recolor(Canvas *cv, const Char *ch) {
+static void recolor(Canvas *cv, const Char *ch, const char *anim) {
     const Seg *s = cv->seg;
     for (int y = 0; y < CH; y++)
         for (int x = 0; x < CW; x++) {
@@ -1246,12 +1246,16 @@ static void recolor(Canvas *cv, const Char *ch) {
         for (int y = 0; y < CH - 1; y++)
             for (int x = 0; x < CW; x++)
                 if (s->lab[y][x] == SHIRT && s->lab[y + 1][x] == DARK) set_rgb(cv, x, y, ch->obi);
-    /* Pack próprio: troca exata de cor no corpo (a cor original decide). */
+    /* Pack próprio: troca exata de cor no corpo (a cor original decide). Quando a
+       camisa do pack é tão clara quanto a lâmina (rastro_pack), fora dos quadros em
+       que a espada aparece o que o separador leu como lâmina é camisa. */
+    bool espada = strstr(anim, "ATTACK") || strstr(anim, "ESPECIAL") || strstr(anim, "DEFEND") || strstr(anim, "THROW");
     if (ch->pack)
         for (int y = 0; y < CH; y++)
             for (int x = 0; x < CW; x++) {
                 int lb = s->lab[y][x];
-                if (lb == NONE || lb == SMEAR || lb == BLADE) continue;
+                if (lb == NONE || lb == SMEAR) continue;
+                if (lb == BLADE && (espada || !rgb_set(ch->rastro_pack[0]))) continue;
                 Color o = cv->orig->p[y][x];
                 for (int i = 0; i < 24 && rgb_set(ch->troca[i].de); i++)
                     if (ch->troca[i].de.r == o.r && ch->troca[i].de.g == o.g && ch->troca[i].de.b == o.b) {
@@ -1261,7 +1265,8 @@ static void recolor(Canvas *cv, const Char *ch) {
             }
     /* O rastro de alguns packs usa as mesmas cores da camisa: o que estiver longe do
        resto do corpo (cabelo, hakama, pele, contorno) é rastro, e fica nas cores dele. */
-    if (ch->pack && rgb_set(ch->rastro_pack[0])) {
+    bool golpe = strstr(anim, "ATTACK") || strstr(anim, "ESPECIAL");
+    if (ch->pack && rgb_set(ch->rastro_pack[0]) && golpe) {
         static Mask core, near;
         for (int y = 0; y < CH; y++)
             for (int x = 0; x < CW; x++) {
@@ -1272,11 +1277,24 @@ static void recolor(Canvas *cv, const Char *ch) {
                              o.b == ch->rastro_pack[i].b;
                 core[y][x] = o.a && !trail && s->lab[y][x] != SMEAR && s->lab[y][x] != BLADE;
             }
-        mask_dilate(near, core, 4, false);
+        mask_dilate(near, core, 6, false);
+        /* abaixo da faixa (o alto da hakama) camisa não há: o que for dessas cores é rastro */
+        int belt = CH;
+        for (int y = 0; y < CH && belt == CH; y++)
+            for (int x = 0; x < CW; x++) {
+                Color o = cv->orig->p[y][x];
+                if (o.a && rgb_set(ch->hakama[0])) {
+                    for (int i = 0; i < 24 && rgb_set(ch->troca[i].de); i++)
+                        if (ch->troca[i].de.r == o.r && ch->troca[i].de.g == o.g && ch->troca[i].de.b == o.b &&
+                            (ch->troca[i].para.r == ch->hakama[0].r && ch->troca[i].para.g == ch->hakama[0].g &&
+                             ch->troca[i].para.b == ch->hakama[0].b)) { belt = y; break; }
+                    if (belt < CH) break;
+                }
+            }
         for (int y = 0; y < CH; y++)
             for (int x = 0; x < CW; x++) {
                 Color o = cv->orig->p[y][x];
-                if (!o.a || near[y][x] || s->lab[y][x] == BLADE) continue;
+                if (!o.a || (near[y][x] && y < belt + 3) || s->lab[y][x] == BLADE) continue;
                 for (int i = 0; i < 3; i++)
                     if (rgb_set(ch->rastro_pack[i]) && o.r == ch->rastro_pack[i].r && o.g == ch->rastro_pack[i].g &&
                         o.b == ch->rastro_pack[i].b) {
@@ -1672,6 +1690,22 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                 for (int y = 0; y < ymax; y++)
                     for (int x = 0; x < CW; x++)
                         if (comp[y][x] == head && x < cx1[head] - 10) comp[y][x] = -1;
+                /* a fita do rabo de cavalo e o que sobrou dele no alto da cabeça: dentro do
+                   cabelo vira cabelo (senão parece uma risca); fora dele, sai */
+                for (int y = cy0[head] - 4; y <= cy0[head] + 3; y++)          /* acima do rosto */
+                    for (int x = cx1[head] - 12; x <= cx1[head]; x++) {
+                        if (!cv_ok(x, y) || !cv->a[y][x].a || is_hair(cv, ch, x, y)) continue;
+                        int opaque = 0;
+                        for (int dy = -1; dy <= 1; dy++)
+                            for (int dx = -1; dx <= 1; dx++) opaque += (dx || dy) && cv_ok(x + dx, y + dy) && cv->a[y + dy][x + dx].a;
+                        /* a arma fica, a não ser um pixel solto acima da cabeça */
+                        if (cv->tag[y][x] == T_WEAPON && (y >= cy0[head] || opaque > 1)) continue;
+                        int nh = 0;
+                        for (int dy = -1; dy <= 1; dy++)
+                            for (int dx = -1; dx <= 1; dx++) nh += (dx || dy) && is_hair(cv, ch, x + dx, y + dy);
+                        if (nh >= 3) cv_put(cv, x, y, ch->cabelo[(x + y) % 2 ? 0 : 1]);
+                        else { cv_clear(cv, x, y); cv->empty[y][x] = true; }
+                    }
                 cx0[head] = cx1[head] - 10 > cx0[head] ? cx1[head] - 10 : cx0[head];
                 for (int y = cy0[head]; y <= cy0[head] + 4 && y < CH; y++)
                     for (int x = cx0[head] - 3; x < cx0[head]; x++)
@@ -2388,7 +2422,7 @@ static void aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
         case EL_LUA:
             /* luar: um halo pálido e poeira de prata subindo devagar */
             glow(cv, ctx, 0.07 * pw, ymid, (Rgb){226, 222, 255}, (Rgb){150, 140, 200}, true);
-            particles(cv, ctx, "prata", (int)(3 * pw), 14, bx0 - 2, bx1 + 2, ymid, by1, 0, -0.7, 0.8,
+            particles(cv, ctx, "prata", (int)(3 * pw), 8, bx0 - 2, bx1 + 2, ymid, by1, 0, -0.7, 0.8,
                       (Rgb){255, 255, 255}, (Rgb){214, 208, 255}, (Rgb){150, 140, 210}, 1);
             break;
         case EL_POEIRA:
@@ -2923,7 +2957,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         drop_sheath(cv, ch);
         return;
     }
-    recolor(cv, ch);
+    recolor(cv, ch, anim);
     accessories(cv, ch, idx);
     if (seg->has_hat) {
         if (ch->chapeu) {
