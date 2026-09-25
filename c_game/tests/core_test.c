@@ -126,8 +126,17 @@ static void test_roster(const Settings *s) {
     for (int i = 0; i < 12; i++) CHECK(roster_get(i)->specialChance == 0, "só o BIG BOSS tem especial (%s)", roster_get(i)->name);
     const MasterProfile *boss = roster_get(12);
     CHECK(boss->sealCount == 3, "o BIG BOSS tem três selos");
-    CHECK(boss->stanceCount == 12, "oboro domina as doze posturas");
-    for (int k = 0; k < 12; k++) CHECK(strcmp(boss->stances[k].name, roster_get(k)->style) == 0, "a %dª postura de oboro é a de %s", k + 1, roster_get(k)->name);
+    CHECK(boss->stanceCount == 3, "oboro tem uma postura por selo");
+    CHECK(!strcmp(boss->stances[0].name, "postura de hanzo") && !strcmp(boss->stances[1].name, "devorador de posturas") &&
+          !strcmp(boss->stances[2].name, "postura do oni"), "de hanzo, devorador de posturas, do oni");
+    /* no devorador de posturas, um eco de cada aprendiz: "eco da terra" é a "postura da terra" */
+    for (int k = 0; k < 12; k++) {
+        bool found = false;
+        for (int i = 0; i < boss->moveCount; i++)
+            found |= !strncmp(boss->moves[i].name, "eco ", 4) && !strcmp(boss->moves[i].name + 4, roster_get(k)->style + 8) &&
+                     boss->moves[i].stance == 1;
+        CHECK(found, "oboro devora a postura de %s", roster_get(k)->name);
+    }
     for (int i = 0; i < LORE_PAGES; i++) CHECK(lore_page(i)[0] != 0, "página %d da lore", i);
     CHECK(boss->senseiCount == 1 && strcmp(boss->sensei[0].text, "Confie em você mesmo. Use tudo que aprendeu.") == 0,
           "no oboro, hanzo não dá dica");
@@ -454,20 +463,18 @@ static void test_big_boss(void) {
     settings_default(&s);
     Duel d;
     duel_init(&d, &s, oboro, 99);
-    for (int i = 0; i < oboro->moveCount; i++)
-        if (oboro->moves[i].minSeal > 0) CHECK(oboro->moves[i].strikes >= 4, "as sequências longas ficam para os selos seguintes");
-    /* No primeiro selo, nenhuma sequência de selo avançado sai. */
+    /* No primeiro selo, só a postura de hanzo. */
     {
         Duel f;
         duel_init(&f, &s, oboro, 5);
         bool early = true;
         for (int k = 0; k < 40 && f.phase != PH_FINISHED; k++) {
             while (f.phase != PH_WINDUP) duel_tick(&f, DT);
-            if (duel_move(&f) && duel_move(&f)->minSeal > 0) early = false;
-            while (f.phase == PH_WINDUP) { if (!f.attempted && f.strikeAt - f.clock <= 0.01) duel_press(&f); duel_tick(&f, DT); }
             if (f.seal > 0) break;
+            if (duel_move(&f) && duel_move(&f)->stance != 0) early = false;
+            while (f.phase == PH_WINDUP) { if (!f.attempted && f.strikeAt - f.clock <= 0.01) duel_press(&f); duel_tick(&f, DT); }
         }
-        CHECK(early, "sequências de selos avançados não aparecem no primeiro selo");
+        CHECK(early, "no primeiro selo, só a postura de hanzo");
     }
     /* Quebrar um selo devolve fôlego a Ren. */
     d.renPosture = 40;
@@ -484,7 +491,7 @@ static void test_big_boss(void) {
     CHECK(!lose.victory && lose.finished == 1, "sem defesa, Ren cai contra o Oboro");
 }
 
-/* Oboro mostra as posturas uma a uma: a guarda muda ao longo do duelo e cada eco sai na postura certa. */
+/* Oboro muda de postura a cada selo, e cada sequência sai na postura do selo. */
 static void test_mimic(void) {
     const MasterProfile *oboro = roster_get(12);
     Settings s;
@@ -493,17 +500,16 @@ static void test_mimic(void) {
     duel_init(&d, &s, oboro, 5);
     int seen[MAX_STANCES] = {0};
     bool matching = true;
-    for (int k = 0; k < 40 && d.phase != PH_FINISHED; k++) {
-        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+    for (int k = 0; k < 400 && d.phase != PH_FINISHED; k++) {
+        while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
+        if (d.phase == PH_FINISHED) break;
         const Move *mv = duel_move(&d);
-        if (mv && d.comboStrike == 0 && mv->stance >= 0 && mv->stance != d.stanceIndex) matching = false;
+        if (mv && d.comboStrike == 0 && (mv->stance != d.stanceIndex || d.stanceIndex != d.seal)) matching = false;
         seen[d.stanceIndex] = 1;
         while (d.phase == PH_WINDUP) { if (!d.attempted && d.strikeAt - d.clock <= 0.01) duel_press(&d); duel_tick(&d, DT); }
     }
-    int count = 0;
-    for (int i = 0; i < MAX_STANCES; i++) count += seen[i];
-    CHECK(count >= 6, "oboro passa por várias posturas (%d)", count);
-    CHECK(matching, "cada eco sai na postura do aprendiz dele");
+    CHECK(seen[0] && seen[1] && seen[2], "oboro passa pelas três posturas");
+    CHECK(matching, "cada sequência sai na postura do selo");
     Tally t = play(oboro, 5, 0.02, 900);
     CHECK(t.victory && t.feintLaunches == 0, "perfeitos vencem oboro, sem fintas");
 }

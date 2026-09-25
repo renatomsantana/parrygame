@@ -564,6 +564,14 @@ static void set_state(State s) {
 
 static const SprAnim *fa(const Fighter *f, const char *name) { return spr_anim(f->set, name); }
 
+/* O aprendiz de quem oboro devorou este golpe: "eco da terra" é a "postura da terra". -1 se não é eco. */
+static int echo_of(const Move *mv) {
+    if (!mv || strncmp(mv->name, "eco ", 4)) return -1;
+    for (int i = 0; i < MASTER_COUNT; i++)
+        if (!strcmp(mv->name + 4, roster_get(i)->style + 8)) return i;
+    return -1;
+}
+
 static int anim_contact(const SprAnim *a) {
     if (!a) return 0;
     return a->contact >= 0 ? a->contact : a->frames / 2;
@@ -752,7 +760,7 @@ static void start_duel(void) {
     G.masked = G.maskOnGround = G.windOnly = false;
     G.hz.on = false;
     audio_music_intensity(0);
-    banner(G.m->style, PAPER);
+    banner(G.m->isBigBoss ? duel_stance(&G.duel)->name : G.m->style, PAPER);
     set_state(ST_DUEL);
 }
 
@@ -967,16 +975,12 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
     if (look == LOOK_JUMP || look == LOOK_WARP) look = LOOK_HIGH;
     if (look == LOOK_THRUST && (a = fa(f, "DASH_ATTACK"))) return a;
     const char *base = look == LOOK_LOW ? "ATTACK_2" : (look == LOOK_THRUST ? "ATTACK_1" : "ATTACK_3");
-    if (G.m->isBigBoss) {
-        const char *stance = duel_stance(&G.duel)->name;
-        for (int i = 0; i < MASTER_COUNT && stance; i++) {
-            const MasterProfile *src = roster_get(i);
-            if (strcmp(src->style, stance)) continue;
-            snprintf(name, sizeof name, "%s_ECO_%s", base, src->name);
-            for (char *u = name; *u; u++)
-                if (*u >= 'a' && *u <= 'z') *u = (char)(*u - 32);
-            if ((a = fa(f, name))) return a;
-        }
+    int echo = G.m->isBigBoss ? echo_of(mv) : -1;
+    if (echo >= 0) {
+        snprintf(name, sizeof name, "%s_ECO_%s", base, roster_get(echo)->name);
+        for (char *u = name; *u; u++)
+            if (*u >= 'a' && *u <= 'z') *u = (char)(*u - 32);
+        if ((a = fa(f, name))) return a;
     }
     if (f->furia) {
         snprintf(name, sizeof name, "%s_FURIA", base);
@@ -1313,11 +1317,9 @@ static void tell_fx(void) {
         {"197", 7, -30, VFX_BACK | VFX_GLOW},   /* oboro */
     };
     int ti = (G.m->id - 1) % ROSTER_SIZE, row = TELL[ti].row;
-    if (G.m->isBigBoss) {
-        const char *stance = duel_stance(&G.duel)->name;
-        for (int i = 0; i < MASTER_COUNT && stance; i++)
-            if (!strcmp(roster_get(i)->style, stance)) { ti = i; row = 7; }
-    }
+    int echo = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
+    if (echo >= 0) { ti = echo; row = 7; }
+    else if (G.m->isBigBoss && G.masked) { ti = 7; row = TELL[7].row; }   /* o oni: a lâmina acende */
     vfx(TELL[ti].fx, row, (Vector2){b->x + b->offsetX, GROUND_LOW + TELL[ti].y}, true, TELL[ti].flags, 22);
 }
 
@@ -1426,7 +1428,8 @@ static void handle_events(void) {
                 G.blackoutTarget = 0;
                 break;
             case EV_STANCE:
-                banner(duel_stance(&G.duel)->name, AGED_GOLD);
+                /* no oboro, a postura nova aparece quando ele volta a lutar, depois da fala */
+                if (!G.m->isBigBoss) banner(duel_stance(&G.duel)->name, AGED_GOLD);
                 break;
             case EV_SEAL: {
                 static const char *names[] = {"primeiro selo", "segundo selo", "terceiro selo"};
@@ -1954,6 +1957,7 @@ static void scene_done(void) {
             /* de volta ao duelo: o grito vem agora, com tempo de acabar antes do próximo golpe */
             G.duel.phaseEnd = fmax(G.duel.phaseEnd, G.duel.clock + 1.8);
             set_state(ST_DUEL);
+            banner(duel_stance(&G.duel)->name, G.masked ? VERMILION : AGED_GOLD);
             break;
         case SCENE_KNEEL:
             /* a música corta; fica só o vento */

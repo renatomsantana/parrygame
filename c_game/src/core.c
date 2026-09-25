@@ -362,6 +362,11 @@ static void resolve(Duel *d) {
             d->renPosture = clampf(d->renPosture + s->sealRenRecover, 0, s->renPosture);
             d->phaseEnd = d->clock + s->sealRecovery;
             emit(d, EV_SEAL, J_NONE, 0, d->seal, false);
+            /* uma postura por selo: o selo novo traz a dele */
+            if (d->m->stanceCount > 1 && d->seal < d->m->stanceCount) {
+                d->stanceIndex = d->seal;
+                emit(d, EV_STANCE, J_NONE, 0, d->stanceIndex, false);
+            }
         } else {
             d->phase = PH_FINISHED;
             emit(d, EV_FINISHED, J_NONE, 0, 0, true);

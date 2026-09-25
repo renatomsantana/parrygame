@@ -257,7 +257,7 @@ lutador e toca as pranchas no ritmo do núcleo:
 | Kojiro erra | HURT; sem HURT, o clarão vermelho e o recuo |
 | Kojiro cai | DEATH até o `stop`; sem DEATH, agachado (DASH_ATTACK quadro 0) |
 | Desarme | o mestre em DESARMADO; kojiro avança com o DASH e para com a lâmina baixa |
-| Selo de oboro quebrado | HURT segurado, depois o SHOUT do Demon (ou o GRITO montado), e a fúria dali em diante |
+| Selo de oboro quebrado | HURT segurado e a fala dele; no primeiro, o GRITO montado (sem máscara); no segundo, a máscara, o SHOUT do Demon e a fúria (a lâmina em chamas) dali em diante |
 
 A escolha do golpe segue a preparação do núcleo: alto → ATTACK_3 (desce), baixo
 → ATTACK_2 (sobe), estocada → DASH_ATTACK (ou ATTACK_1), golpe forte →

@@ -105,13 +105,13 @@ Quem trava num mestre pode conversar com Hanzo e ouvir uma dica. No Oboro, Hanzo
 
 ## A luta final: Oboro
 
-Três formas, uma por selo. A cada selo quebrado ele para de lutar e fala.
+Três formas, uma por selo, cada uma com a sua postura. A cada selo quebrado ele para de lutar e fala.
 
-**Forma 1, sem máscara.** Um homem cansado, quase triste. "Ele não é quem você pensa."
+**Forma 1, postura de Hanzo, sem máscara.** Um homem cansado, quase triste, lutando do jeito limpo que o mestre ensinou. "Ele não é quem você pensa."
 
-**Forma 2, sem máscara, perdendo o controle.** Fala de Hanzo, do treino até a última gota de sangue, do duelo em que Hanzo parou no meio do golpe. Kojiro: "Mentira."
+**Forma 2, devorador de posturas, sem máscara, perdendo o controle.** Luta com um eco de cada aprendiz, com o elemento dele. Fala de Hanzo, do treino até a última gota de sangue, do duelo em que Hanzo parou no meio do golpe. Kojiro: "Mentira."
 
-**Forma 3, a máscara de oni.** Um raio, e quando a luz volta ele está de máscara. Kojiro reconhece o homem que matou o pai: "Foi você." Oboro: "O homem dessa máscara matou meus pais também. Eu uso isso pra lembrar do que eu quase me tornei. E pra que o próximo garoto que ele mandasse viesse atrás de mim, e não deles. Eu só não esperava que fosse você." A lâmina acende e ele luta com tudo.
+**Forma 3, postura do oni: a máscara de oni e a lâmina em chamas.** Ele se perde. Um raio, e quando a luz volta ele está de máscara. Kojiro reconhece o homem que matou o pai: "Foi você." Oboro: "O homem dessa máscara matou meus pais também. Eu uso isso pra lembrar do que eu quase me tornei. E pra que o próximo garoto que ele mandasse viesse atrás de mim, e não deles. Eu só não esperava que fosse você." A lâmina acende e ele luta com tudo.
 
 **Postura quebrada.** De joelhos, desarmado, ele tira a máscara e ela cai no chão: "Eu achei isso no baú dele."
 

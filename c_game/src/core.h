@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #define MAX_WINDUPS 6
-#define MAX_STANCES 12         /* oboro usa as doze posturas dos aprendizes */
+#define MAX_STANCES 4
 #define MAX_SEALS 3
 #define MAX_FALSE_CUES 3
 #define MAX_LINES 8
@@ -73,7 +73,7 @@ typedef struct {
  * uma preparação seguida de 1 a MAX_CHAIN golpes, com intervalos sempre iguais
  * entre um contato e o próximo. É isso que o jogador estuda e decora.
  */
-#define MAX_MOVES 16
+#define MAX_MOVES 24
 #define MAX_CHAIN 8
 
 /* Preparação que denuncia a sequência. LOOK_HEAVY é o golpe forte: o salto com a

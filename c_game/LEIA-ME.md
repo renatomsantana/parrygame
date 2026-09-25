@@ -87,7 +87,7 @@ que aprendeu.").
 | 10 | arashi | tempestade (dano 1,5×) | duas katanas | Salão do castelo na tempestade | 420 | 60 / 160 ms | 15 |
 | 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 450 | 58 / 155 ms | 12 |
 | 12 | jinshi | lua (sem som) | katana bem branca, forjada com a lua | Encosta da serra | 450 | 55 / 150 ms | 10 |
-| 13 | **oboro** | as doze, trocando a cada duas sequências | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
+| 13 | **oboro** | hanzo → devorador de posturas → oni (uma por selo) | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
 
 A dificuldade é da posição na trilha, não do personagem: postura, erros até
 cair e janelas apertam a cada passo, e do 5º em diante acertar devolve postura
@@ -133,7 +133,7 @@ repertório mais variado e o ritmo irregular.
 | arashi | faísca (1) · duas tempestades (1) ⚔ · trovoada (2: 0,45) ⚔ no 2º · tormenta (3: 0,40 0,40) ⚔ no 3º · granizo (4: 0,40 0,40 0,40) · ventania (3: 0,40 0,70) · trovão (1) correndo ⚔ · raio duplo (2: 0,40) saltando ⚔ nos dois · céu partido (5: 0,40 0,40 0,40 0,80) ⚔ no 5º · **relâmpago** (forte) ⚔ |
 | yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) · **eclipse** (forte) · vultos (3: 0,40 0,70) · breu (1) correndo · coruja (2: 0,45) saltando · meia-noite (4: 0,40 0,40 0,90) · nevoeiro (2: 0,70) |
 | jinshi | crescente (1) · minguante (3: 0,60 0,60) · fases da lua (4: 0,50 0,50 0,90) · luar (3: 0,45 1,00) · lua cheia (5: 0,50 0,50 0,50 0,90) · lua branca (6: 0,40 0,90 0,45 0,45 1,00) · noite branca (4: 1,00 0,40 0,40) · reflexo no lago (1) correndo · lua alta (2: 0,70) saltando · **halo** (forte) |
-| oboro | um eco de cada aprendiz, na postura dele · doze posturas (5, terceiro selo) · passo de hanzo (1) correndo · queda da lua (1) saltando |
+| oboro | **postura de hanzo:** corte do mestre (1) · lição (2: 0,60) · estocada de hanzo (1) · três lições (3: 0,50 0,60) · passo de hanzo (1) correndo · salto do mestre (2: 0,55) saltando · **devorador de posturas:** um eco de cada aprendiz, com o elemento dele (eco da terra, da tartaruga, do touro, da água, do tigre, do corvo, do vento, da chama, do mar, da tempestade, da noite, da lua) · **postura do oni** (de máscara, lâmina em chamas): fúria do oni (4: 0,40 0,40 0,70) · chama do oni (3: 0,45 0,45) · doze posturas (6: 0,40 0,40 0,40 0,40 0,90) · investida do oni (1) correndo · mergulho do oni (2: 0,50) saltando · **golpe do oni** (forte) |
 
 ## Visual e som
 
