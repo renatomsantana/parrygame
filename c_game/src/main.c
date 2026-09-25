@@ -89,11 +89,10 @@ static const Look MASTER_LOOKS[ROSTER_SIZE] = {
     {.coat = RGB(120, 92, 58), .sleeve = RGB(150, 120, 80), .pants = RGB(70, 56, 40), .skin = RGB(214, 164, 120),
      .hair = RGB(60, 40, 26), .blade = RGB(196, 196, 196), .hat = HAT_KASA, .size = 1.15f, .bladeLen = 22,
      .robe = 0.5f, .pantsWidth = 1.5f, .handle = RGB(90, 60, 36), .bladeWidth = 1.8f},
-    /* genbu: velho de túnica verde-musgo e contas, escudo e espada curta. */
+    /* genbu: velho de túnica verde-musgo e contas, uma katana simples. */
     {.coat = RGB(96, 110, 86), .sleeve = RGB(170, 170, 150), .pants = RGB(60, 64, 52), .skin = RGB(214, 170, 136),
-     .hair = RGB(186, 186, 186), .blade = RGB(220, 224, 228), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 13,
-     .robe = 1.2f, .flare = 0.3f, .extra = RGB(90, 60, 36), .extras = EX_BEADS, .handle = RGB(60, 70, 50), .bladeWidth = 1.1f,
-     .offhand = OFF_SHIELD},
+     .hair = RGB(186, 186, 186), .blade = RGB(220, 224, 228), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 19,
+     .robe = 1.2f, .flare = 0.3f, .extra = RGB(90, 60, 36), .extras = EX_BEADS, .handle = RGB(60, 70, 50), .bladeWidth = 1},
     /* raizo: gi marrom, ombreiras, chapéu de palha, hakama larga e um espadão enorme. */
     {.coat = RGB(92, 58, 40), .sleeve = RGB(200, 188, 168), .pants = RGB(40, 36, 44), .skin = RGB(222, 176, 136),
      .hair = RGB(24, 20, 20), .blade = RGB(232, 232, 238), .hat = HAT_KASA, .size = 1.2f, .bladeLen = 30,
@@ -108,11 +107,11 @@ static const Look MASTER_LOOKS[ROSTER_SIZE] = {
      .hair = RGB(232, 184, 60), .blade = RGB(250, 246, 236), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 9,
      .robe = 0.4f, .pantsWidth = 1.3f, .trim = RGB(200, 40, 40), .extra = RGB(200, 40, 40), .extras = EX_SCARF,
      .handle = RGB(40, 40, 46), .bladeWidth = 1.3f, .offhand = OFF_DAGGER},
-    /* karasu: sobretudo preto com capa de penas, espada e adaga. */
+    /* karasu: sobretudo preto com capa de penas, uma wakizashi em cada mão. */
     {.coat = RGB(24, 24, 30), .sleeve = RGB(24, 24, 30), .pants = RGB(20, 20, 26), .skin = RGB(220, 190, 170),
-     .hair = RGB(14, 14, 18), .blade = RGB(210, 214, 226), .hat = HAT_NONE, .size = 1, .bladeLen = 20,
-     .robe = 1.1f, .trim = RGB(70, 70, 96), .extra = RGB(30, 30, 46), .extras = EX_CAPE, .handle = RGB(30, 30, 40),
-     .bladeWidth = 1, .offhand = OFF_DAGGER},
+     .hair = RGB(14, 14, 18), .blade = RGB(210, 214, 226), .hat = HAT_NONE, .size = 1, .bladeLen = 15,
+     .robe = 1.1f, .trim = RGB(150, 30, 40), .extra = RGB(30, 30, 46), .extras = EX_CAPE, .handle = RGB(30, 30, 40),
+     .bladeWidth = 1, .offhand = OFF_SWORD},
     /* hayate: jaqueta curta verde-água e cachecol branco ao vento, uma foice em cada mão. */
     {.coat = RGB(60, 150, 140), .sleeve = RGB(220, 230, 220), .pants = RGB(40, 50, 56), .skin = RGB(226, 184, 150),
      .hair = RGB(40, 30, 30), .blade = RGB(236, 244, 244), .hat = HAT_NONE, .size = 1, .bladeLen = 13,
@@ -136,10 +135,10 @@ static const Look MASTER_LOOKS[ROSTER_SIZE] = {
      .hair = RGB(20, 20, 32), .blade = RGB(200, 204, 220), .hat = HAT_HOOD, .size = 1, .bladeLen = 10,
      .robe = 0.4f, .extra = RGB(120, 26, 36), .extras = EX_SCARF, .handle = RGB(20, 20, 26), .bladeWidth = 0.9f,
      .offhand = OFF_DAGGER},
-    /* jinshi: monge da montanha, túnica longa, chapéu de palha, cajado de ferro. */
+    /* jinshi: monge da montanha, túnica longa, chapéu de palha, a katana branca forjada com a lua. */
     {.coat = RGB(110, 96, 80), .sleeve = RGB(110, 96, 80), .pants = RGB(80, 70, 60), .skin = RGB(210, 164, 126),
-     .hair = RGB(40, 30, 26), .blade = RGB(90, 92, 100), .hat = HAT_KASA, .size = 1.1f, .bladeLen = 30,
-     .robe = 1.6f, .flare = 0.3f, .extra = RGB(60, 36, 24), .extras = EX_BEADS, .weapon = WEAPON_STAFF, .bladeWidth = 1},
+     .hair = RGB(40, 30, 26), .blade = RGB(248, 250, 255), .hat = HAT_KASA, .size = 1.1f, .bladeLen = 22,
+     .robe = 1.6f, .flare = 0.3f, .extra = RGB(60, 36, 24), .extras = EX_BEADS, .handle = RGB(226, 226, 236), .bladeWidth = 1},
     /* oboro: o uniforme da escola em preto e roxo, cabelo solto, capa, a katana de hanzo. */
     {.coat = RGB(26, 20, 30), .sleeve = RGB(60, 34, 80), .pants = RGB(20, 16, 24), .skin = RGB(226, 200, 188),
      .hair = RGB(16, 12, 20), .blade = RGB(200, 200, 220), .hat = HAT_LONG_HAIR, .size = 1.15f, .bladeLen = 22,

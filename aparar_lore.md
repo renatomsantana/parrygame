@@ -52,7 +52,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 2. Genbu | Postura da Tartaruga
 
-- **Arma:** Escudo e espada curta
+- **Arma:** Katana simples
 - **Personalidade:** Paciente e sábio
 - **Visão sobre Oboro:** Sente pena dele
 - **Visão sobre Hanzo:** Acredita que Hanzo tentou ajudá-lo até o fim
@@ -68,7 +68,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 4. Shizuku | Postura da Água
 
-- **Arma:** Florete
+- **Arma:** Florete de esgrima
 - **Personalidade:** Serena e analítica
 - **Visão sobre Oboro:** Acredita que ele mudou após assumir o dojo
 - **Visão sobre Hanzo:** Nunca conseguiu entender completamente o mestre
@@ -84,7 +84,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 6. Karasu | Postura do Corvo
 
-- **Arma:** Espada e adaga
+- **Arma:** Wakizashi, uma em cada mão
 - **Personalidade:** Sarcástico e oportunista
 - **Visão sobre Oboro:** Segue-o apenas porque venceu
 - **Visão sobre Hanzo:** Nunca confiou totalmente nele
@@ -92,7 +92,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 7. Hayate | Postura do Vento
 
-- **Arma:** Duas foices (kama) e o vento
+- **Arma:** Duas foices pequenas (kama) e o vento
 - **Personalidade:** Impulsivo e competitivo
 - **Visão sobre Oboro:** Sempre o admirou
 - **Visão sobre Hanzo:** Acredita que Hanzo foi injusto
@@ -100,7 +100,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 8. Enjin | Postura da Chama
 
-- **Arma:** Sabre curvo
+- **Arma:** Katana de fogo
 - **Personalidade:** Explosivo e agressivo
 - **Visão sobre Oboro:** Odeia o homem que ele se tornou
 - **Visão sobre Hanzo:** Acredita que ele deveria ter impedido Oboro
@@ -116,7 +116,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 10. Arashi | Postura da Tempestade
 
-- **Arma:** Duas espadas
+- **Arma:** Duas katanas
 - **Personalidade:** Arrogante e orgulhoso
 - **Visão sobre Oboro:** Ainda o considera o maior espadachim vivo
 - **Visão sobre Hanzo:** Acredita que envelheceu e foi superado
@@ -124,7 +124,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 11. Yoru | Postura da Noite
 
-- **Arma:** Uma adaga em cada mão
+- **Arma:** Duas adagas, empunhadas ao contrário
 - **Personalidade:** Desconfiado e silencioso
 - **Visão sobre Oboro:** Suspeita que existe algo oculto sobre a vitória contra Hanzo
 - **Visão sobre Hanzo:** Acredita que ele escondia algo de todos
@@ -132,7 +132,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ### 12. Jinshi | Postura da Montanha
 
-- **Arma:** Cajado de ferro
+- **Arma:** Katana branca forjada com a lua
 - **Personalidade:** Reservado e reflexivo
 - **Visão sobre Oboro:** Nunca o perdoou
 - **Visão sobre Hanzo:** Acredita que ele falhou como mestre
@@ -174,7 +174,6 @@ Para Oboro, Musashi recebeu gratuitamente aquilo pelo qual ele sacrificou a pró
 - Postura e arma de Musashi (a katana de Hanzo está com Oboro)
 - Postura de Hanzo
 - Pares de posturas parecidas: Terra (Daichi) e Montanha (Jinshi), Água (Shizuku) e Mar (Suiren)
-- Armas não afiadas: escudo (Genbu) e cajado de ferro (Jinshi)
 - Nome do Enjin (em japonês soa como "engine", motor)
 - Motivo de Jinshi nunca ter perdoado Oboro
 - Qual semelhança Suiren vê entre Musashi e o jovem Oboro

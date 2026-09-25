@@ -694,6 +694,7 @@ typedef struct {
     bool par;           /* uma segunda arma na outra mão */
     double par_comprimento; /* katana: a segunda é uma lâmina mais curta, deste tamanho em px */
     bool reverso;       /* adaga empunhada ao contrário: a lâmina sai da mão para trás */
+    Rgb brilho;         /* halo em volta da lâmina (a katana da lua do Jinshi) */
     Rgb cor_par;
     Rgb guarda;
     int atras, ponta;   /* lança e cajado: px atrás da mão, px da ponta */
@@ -770,8 +771,8 @@ static Char CHARS[] = {
      .lamina = {HEX(0xd8d8cc), HEX(0x9c9a8a)},
      .rastro = {HEX(0xfbf0d0), HEX(0xe0b868), HEX(0xa47a3a)}, .elemento = EL_TERRA, .largura = 1,
      .especial = SP_SALTO, .efeito = FX_PEDRAS},
-    /* 2. Tartaruga. Espada curta e o casco nas costas (escudo). Verde. */
-    {.id = "genbu", .titulo = "Genbu", .arma = {.kind = W_CURTA, .comprimento = 11}, .cabeca = "careca",
+    /* 2. Tartaruga. Katana simples e o casco nas costas. Verde. */
+    {.id = "genbu", .titulo = "Genbu", .arma = {.kind = W_KATANA}, .cabeca = "careca",
      .acessorios = {AC_CASCO},
      .camisa = {HEX(0xb6d0a0), HEX(0x88ac74), HEX(0x5e8452), HEX(0x3e5e38)},
      .hakama = {HEX(0x3e5a40), HEX(0x2e4632), HEX(0x223424), HEX(0x18261a), HEX(0x101a12)},
@@ -835,9 +836,9 @@ static Char CHARS[] = {
      .troca = {{HEX(0x1e6f50), HEX(0x3a3642)}, {HEX(0x134c4c), HEX(0x28252e)}, {HEX(0x0c2e44), HEX(0x1a181e)},
                {HEX(0x391f21), HEX(0xa01820)}, {HEX(0x5d2c28), HEX(0xd02828)},
                {HEX(0x272727), HEX(0xb88428)}, {HEX(0x3d3d3d), HEX(0xe8b83c)}, {HEX(0x5ac54f), HEX(0xffb020)}}},
-    /* 6. Corvo. Espada e uma segunda lâmina mais curta na outra mão. Preto e vermelho. */
+    /* 6. Corvo. Wakizashi (a espada curta), uma em cada mão. Preto e vermelho. */
     {.id = "karasu", .titulo = "Karasu",
-     .arma = {.kind = W_KATANA, .par = true, .par_comprimento = 12, .cor_par = HEX(0xece4e6), .guarda = HEX(0x8c1018)},
+     .arma = {.kind = W_KATANA, .escala = 0.72, .par = true, .cor_par = HEX(0xece4e6), .guarda = HEX(0x8c1018)},
      .cabeca = "corvo",
      .acessorios = {AC_TRAPO},
      .camisa = {HEX(0x5a5058), HEX(0x3e363e), HEX(0x2a242a), HEX(0x1c181c)},
@@ -939,18 +940,18 @@ static Char CHARS[] = {
      .troca = {{HEX(0x1e6f50), HEX(0x4a3e6a)}, {HEX(0x134c4c), HEX(0x2e2844)}, {HEX(0x0c2e44), HEX(0x1a1628)},
                {HEX(0x391f21), HEX(0x4a1c7a)}, {HEX(0x5d2c28), HEX(0x8a3ce0)},
                {HEX(0x272727), HEX(0x141320)}, {HEX(0x3d3d3d), HEX(0x26243a)}, {HEX(0x5ac54f), HEX(0xe8c8ff)}}},
-    /* 12. Montanha. Cajado de ferro. Cinza pedra e branco osso. */
+    /* 12. Montanha. Katana branca forjada com a lua (lâmina com halo de luar). Cinza pedra e branco osso. */
     {.id = "jinshi", .titulo = "Jinshi",
-     .arma = {.kind = W_CAJADO, .escala = 1.05, .atras = 16, .haste = {HEX(0x70747e), HEX(0x3a3c44)},
-              .ponteira = HEX(0xece6d4)},
+     .arma = {.kind = W_KATANA, .brilho = HEX(0xbcd0ff)},
      .cabeca = "eremita",
      .camisa = {HEX(0xd6d2c6), HEX(0xaaa598), HEX(0x7c786e), HEX(0x56534c)},
      .hakama = {HEX(0x4c4a46), HEX(0x3a3936), HEX(0x2a2927), HEX(0x1e1d1c), HEX(0x141413)},
      .pele = {HEX(0xd0a080), HEX(0xa87858), HEX(0x704e3c)},
      .cabelo = {HEX(0x5c5a58), HEX(0x8a8884), HEX(0xb8b6b0)},
      .destaque = {HEX(0xece6d4), HEX(0xa8a292)}, .obi = HEX(0xece6d4),
-     .sem_saya = true, .cabo = HEX(0x4a4c54),
-     .rastro = {HEX(0xfbf8ee), HEX(0xe2dccb), HEX(0xa49e8c)}, .elemento = EL_POEIRA, .altura = 1,
+     .saya = HEX(0xdcdce6), .cabo = HEX(0xe8e8f0),
+     .lamina = {HEX(0xffffff), HEX(0xd2e0ff)},
+     .rastro = {HEX(0xfbfcff), HEX(0xdce6ff), HEX(0x9fb0d8)}, .elemento = EL_POEIRA, .altura = 1,
      .especial = SP_SALTO, .efeito = FX_AVALANCHE},
     /* Oboro, o último da trilha. Katana de Hanzo. Roxo escuro e dourado. */
     {.id = "oboro", .titulo = "Oboro", .arma = {.kind = W_KATANA}, .cabeca = "rabo_longo",
@@ -1632,6 +1633,12 @@ static Blade other_hand(const Blade *b, double open) {
 static void claws(Canvas *cv, const Blade *b, double size, Rgb core, Rgb edge, bool behind) {
     double ang = atan2(b->u[1], b->u[0]), n[2];
     perp(b->u, n);
+    /* barra de metal sobre os nós dos dedos, de onde saem as três lâminas */
+    for (int k = -2; k <= 2; k++) {
+        int x = pyround(b->hilt[0] + b->u[0] * 0.5 + n[0] * k * 0.7), y = pyround(b->hilt[1] + b->u[1] * 0.5 + n[1] * k * 0.7);
+        bool ok = behind ? empty_orig(cv, x, y) && cv->a[y][x].a == 0 : cv_ok(x, y);
+        if (ok) cv_put(cv, x, y, abs(k) == 2 ? (Rgb){70, 70, 80} : (Rgb){130, 130, 142});
+    }
     static const double da[3] = {-0.28, 0.0, 0.28};
     static Pts p;
     for (int j = 0; j < 3; j++) {
@@ -1667,9 +1674,15 @@ static void kama(Canvas *cv, const Blade *b, double len, const Weapon *w, Rgb co
                          : cv_ok(x, y) && (lab_at(cv, x, y) == NONE || lab_at(cv, x, y) == BLADE || cv->a[y][x].a == 0);
         if (ok) { cv_put(cv, x, y, wood); mark(cv, x, y); }
     }
+    /* anel de metal onde a lâmina encaixa no cabo */
+    for (int k = -1; k <= 1; k++) {
+        int x = pyround(tx - b->u[0] * 1.2 + n[0] * k * 0.8), y = pyround(ty - b->u[1] * 1.2 + n[1] * k * 0.8);
+        bool ok = behind ? empty_orig(cv, x, y) && cv->a[y][x].a == 0 : cv_ok(x, y) && (lab_at(cv, x, y) == NONE || cv->a[y][x].a == 0);
+        if (ok) cv_put(cv, x, y, (Rgb){150, 150, 160});
+    }
     for (int i = 0; i <= 6; i++) {
         double bend = i * i * 0.09;  /* a ponta volta em direção à mão */
-        for (int e = 0; e < 2; e++) {
+        for (int e = 0; e < (i < 3 ? 3 : 2); e++) {
             if (e && i > 4) break;
             double x = tx + n[0] * i - b->u[0] * (bend + e), y = ty + n[1] * i - b->u[1] * (bend + e);
             int xi = pyround(x), yi = pyround(y);
@@ -1682,6 +1695,18 @@ static void kama(Canvas *cv, const Blade *b, double len, const Weapon *w, Rgb co
 
 static void blade_fx(Canvas *cv, const Char *ch, const char *anim, int idx) {
     Element el = ch->elemento;
+    if (rgb_set(ch->arma.brilho))
+        for (int x = 0; x < CW; x++)
+            for (int y = 0; y < CH; y++) {
+                if (!cv->wpx[y][x]) continue;
+                static const int d4[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+                for (int k = 0; k < 4; k++) {
+                    int nx = x + d4[k][0], ny = y + d4[k][1];
+                    double r = hsh6("lua", anim, idx, x, y, k, 0);
+                    if (r < 0.45 && cv_is_empty(cv, nx, ny)) cv_put(cv, nx, ny, ch->arma.brilho);
+                }
+                if (hsh4("estrela", anim, idx, x, y) < 0.03 && cv_is_empty(cv, x + 1, y - 2)) cv_put(cv, x + 1, y - 2, (Rgb){255, 255, 255});
+            }
     for (int x = 0; x < CW; x++)
         for (int y = 0; y < CH; y++) {
             if (!cv->wpx[y][x]) continue;
@@ -1872,6 +1897,14 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
         bool at_hand = b->nearest <= 8 && !b->loose;
         switch (w->kind) {
             case W_KATANA: case W_DUPLA:
+                if (escala < 1.0 && at_hand) {
+                    /* wakizashi: a mesma espada, mais curta */
+                    for (int i = 0; i < b->n; i++) {
+                        if (b->dist[i] > KATANA * escala) erase_px(cv, b->x[i], b->y[i]);
+                        else mark(cv, b->x[i], b->y[i]);
+                    }
+                    break;
+                }
                 for (int i = 0; i < b->n; i++) mark(cv, b->x[i], b->y[i]);
                 if (escala > 1.0 && at_hand) stroke(cv, b, full, fmax(full, KATANA * escala), core, &edge, 0, 0, 2, false);
                 break;
@@ -1898,21 +1931,20 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                 break;
             }
             case W_FLORETE: {
-                for (int i = 0; i < b->n; i++) {
-                    if (in_set(s->c[b->y[i]][b->x[i]], "Lg")) erase_px(cv, b->x[i], b->y[i]);
-                    else mark(cv, b->x[i], b->y[i]);
-                }
+                /* florete de esgrima: some a lâmina curva do pack e entra uma lâmina reta
+                   e fina, do cabo à ponta, com o copo (a campânula) na mão */
+                for (int i = 0; i < b->n; i++) erase_px(cv, b->x[i], b->y[i]);
                 if (!at_hand) break;
-                stroke(cv, b, full - 1, fmax(full, KATANA * escala), core, NULL, 0, 0, 2, false);
-                /* copo da empunhadura */
+                double len = fmax(full, KATANA * escala);
+                stroke(cv, b, 2, len - 2, core, NULL, 0, 0, 2, false);
+                stroke(cv, b, len - 2, len, edge, NULL, 0, 0, 2, false);
                 double n[2];
                 perp(b->u, n);
-                double hx = b->hilt[0] + b->u[0] * 1.5, hy = b->hilt[1] + b->u[1] * 1.5;
-                for (int k = -1; k <= 1; k++) {
-                    int x = pyround(hx + n[0] * k), y = pyround(hy + n[1] * k);
-                    if (!cv_ok(x, y)) continue;
-                    int lb = lab_at(cv, x, y);
-                    if (lb == NONE || lb == BLADE || lb == HANDLE) cv_put(cv, x, y, k ? ch->destaque[0] : ch->destaque[1]);
+                for (int k = -2; k <= 2; k++) {
+                    double back = abs(k) == 2 ? 0.6 : 1.6;  /* copo em arco, as bordas voltadas para a mão */
+                    int x = pyround(b->hilt[0] + b->u[0] * back + n[0] * k), y = pyround(b->hilt[1] + b->u[1] * back + n[1] * k);
+                    if (cv_ok(x, y) && (weapon_ok(cv, x, y) || lab_at(cv, x, y) == HANDLE))
+                        cv_put(cv, x, y, abs(k) == 2 ? ch->destaque[1] : ch->destaque[0]);
                 }
                 break;
             }
@@ -1945,16 +1977,29 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                 stroke(cv, b, -back, tip - head, w->haste[0], &w->haste[1], 0, 0, 2, false);
                 if (w->kind == W_LANCA) {
                     stroke(cv, b, tip - head, tip, core, &edge, 0, 0, 1, false);
-                    /* alargamento da ponta (losango) */
+                    /* ponta em folha: larga no terço de baixo e afinando até a ponta */
                     double n[2];
                     perp(b->u, n);
-                    double mx = b->hilt[0] + b->u[0] * (tip - head + 1.5), my = b->hilt[1] + b->u[1] * (tip - head + 1.5);
-                    for (int k = -1; k <= 1; k += 2) {
-                        int x = pyround(mx + n[0] * k), y = pyround(my + n[1] * k);
-                        if (empty_orig(cv, x, y)) {
-                            cv_put(cv, x, y, edge);
-                            mark(cv, x, y);
+                    for (int j = 1; j <= 2; j++) {
+                        double t = tip - head + 1 + j;
+                        for (int k = -1; k <= 1; k += 2) {
+                            int x = pyround(b->hilt[0] + b->u[0] * t + n[0] * k), y = pyround(b->hilt[1] + b->u[1] * t + n[1] * k);
+                            if (empty_orig(cv, x, y)) {
+                                cv_put(cv, x, y, j == 1 ? edge : core);
+                                mark(cv, x, y);
+                            }
                         }
+                    }
+                    /* anel de metal na base da ponta e uma fita curta que balança */
+                    double cx = b->hilt[0] + b->u[0] * (tip - head), cy = b->hilt[1] + b->u[1] * (tip - head);
+                    for (int k = -1; k <= 1; k++) {
+                        int x = pyround(cx + n[0] * k), y = pyround(cy + n[1] * k);
+                        if (cv_ok(x, y) && weapon_ok(cv, x, y)) cv_put(cv, x, y, ch->destaque[1]);
+                    }
+                    int sw = (ctx->idx / 2) % 2;
+                    for (int j = 1; j <= 3; j++) {
+                        int x = pyround(cx - b->u[0] * (1 + sw) - n[0] * 0.3 * j), y = pyround(cy - b->u[1] * (1 + sw) + j);
+                        if (cv_ok(x, y) && cv->a[y][x].a == 0) cv_put(cv, x, y, j == 3 ? ch->destaque[1] : ch->destaque[0]);
                     }
                 } else {
                     Rgb cap = rgb_set(w->ponteira) ? w->ponteira : core;
@@ -1967,8 +2012,8 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                 for (int i = 0; i < b->n; i++) erase_px(cv, b->x[i], b->y[i]);
                 skip_pair = true;
                 if (b->nearest > 3 || b->loose) break;
-                /* do tamanho da espada: quase tudo é cabo, e a lâmina curva fica na ponta */
-                double len = w->comprimento > 0 ? w->comprimento : KATANA * escala - 2;
+                /* foice pequena (kama): quase tudo é cabo, e a lâmina curva fica na ponta */
+                double len = w->comprimento > 0 ? w->comprimento : KATANA * escala * 0.8;
                 kama(cv, b, len, w, core, edge, false);
                 /* a outra foice na mão esquerda */
                 if (w->par && !ch->pack_par) {

@@ -52,17 +52,17 @@ e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
 | # | Aprendiz | Postura | Arma | Cenário | Postura dele | Perfeito / Bom | Erros até cair |
 |---:|---|---|---|---|---:|---:|---:|
 | 1 | daichi | terra | espada pesada | Celeiro | 300 | 90 / 220 ms | 50 |
-| 2 | genbu | tartaruga | escudo e espada curta | Jardim | 300 | 87 / 215 ms | 45 |
+| 2 | genbu | tartaruga | katana simples | Jardim | 300 | 87 / 215 ms | 45 |
 | 3 | raizo | touro | espadão | Pátio do dojo | 330 | 84 / 208 ms | 40 |
-| 4 | shizuku | água | florete | Cachoeira | 330 | 80 / 200 ms | 35 |
+| 4 | shizuku | água | florete de esgrima | Cachoeira | 330 | 80 / 200 ms | 35 |
 | 5 | garfiel | tigre | garras nas duas mãos | Portão do tigre branco | 360 | 76 / 192 ms | 30 |
-| 6 | karasu | corvo | espada e adaga | Cobertura | 360 | 72 / 185 ms | 25 |
-| 7 | hayate | vento (ritmo quebrado) | duas foices | Trem | 390 | 69 / 178 ms | 22 |
-| 8 | enjin | chama | sabre curvo | Forja | 390 | 66 / 172 ms | 20 |
+| 6 | karasu | corvo | duas wakizashi | Cobertura | 360 | 72 / 185 ms | 25 |
+| 7 | hayate | vento (ritmo quebrado) | duas foices pequenas | Trem | 390 | 69 / 178 ms | 22 |
+| 8 | enjin | chama | katana de fogo | Forja | 390 | 66 / 172 ms | 20 |
 | 9 | suiren | mar (acelerando) | lança | Porto | 420 | 63 / 166 ms | 18 |
-| 10 | arashi | tempestade | duas espadas | Salão de espelhos | 420 | 60 / 160 ms | 15 |
-| 11 | yoru | noite (apagões) | uma adaga em cada mão | Bambuzal | 450 | 58 / 155 ms | 12 |
-| 12 | jinshi | montanha (sem som) | cajado de ferro | Encosta da serra | 450 | 55 / 150 ms | 10 |
+| 10 | arashi | tempestade | duas katanas | Salão de espelhos | 420 | 60 / 160 ms | 15 |
+| 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 450 | 58 / 155 ms | 12 |
+| 12 | jinshi | montanha (sem som) | katana branca forjada com a lua | Encosta da serra | 450 | 55 / 150 ms | 10 |
 | 13 | **oboro** | as doze, trocando a cada duas sequências | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
 
 A dificuldade é da posição na trilha, não do personagem: postura, erros até
@@ -106,8 +106,8 @@ na lâmina, brasas, penas, névoa…). Os três primeiros têm só dois golpes.
   Quebra de postura: tela sem cor, bordas escuras, rachadura branca, cerâmica e
   taiko, meio segundo de silêncio. Execução: tela em duas cores e um traço de
   corte atravessando.
-- Katana 3D (`assets/katana`, convertida do FBX com assimp) nas mãos; lança e
-  cajado desenhados; escudo e segunda lâmina na mão de trás.
+- Katana 3D (`assets/katana`, convertida do FBX com assimp) nas mãos; lança
+  desenhada; a segunda lâmina (adaga, wakizashi, garra, foice) na mão de trás.
 - Interface em pergaminho escuro, no jeito RPG Maker, em Montserrat
   (`assets/fonts`, licença OFL), toda em minúsculo.
 - musashi: casaco laranja escuro, cabelo preto até o ombro com franja, sem bandana.

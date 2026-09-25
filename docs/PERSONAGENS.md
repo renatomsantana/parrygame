@@ -42,17 +42,17 @@ mesmos pixels.
 |---:|---|---|---|---|---|
 | — | **Kojiro** | katana | sem chapéu e **sem máscara**: coque solto no alto da cabeça com fita vermelha, mechas na testa, barba rala | original (branco e preto) | branco, sem aura |
 | 1 | **Daichi** (terra) | espada pesada, lâmina larga | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
-| 2 | **Genbu** (tartaruga) | espada curta + casco nas costas | careca, barbicha; atarracado | verde musgo | verde, esporos |
+| 2 | **Genbu** (tartaruga) | katana simples + casco nas costas | careca, barbicha; atarracado | verde musgo | verde, esporos |
 | 3 | **Raizo** (touro) | **espadão** do próprio pack, do jeito que vem | **corpo do samurai do espadão**, chapéu de palha; a roupa preta virou marrom | marrom, amarelo | ouro, fagulhas subindo |
-| 4 | **Shizuku** (água) | florete com copo ciano, **estoca** | **corpo do Samurai #4**, cabelo roxo virou azul petróleo | azul claro, ciano, hakama azul | água, bolhas |
+| 4 | **Shizuku** (água) | **florete de esgrima**: lâmina reta e fina, copo na mão | **corpo do Samurai #4**, cabelo roxo virou azul petróleo | azul claro, ciano, hakama azul | água, bolhas |
 | 5 | **Garfiel** (tigre branco, Byakko) | **garras nas duas mãos** (três lâminas em cada) | **corpo do samurai de duas espadas**, cabelo loiro, roupa preta listrada de vermelho | preto e vermelho, cabelo loiro | terra, três riscos de garra |
-| 6 | **Karasu** (corvo) | **espada na direita e lâmina mais curta na esquerda** | **corpo do samurai de duas espadas**, preto e vermelho, trapo vermelho | preto e vermelho | eco da segunda lâmina, penas caindo |
+| 6 | **Karasu** (corvo) | **duas wakizashi** (espadas curtas, 0,72× a katana) | **corpo do samurai de duas espadas**, preto e vermelho, trapo vermelho | preto e vermelho | eco da segunda lâmina, penas caindo |
 | 7 | **Hayate** (vento) | **duas foices** (kama) do tamanho de uma espada: cabo longo e a lâmina curva na ponta | **corpo do samurai de duas espadas**, verde claro e limão, cachecol | verde claro, limão | vento; no golpe, **cortes de vento** voam para a frente |
-| 8 | **Enjin** (chama) | espada de fogo | cabelo em chamas; 1 px mais largo | vermelho e amarelo | fogo, labaredas e brasas |
-| 9 | **Suiren** (mar) | lança de água, **estoca** | cabelo curto, faixa turquesa | azul mar, turquesa | água, bolhas |
-| 10 | **Arashi** (tempestade) | duas espadas com raios | **corpo do Samurai #5**, cabelo prateado, olhos de raio | preto, azul elétrico | raios nas lâminas e no corpo |
+| 8 | **Enjin** (chama) | katana de fogo | cabelo em chamas; 1 px mais largo | vermelho e amarelo | fogo, labaredas e brasas |
+| 9 | **Suiren** (mar) | lança com ponta em folha, anel e fita, **estoca** | cabelo curto, faixa turquesa | azul mar, turquesa | água, bolhas |
+| 10 | **Arashi** (tempestade) | duas katanas com raios | **corpo do Samurai #5**, cabelo prateado, olhos de raio | preto, azul elétrico | raios nas lâminas e no corpo |
 | 11 | **Yoru** (noite) | uma adaga em cada mão, **empunhadas ao contrário** (lâmina para trás), brilho roxo | **corpo do samurai de duas espadas**, ninja preto e roxo | preto azulado e roxo | corte duplo, fumaça roxa |
-| 12 | **Jinshi** (montanha) | cajado de ferro, ponteiras de osso | cabelo grisalho comprido, barba; mais alto | cinza pedra, branco osso | rastro grosso, pedrisco caindo |
+| 12 | **Jinshi** (montanha) | **katana branca forjada com a lua**, com halo de luar | cabelo grisalho comprido, barba; mais alto | cinza pedra, branco osso | rastro grosso, pedrisco caindo |
 | — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon** (máscara oni), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
 | — | **Hanzo** | **nenhuma**: um velho que não luta mais | coque branco, **sem barba**; mais baixo | azul escuro | sem rastro nem aura |
 
@@ -129,11 +129,14 @@ Na prancha, a katana aparece cortada em alguns quadros (atrás do corpo, borrada
 no movimento). O programa mede o comprimento da katana do pack (a mediana das
 vezes em que ela aparece inteira: 16,6 px do cabo à ponta) e desenha cada arma
 com um comprimento fixo a partir dele: espadão do Raizo 1,45× (e duas fileiras a
-mais de largura), lança 1,2× mais 14 px de haste atrás da mão, florete 1,15×,
+mais de largura), wakizashi do Karasu 0,72×, lança 1,2× mais 14 px de haste atrás
+da mão, florete 1,15× (reto, com copo),
 adaga 8 px (as do Yoru empunhadas ao contrário: a lâmina sai do punho para trás
 e, na mão da frente, fica deitada por cima do antebraço), espada curta 11 px, a
 lâmina curta do Karasu 12 px, garras 10 px, foice do tamanho da espada, quase
-toda cabo, com a lâmina curva de 6 px na ponta. Só a lâmina que sai da mão é
+toda cabo (0,8× a katana), com anel de metal e a lâmina curva de 6 px na ponta;
+as garras saem de uma barra de metal sobre os nós dos dedos; a katana branca do
+Jinshi tem um halo azulado de luar em volta da lâmina. Só a lâmina que sai da mão é
 trocada ou alongada; um pedaço solto dela aparecendo no meio do rastro fica como
 está. Adaga e espada curta são
 desenhadas inteiras (cabo, guarda e lâmina). Cada pack tem a sua katana medida
