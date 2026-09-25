@@ -47,6 +47,8 @@
 #define SWORD_GRAVITY 380.0f
 #define GHOST_MAX 10
 #define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
+#define AFTER_MAX 8           /* silhuetas que o mestre deixa nos movimentos rápidos */
+enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP };
 #define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
 #define PIX_LORE 41
 #define PIX_TRAIL 42
@@ -165,7 +167,7 @@ static KatanaStyle katana_style(const Look *l) {
 
 /* Lutador em pixel art: as pranchas de assets/sprites tocadas no ritmo do duelo.
  * Sem as pranchas (set == NULL) o lutador é o boneco de rig.c. */
-typedef struct { const SprAnim *a; int from, to; float dur; } FSeg;
+typedef struct { const SprAnim *a; int from, to; float dur; bool cycle; } FSeg;
 typedef struct {
     const SprSet *set;
     SprPlayer pl;
@@ -175,6 +177,7 @@ typedef struct {
     bool idle;                /* parado na guarda */
     bool autoIdle;            /* volta para a guarda quando a fila acaba */
     bool furia;               /* oboro depois do grito */
+    int squat;                /* px que o tronco desce: pegar impulso, amortecer a queda */
     const SprAnim *strike;    /* golpe (ou parry) em curso */
 } Fighter;
 
@@ -206,6 +209,13 @@ static struct {
     Fighter renS, bossS;
     float bossStep, bossStepTo, bossStepSpeed; /* passo do mestre até o alcance do golpe */
     float bossStrikeStep;     /* onde ele precisa estar no contato */
+    int leap, leapStage;      /* investida correndo ou salto em curso (LEAP_*) */
+    float leapT, leapAt, leapAir; /* tempo na preparação; quando corre ou salta; tempo no ar */
+    float hopT, hopLen, hopH; /* arco do pulo do mestre (salto, recuo, ameaça) */
+    float landT;              /* amortecendo a queda do salto */
+    struct { const SprAnim *a; int frame; Vector2 feet; float life; } after[AFTER_MAX];
+    int afterHead;
+    float afterTimer, lastStep;
     bool gritoPending;
     struct { const SprFx *fx; int row; Vector2 pos; float t, fps; bool flip, back, glow; } vfx[VFX_MAX];
     Fx fx;
@@ -237,7 +247,6 @@ static struct {
     float renParryTime;       /* tempo desde o gesto; -1 = nenhum pendente */
     float renKnock, bossKnock;
     float bossHome;
-    float hopTime;
     float hitstop;
     float slowmo, slowmoTime;
     float staggerTime;
@@ -567,15 +576,20 @@ static void f_clear(Fighter *f, bool autoIdle) {
     f->autoIdle = autoIdle;
 }
 
-static void f_add(Fighter *f, const SprAnim *a, int from, int to, float dur) {
-    if (!f->set || !a) return;
+static void f_seg(Fighter *f, FSeg sg) {
+    if (!f->set || !sg.a) return;
     if (f->fresh) {
-        spr_play(&f->pl, a, from, to, dur);
+        if (sg.cycle) spr_cycle(&f->pl, sg.a, sg.dur);
+        else spr_play(&f->pl, sg.a, sg.from, sg.to, sg.dur);
         f->fresh = false;
     } else if (f->qn < 4) {
-        f->q[f->qn++] = (FSeg){a, from, to, dur};
+        f->q[f->qn++] = sg;
     }
 }
+
+static void f_add(Fighter *f, const SprAnim *a, int from, int to, float dur) { f_seg(f, (FSeg){a, from, to, dur, false}); }
+/* A animação em laço (a corrida) por `dur` segundos. */
+static void f_add_cycle(Fighter *f, const SprAnim *a, float dur) { f_seg(f, (FSeg){a, 0, 0, dur, true}); }
 
 static void f_update(Fighter *f, float dt) {
     if (!f->set) return;
@@ -585,7 +599,8 @@ static void f_update(Fighter *f, float dt) {
         FSeg sg = f->q[0];
         memmove(f->q, f->q + 1, sizeof(FSeg) * (size_t)(f->qn - 1));
         f->qn--;
-        spr_play(&f->pl, sg.a, sg.from, sg.to, sg.dur);
+        if (sg.cycle) spr_cycle(&f->pl, sg.a, sg.dur);
+        else spr_play(&f->pl, sg.a, sg.from, sg.to, sg.dur);
     } else if (f->autoIdle) {
         fighter_idle(f);
     }
@@ -663,6 +678,9 @@ static void setup_actors(void) {
     fighter_load(&G.bossS, G.m ? G.m->name : "");
     G.bossStep = G.bossStepTo = 0;
     G.bossStepSpeed = 0;
+    G.leap = LEAP_NONE;
+    G.hopT = G.hopLen = 0;
+    memset(G.after, 0, sizeof G.after);
     G.gritoPending = false;
 }
 
@@ -875,17 +893,18 @@ static MoveLook strike_look(void) {
     MoveLook look = mv ? mv->look : LOOK_HIGH;
     int k = G.duel.comboStrike;
     if (k == 0) return look;
-    if (look == LOOK_HEAVY) return k % 2 ? LOOK_LOW : LOOK_HIGH;
-    if (look == LOOK_THRUST) return k % 2 ? LOOK_HIGH : LOOK_THRUST;
+    if (look == LOOK_HEAVY || look == LOOK_JUMP) return k % 2 ? LOOK_LOW : LOOK_HIGH;
+    if (look == LOOK_THRUST || look == LOOK_DASH) return k % 2 ? LOOK_HIGH : LOOK_THRUST;
     if (k % 2 == 0) return look;
     return look == LOOK_HIGH ? LOOK_LOW : LOOK_HIGH;
 }
 
-/* O golpe forte usa as poses do golpe alto nos bonecos. */
-static Pose windup_pose(MoveLook l) { return l == LOOK_LOW ? POSE_WINDUP_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_WINDUP); }
-static Pose rearm_pose(MoveLook l) { return l == LOOK_LOW ? POSE_REARM_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_REARM_HIGH); }
-static Pose contact_pose(MoveLook l) { return l == LOOK_LOW ? POSE_CONTACT_LOW : (l == LOOK_THRUST ? POSE_CONTACT_THRUST : POSE_CONTACT); }
-static Pose parry_pose(MoveLook l) { return l == LOOK_LOW ? POSE_PARRY_LOW : (l == LOOK_THRUST ? POSE_PARRY_THRUST : POSE_PARRY); }
+/* Nos bonecos, o golpe forte e o salto usam as poses do golpe alto; a investida, as da estocada. */
+static MoveLook rig_look(MoveLook l) { return l == LOOK_DASH ? LOOK_THRUST : (l == LOOK_LOW || l == LOOK_THRUST ? l : LOOK_HIGH); }
+static Pose windup_pose(MoveLook l) { l = rig_look(l); return l == LOOK_LOW ? POSE_WINDUP_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_WINDUP); }
+static Pose rearm_pose(MoveLook l) { l = rig_look(l); return l == LOOK_LOW ? POSE_REARM_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_REARM_HIGH); }
+static Pose contact_pose(MoveLook l) { l = rig_look(l); return l == LOOK_LOW ? POSE_CONTACT_LOW : (l == LOOK_THRUST ? POSE_CONTACT_THRUST : POSE_CONTACT); }
+static Pose parry_pose(MoveLook l) { l = rig_look(l); return l == LOOK_LOW ? POSE_PARRY_LOW : (l == LOOK_THRUST ? POSE_PARRY_THRUST : POSE_PARRY); }
 
 /* Golpe do mestre em pixel art. A preparação escolhe a prancha: alto desce
  * (ATTACK_3), baixo sobe (ATTACK_2), estocada é o corte reto ou a investida.
@@ -911,6 +930,9 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
         look = LOOK_HIGH;
     }
     if (mv && mv->strikes >= 3 && G.duel.comboStrike == mv->strikes - 1 && (a = fa(f, "ESPECIAL"))) return a;
+    /* a investida acaba na estocada; o salto desce com o corte alto */
+    if (look == LOOK_DASH) look = LOOK_THRUST;
+    if (look == LOOK_JUMP) look = LOOK_HIGH;
     if (look == LOOK_THRUST && (a = fa(f, "DASH_ATTACK"))) return a;
     const char *base = look == LOOK_LOW ? "ATTACK_2" : (look == LOOK_THRUST ? "ATTACK_1" : "ATTACK_3");
     if (G.m->isBigBoss) {
@@ -932,21 +954,69 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
     return fa(f, "ATTACK_1");
 }
 
-/* Preparação: os quadros até o `hold` e ele parado ali até a lâmina partir,
- * andando até a ponta da arma encontrar a guarda de kojiro no contato. */
+static void boss_hop(float len, float h) {
+    G.hopT = 0;
+    G.hopLen = len;
+    G.hopH = h;
+}
+
+static const SprAnim *boss_run(void) {
+    const SprAnim *a = G.bossS.furia ? fa(&G.bossS, "RUN_FURIA") : NULL;
+    return a ? a : fa(&G.bossS, "RUN");
+}
+
+/* Preparação: os quadros até o `hold` e ele parado ali até a lâmina partir.
+ * No começo da sequência ele dá um passo curto e rápido para dentro e firma os
+ * pés; o bote (o resto do caminho até a ponta da arma encontrar a guarda de
+ * kojiro) vem quando a lâmina parte. A investida recua num pulinho e vem
+ * correndo; o salto agacha, sobe e desce cortando, e toca o chão no contato. */
 static void sprite_windup(void) {
     Fighter *f = &G.bossS;
+    G.leap = LEAP_NONE;
     if (!f->set) return;
-    const SprAnim *a = boss_strike_anim(strike_look());
+    MoveLook look = strike_look();
+    const SprAnim *a = boss_strike_anim(look);
     int hold = anim_hold(a);
+    float w = G.windupLen;
+    bool first = G.duel.comboStrike == 0;
     f_clear(f, false);
-    f_add(f, a, 0, hold, fminf(G.windupLen, (hold + 1) * a->frameTime * 1.8f));
     f->strike = a;
-    /* chega perto na preparação e dá o bote (o resto do passo) quando a lâmina parte */
     float reach = a->hasReach ? (float)a->reachX : 36;
     G.bossStrikeStep = clampf(REN_X + ren_guard_x() + reach - G.bossHome, -70, 16);
+    G.leapT = 0;
+    G.leapStage = 0;
+    const SprAnim *run = boss_run(), *jump = fa(f, "JUMP");
+    if (first && look == LOOK_DASH && run && w > 0.3f) {
+        G.leap = LEAP_DASH;
+        G.leapAt = w * 0.3f;
+        f_add(f, a, 0, 0, G.leapAt);
+        f_add_cycle(f, run, w - G.leapAt);
+        /* recua o bastante para sempre haver uns 30 px de corrida, mesmo com a lança */
+        G.bossStepTo = fmaxf(G.bossStep, clampf(G.bossStrikeStep + 40, 20, 48));
+        G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / (G.leapAt * 0.8f);
+        boss_hop(G.leapAt * 0.8f, 5);
+        return;
+    }
+    if (first && look == LOOK_JUMP && w > 0.3f) {
+        G.leap = LEAP_JUMP;
+        G.leapAt = w * 0.25f;
+        G.leapAir = w - G.leapAt + G.settings.attackLead;
+        float rise = G.leapAir * 0.5f;
+        /* agacha na guarda; no ar, o salto do pack (se tiver) até o alto do arco */
+        f_add(f, a, 0, 0, G.leapAt);
+        if (jump) f_add(f, jump, 0, jump->frames > 2 ? jump->frames - 2 : jump->frames - 1, rise);
+        else f_add(f, a, 0, 0, rise);
+        f_add(f, a, 0, hold, fmaxf(0.02f, w - G.leapAt - rise));
+        G.bossStepTo = G.bossStep;
+        return;
+    }
+    /* a preparação anda devagar até o hold (cada quadro pelo menos 0,12 s) e segura */
+    float antic = fmaxf((hold + 1) * a->frameTime * 1.8f, (hold + 1) * 0.12f);
+    f_add(f, a, 0, hold, first ? fminf(w * 0.6f, antic) : fminf(w, antic));
     G.bossStepTo = G.bossStep + (G.bossStrikeStep - G.bossStep) * 0.4f;
-    G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.06f, G.windupLen * 0.8f);
+    float stepTime = first ? fminf(0.2f, w * 0.5f) : w * 0.8f;
+    G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.06f, stepTime);
+    if (first && fabsf(G.bossStepTo - G.bossStep) > 4) boss_hop(stepTime, 2);
 }
 
 /* A lâmina parte: os quadros entre o hold e o contato; o contato sai no impacto. */
@@ -958,7 +1028,9 @@ static void sprite_launch(void) {
     G.bossStepTo = G.bossStrikeStep;
     G.bossStepSpeed = fabsf(G.bossStrikeStep - G.bossStep) / fmaxf(0.05f, G.settings.attackLead - 0.02f);
     f_clear(f, false);
-    if (c - 1 > hold) f_add(f, a, hold + 1, c - 1, G.settings.attackLead);
+    int from = hold + 1;
+    if (G.leap == LEAP_DASH) from = hold > 2 ? hold - 2 : 0;   /* da corrida direto para o golpe */
+    if (c - 1 >= from) f_add(f, a, from, c - 1, G.settings.attackLead);
     else f_add(f, a, hold, hold, G.settings.attackLead);
 }
 
@@ -1006,8 +1078,15 @@ static void sprite_impact(const DuelEvent *e) {
             f_add(b, a, c + 1, a->frames - 1, 0);
         }
         b->strike = NULL;
-        G.bossStepTo = 0;
+        if (G.leap == LEAP_JUMP) {   /* a poeira da queda, e os joelhos dobram */
+            vfx("70", 4, (Vector2){G.boss.x + G.boss.offsetX, GROUND_LOW - 8}, true, VFX_FRONT, 24);
+            G.landT = 0.2f;
+        }
+        /* entre os golpes de uma sequência ele fica onde está; no fim, volta */
+        G.bossStepTo = G.duel.comboRemaining > 0 ? G.bossStep : 0;
         G.bossStepSpeed = 40;
+        G.hopT = G.hopLen;
+        G.leap = LEAP_NONE;
     }
     if (r->set) {
         if (e->judgement == J_PERFEITO || e->judgement == J_BOM) {
@@ -1219,7 +1298,7 @@ static void handle_events(void) {
                     rig_then(b, windup_pose(strike_look()), 0.2f, EASE_OUT);
                 }
                 audio_play(SND_SWING, 0.5f, 1.2f);
-                if (m->rhythmJitter > 0) G.hopTime = 0.3f; /* neon jax ameaça pular */
+                if (m->rhythmJitter > 0) boss_hop(0.3f, 9); /* hayate ameaça pular */
                 break;
             case EV_LAUNCH:
                 G.bossWinding = false;
@@ -1302,12 +1381,65 @@ static void fighters_update(float dt) {
     f_update(&G.renS, dt);
     f_update(&G.bossS, dt);
     if (!G.bossS.set) return;
-    if (G.bossS.idle && !G.bossWinding) {
-        G.bossStepTo = 0;
-        G.bossStepSpeed = fmaxf(G.bossStepSpeed, 30);
+    bool landed = G.hopT >= G.hopLen;
+    /* investida e salto: depois do recuo (ou de agachar) ele arranca */
+    if (G.leap && G.bossWinding) {
+        G.leapT += dt;
+        if (G.leapStage == 0 && G.leapT >= G.leapAt) {
+            G.leapStage = 1;
+            vfx("70", 4, (Vector2){G.boss.x + G.boss.offsetX, GROUND_LOW - 8}, true, VFX_FRONT, 22);
+            if (G.leap == LEAP_DASH) {
+                G.bossStepTo = G.bossStrikeStep + 10;
+                G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.windupLen - G.leapAt);
+            } else {
+                G.bossStepTo = G.bossStrikeStep;
+                G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.leapAir);
+                boss_hop(G.leapAir, 24);
+            }
+        }
+    }
+    /* agacha antes do salto e firma o corpo no fim da preparação */
+    G.landT = fmaxf(0, G.landT - dt);
+    int squat = 0;
+    if (G.leap == LEAP_JUMP && G.leapStage == 0) squat = 1 + (int)(2.99f * clampf(G.leapT / G.leapAt, 0, 1));
+    else if (G.landT > 0) squat = G.landT > 0.1f ? 3 : 1;
+    else if (G.bossWinding && !G.leap && G.windupTime > G.windupLen * 0.5f) squat = 1;
+    G.bossS.squat = squat;
+    if (G.bossS.idle && !G.bossWinding && landed) {
+        if (G.bossStep < -10) {
+            /* longe do lugar: volta num pulo para trás */
+            float t = 0.32f;
+            const SprAnim *j = fa(&G.bossS, "JUMP");
+            G.bossStepTo = 0;
+            G.bossStepSpeed = -G.bossStep / t;
+            boss_hop(t, 6);
+            if (j) {
+                f_clear(&G.bossS, true);
+                f_add(&G.bossS, j, j->frames - 1, j->frames - 1, t);
+            }
+        } else {
+            G.bossStepTo = 0;
+            G.bossStepSpeed = fmaxf(G.bossStepSpeed, 30);
+        }
     }
     float d = G.bossStepTo - G.bossStep, mv = G.bossStepSpeed * dt;
     G.bossStep = fabsf(d) <= mv ? G.bossStepTo : G.bossStep + (d > 0 ? mv : -mv);
+}
+
+/* Silhuetas que o mestre deixa para trás no bote, na corrida e no salto. */
+static void update_after(float dt) {
+    for (int i = 0; i < AFTER_MAX; i++) G.after[i].life = fmaxf(0, G.after[i].life - dt * 5);
+    float v = dt > 0 ? fabsf(G.bossStep - G.lastStep) / dt : 0;
+    G.lastStep = G.bossStep;
+    bool fast = v > 60 || (G.hopT < G.hopLen && G.hopH > 10);
+    G.afterTimer -= dt;
+    if (!G.bossS.set || !G.bossS.pl.anim || !fast || G.afterTimer > 0) return;
+    G.afterTimer = 0.035f;
+    G.afterHead = (G.afterHead + 1) % AFTER_MAX;
+    G.after[G.afterHead].a = G.bossS.pl.anim;
+    G.after[G.afterHead].frame = G.bossS.pl.frame;
+    G.after[G.afterHead].feet = (Vector2){G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};
+    G.after[G.afterHead].life = 1;
 }
 
 static void update_actors(float dt) {
@@ -1351,9 +1483,9 @@ static void update_actors(float dt) {
             G.gritoPending = false;
         }
     }
-    if (G.hopTime > 0) {
-        G.hopTime = fmaxf(0, G.hopTime - dt);
-        b->hopY = sinf((1 - G.hopTime / 0.3f) * PI) * 9;
+    if (G.hopT < G.hopLen) {
+        G.hopT = fminf(G.hopLen, G.hopT + dt);
+        b->hopY = sinf(G.hopT / G.hopLen * PI) * G.hopH;
     } else {
         b->hopY = 0;
     }
@@ -1367,6 +1499,7 @@ static void update_actors(float dt) {
     G.bossKnock *= expf(-dt * 7);
     r->offsetX = -G.renKnock;
     b->offsetX = G.bossKnock + (G.bossS.set ? G.bossStep : 0);
+    update_after(dt);
 }
 
 static void update_ctx(float dt) {
@@ -1496,6 +1629,7 @@ static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Col
         float period = 1.8f - 0.8f * r->fatigue;
         breath = fmodf(r->time, period) > period * 0.5f ? 1 : 0;
     }
+    if (f->squat > breath) breath = f->squat;
     SprDraw o = {r->faceLeft, breath, true, (Color){16, 12, 18, 255}};
     static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     for (int k = 0; k < 4; k++) spr_draw(f->set, a, frame, (Vector2){feet.x + off[k][0], feet.y + off[k][1]}, o);
@@ -1529,6 +1663,22 @@ static void draw_rigs(Color light) {
         Color c = G.ghosts[i].color;
         c.a = (unsigned char)(150 * G.ghosts[i].life);
         rig_draw_flat(&G.ghosts[i].rig, c);
+    }
+    if (G.bossS.set && !dark) {
+        /* as silhuetas do movimento, na cor do elemento de cada mestre */
+        static const Color AFTER_TINT[ROSTER_SIZE] = {
+            {230, 150, 80, 255}, {130, 210, 150, 255}, {235, 90, 70, 255}, {110, 180, 255, 255},
+            {250, 240, 210, 255}, {120, 110, 190, 255}, {140, 240, 200, 255}, {255, 140, 50, 255},
+            {90, 150, 240, 255}, {190, 150, 255, 255}, {130, 110, 220, 255}, {225, 225, 235, 255},
+            {235, 60, 70, 255},
+        };
+        Color c = AFTER_TINT[(G.m->id - 1) % ROSTER_SIZE];
+        for (int n = 1; n <= AFTER_MAX; n++) {       /* da mais antiga para a mais nova */
+            int i = (G.afterHead + n) % AFTER_MAX;
+            if (G.after[i].life <= 0 || !G.after[i].a) continue;
+            SprDraw o = {G.boss.faceLeft, 0, true, fadec(c, 0.45f * G.after[i].life)};
+            spr_draw(G.bossS.set, G.after[i].a, G.after[i].frame, G.after[i].feet, o);
+        }
     }
     if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
     else draw_fighter(&G.boss, light, rim, dark);

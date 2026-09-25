@@ -92,24 +92,28 @@ denuncia o tipo de golpe (alto, baixo em gedan subindo, ou estocada), e cada
 vilão tem um sinal próprio no começo de cada sequência (faíscas no chão, gotas
 na lâmina, brasas, penas, névoa…). O **golpe forte** é um só: o salto com a
 pancada de cima (o STRONG_ATTACK do pack, ou o especial de quem não tem), com a
-preparação no ar, longa e bem visível. Os três primeiros têm três sequências,
-nenhuma com mais de dois contatos; do Shizuku em diante, cinco.
+preparação no ar, longa e bem visível. Além dele, dois jeitos de chegar que
+também se leem de longe: **correndo** (recua num pulinho, firma os pés e vem
+correndo até o alcance; o golpe sai da corrida) e **saltando** (agacha, salta e
+desce cortando; o contato é o instante em que os pés tocam o chão). Os três
+primeiros têm seis sequências, nenhuma com mais de dois contatos; do Shizuku em
+diante, de sete a nove, com combos de até cinco golpes.
 
 | Aprendiz | Sequências (golpes: intervalos em s) |
 |---|---|
-| daichi | rocha (1) · desabamento (2: 1,00) · **terremoto** (forte) |
-| genbu | casco (1) · mordida (2: 0,42) · carapaça (2: 0,60) |
-| raizo | corte do touro (1) · investida dupla (2: 0,85) · **chifrada** (forte) |
-| shizuku | gota (1) · correnteza (2: 0,50) · queda d'água (3: 0,50 0,45) · garoa (2: 0,40) · **tsunami** (forte) |
-| garfiel | patada (1) · garras cruzadas (2: 0,40) · bote do tigre (3: 0,40 0,85) · rasgo (2: 0,40) · **salto do tigre** (forte) |
-| karasu | bicada (1) · garra (2: 0,55) · revoada (3: 0,50 0,90) · bando (3: 0,40 0,40) · **mergulho** (forte) |
-| hayate | rajada (1) · redemoinho (2: 0,45) · vendaval (3: 0,50 0,90) · brisa cortante (2: 0,40) · **ciclone** (forte) |
-| enjin | brasa (2: 0,50) · labareda (3: 0,45 0,45) · incêndio (4: 0,45 0,45 0,80) · fagulhas (3: 0,40 0,40) · **erupção** (forte) |
-| suiren | onda (1) · ressaca (2: 0,50) · maremoto (4: 0,55 0,50 0,45) · maré baixa (2: 0,45) · **arpão** (forte) |
-| arashi | faísca (1) · trovoada (2: 0,45) · tormenta (3: 0,40 0,40) · granizo (4: 0,40 0,40 0,40) · **relâmpago** (forte) |
-| yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) · vultos (3: 0,40 0,70) · **eclipse** (forte) |
-| jinshi | pedra (1) · avalanche (3: 0,60 0,60) · cordilheira (4: 0,50 0,50 0,90) · rocha rolante (2: 0,80) · **deslizamento** (forte) |
-| oboro | um eco de cada aprendiz, na postura dele · doze posturas (5, terceiro selo) |
+| daichi | rocha (1) · desabamento (2: 1,00) · **terremoto** (forte) · raiz (1) · arado (1) correndo · pedregulho (2: 0,90) saltando |
+| genbu | casco (1) · mordida (2: 0,42) · carapaça (2: 0,60) · bote da tartaruga (1) correndo · concha (1) · maré lenta (2: 0,75) |
+| raizo | corte do touro (1) · investida dupla (2: 0,85) · **chifrada** (forte) · estouro da boiada (1) correndo · coice (1) · pisada (2: 0,70) saltando |
+| shizuku | gota (1) · correnteza (2: 0,50) · queda d'água (3: 0,50 0,45) · garoa (2: 0,40) · **tsunami** (forte) · remanso (1) · salto do peixe (2: 0,45) saltando · corredeira (1) correndo |
+| garfiel | patada (1) · garras cruzadas (2: 0,40) · bote do tigre (3: 0,40 0,85) · **salto do tigre** (forte) · rasgo (2: 0,40) · caçada (2: 0,40) correndo · rugido (3: 0,45 0,45) · pulo do gato (2: 0,45) saltando |
+| karasu | bicada (1) · garra (2: 0,55) · revoada (3: 0,50 0,90) · **mergulho** (forte) · bando (3: 0,40 0,40) · voo rasante (1) correndo · asa quebrada (2: 0,50) saltando |
+| hayate | rajada (1) · redemoinho (2: 0,45) · vendaval (3: 0,50 0,90) · **ciclone** (forte) · brisa cortante (2: 0,40) · lufada (1) correndo · tufão (4: 0,40 0,40 0,60) · folha ao vento (2: 0,55) saltando |
+| enjin | brasa (2: 0,50) · labareda (3: 0,45 0,45) · incêndio (4: 0,45 0,45 0,80) · **erupção** (forte) · fagulhas (3: 0,40 0,40) · chama viva (1) correndo · cinzas (2: 0,45) · fogo alto (3: 0,45 0,45) saltando |
+| suiren | onda (1) · ressaca (2: 0,50) · maremoto (4: 0,55 0,50 0,45) · **arpão** (forte) · maré baixa (2: 0,45) · arrebentação (3: 0,45 0,45) · espuma (1) correndo · salto da baleia (2: 0,60) saltando |
+| arashi | faísca (1) · trovoada (2: 0,45) · tormenta (3: 0,40 0,40) · **relâmpago** (forte) · granizo (4: 0,40 0,40 0,40) · trovão (1) correndo · raio duplo (2: 0,40) saltando · ventania (3: 0,40 0,70) · céu partido (5: 0,40 0,40 0,40 0,80) |
+| yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) · **eclipse** (forte) · vultos (3: 0,40 0,70) · breu (1) correndo · coruja (2: 0,45) saltando · meia-noite (4: 0,40 0,40 0,90) · nevoeiro (2: 0,70) |
+| jinshi | pedra (1) · avalanche (3: 0,60 0,60) · cordilheira (4: 0,50 0,50 0,90) · **deslizamento** (forte) · rocha rolante (2: 0,80) · desfiladeiro (1) correndo · cume (2: 0,70) saltando · tremor (3: 0,60 0,60) · monte (5: 0,50 0,50 0,50 0,90) |
+| oboro | um eco de cada aprendiz, na postura dele · doze posturas (5, terceiro selo) · passo de hanzo (1) correndo · queda da lua (1) saltando |
 
 ## Visual e som
 
@@ -124,9 +128,13 @@ nenhuma com mais de dois contatos; do Shizuku em diante, cinco.
 - Lutadores com as pranchas geradas (`src/sprites.c`), em tamanho de pixel 1:1.
   A preparação de cada golpe escolhe a prancha (alto desce, baixo sobe, estocada
   é o corte reto ou a investida; o último golpe das sequências longas é o
-  especial). O mestre chega perto na preparação e dá o bote quando a lâmina
+  especial). O mestre dá um passo curto e rápido para dentro no começo da
+  preparação, firma o corpo (o tronco desce 1 px) e dá o bote quando a lâmina
   parte, para a ponta da arma encontrar a guarda de kojiro no quadro de
   contato, que sai junto com o som do choque; o hitstop segura esse quadro.
+  Entre os golpes de um combo ele fica onde está; no fim, volta ao lugar num
+  pulo para trás. No bote, na corrida e no salto ele deixa silhuetas na cor do
+  seu elemento.
   Kojiro apara com um corte de encontro ao golpe (ou com a DEFEND, quando a
   prancha existir). Parry perfeito: o mestre acusa (HURT). Desarme: o mestre fica
   de joelhos sem a arma (DESARMADO) e kojiro avança com a lâmina baixa. Oboro

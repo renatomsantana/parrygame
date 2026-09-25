@@ -60,11 +60,13 @@ typedef struct {
     int from, to, frame;
     float t, dur;
     bool loop;
+    float limit;                 /* laço: acaba depois deste tempo (0 = nunca) */
     const SprAnim *after;
 } SprPlayer;
 
 void spr_play(SprPlayer *p, const SprAnim *a, int from, int to, float dur); /* dur <= 0: o tempo de cada quadro */
 void spr_loop(SprPlayer *p, const SprAnim *a);
+void spr_cycle(SprPlayer *p, const SprAnim *a, float time);  /* o laço por `time` segundos */
 void spr_update(SprPlayer *p, float dt);
 bool spr_done(const SprPlayer *p);
 

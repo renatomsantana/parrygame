@@ -261,14 +261,19 @@ lutador e toca as pranchas no ritmo do núcleo:
 
 A escolha do golpe segue a preparação do núcleo: alto → ATTACK_3 (desce), baixo
 → ATTACK_2 (sobe), estocada → DASH_ATTACK (ou ATTACK_1), golpe forte →
-STRONG_ATTACK (o salto com a pancada; quem não tem usa o ESPECIAL). O último golpe das
+STRONG_ATTACK (o salto com a pancada; quem não tem usa o ESPECIAL), correndo →
+recua num pulinho, RUN em laço até perto e a estocada sai da corrida, saltando →
+agacha na guarda (o tronco desce), JUMP até o alto do arco e o ATTACK_3 na
+descida, com o contato no pouso. O último golpe das
 sequências de três ou mais é o ESPECIAL; o golpe especial de oboro é o
 STRONG_ATTACK. Oboro usa `ATTACK_n_ECO_<NOME>` da postura em que está.
 
 **Distância:** o mestre anda até `x de kojiro + guarda + alcance do golpe`
-(guarda de 12 px enquanto o Samurai #3 não tiver DEFEND): 40% do passo na
-preparação e o resto como bote enquanto a lâmina parte. No contato, a ponta da
-arma chega à guarda de kojiro.
+(guarda de 12 px enquanto o Samurai #3 não tiver DEFEND): 40% do passo num
+passo curto no começo da preparação e o resto como bote enquanto a lâmina parte.
+No contato, a ponta da arma chega à guarda de kojiro. Entre os golpes de um
+combo ele fica onde está; no fim da sequência volta num pulo para trás (o último
+quadro do JUMP).
 
 Sem as tiras (quem clonou o repositório sem os packs), o jogo usa os bonecos de
 `src/rig.c` para quem não tiver pasta.

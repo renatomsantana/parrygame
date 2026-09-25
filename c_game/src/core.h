@@ -73,12 +73,14 @@ typedef struct {
  * uma preparação seguida de 1 a MAX_CHAIN golpes, com intervalos sempre iguais
  * entre um contato e o próximo. É isso que o jogador estuda e decora.
  */
-#define MAX_MOVES 14
+#define MAX_MOVES 16
 #define MAX_CHAIN 5
 
 /* Preparação que denuncia a sequência. LOOK_HEAVY é o golpe forte: o salto com a
- * pancada de cima (STRONG_ATTACK), de preparação longa e bem visível. */
-typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST, LOOK_HEAVY } MoveLook;
+ * pancada de cima (STRONG_ATTACK), de preparação longa e bem visível. LOOK_DASH
+ * recua e vem correndo até o alcance; LOOK_JUMP salta e desce cortando, com o
+ * contato no instante em que os pés tocam o chão. */
+typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST, LOOK_HEAVY, LOOK_DASH, LOOK_JUMP } MoveLook;
 
 typedef struct {
     const char *name;

@@ -506,9 +506,9 @@ static void test_special(void) {
 static void test_movesets(void) {
     Settings s;
     settings_default(&s);
-    /* Os três primeiros são simples: três sequências, nenhuma com mais de dois contatos. */
+    /* Os três primeiros são simples: seis sequências, nenhuma com mais de dois contatos. */
     for (int i = 0; i < 3; i++) {
-        CHECK(roster_get(i)->moveCount == 3, "%s tem só três sequências", roster_get(i)->name);
+        CHECK(roster_get(i)->moveCount == 6, "%s tem seis sequências", roster_get(i)->name);
         for (int k = 0; k < roster_get(i)->moveCount; k++) CHECK(roster_get(i)->moves[k].strikes <= 2, "%s: nada acima de dois contatos", roster_get(i)->name);
     }
     /* Cada golpe tem nome próprio: nenhum mestre repete o de outro. */
@@ -519,7 +519,8 @@ static void test_movesets(void) {
                     CHECK(strcmp(roster_get(a)->moves[i].name, roster_get(b)->moves[k].name) != 0, "golpe %s é só de %s", roster_get(a)->moves[i].name, roster_get(a)->name);
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
-        CHECK(m->moveCount >= 2, "%s tem um repertório de sequências", m->name);
+        CHECK(m->moveCount >= 6 && (m->isBigBoss || m->moveCount <= 9), "%s tem de 6 a 9 sequências (%d)", m->name, m->moveCount);
+        CHECK(m->moveCount <= MAX_MOVES, "%s cabe no repertório", m->name);
         bool chain = false;
         for (int k = 0; k < m->moveCount; k++) {
             const Move *mv = &m->moves[k];
@@ -534,6 +535,14 @@ static void test_movesets(void) {
         bool heavy = false;
         for (int k = 0; k < m->moveCount; k++) heavy |= m->moves[k].look == LOOK_HEAVY;
         if (!m->isBigBoss && i != 1) CHECK(heavy, "%s tem um golpe forte", m->name);
+        /* e todos vêm correndo e saltando em alguma sequência */
+        bool dash = false, jump = false;
+        for (int k = 0; k < m->moveCount; k++) {
+            dash |= m->moves[k].look == LOOK_DASH;
+            jump |= m->moves[k].look == LOOK_JUMP;
+        }
+        CHECK(dash, "%s tem uma investida correndo", m->name);
+        if (i != 1) CHECK(jump, "%s tem um golpe saltando", m->name);
     }
     /* O intervalo entre contatos de uma sequência é exatamente o do moveset. */
     const MasterProfile *tetsu = roster_get(0);

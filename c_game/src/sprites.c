@@ -257,6 +257,7 @@ float spr_mouse(int button, float x, float y, float unit, Color tint) {
 void spr_play(SprPlayer *p, const SprAnim *a, int from, int to, float dur) {
     p->anim = a;
     p->loop = false;
+    p->limit = 0;
     p->after = NULL;
     p->t = 0;
     if (!a) return;
@@ -273,6 +274,11 @@ void spr_play(SprPlayer *p, const SprAnim *a, int from, int to, float dur) {
 void spr_loop(SprPlayer *p, const SprAnim *a) {
     spr_play(p, a, 0, a ? a->frames - 1 : 0, 0);
     p->loop = true;
+}
+
+void spr_cycle(SprPlayer *p, const SprAnim *a, float time) {
+    spr_loop(p, a);
+    p->limit = time > 0 ? time : 0.001f;
 }
 
 void spr_update(SprPlayer *p, float dt) {
@@ -293,4 +299,7 @@ void spr_update(SprPlayer *p, float dt) {
     p->frame = p->from + (k < n - 1 ? k : n - 1);
 }
 
-bool spr_done(const SprPlayer *p) { return !p->anim || (!p->loop && p->t >= p->dur); }
+bool spr_done(const SprPlayer *p) {
+    if (!p->anim) return true;
+    return p->loop ? p->limit > 0 && p->t >= p->limit : p->t >= p->dur;
+}
