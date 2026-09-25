@@ -169,8 +169,8 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     },
     {
         .id = 8, .name = "enjin", .style = "postura da chama", .title = "O que Odeia", .venue = "Forja dentro da cratera",
-        .special = "Sabre curvo: o fogo nunca queima uma vez só.",
-        .arena = ARENA_FORJA, .posture = 390, .hitsToFall = 20, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFB890FF,
+        .special = "Katana de fogo: quem leva um golpe fica em brasas e continua perdendo vida; o parry perfeito apaga.",
+        .arena = ARENA_FORJA, .posture = 390, .hitsToFall = 20, .burn = 0.6f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFB890FF,
         .stances = {STANCE("", 0.066f, 0.172f, 0.70f, 0.80f, 0.65f)}, .stanceCount = 1,
         .moves = {
             {"brasa", 2, {0.50f}, 2.0f, -1, 0, LOOK_HIGH},
@@ -187,7 +187,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                   {"kojiro", "Então queima."}}, .introCount = 2,
         .outro = {{"enjin", "Isso. É isso que derruba ele. Vai, e derruba por mim."}}, .outroCount = 1,
         .sensei = {{"hanzo", "O fogo nunca queima uma vez só."},
-                   {"hanzo", "Não descanse o braço enquanto a chama ainda sobe."}}, .senseiCount = 2,
+                   {"hanzo", "Se pegar fogo, não corra: apare perfeito, e a brasa apaga."}}, .senseiCount = 2,
     },
     {
         .id = 9, .name = "suiren", .style = "postura do mar", .title = "O Amigo de Oboro", .venue = "Porto dos tambores",

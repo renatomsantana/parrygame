@@ -1417,6 +1417,20 @@ static void handle_events(void) {
                 break;
             case EV_COMBO:
                 break;
+            case EV_BURN: {
+                Vector2 at = {r->x + r->offsetX, GROUND_LOW - 22};
+                if (e->flag) {
+                    /* a lâmina de fogo acendeu kojiro */
+                    vfx("69", 0, at, false, VFX_BACK | VFX_GLOW, 24);
+                    fx_burst(&G.fx, P_EMBER, at, 18, 60, 3.14f, -1.57f, (Color){255, 190, 80, 255}, (Color){255, 90, 30, 255});
+                    audio_play(SND_SWING, 0.5f, 0.55f);
+                } else {
+                    /* apagou: um fio de fumaça */
+                    fx_burst(&G.fx, P_DUST, at, 10, 25, 1.0f, -1.57f, (Color){150, 146, 150, 150}, (Color){90, 86, 92, 120});
+                    audio_play(SND_GESTURE, 0.4f, 0.55f);
+                }
+                break;
+            }
             case EV_FINISHED:
                 if (e->flag) {
                     start_disarm();
@@ -1537,6 +1551,15 @@ static void update_actors(float dt) {
     if (G.renParryTime >= 0) {
         G.renParryTime += dt;
         if (G.renParryTime > 0.3f) { rig_pose(r, POSE_IDLE, 0.22f, EASE_INOUT); G.renParryTime = -1; }
+    }
+    /* Em brasas (enjin): kojiro solta brasas e pisca em laranja enquanto queima. */
+    if (G.duel.burnLeft > 0 && G.state == ST_DUEL) {
+        r->flash = fmaxf(r->flash, 0.22f + 0.12f * sinf(G.time * 18));
+        r->flashColor = (Color){255, 120, 40, 255};
+        if (fmodf(G.time, 0.07f) < dt) {
+            Vector2 at = {r->x + r->offsetX + frand(-6, 6), GROUND_LOW - frand(6, 34)};
+            fx_burst(&G.fx, P_EMBER, at, 2, 22, 0.6f, -1.57f, (Color){255, 200, 90, 255}, (Color){255, 100, 30, 255});
+        }
     }
     /* Golpe especial: o mestre arde em vermelhão enquanto arma. */
     if (G.special && G.state == ST_DUEL) {
@@ -1970,7 +1993,7 @@ static void ui_hud(void) {
     bool low = G.shownRen <= G.settings.renPosture * 0.25f;
     /* kojiro não tem postura: tem vida, em vermelho, que pulsa quando está no fim */
     float pulse = low ? 0.5f + 0.5f * sinf(G.time * 8) : 0;
-    ui_status(bot, "kojiro", NULL, "vida", 0, 0, G.shownRen, G.ghostRen, G.settings.renPosture,
+    ui_status(bot, "kojiro", G.duel.burnLeft > 0 ? "em brasas" : NULL, "vida", 0, 0, G.shownRen, G.ghostRen, G.settings.renPosture,
               (Color){(unsigned char)(140 + 40 * pulse), 26, 30, 255}, (Color){(unsigned char)(212 + 30 * pulse), 62, 56, 255});
 
     if (G.bannerTime > 0) {

@@ -105,7 +105,9 @@ no alto, pouco antes de ela partir; é o reaparecer que avisa. **⚔** é o golp
 segura as duas se for perfeito; no bom, a segunda entra; no erro, entram as
 duas. Todos têm de sete a dez sequências. Daichi, Genbu e Raizo nunca passam de
 dois contatos; Garfiel chega a oito golpes seguidos; arashi bate 1,5 vez mais
-forte; yoru apaga as luzes em sete de cada dez sequências; jinshi tem o
+forte; enjin deixa kojiro **em brasas** a cada erro
+(ele perde mais 60% de um golpe ao longo de 3 s, e o parry perfeito apaga); yoru
+apaga as luzes em sete de cada dez sequências; jinshi tem o
 repertório mais variado e o ritmo irregular.
 
 | Aprendiz | Sequências (golpes: intervalos em s) |

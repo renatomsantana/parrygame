@@ -166,7 +166,8 @@ static void test_no_defense(void) {
         const MasterProfile *m = roster_get(i);
         Tally k = play(m, 7, -1, 600);
         int need = (int)ceilf(m->hitsToFall / (m->damage > 0 ? m->damage : 1) - 1e-4f);
-        CHECK(k.blades >= need && k.blades <= need + 1, "%s derruba Ren com %d lâminas (%d)", m->name, need, k.blades);
+        if (m->burn > 0) CHECK(k.blades < need && k.blades >= need / 2, "%s: as brasas derrubam Ren antes (%d de %d lâminas)", m->name, k.blades, need);
+        else CHECK(k.blades >= need && k.blades <= need + 1, "%s derruba Ren com %d lâminas (%d)", m->name, need, k.blades);
     }
 }
 
@@ -686,6 +687,40 @@ static void test_far_lead(void) {
     CHECK(seen, "uma estocada de longe de suiren foi observada");
 }
 
+/* Enjin: o erro deixa kojiro em brasas, a vida continua caindo, e o perfeito apaga. */
+static void test_burn(void) {
+    Settings s;
+    settings_default(&s);
+    const MasterProfile *enjin = roster_get(7);
+    CHECK(enjin->burn > 0, "enjin queima");
+    for (int i = 0; i < roster_size(); i++)
+        if (i != 7) CHECK(roster_get(i)->burn == 0, "só o enjin queima (%s)", roster_get(i)->name);
+    Duel d;
+    duel_init(&d, &s, enjin, 3);
+    while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+    while (d.phase == PH_WINDUP) duel_tick(&d, DT);            /* sem gesto: erro */
+    CHECK(d.burnLeft > BURN_TIME - 0.1f, "o erro acende as brasas (%.2f s)", d.burnLeft);
+    float before = d.renPosture;
+    double t0 = d.clock;
+    while (d.phase == PH_RECOVERY && d.clock - t0 < 0.5) duel_tick(&d, DT);
+    CHECK(d.renPosture < before - 1e-3f, "em brasas, a vida cai sem golpe (%.2f -> %.2f)", before, d.renPosture);
+    CHECK(fabsf((before - d.renPosture) - d.burnRate * (float)(d.clock - t0)) < 0.05f, "a queimadura é contínua");
+    float total = duel_ren_damage(&d) * enjin->burn;
+    CHECK(fabsf(d.burnRate * BURN_TIME - total) < 0.01f, "a queimadura inteira vale %.0f%% de um golpe", enjin->burn * 100);
+    /* perfeito apaga */
+    bool out = false;
+    for (int n = 0; n < 40 && !out && d.phase != PH_FINISHED; n++) {
+        while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
+        if (d.burnLeft <= 0) { d.burnLeft = 1; d.burnRate = 0; }  /* garante brasas para o teste */
+        while (d.phase == PH_WINDUP) {
+            if (!d.attempted && d.strikeAt - d.clock <= 0.02) duel_press(&d);
+            duel_tick(&d, DT);
+        }
+        out = d.burnLeft == 0;
+    }
+    CHECK(out, "o parry perfeito apaga as brasas");
+}
+
 int main(void) {
     Settings s;
     settings_default(&s);
@@ -712,6 +747,7 @@ int main(void) {
     test_traits();
     test_dual();
     test_far_lead();
+    test_burn();
     test_levels();
     test_special();
     test_campaign();

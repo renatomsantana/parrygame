@@ -86,6 +86,7 @@ typedef struct {
  * kojiro para terminar o golpe; o reaparecer é o aviso. */
 typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST, LOOK_HEAVY, LOOK_DASH, LOOK_JUMP, LOOK_FAR, LOOK_WARP } MoveLook;
 #define FAR_LEAD 1.75f            /* a estocada de longe parte 1,75 x mais cedo */
+#define BURN_TIME 3.0f            /* segundos em brasas depois de um golpe do enjin */
 
 typedef struct {
     const char *name;
@@ -121,6 +122,8 @@ typedef struct {
     int hitsToFall;               /* erros que Ren aguenta contra este mestre (0 = padrão das Settings) */
     float specialChance;          /* golpe especial: dano dobrado (só o BIG BOSS) */
     float damage;                 /* multiplica o dano em kojiro (0 = 1) */
+    float burn;                   /* enjin: um erro deixa kojiro em brasas; em BURN_TIME s ele
+                                     perde mais esta fração do golpe (0 = não queima) */
     bool healsOnHit;              /* acertar ren devolve postura ao mestre (do 5º mestre em diante) */
     Stance stances[MAX_STANCES];
     int stanceCount;
@@ -175,7 +178,8 @@ typedef enum {
     EV_SEAL,          /* i: novo selo (o BIG BOSS entrou em outra fase) */
     EV_COMBO,         /* i: golpes na sequência (só quando mais de um) */
     EV_FINISHED,      /* flag: vitória */
-    EV_SPECIAL        /* o próximo golpe é especial: dano dobrado */
+    EV_SPECIAL,       /* o próximo golpe é especial: dano dobrado */
+    EV_BURN           /* flag: kojiro pegou fogo (true) ou as brasas apagaram (false) */
 } EventKind;
 
 typedef struct {
@@ -207,6 +211,7 @@ typedef struct {
     bool attempted, attackLaunched, feintLaunched, cuePlayed, fakeCuePlayed;
 
     float renPosture;             /* vida de kojiro */
+    float burnLeft, burnRate;     /* brasas: segundos que faltam e vida perdida por segundo */
     float bossPosture;
     int seal;                     /* selo atual (0..sealCount-1) */
     int stanceIndex;

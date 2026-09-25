@@ -316,6 +316,11 @@ static void resolve(Duel *d) {
     if (d->attempted && lead >= 0 && lead <= st->perfectWindow + 1e-6) {
         j = J_PERFEITO;
         d->perfects++;
+        /* o parry perfeito apaga as brasas */
+        if (d->burnLeft > 0) {
+            d->burnLeft = 0;
+            emit(d, EV_BURN, J_NONE, 0, 0, false);
+        }
         d->bossPosture -= s->perfectBossDamage;
         d->renPosture = clampf(d->renPosture + s->perfectRenRecover, 0, s->renPosture);
     } else if (d->attempted && lead >= 0 && lead <= st->goodWindow + 1e-6) {
@@ -333,6 +338,12 @@ static void resolve(Duel *d) {
         d->bads++;
         d->renPosture = clampf(d->renPosture - duel_ren_damage(d) * (dual ? 2 : 1), 0, s->renPosture);
         second = dual;
+        if (d->m->burn > 0) {
+            /* a lâmina de fogo deixa kojiro em brasas (um erro novo reacende) */
+            d->burnLeft = BURN_TIME;
+            d->burnRate = duel_ren_damage(d) * d->m->burn / BURN_TIME;
+            emit(d, EV_BURN, J_NONE, 0, 0, true);
+        }
         if (d->m->healsOnHit) d->bossPosture = clampf(d->bossPosture + s->badBossRecover, 0, d->m->posture);
     }
 
@@ -368,6 +379,21 @@ static void resolve(Duel *d) {
 void duel_tick(Duel *d, double delta) {
     if (d->phase == PH_FINISHED) return;
     d->clock += delta > 0 ? delta : 0;
+    if (d->burnLeft > 0 && delta > 0) {
+        float t = (float)delta < d->burnLeft ? (float)delta : d->burnLeft;
+        d->burnLeft -= t;
+        d->renPosture = clampf(d->renPosture - d->burnRate * t, 0, d->s.renPosture);
+        if (d->renPosture <= 0.001f) {
+            /* caiu queimando */
+            d->renPosture = 0;
+            d->burnLeft = 0;
+            d->phase = PH_FINISHED;
+            d->comboRemaining = 0;
+            emit(d, EV_FINISHED, J_NONE, 0, 0, false);
+            return;
+        }
+        if (d->burnLeft <= 0) emit(d, EV_BURN, J_NONE, 0, 0, false);
+    }
     if (d->phase == PH_READY || d->phase == PH_RECOVERY) {
         if (d->clock >= d->phaseEnd) begin_attack(d);
         return;
