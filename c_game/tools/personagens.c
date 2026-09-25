@@ -1020,14 +1020,16 @@ typedef struct {
 } Head;
 
 static const Head HEADS[] = {
-    /* Kojiro (o Musashi de Vagabond): cabelo puxado para trás num coque bagunçado no
-       alto da nuca, com fiapos espetados, preso com fita vermelha de pontas soltas;
-       mecha caindo na testa, rosto à mostra e barba rala no queixo. */
-    {"coque", {{-2, 4, "h..H"}, {-1, 3, "H.HHiH"}, {0, 4, "HhhiH"}, {1, 4, "HHhhH"}, {2, 4, "aAHHH"},
-               {3, 5, "HHHHhiH"}, {4, 4, "HhHHHHhiH"}, {5, 4, "HHhHHHHhH"}, {6, 4, "HHHhHHFFH"},
-               {7, 4, "HHHHHhFeF"}, {8, 5, "HHHfFFFFf"}, {9, 7, "HkfFkf"}, {10, 8, "kkFf"}},
-     {{{-3, 6, "H"}, {-2, 2, "H"}, {0, 2, "H"}, {3, 3, "H"}, {6, 2, "H"}, {7, 2, "HH"}, {8, 3, "H"}},
-      {{-3, 5, "H"}, {-2, 3, "H"}, {0, 3, "H"}, {1, 2, "H"}, {6, 3, "H"}, {7, 1, "H"}, {8, 2, "HH"}}}},
+    /* Kojiro (o Musashi de Vagabond): cabelo todo puxado para cima num coque bagunçado
+       no alto da cabeça, com fiapos espetados, preso com fita vermelha; a nuca curta,
+       sem cabelo descendo. O rosto fica na sombra da franja: sem nariz nem olho, só o
+       queixo e a bochecha escuros. */
+    {"coque", {{-3, 7, "h.h"}, {-2, 6, "HHiH"}, {-1, 5, "HHHhiH"}, {0, 6, "HHhH"}, {1, 6, "aAAa"},
+               {2, 6, "HHhhH"}, {3, 5, "HHhhHHHH"}, {4, 4, "HHhHHHhHH"}, {5, 4, "HHHHhHHHH"},
+               {6, 4, "HHHHHHfFF"}, {7, 4, "HHHHHkfFF"}, {8, 4, "XHHHkfFFf"}, {9, 4, "XXXkkffFX"},
+               {10, 4, "XXXXkkfXX"}, {11, 4, "XXX"}},
+     {{{-4, 8, "H"}, {-3, 5, "H"}, {-1, 4, "H"}},
+      {{-4, 9, "H"}, {-3, 4, "H"}, {-2, 4, "H"}}}},
     /* Hanzo: coque grande de cabelo branco, testa alta, sem barba. */
     {"mestre", {{1, 4, "HHH"}, {2, 3, "HhiiH"}, {3, 4, "HhhH"}, {4, 5, "aA"}, {5, 5, "HHhiH"},
                 {6, 4, "HHHhiiF"}, {7, 4, "HHHhFFFF"}, {8, 4, "HHHfFkeF"}}},
@@ -1460,6 +1462,13 @@ static void draw_head(Canvas *cv, const Char *ch, int idx) {
                ch->destaque[1], idx + hd->fitas[i].y, 0.2, 1.1, 1, 1.3);
     int nv = (hd->atras[0][0].t != NULL) + (hd->atras[1][0].t != NULL);
     if (nv) paint_rows(cv, hd->atras[(idx / 2) % nv], 14, &pal, true);
+    if (!strcmp(hd->name, "coque")) {
+        /* coque: o cabelo que o chapéu escondia descendo pela nuca sai; fica a nuca curta */
+        const Seg *s = cv->seg;
+        for (int y = s->oy + 8; y <= s->oy + 12; y++)
+            for (int x = s->ox - 2; x <= s->ox + 6; x++)
+                if (cv_ok(x, y) && s->lab[y][x] == HAIR) cv_clear(cv, x, y);
+    }
     paint_rows(cv, hd->frente, 16, &pal, false);
 }
 
