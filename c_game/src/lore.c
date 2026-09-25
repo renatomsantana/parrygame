@@ -79,89 +79,59 @@ static bool sprite_person(const char *id, float x, float feet, bool faceLeft, fl
     return sprite_person_lit(id, x, feet, faceLeft, t, WHITE, CA(0, 0, 0, 0));
 }
 
-static void rain(float t, int n, Color c) {
-    for (int i = 0; i < n; i++) {
-        float x = fract(hash1(i) + t * 0.1f) * 340 - 10, y = fract(hash1(i + 7) + t * 1.4f) * 190 - 10;
-        DrawLine((int)x, (int)y, (int)(x - 2), (int)(y + 6), c);
+/* Um pinheiro escuro: camadas de triângulo, a de baixo mais larga. */
+static void pine(float x, float base, float h, Color c) {
+    rect(x - 1, base - h * 0.25f, 2, h * 0.25f, C(30, 22, 24));
+    for (int k = 0; k < 4; k++) {
+        float top = base - h + k * h * 0.18f, w = 3 + k * h * 0.09f;
+        DrawTriangle((Vector2){x - w, top + h * 0.3f}, (Vector2){x + w, top + h * 0.3f}, (Vector2){x, top}, c);
     }
 }
 
-static void dojo_gate(float x, float ground, Color c) {
-    rect(x - 30, ground - 40, 4, 40, c);
-    rect(x + 26, ground - 40, 4, 40, c);
-    rect(x - 36, ground - 46, 72, 5, c);
-    rect(x - 32, ground - 36, 64, 3, c);
-}
-
-void lore_draw_scene(int page, float t) {
-    switch (page) {
-        case 0: { /* Hanzo e Ren no pátio do dojo ao amanhecer */
-            sky(C(255, 170, 120), C(255, 225, 190));
-            DrawCircle(250, 118, 26, C(255, 240, 200));
-            mountain(60, 90, 180, C(200, 120, 110));
-            rect(0, 140, 320, 40, C(120, 80, 60));
-            dojo_gate(160, 140, C(90, 40, 36));
-            if (!sprite_person("hanzo", 138, 142, false, t)) person(130, 142, 56, C(40, 26, 30), true);  /* Hanzo */
-            if (!sprite_person("kojiro", 182, 142, true, t + 0.7f)) person(186, 142, 34, C(220, 100, 40), true);  /* Kojiro */
-            for (int i = 0; i < 18; i++) {
-                float x = fract(hash1(i) + t * 0.05f) * 340 - 10, y = fract(hash1(i + 3) + t * 0.08f) * 180;
-                DrawEllipse((int)x, (int)y, 2, 1, C(255, 180, 200));
-            }
-            break;
-        }
-        case 1: { /* Noite de chuva: Oboro saca, Hanzo não */
-            float flash = fract(t * 0.35f) < 0.05f ? 1 : 0;
-            sky(C(10, 12, 24), C(30, 34, 50));
-            if (flash > 0) rect(0, 0, 320, 180, CA(220, 220, 255, 90));
-            rect(0, 140, 320, 40, C(24, 26, 34));
-            dojo_gate(160, 140, C(16, 16, 22));
-            person(120, 142, 50, C(40, 30, 34), false);   /* Hanzo, espada na bainha */
-            rect(128, 118, 16, 2, C(60, 40, 30));
-            person(205, 142, 52, C(8, 8, 12), true);      /* Oboro */
-            DrawCircle(207, 97, 1, C(255, 40, 60));
-            rain(t, 90, CA(150, 160, 200, 140));
-            break;
-        }
-        case 2: { /* Doze mestres guardam o caminho até o castelo */
-            sky(C(4, 4, 10), C(20, 16, 34));
-            mountain(160, 40, 180, C(14, 12, 24));
-            rect(146, 24, 28, 16, C(20, 14, 24));
-            DrawTriangle((Vector2){140, 26}, (Vector2){180, 26}, (Vector2){160, 14}, C(60, 20, 30));
-            rect(156, 30, 8, 6, C(255, 170, 80));
-            for (int i = 0; i < 12; i++) {
-                float x = 30 + i * 22 + sinf(t * 2 + i) * 0.5f, feet = 140 - fabsf(i - 5.5f) * 4;
-                person(x, feet, 24, C(4, 4, 8), true);
-                glow(x + 7, feet - 18, 5 * (0.8f + 0.2f * sinf(t * 9 + i)), C(255, 120, 40));
-            }
-            break;
-        }
-        case 3: { /* Ren pega a katana do mestre */
-            sky(C(40, 30, 60), C(120, 80, 100));
-            rect(0, 140, 320, 40, C(50, 40, 50));
-            rect(170, 120, 12, 22, C(90, 90, 100));     /* lápide */
-            rect(166, 116, 20, 5, C(100, 100, 110));
-            rect(160, 132, 4, 8, C(80, 70, 70));        /* lanterna */
-            glow(162, 130, 10 * (0.85f + 0.15f * sinf(t * 8)), C(255, 170, 80));
-            person(130, 142, 40, C(220, 100, 40), false);
-            float lift = fminf(1, t * 0.5f);
-            DrawLine(140, (int)(120 - lift * 20), (int)(152 + lift * 8), (int)(100 - lift * 30), C(220, 220, 230));
-            break;
-        }
-        default: { /* A trilha até o castelo */
-            sky(C(20, 16, 50), C(120, 80, 120));
-            stars(40, t);
-            mountain(250, 30, 180, C(40, 30, 60));
-            rect(236, 18, 28, 16, C(30, 20, 40));
-            DrawTriangle((Vector2){232, 20}, (Vector2){268, 20}, (Vector2){250, 8}, C(90, 30, 60));
-            for (int i = 0; i < MASTER_COUNT; i++) {
-                float x, y;
-                lore_trail_point(i, &x, &y);
-                glow(x, y, 5 + 1.5f * sinf(t * 2 + i), C(255, 150, 70));
-            }
-            person(40, 132, 22, C(220, 100, 40), true);
-            break;
-        }
+/* A cabana de Hanzo na serra, à noite: ele de um lado da fogueira, Kojiro do outro. */
+void lore_draw_cabin(float t) {
+    sky(C(14, 12, 30), C(66, 48, 76));
+    stars(50, t);
+    glow(262, 30, 28, C(190, 190, 230));
+    DrawCircle(262, 30, 9, C(236, 232, 214));
+    DrawCircle(259, 28, 2, C(214, 208, 190));
+    DrawCircle(265, 33, 1, C(214, 208, 190));
+    mountain(70, 60, 180, C(44, 36, 66));
+    mountain(250, 72, 180, C(34, 28, 54));
+    for (int i = 0; i < 7; i++) pine(214 + i * 17 + (i % 2) * 5, 140, 30 + (i * 7 % 11), C(22, 26, 34));
+    rect(0, 138, 320, 42, C(40, 32, 38));
+    rect(0, 138, 320, 2, C(62, 50, 54));
+    /* a cabana: tábuas, teto de palha, a porta acesa e uma janela */
+    rect(26, 104, 68, 36, C(74, 50, 38));
+    for (int k = 0; k < 6; k++) rect(26, 104 + k * 6, 68, 1, C(58, 38, 30));
+    DrawTriangle((Vector2){14, 106}, (Vector2){106, 106}, (Vector2){60, 80}, C(96, 76, 50));
+    rect(14, 104, 92, 3, C(70, 54, 36));
+    for (int k = 0; k < 9; k++) rect(20 + k * 10, 106, 1, 2, C(70, 54, 36));
+    float fl = 0.9f + 0.1f * sinf(t * 7) * sinf(t * 3.1f);
+    glow(54, 128, 24 * fl, C(255, 150, 70));
+    rect(48, 118, 12, 22, C(255, 170, 90));
+    rect(74, 112, 8, 7, C(255, 190, 110));
+    rect(77, 112, 1, 7, C(74, 50, 38));
+    rect(74, 115, 8, 1, C(74, 50, 38));
+    /* fumaça subindo do teto */
+    for (int i = 0; i < 6; i++) {
+        float k = fract(t * 0.12f + i / 6.0f);
+        DrawCircle((int)(80 + sinf(k * 6 + i) * 3 + k * 10), (int)(84 - k * 50), 2 + k * 3, CA(120, 110, 130, (unsigned char)(90 * (1 - k))));
     }
+    /* a fogueira entre os dois */
+    float fx = 173, fy = 140;
+    glow(fx, fy - 6, 34 * fl, C(255, 130, 50));
+    rect(fx - 7, fy - 1, 14, 2, C(70, 44, 30));
+    rect(fx - 5, fy - 2, 10, 1, C(92, 58, 38));
+    float h = 9 + 2 * sinf(t * 9);
+    DrawTriangle((Vector2){fx - 5, fy - 2}, (Vector2){fx + 5, fy - 2}, (Vector2){fx + sinf(t * 5), fy - 2 - h}, C(255, 140, 50));
+    DrawTriangle((Vector2){fx - 3, fy - 2}, (Vector2){fx + 3, fy - 2}, (Vector2){fx - sinf(t * 6), fy - 2 - h * 0.6f}, C(255, 220, 120));
+    for (int i = 0; i < 6; i++) {
+        float k = fract(t * 0.6f + hash1(i));
+        DrawPixel((int)(fx + sinf(i * 3 + t * 2) * 4), (int)(fy - 6 - k * 26), CA(255, 200, 120, (unsigned char)(255 * (1 - k))));
+    }
+    if (!sprite_person("hanzo", 140, 142, false, t)) person(140, 142, 40, C(200, 200, 204), false);
+    if (!sprite_person("kojiro", 206, 142, true, t + 0.7f)) person(206, 142, 36, C(220, 100, 40), true);
 }
 
 void lore_trail_point(int index, float *x, float *y) {
@@ -206,25 +176,6 @@ void lore_draw_trail(const Campaign *c, float t, int selected) {
         }
         DrawPoly((Vector2){x, y}, 4, r, 45, open ? col : C(40, 36, 50));
         if (done || i == selected) glow(x, y, 10, col);
-    }
-}
-
-void lore_draw_ending(float t) {
-    sky(C(255, 180, 120), C(255, 235, 200));
-    DrawCircle(160, 110, 40 + sinf(t * 0.5f) * 2, C(255, 245, 220));
-    mountain(160, 70, 180, C(200, 130, 120));
-    rect(0, 150, 320, 30, C(120, 80, 70));
-    /* Kojiro devolve a katana a Hanzo no alto da serra (sem as pranchas, a lápide e a silhueta) */
-    rect(152, 144, 4, 8, C(80, 70, 70));
-    glow(154, 142, 12 * (0.85f + 0.15f * sinf(t * 8)), C(255, 170, 80));
-    if (!sprite_person("hanzo", 184, 152, true, t)) {
-        rect(170, 130, 12, 22, C(110, 100, 100));
-        rect(166, 126, 20, 5, C(120, 110, 110));
-    }
-    if (!sprite_person("kojiro", 126, 152, false, t + 0.7f)) person(120, 152, 44, C(220, 100, 40), true);
-    for (int i = 0; i < 24; i++) {
-        float x = fract(hash1(i) + t * 0.04f) * 340 - 10, y = fract(hash1(i + 3) + t * 0.06f) * 180;
-        DrawEllipse((int)x, (int)y, 2, 1, C(255, 190, 210));
     }
 }
 

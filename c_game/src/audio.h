@@ -6,13 +6,14 @@
 
 typedef enum {
     SND_CUE, SND_CUE_FEINT, SND_PERFECT, SND_GOOD, SND_BAD, SND_BREAK, SND_SWING, SND_GESTURE,
-    SND_UI, SND_TYPE, SND_GEM, SND_SEAL, SND_DRUM, SND_THUNDER, SND_VICTORY, SND_DEFEAT, SND_THUD, SND_COUNT
+    SND_UI, SND_TYPE, SND_GEM, SND_SEAL, SND_DRUM, SND_THUNDER, SND_VICTORY, SND_DEFEAT, SND_THUD, SND_CLAP, SND_COUNT
 } SoundId;
 
 /* Trilhas: uma por cenário (ArenaId) e duas extras. */
 #define MUSIC_LORE 13       /* 0..12 são as trilhas dos cenários (ArenaId) */
 #define MUSIC_TITLE 14
 #define MUSIC_SILENCE 15
+#define MUSIC_WIND 16        /* a escolha no fim: a música corta e fica só o vento */
 
 void audio_init(void);
 void audio_shutdown(void);

@@ -53,7 +53,7 @@ mesmos pixels.
 | 10 | **Arashi** (tempestade) | duas katanas com raios | **corpo do Samurai #5**, cabelo prateado, olhos de raio | preto, azul elétrico | raios nas lâminas e no corpo |
 | 11 | **Yoru** (noite) | uma adaga em cada mão, **empunhadas ao contrário** (lâmina para trás), brilho roxo | **corpo do samurai de duas espadas**, ninja preto e roxo | preto azulado e roxo | corte duplo, fumaça roxa |
 | 12 | **Jinshi** (lua) | **katana bem branca, forjada com a lua**, com halo de luar | **corpo do Samurai #4** (o da Shizuku), cabelo roxo do pack solto e comprido, até a cintura (o rabo de cavalo sai) | roxo e verde | rastro branco, halo pálido e poeira de prata subindo |
-| — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon** (máscara oni), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
+| — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon**, de rosto descoberto (`oboro`) e de máscara oni (`oboro_mascara`), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
 | — | **Hanzo** | **nenhuma**: um velho que não luta mais | **pack do Hanzo**: cabelo e barba brancos (sem o pack, coque branco e sem barba) | azul escuro | sem rastro nem aura |
 
 As armas do pedido caíram assim: garras → Garfiel, espada maior → Raizo
@@ -428,6 +428,20 @@ as partículas do elemento de cada aprendiz (fogo do Enjin, raios do Arashi,
 As versões de **fúria** do pack (`*_FURIA`: lâmina vermelha, rastro de sangue)
 são a fase 2. O rastro vermelho tem as mesmas cores da máscara, então o alcance
 delas é copiado do golpe normal, que tem o mesmo desenho.
+
+### Oboro sem a máscara
+
+Na história, a máscara de oni só aparece na terceira forma. O `oboro` sai **de
+rosto descoberto** e o `oboro_mascara` sai como o pack desenhou (os dois com os
+mesmos golpes, ecos e grito). A máscara do Demon é sempre o mesmo desenho, só
+deslocado de quadro em quadro, então o programa guarda três moldes dela (de
+frente, de costas e caído no chão, no fim da DEATH), acha o molde em cada quadro
+pelos vermelhos e pelos olhos amarelos e pinta por cima um rosto cansado debaixo
+do elmo, com a barba preta do pack (e tira os chifres). Só troca o pixel que
+ainda é o da máscara: a lâmina passando na frente fica. Com a cabeça pendendo, no
+clarão do golpe ou no SHOUT do pack a máscara fica, e o jogo não usa esses
+quadros sem ela (o DESARMADO do Oboro para antes de a cabeça pender, e o grito da
+forma sem máscara é o `GRITO` montado).
 
 **`GRITO.png`** (14 quadros, 90 ms cada) é a cena final: parado, a fúria sobe
 (passa do IDLE para o IDLE_FURIA), ele treme cada vez mais, as linhas do grito

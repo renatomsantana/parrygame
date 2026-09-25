@@ -30,12 +30,20 @@ O progresso fica em `apara_save.txt`, ao lado do executável.
 
 ## História
 
-Hattori Hanzo criou a Arte do Aparar e reuniu treze aprendizes em busca de um
-sucessor. Oboro, o mais promissor, venceu o mestre depois de incontáveis
-desafios e tomou o dojo, como manda a tradição, mas percebeu que Hanzo lhe
-concedera a abertura. Passou anos aprendendo as posturas dos outros doze.
-Anos depois, Hanzo encontra Kojiro, e Kojiro sobe a trilha para mostrar que o
-estilo do mestre é inabalável. A tela de título mostra Kojiro de costas em cima de um
+A abertura conta a história como Kojiro acredita nela: Hattori Hanzo criou a
+Arte do Aparar, Oboro, o aluno mais promissor, venceu o mestre e tomou o dojo,
+e anos depois Hanzo recolheu Kojiro, um órfão que viu o pai morrer pelas mãos de
+um homem com máscara de oni. Kojiro sobe a trilha pela vingança. Cada aprendiz
+pensa uma coisa de Hanzo e de Oboro (uns falam bem do velho, outros devem a vida
+a Oboro, outros chamam Hanzo de monstro, e dois viram que o último duelo não foi
+justo), e depois de cada vitória Kojiro volta à cabana de Hanzo na serra, que
+comenta o vencido e fala do próximo. Na luta final, Oboro fala a cada selo
+quebrado, põe a máscara de oni no terceiro e, de joelhos, a tira: "Eu achei isso
+no baú dele." Aí vem a escolha, **DESEJA MATAR O OBORO?**, sem nada marcado e sem
+tempo, e um final para cada resposta. A história inteira está em
+`../aparar_lore.md`.
+
+A tela de título mostra Kojiro de costas em cima de um
 morro, à noite, com a espada na bainha e o vento nos fiapos do coque, olhando
 para o dojo de Hanzo, pequeno e aceso no pico da serra (desenhado pixel a pixel
 em `src/lore.c`); a abertura é narrada sobre essa mesma serra (segurar
@@ -60,7 +68,8 @@ metade da postura, o adversário acelera a preparação (o ritmo dentro de uma
 sequência nunca muda). Quebrar a postura **desarma**: a arma voa, crava no chão
 e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
 (25% das vezes) que tira o dobro. Depois de duas derrotas seguidas, dá para
-**conversar com hanzo**.
+**conversar com hanzo** (no Oboro, ele só diz "Confie em você mesmo. Use tudo
+que aprendeu.").
 
 ## A trilha
 
@@ -175,7 +184,12 @@ repertório mais variado e o ritmo irregular.
   na fonte de pixel Tiny5 (`assets/fonts`, licença OFL), toda em minúsculo. O
   layout é pensado em 1280 × 720, mas tudo cai na grade de 320 × 180.
 - As falas do duelo ficam numa caixa no alto, para os lutadores aparecerem
-  inteiros; na cena de hanzo e no final, hanzo e kojiro também são os sprites.
+  inteiros; na cabana de hanzo e nos finais, hanzo e kojiro também são os sprites.
+- Oboro luta de rosto descoberto nas duas primeiras formas: o gerador acha a
+  máscara de oni do pack em cada quadro e pinta um rosto cansado no lugar
+  (`oboro/`); a prancha com a máscara sai em `oboro_mascara/`.
+- A escolha do fim corta a música e deixa só o vento; nos finais, Hanzo entra
+  batendo palmas (sim) ou sai do escuro (não).
 - Teclas de pixel na pausa e, no primeiro duelo, a dica de como aparar.
 - Trilha sonora sintetizada por cenário; vitória e derrota com sons curtos e sutis.
 
@@ -187,14 +201,14 @@ de um botão só).
 | Arquivo | O quê |
 |---|---|
 | `src/core.c`, `core.h` | Regras puras: relógio, tentativa, postura, selos, moveset, trilha. Sem raylib. |
-| `src/roster.c` | Os treze lutadores (doze aprendizes e oboro), falas, conselhos de hanzo e a lore. **Balanceamento é aqui.** |
+| `src/roster.c` | Os treze lutadores (doze aprendizes e oboro), falas, visitas e conselhos de hanzo, a lore e as cenas da luta final e dos finais. **Balanceamento é aqui.** |
 | `src/main.c` | Telas, coreografia, interface, visuais de cada lutador (`MASTER_LOOKS`) |
 | `src/sprites.c` | Lê as pranchas geradas (`sprite.txt` e tiras) e desenha e toca os lutadores em pixel art; efeitos em folha e teclas |
 | `src/rig.c` | Bonecos (quando faltam as pranchas): poses, passos, cansaço, roupas, armas |
 | `src/katana3d.c` | A katana 3D dentro do mundo em pixel |
 | `src/arenas.c` | Os treze cenários dos duelos (e o do título) |
 | `src/pixelize.c` | Paleta curta por cena e dithering ordenado nos fundos |
-| `src/lore.c` | Tela de título, trilha, final e a cena do sensei |
+| `src/lore.c` | Tela de título, trilha e a cabana de hanzo |
 | `src/fx.c` | Faíscas, estrela, anéis, arcos, flash, tremor |
 | `src/audio.c` | Efeitos e trilha ambiente sintetizados |
 | `tests/core_test.c` | Verificações do núcleo (`make test`) |

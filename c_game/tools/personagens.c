@@ -738,6 +738,7 @@ typedef struct {
     bool sem_arma;                          /* Hanzo: não luta mais; sem espada, sem golpes */
     Rgb bainha[2];                          /* pack do Hanzo: cores da espada embainhada, que sai */
     Rgb rastro_pack[3];                     /* pack cujo rastro usa as cores da camisa: longe do corpo, vira rastro */
+    bool sem_mascara;                       /* Oboro nas duas primeiras formas: rosto no lugar da máscara de oni */
 } Char;
 
 static bool pack_no_shirt(void) {
@@ -766,6 +767,21 @@ static const Char ORIG = {
     .olho = {24, 16, 20},
     .mascara = {{30, 30, 36}, {50, 50, 60}},
 };
+
+/* O corpo do Oboro, igual com e sem a máscara. */
+#define OBORO                                                                                             \
+    .arma = {.kind = W_KATANA}, .cabeca = "rabo_longo",                                                   \
+    .camisa = {HEX(0x8a6ab0), HEX(0x5e4488), HEX(0x3e2c62), HEX(0x281c42)},                               \
+    .hakama = {HEX(0x2a2030), HEX(0x201826), HEX(0x18121c), HEX(0x110d14), HEX(0x0b080d)},                \
+    .pele = {HEX(0xe6b894), HEX(0xc08c6c), HEX(0x845c48)},                                                \
+    .cabelo = {HEX(0x0e0a12), HEX(0x221a2c), HEX(0x3e3250)},                                              \
+    .destaque = {HEX(0xffcc40), HEX(0xb08018)}, .destaque2 = HEX(0xffcc40), .obi = HEX(0xffcc40),         \
+    .saya = HEX(0x18121c), .cabo = HEX(0xb08018),                                                         \
+    .lamina = {HEX(0xfffbe8), HEX(0xe8c060)},                                                             \
+    .rastro = {HEX(0xfff6dc), HEX(0xb48cff), HEX(0x6a3cc0)}, .elemento = EL_SOMBRA, .altura = 1,          \
+    .especial = SP_INVESTIDA, .efeito = FX_SOMBRA,                                                        \
+    .pack = "demon", .ecos = true, .pack_sem_camisa = true,                                               \
+    .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}}
 
 static Char CHARS[] = {
     /* O protagonista: sem chapéu e sem máscara, coque solto no alto da cabeça, katana. */
@@ -976,20 +992,11 @@ static Char CHARS[] = {
                {HEX(0x657392), HEX(0x503678)},
                {HEX(0x1a1932), HEX(0x0e2418)}, {HEX(0x2a2f4e), HEX(0x1a3e28)}, {HEX(0x424c6e), HEX(0x2a5a3a)},
                {HEX(0x571c27), HEX(0x2f8a5a)}, {HEX(0x891e2b), HEX(0x5ad08a)}, {HEX(0x5ac54f), HEX(0x1fc45a)}}},
-    /* Oboro, o último da trilha. Katana de Hanzo. Roxo escuro e dourado. */
-    {.id = "oboro", .titulo = "Oboro", .arma = {.kind = W_KATANA}, .cabeca = "rabo_longo",
-     .camisa = {HEX(0x8a6ab0), HEX(0x5e4488), HEX(0x3e2c62), HEX(0x281c42)},
-     .hakama = {HEX(0x2a2030), HEX(0x201826), HEX(0x18121c), HEX(0x110d14), HEX(0x0b080d)},
-     .pele = {HEX(0xe6b894), HEX(0xc08c6c), HEX(0x845c48)},
-     .cabelo = {HEX(0x0e0a12), HEX(0x221a2c), HEX(0x3e3250)},
-     .destaque = {HEX(0xffcc40), HEX(0xb08018)}, .destaque2 = HEX(0xffcc40), .obi = HEX(0xffcc40),
-     .saya = HEX(0x18121c), .cabo = HEX(0xb08018),
-     .lamina = {HEX(0xfffbe8), HEX(0xe8c060)},
-     .rastro = {HEX(0xfff6dc), HEX(0xb48cff), HEX(0x6a3cc0)}, .elemento = EL_SOMBRA, .altura = 1,
-     .especial = SP_INVESTIDA, .efeito = FX_SOMBRA,
-     /* corpo do Demon (oni), com as cores dele; ataca em cada postura dos onze e tem a cena do grito */
-     .pack = "demon", .ecos = true, .pack_sem_camisa = true,
-     .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}}},
+    /* Oboro, o último da trilha. Katana de Hanzo. Corpo do Demon (oni), com as cores
+       dele; ataca em cada postura dos onze e tem a cena do grito. Nas duas primeiras
+       formas luta de rosto descoberto; a máscara de oni só vem na terceira. */
+    {.id = "oboro", .titulo = "Oboro", OBORO, .sem_mascara = true},
+    {.id = "oboro_mascara", .titulo = "Oboro (máscara)", OBORO},
     /* Hanzo: um velho que não luta mais. Sem espada; cabelo branco, sem barba, azul escuro. */
     {.id = "hanzo", .titulo = "Hanzo", .arma = {.kind = W_KATANA}, .cabeca = "mestre", .sem_arma = true, .sem_saya = true,
      .pack = "hanzo", .bainha = {HEX(0x571c27), HEX(0x391f21)},
@@ -2888,6 +2895,120 @@ static void no_weapon(Canvas *cv, const Char *ch) {
         }
 }
 
+/* ----- Oboro sem a máscara ------------------------------------------------ */
+/* A máscara de oni do pack Demon é sempre o mesmo desenho, só deslocado de quadro
+ * em quadro. ONI é ela como vem (linha 0 = a dos olhos amarelos, coluna 0 = 9 px
+ * antes do olho de trás); ROSTO é o que fica no lugar: um rosto cansado debaixo do
+ * elmo, com a barba preta do pack, e o elmo sem os chifres. '.' fica como está e
+ * '-' some. Só troca o pixel que ainda é o da máscara (a lâmina passando na frente
+ * fica), e o nariz só entra onde não havia nada. */
+#define ONI_TOP 12
+static const char *const ONI[] = {
+    ".......A.....A....", "......A.......A...", ".....AA.......AA..", ".....AA.......AA..",
+    "....BCABBDD...AC..", "...EECCADDFG.ACC..", "..EBBBCCAFHFGCC...", ".BBEBDDCCHFHGCD...",
+    ".EEBDBDIJCHGCDD...", "KKBDBDJAAACCCAAD..", "EBAADJLLAKKCKACDC.", "BEDDCMALLLACLLDC..",
+    "EDBDNOAKLPCAPLC...", "DBDLQCLAKCAKACL...", "ADDLLCCLLKACCLL...", "LCCLLCACRLLLLRLL..",
+    "LLLLLSCARFKAFRL...", "LLLLLLSCAKAACLLL..", "CCTTLLSSCASSCLDLL.",
+};
+static const char *const ROSTO[] = {
+    ".......-.....-....", "......-.......-...", ".....--.......--..", ".....--.......--..",
+    ".....BB.......--..", ".....DDD.....---..", "......DDD....DD...", ".......DD....D....",
+    ".........D..D.....", ".......LLVVVVVV...", "........XWWWWWXV-.", "....L.L.X.LW..WV..",
+    "......LXWLXWLWX...", ".....L.XWVWWVWWX..", ".....LL.XXWWXWV...", ".....LSXS....S....",
+    "......SSSLVVLS....", ".......SSSLSS.....", "........SS..S.....",
+};
+#define ONI_ROWS ((int)(sizeof ONI / sizeof ONI[0]))
+
+static uint32_t oni_color(char k) {
+    switch (k) {
+        case 'A': return 0x891e2b; case 'B': return 0x00396d; case 'C': return 0x571c27; case 'D': return 0x0c2e44;
+        case 'E': return 0x0069aa; case 'F': return 0xc7cfdd; case 'G': return 0x657392; case 'H': return 0x92a1b9;
+        case 'I': return 0x090008; case 'J': return 0x050213; case 'K': return 0xc42430; case 'L': return 0x131313;
+        case 'M': return 0x00020e; case 'N': return 0x02000d; case 'O': return 0x05020d; case 'P': return 0xffc825;
+        case 'Q': return 0x01010d; case 'R': return 0xffffff; case 'S': return 0x272727; case 'T': return 0x1b1b1b;
+        case 'W': return 0xf6ca9f; case 'X': return 0xe69c69; case 'V': return 0x8a4836; case 'Y': return 0x3d3d3d;
+        default: return 0;
+    }
+}
+
+static bool orig_is(const Canvas *cv, int x, int y, char k) {
+    if (!cv_ok(x, y)) return false;
+    Color o = cv->orig->p[y][x];
+    if (k == '.') return o.a == 0;
+    uint32_t c = oni_color(k);
+    return o.a && o.r == (c >> 16 & 0xff) && o.g == (c >> 8 & 0xff) && o.b == (c & 0xff);
+}
+
+/* De costas, só os chifres aparecem por cima do elmo. */
+static const char *const CHIFRES[] = {
+    "........A.........", ".......AA......A..", ".......A.......AA.", "......AA........A.",
+    "......AA........AA", "......CA........AA", "......CCABEEEE..AC", ".......CEEBBBBEACC",
+    ".......EBBBDDBBEC.",
+};
+static const char *const SEM_CHIFRES[] = {
+    "........-.........", ".......--......-..", ".......-.......--.", "......--........-.",
+    "......--........--", "......--........--", "......--B.......--", ".......E.......E--",
+    "................D.",
+};
+
+/* Caído de bruços no fim da DEATH: a cabeça deitada, o alto do elmo para a direita. */
+static const char *const DEITADO[] = {
+    "LLLLL.L.LKB.............", "LLLLLLLLLKBE............", "LLELLLLLABEBE...........",
+    "LLEAELLLADEBEK..........", "YLEAEALCDBDEBKEB........", "YSBCEAECDDBDABEBE.......",
+    "SSBCBCELLLDDADBEBE......", "SSDCLLLLLQNCDBDBBEB.....", "TSLLLLSCCCOMJDBDBCCAA...",
+    "TLLLSSCACLAALJDDCCAAAA..", "LLSSSCACLAKLLAICCAB...A.", "LSSSCARRLKLLAAJCADB.....",
+    "SSSSAKFLKCLLKACHFDD.....", "LSSSSAKLAACAKCHFHFD.....", "RRSSSAALCKACCCGHFG......",
+};
+static const char *const DEITADO_ROSTO[] = {
+    "........................", "........................", "........................",
+    "........................", "........................", "........................",
+    "........................", "........................", ".......LLL.......DD--...",
+    "......LVL.VX....DD----..", ".....LVV.XW..X.DDD....-.", "....SXSS.W..XX.DD.......",
+    "....SXS.WX..WXV.........", ".....XW.XWXWWV..........", ".....XX.VWXVVV..........",
+};
+
+typedef struct { const char *const *oni, *const *novo; int rows, match; } Molde;
+#define MOLDE(o, n, m) {o, n, (int)(sizeof o / sizeof o[0]), m}
+static const Molde MOLDES[] = {
+    MOLDE(ONI, ROSTO, ONI_TOP + 3),                    /* de frente: o rosto e o elmo sem chifres */
+    MOLDE(CHIFRES, SEM_CHIFRES, 9),                    /* de costas: só sem os chifres */
+    MOLDE(DEITADO, DEITADO_ROSTO, 15),                 /* caído: o rosto de lado, sem chifres */
+};
+
+/* Acha o desenho do molde no quadro original pelos vermelhos e pelos olhos das
+ * primeiras linhas e, se achar, pinta o novo por cima. */
+static bool oni_patch(Canvas *cv, const Molde *md) {
+    int best = 0, total = 0, bx = 0, by = 0, w = (int)strlen(md->oni[0]);
+    for (int r = 0; r < md->match; r++)
+        for (int c = 0; md->oni[r][c]; c++) total += in_set(md->oni[r][c], "ACKP");
+    for (int y = 0; y + md->rows <= CH && best < total; y++)
+        for (int x = 0; x + w <= CW && best < total; x++) {
+            int n = 0;
+            for (int r = 0; r < md->match; r++)
+                for (int c = 0; md->oni[r][c]; c++)
+                    if (in_set(md->oni[r][c], "ACKP") && orig_is(cv, x + c, y + r, md->oni[r][c])) n++;
+            if (n > best) { best = n; bx = x; by = y; }
+        }
+    if (best * 100 < total * 85) return false;
+    for (int r = 0; r < md->rows; r++)
+        for (int c = 0; md->novo[r][c]; c++) {
+            char k = md->novo[r][c];
+            int x = bx + c, y = by + r;
+            if (k == '.' || !cv_ok(x, y) || !orig_is(cv, x, y, md->oni[r][c])) continue;
+            if (k == '-') { cv_clear(cv, x, y); continue; }
+            uint32_t v = oni_color(k);
+            cv_put(cv, x, y, (Rgb){(unsigned char)(v >> 16), (unsigned char)(v >> 8), (unsigned char)v});
+        }
+    return true;
+}
+
+/* O primeiro molde que achar vale; com a cabeça pendendo, no clarão do golpe ou
+ * no grito do pack, fica como está (o jogo não usa esses quadros sem a máscara). */
+static void unmask(Canvas *cv) {
+    for (size_t i = 0; i < sizeof MOLDES / sizeof MOLDES[0]; i++)
+        if (oni_patch(cv, &MOLDES[i])) return;
+}
+
 /* O Hanzo do próprio pack fica como vem (o cabelo branco confundiria o separador
  * de lâminas); só a espada embainhada sai: cada mancha das cores da bainha com
  * 6 px ou mais de largura (as botas e os punhos são menores). */
@@ -2958,6 +3079,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         return;
     }
     recolor(cv, ch, anim);
+    if (ch->sem_mascara) unmask(cv);
     accessories(cv, ch, idx);
     if (seg->has_hat) {
         if (ch->chapeu) {
@@ -4025,6 +4147,7 @@ int main(int argc, char **argv) {
                 f0 = f1 = ss->nframes > 1 ? 1 : 0;
             } else if ((ss = source_strip(sc, "DEATH"))) {
                 f1 = ss->nframes * 2 / 5;          /* o quadro em que chega aos joelhos */
+                if (ch->ecos) f1 = ss->nframes / 3; /* o Oboro ainda de cabeça erguida (depois ela pende) */
             } else if ((ss = source_strip(sc, "HURT"))) {
                 f0 = ss->nframes > 1 ? 1 : 0;       /* o primeiro é o clarão do golpe */
                 f1 = ss->nframes - 1;
@@ -4058,7 +4181,7 @@ int main(int argc, char **argv) {
             static const char *atk[] = {"ATTACK_1", "ATTACK_2", "ATTACK_3"};
             for (int a = 0; a < NCHARS; a++) {
                 const Char *ap = &CHARS[a];
-                if (!strcmp(ap->id, "kojiro") || ap->sem_arma || !strcmp(ap->id, ch->id)) continue;
+                if (!strcmp(ap->id, "kojiro") || ap->sem_arma || ap->ecos) continue;
                 /* a espada é a dele; só a aura, o rastro e o brilho do elemento são do aprendiz */
                 Char tmp = *ch;
                 tmp.elemento = ap->elemento;

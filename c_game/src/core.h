@@ -12,7 +12,7 @@
 #define MAX_STANCES 12         /* oboro usa as doze posturas dos aprendizes */
 #define MAX_SEALS 3
 #define MAX_FALSE_CUES 3
-#define MAX_LINES 3
+#define MAX_LINES 8
 #define MAX_EVENTS 32
 #define MASTER_COUNT 12   /* aprendizes antes de oboro */
 
@@ -145,6 +145,8 @@ typedef struct {
     int outroCount;
     Line sensei[MAX_LINES];       /* conselhos de hanzo para quem travou neste mestre */
     int senseiCount;
+    Line visit[MAX_LINES];        /* depois da vitória, na cabana de hanzo: o que ele diz deste e do próximo */
+    int visitCount;
 } MasterProfile;
 
 #define ROSTER_SIZE 13
@@ -153,6 +155,37 @@ int roster_size(void);
 
 #define LORE_PAGES 10
 const char *lore_page(int index);
+
+/* A luta final e os finais: falas e o que acontece em cena quando cada uma começa.
+ * Uma entrada sem fala é só a ação, e passa sozinha quando ela termina. */
+typedef enum {
+    CUE_NONE,
+    CUE_MASK_ON,      /* oboro põe a máscara de oni */
+    CUE_MASK_OFF,     /* de joelhos, desarmado, ele tira a máscara */
+    CUE_RAISE,        /* kojiro chega perto e ergue a espada */
+    CUE_KILL,         /* kojiro mata oboro */
+    CUE_HANZO_CLAP,   /* hanzo chega aplaudindo, e kojiro vira para ele */
+    CUE_LOWER,        /* kojiro abaixa a espada e vai embora */
+    CUE_HANZO_IN,     /* hanzo aparece do escuro, e kojiro vira */
+    CUE_HANZO_KILL,   /* hanzo pega a katana dele do chão e mata oboro */
+    CUE_CHASE,        /* kojiro corre atrás dele, e hanzo some */
+} Cue;
+
+typedef struct {
+    const char *speaker, *text;   /* sem fala: NULL */
+    Cue cue;
+} Beat;
+
+typedef enum {
+    SCENE_SEAL_1,     /* primeiro selo quebrado: oboro fala de hanzo */
+    SCENE_SEAL_2,     /* segundo selo: a máscara */
+    SCENE_KNEEL,      /* postura quebrada: de joelhos, sem a máscara */
+    SCENE_SIM,        /* matou oboro */
+    SCENE_NAO,        /* não matou */
+    SCENE_COUNT
+} SceneId;
+
+const Beat *story_scene(SceneId id, int *count);
 
 /* ------------------------------------------------------------------ */
 /* Gerador com semente (mulberry32, idêntico ao do plugin JS)           */

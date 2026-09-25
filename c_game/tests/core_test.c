@@ -81,7 +81,8 @@ static void test_roster(const Settings *s) {
         CHECK(m->name && m->name[0], "nome do mestre %d", i + 1);
         CHECK(m->style && (m->isBigBoss || strncmp(m->style, "postura d", 9) == 0), "cada aprendiz tem uma postura (%s)", m->name);
         CHECK(m->posture > 0, "postura positiva (%s)", m->name);
-        CHECK(m->introCount >= 2 && m->outroCount >= 1, "falas antes e depois (%s)", m->name);
+        /* oboro não tem fala de saída: de joelhos, a cena da máscara (story_scene) */
+        CHECK(m->introCount >= 2 && (m->outroCount >= 1 || m->isBigBoss), "falas antes e depois (%s)", m->name);
         for (int o = 0; o < i; o++) CHECK(roster_get(o)->arena != m->arena, "um cenário próprio por lutador (%s)", m->name);
         CHECK(m->isBigBoss == (i == 12), "só o último é oboro (%s)", m->name);
         CHECK(m->stanceCount >= 1, "ao menos uma guarda (%s)", m->name);
@@ -128,6 +129,63 @@ static void test_roster(const Settings *s) {
     CHECK(boss->stanceCount == 12, "oboro domina as doze posturas");
     for (int k = 0; k < 12; k++) CHECK(strcmp(boss->stances[k].name, roster_get(k)->style) == 0, "a %dª postura de oboro é a de %s", k + 1, roster_get(k)->name);
     for (int i = 0; i < LORE_PAGES; i++) CHECK(lore_page(i)[0] != 0, "página %d da lore", i);
+    CHECK(boss->senseiCount == 1 && strcmp(boss->sensei[0].text, "Confie em você mesmo. Use tudo que aprendeu.") == 0,
+          "no oboro, hanzo não dá dica");
+}
+
+/* Depois de cada vitória, a cabana de hanzo: kojiro conta quem venceu, hanzo fala dele
+ * e do próximo. */
+static void test_visits(void) {
+    for (int i = 0; i < MASTER_COUNT; i++) {
+        const MasterProfile *m = roster_get(i), *next = roster_get(i + 1);
+        CHECK(m->visitCount >= 3 && m->visitCount <= MAX_LINES, "visita a hanzo depois de %s", m->name);
+        CHECK(strcmp(m->visit[0].speaker, "kojiro") == 0, "kojiro conta que venceu %s", m->name);
+        bool hanzo = false, nextNamed = false;
+        for (int k = 0; k < m->visitCount; k++) {
+            const char *who = m->visit[k].speaker;
+            CHECK(!strcmp(who, "kojiro") || !strcmp(who, "hanzo"), "na cabana só kojiro e hanzo (%s)", m->name);
+            hanzo |= !strcmp(who, "hanzo");
+            char low[256];
+            size_t n = strlen(m->visit[k].text);
+            for (size_t c = 0; c <= n && c < sizeof low; c++) {
+                char ch = m->visit[k].text[c];
+                low[c] = (char)(ch >= 'A' && ch <= 'Z' ? ch + 32 : ch);
+            }
+            low[sizeof low - 1] = 0;
+            nextNamed |= !strcmp(who, "hanzo") && strstr(low, next->name) != NULL;
+        }
+        CHECK(hanzo, "hanzo fala na visita (%s)", m->name);
+        CHECK(nextNamed, "hanzo fala do próximo, %s, depois de %s", next->name, m->name);
+    }
+    CHECK(roster_get(12)->visitCount == 0, "depois de oboro não há cabana");
+}
+
+static bool scene_has(SceneId id, Cue cue) {
+    int n;
+    const Beat *b = story_scene(id, &n);
+    for (int i = 0; i < n; i++)
+        if (b[i].cue == cue) return true;
+    return false;
+}
+
+static void test_story(void) {
+    for (int id = 0; id < SCENE_COUNT; id++) {
+        int n = 0;
+        const Beat *b = story_scene((SceneId)id, &n);
+        CHECK(b && n > 0, "cena %d", id);
+        for (int i = 0; i < n; i++)
+            CHECK((b[i].text == NULL) == (b[i].speaker == NULL) && (b[i].text || b[i].cue != CUE_NONE),
+                  "cada momento da cena %d tem fala ou ação", id);
+    }
+    CHECK(scene_has(SCENE_SEAL_2, CUE_MASK_ON), "a máscara só vem no segundo selo");
+    CHECK(!scene_has(SCENE_SEAL_1, CUE_MASK_ON), "no primeiro selo, ainda sem máscara");
+    CHECK(scene_has(SCENE_KNEEL, CUE_MASK_OFF), "de joelhos, ele tira a máscara");
+    CHECK(scene_has(SCENE_SIM, CUE_KILL) && scene_has(SCENE_SIM, CUE_HANZO_CLAP), "sim: kojiro mata, hanzo aplaude");
+    CHECK(scene_has(SCENE_NAO, CUE_HANZO_KILL) && scene_has(SCENE_NAO, CUE_CHASE), "não: hanzo mata e some");
+    CHECK(!scene_has(SCENE_NAO, CUE_KILL), "no não, kojiro não mata");
+    int n;
+    story_scene(SCENE_COUNT, &n);
+    CHECK(n == 0, "cena fora da lista");
 }
 
 static void test_rng(void) {
@@ -726,6 +784,8 @@ int main(void) {
     settings_default(&s);
     test_settings();
     test_roster(&s);
+    test_visits();
+    test_story();
     test_rng();
     test_perfect_victory();
     test_no_defense();

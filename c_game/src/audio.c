@@ -231,6 +231,20 @@ static float s_thud(float t, float d, float *st) {
     return sinf(TAU * (90 + 120 * expf(-t * 40)) * t) * expf(-t * 22) + lp(&st[0], nrand(), 0.2f) * expf(-t * 50);
 }
 
+/* Palma: três estalos de ruído bem juntos e um rabo curto, no salão vazio. */
+static float s_clap(float t, float d, float *st) {
+    (void)d;
+    float env = 0;
+    for (int i = 0; i < 3; i++) {
+        float on = t - i * 0.011f;
+        if (on >= 0) env += expf(-on * 180) * (i == 2 ? 1 : 0.6f);
+    }
+    if (t > 0.022f) env += expf(-(t - 0.022f) * 30) * 0.25f;
+    float n = nrand();
+    float band = n - lp(&st[0], n, 0.25f);   /* sem o grave */
+    return lp(&st[1], band, 0.6f) * env;     /* e sem o chiado de cima */
+}
+
 /* ------------------------------------------------------------------ */
 /* Trilha ambiente                                                      */
 /* ------------------------------------------------------------------ */
@@ -290,7 +304,7 @@ typedef struct {
     float noiseAmp, noiseCut; /* vento, água, multidão */
 } Style;
 
-static const Style STYLES[MUSIC_SILENCE + 1] = {
+static const Style STYLES[MUSIC_WIND + 1] = {
     /* DOJO      */ {72, {110, 164.8f, 0}, 0.05f, 0.015f, 0.02f},
     /* SERRA     */ {62, {98, 146.8f, 196}, 0.04f, 0.05f, 0.012f},
     /* CELEIRO   */ {80, {98, 146.8f, 196}, 0.045f, 0.01f, 0.03f},
@@ -307,6 +321,7 @@ static const Style STYLES[MUSIC_SILENCE + 1] = {
     /* LORE      */ {60, {110, 146.8f, 220}, 0.04f, 0.008f, 0.02f},
     /* TITLE     */ {70, {82.4f, 123.5f, 164.8f}, 0.045f, 0.01f, 0.02f},
     /* SILENCE   */ {60, {0, 0, 0}, 0, 0, 0.02f},
+    /* WIND      */ {60, {0, 0, 0}, 0, 0.11f, 0.010f},
 };
 
 /* Escalas: pentatônica menor a partir da raiz de cada trilha. */
@@ -436,7 +451,7 @@ static void music_callback(void *buffer, unsigned int frames) {
         } else if (M.gain < 1) {
             M.gain += 1.0f / (RATE * 1.2f);
         }
-        const Style *st = &STYLES[M.style <= MUSIC_SILENCE ? M.style : MUSIC_SILENCE];
+        const Style *st = &STYLES[M.style <= MUSIC_WIND ? M.style : MUSIC_SILENCE];
         float intensity = M.intensity;
 
         M.stepPos += st->bpm * 4 / 60.0f / RATE;
@@ -492,6 +507,7 @@ void audio_init(void) {
     sounds[SND_VICTORY] = make_sound(2.2f, s_victory, 0.6f);
     sounds[SND_DEFEAT] = make_sound(2.0f, s_defeat, 0.6f);
     sounds[SND_THUD] = make_sound(0.3f, s_thud, 0.5f);
+    sounds[SND_CLAP] = make_sound_room(0.4f, s_clap, 0.55f, 0.3f);
 #if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
     static const SoundId poly[] = {SND_PERFECT, SND_GOOD, SND_BAD, SND_SWING};
     /* sem placa de som o Sound vem vazio, e a raylib não confere isso no alias */

@@ -74,7 +74,8 @@ static const char *POST_FS =
     "}\n";
 
 typedef enum {
-    ST_TITLE, ST_LORE, ST_TRAIL, ST_INTRO, ST_DUEL, ST_FINISHER, ST_OUTRO, ST_CLEARED, ST_DEFEAT, ST_SENSEI, ST_ENDING
+    ST_TITLE, ST_LORE, ST_TRAIL, ST_INTRO, ST_DUEL, ST_FINISHER, ST_OUTRO, ST_CLEARED, ST_DEFEAT, ST_SENSEI, ST_ENDING,
+    ST_VISIT, ST_SCENE, ST_CHOICE
 } State;
 
 /* Paleta da interface. */
@@ -260,6 +261,29 @@ static struct {
     int defeatsHere;          /* derrotas seguidas contra o mestre atual */
     int defeatIndex;          /* opção escolhida no painel de derrota */
 
+    /* A luta final (story_scene), a escolha e os finais. */
+    SceneId sceneId;
+    const Beat *beats;
+    int beatCount, beatIndex;
+    float beatTime, beatPrev; /* desde que o momento da cena começou (e no quadro anterior) */
+    bool cueFired;            /* a ação do momento já aconteceu */
+    float cueFrom;            /* onde kojiro estava quando a ação começou */
+    bool sealTold[MAX_SEALS]; /* oboro já falou depois deste selo */
+    bool masked;              /* oboro de máscara: a terceira forma */
+    bool maskOnGround;        /* a máscara que ele tirou, no chão */
+    float maskDrop;           /* 0..1: caindo */
+    int choice;               /* -1 nenhuma, 0 sim, 1 não */
+    SceneId ending;           /* SCENE_SIM ou SCENE_NAO, depois da escolha */
+    int demoChoice;           /* --final: o que o robô escolhe (0 sim, 1 não) */
+    bool windOnly;            /* da escolha em diante: sem trovões, só o vento */
+    struct {
+        bool on;
+        float x, from, to, t, len; /* anda de from até to em len segundos */
+        float alpha;
+        bool faceLeft;
+        Fighter f;
+    } hz;                     /* hanzo em cena, nos finais */
+
     float shownRen, shownBoss, ghostRen, ghostBoss;
     ArenaCtx ctx;
 
@@ -270,6 +294,8 @@ static struct {
     float recStart, recEnd;
     int recFrame;
 } G;
+
+static void start_scene(SceneId id);
 
 /* ------------------------------------------------------------------ */
 /* Utilidades                                                          */
@@ -722,6 +748,9 @@ static void start_duel(void) {
     G.ctx.blackout = 0;
     G.ctx.seal = 0;
     G.lightningTimer = 3;
+    memset(G.sealTold, 0, sizeof G.sealTold);
+    G.masked = G.maskOnGround = G.windOnly = false;
+    G.hz.on = false;
     audio_music_intensity(0);
     banner(G.m->style, PAPER);
     set_state(ST_DUEL);
@@ -1576,14 +1605,20 @@ static void update_actors(float dt) {
     /* BIG BOSS se recompõe depois de perder um selo. */
     if (G.staggerTime > 0) {
         G.staggerTime += dt;
-        if (G.state == ST_DUEL && G.staggerTime > 1.3f) {
+        int seal = G.duel.seal;
+        if (G.state == ST_DUEL && G.staggerTime > 1.3f && G.m->isBigBoss && seal >= 1 && seal <= 2 && !G.sealTold[seal]) {
+            /* oboro para de lutar e fala; o grito vem depois */
+            G.sealTold[seal] = true;
+            start_scene(seal == 1 ? SCENE_SEAL_1 : SCENE_SEAL_2);
+        } else if (G.state == ST_DUEL && G.staggerTime > 1.3f) {
             rig_pose(b, POSE_IDLE, 0.5f, EASE_INOUT);
             G.staggerTime = 0;
-            const SprAnim *grito = fa(&G.bossS, "SHOUT");   /* o grito do pack; sem ele, o montado */
+            /* o grito do pack mostra a máscara: sem ela, o montado */
+            const SprAnim *grito = G.masked || !G.m->isBigBoss ? fa(&G.bossS, "SHOUT") : NULL;
             if (!grito) grito = fa(&G.bossS, "GRITO");
             if (G.gritoPending && grito) {
-                /* oboro grita e volta em fúria */
-                G.bossS.furia = true;
+                /* oboro grita; de máscara, volta em fúria, com a lâmina em chamas */
+                G.bossS.furia = G.masked || !G.m->isBigBoss;
                 f_clear(&G.bossS, true);
                 f_add(&G.bossS, grito, 0, grito->frames - 1, 0);
             } else {
@@ -1618,7 +1653,7 @@ static void update_ctx(float dt) {
     G.ctx.lightning = fmaxf(0, G.ctx.lightning - dt * 3);
     /* tempestade: no dojo de oboro depois do primeiro selo, e a noite toda no castelo de arashi */
     bool storm = (G.m->arena == ARENA_CIDADELA && G.ctx.seal >= 1) || G.m->arena == ARENA_SALAO;
-    if (storm) {
+    if (storm && !G.windOnly) {
         G.lightningTimer -= dt;
         if (G.lightningTimer <= 0) {
             bool castle = G.m->arena == ARENA_SALAO;
@@ -1687,7 +1722,323 @@ static void update_finisher(float dt) {
     f_update(&G.renS, dt);
     f_update(&G.bossS, dt);
     update_sword(dt);
-    if (G.sword.stuck && G.sword.stuckTime > 1.1f) start_lines(G.m->outro, G.m->outroCount, ST_OUTRO);
+    if (G.sword.stuck && G.sword.stuckTime > 1.1f) {
+        if (G.m->isBigBoss) start_scene(SCENE_KNEEL);   /* de joelhos, ele tira a máscara */
+        else start_lines(G.m->outro, G.m->outroCount, ST_OUTRO);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Cenas da luta final e dos finais (story_scene)                      */
+/* ------------------------------------------------------------------ */
+
+/* Quanto a ação de cada momento leva antes da fala (ou antes de passar sozinha). */
+static float cue_len(Cue c) {
+    switch (c) {
+        case CUE_MASK_ON: return 1.4f;
+        case CUE_MASK_OFF: return 1.5f;
+        case CUE_RAISE: return 1.2f;
+        case CUE_KILL: return 2.8f;
+        case CUE_HANZO_CLAP: return 2.6f;
+        case CUE_LOWER: return 2.5f;
+        case CUE_HANZO_IN: return 1.6f;
+        case CUE_HANZO_KILL: return 2.6f;
+        case CUE_CHASE: return 1.8f;
+        default: return 0;
+    }
+}
+
+/* A ação acontece uma vez, quando o relógio do momento passa por `when`. */
+static bool crossed(float when) { return G.beatPrev <= when && G.beatTime > when; }
+
+/* Oboro com ou sem a máscara de oni (duas pranchas; o quadro em curso segue). */
+static void boss_wear(bool mask) {
+    G.masked = mask;
+    const SprSet *s = spr_get(mask ? "oboro_mascara" : "oboro");
+    if (s && G.bossS.set) G.bossS.set = s;
+}
+
+/* Kojiro anda (a corrida, devagar) ou corre por `dur` segundos. */
+static void ren_walk(float dur, bool run) {
+    const SprAnim *a = fa(&G.renS, "RUN");
+    if (!a) return;
+    f_clear(&G.renS, true);
+    float lap = run ? a->frames * a->frameTime : a->frames * a->frameTime * 1.8f;
+    for (float t = 0; t < dur - 0.01f; t += lap) f_add(&G.renS, a, 0, a->frames - 1, lap);
+}
+
+static void hanzo_walk(float to, float len) {
+    G.hz.from = G.hz.x;
+    G.hz.to = to;
+    G.hz.t = 0;
+    G.hz.len = len;
+    const SprAnim *a = spr_anim(G.hz.f.set, "RUN");
+    if (!a || len <= 0) return;
+    f_clear(&G.hz.f, true);
+    float lap = a->frames * a->frameTime * 2;   /* um velho: passos lentos */
+    for (float t = 0; t < len - 0.01f && G.hz.f.qn < 3; t += lap) f_add(&G.hz.f, a, 0, a->frames - 1, lap);
+}
+
+/* Hanzo entra em cena em x (sem as pranchas, só a fala). */
+static void hanzo_enter(float x, bool faceLeft) {
+    memset(&G.hz, 0, sizeof G.hz);
+    G.hz.on = true;
+    G.hz.x = G.hz.from = G.hz.to = x;
+    G.hz.alpha = 1;
+    G.hz.faceLeft = faceLeft;
+    G.hz.f.set = spr_get("hanzo");
+    fighter_idle(&G.hz.f);
+}
+
+/* O golpe que mata oboro: clarão, o traço de corte, e ele cai (o fim da DEATH, de joelhos até o chão). */
+static void oboro_dies(void) {
+    Rig *b = &G.boss;
+    Vector2 at = {b->x + b->offsetX, GROUND_LOW - 16};
+    const SprAnim *d = fa(&G.bossS, "DEATH");
+    if (d) {
+        f_clear(&G.bossS, false);
+        f_add(&G.bossS, d, d->frames * 2 / 3, d->frames - 1, 1.4f);
+    } else {
+        rig_pose(b, POSE_FALLEN, 0.8f, EASE_OUT);
+    }
+    fx_flash(&G.fx, WHITE, 0.8f);
+    fx_kick(&G.fx, 3, 0.25f);
+    fx_burst(&G.fx, P_SHARD, at, 16, 70, 1.2f, -2.4f, (Color){130, 18, 26, 255}, (Color){60, 8, 12, 255});
+    G.slash = 0.35f;
+    G.duo = 0.5f;
+    G.silence = 1.5f;
+    audio_play(SND_BREAK, 0.9f, 0.8f);
+}
+
+static void scene_cue(void) {
+    Rig *r = &G.ren, *b = &G.boss;
+    float t = G.beatTime, bx = b->x + b->offsetX;
+    switch (G.beats[G.beatIndex].cue) {
+        case CUE_MASK_ON:
+            /* um raio, e quando a luz volta ele está de máscara */
+            if (crossed(0.5f)) {
+                boss_wear(true);
+                fighter_idle(&G.bossS);
+                G.ctx.lightning = 1;
+                G.ctx.bolt = frand(0, 1);
+                audio_play(SND_THUNDER, 0.9f, 0.8f);
+                audio_play(SND_SEAL, 0.6f, 0.6f);
+                fx_flash(&G.fx, (Color){190, 24, 34, 255}, 0.7f);
+                fx_kick(&G.fx, 2, 0.3f);
+                vfx("197", 7, (Vector2){bx, GROUND_LOW - 30}, true, VFX_BACK | VFX_GLOW, 20);
+            }
+            break;
+        case CUE_MASK_OFF:
+            if (crossed(0.6f)) {
+                boss_wear(false);
+                const SprAnim *d = fa(&G.bossS, "DESARMADO");
+                if (d) {
+                    f_clear(&G.bossS, false);
+                    f_add(&G.bossS, d, d->frames - 1, d->frames - 1, 0.1f);
+                }
+                G.maskOnGround = true;
+                G.maskDrop = 0;
+                audio_play(SND_GESTURE, 0.6f, 0.7f);
+            }
+            if (crossed(0.95f)) audio_play(SND_THUD, 0.4f, 1.5f);
+            break;
+        case CUE_RAISE: {
+            /* dois passos até ele, e a espada sobe */
+            float to = bx - 32 - r->x;
+            if (crossed(0)) ren_walk(0.6f, false);
+            r->offsetX = G.cueFrom + (to - G.cueFrom) * smooth(t / 0.6f);
+            const SprAnim *a = fa(&G.renS, "ATTACK_1");    /* a lâmina sobe por cima do ombro */
+            if (crossed(0.6f) && a) {
+                f_clear(&G.renS, false);
+                f_add(&G.renS, a, 0, anim_hold(a), 0.5f);
+            }
+            break;
+        }
+        case CUE_KILL: {
+            const SprAnim *a = fa(&G.renS, "ATTACK_1");
+            if (crossed(0)) {
+                if (a) {
+                    f_clear(&G.renS, false);
+                    f_add(&G.renS, a, anim_hold(a), a->frames - 1, 0.45f);
+                }
+                audio_play(SND_SWING, 1, 0.8f);
+            }
+            if (crossed(0.15f)) oboro_dies();
+            break;
+        }
+        case CUE_HANZO_CLAP: {
+            /* hanzo vem da esquerda, devagar, batendo palmas */
+            if (crossed(0)) {
+                hanzo_enter(-24, false);
+                hanzo_walk(r->x + r->offsetX - 48, 2.2f);
+            }
+            int n = (int)floorf((t - 0.3f) / 0.45f), np = (int)floorf((G.beatPrev - 0.3f) / 0.45f);
+            if (t > 0.3f && t < 4.2f && n != np) audio_play(SND_CLAP, 0.55f, frand(0.95f, 1.05f));
+            if (crossed(1.5f)) {
+                r->faceLeft = true;
+                fighter_idle(&G.renS);
+            }
+            break;
+        }
+        case CUE_LOWER:
+            /* a espada desce; ele vira as costas e vai embora */
+            if (crossed(0)) fighter_idle(&G.renS);
+            if (crossed(0.7f)) {
+                r->faceLeft = true;
+                ren_walk(1.6f, false);
+            }
+            if (t > 0.7f) r->offsetX = G.cueFrom + (56 - r->x - G.cueFrom) * smooth((t - 0.7f) / 1.6f);
+            if (crossed(2.3f)) fighter_idle(&G.renS);
+            break;
+        case CUE_HANZO_IN:
+            /* hanzo sai do escuro atrás de oboro, com um raio; kojiro vira */
+            if (crossed(0)) {
+                hanzo_enter(bx + 46, true);
+                G.ctx.lightning = 1;
+                G.ctx.bolt = frand(0, 1);
+                audio_play(SND_THUNDER, 0.7f, 0.9f);
+            }
+            G.hz.alpha = clampf(t / 0.9f, 0, 1);
+            if (crossed(0.6f)) r->faceLeft = false;
+            break;
+        case CUE_HANZO_KILL:
+            /* ele some e aparece do lado de oboro com a katana que era dele: um corte só */
+            if (crossed(0.2f)) G.hz.alpha = 0;
+            if (crossed(0.45f)) {
+                G.hz.x = bx + 14;
+                G.hz.alpha = 1;
+                G.sword.active = false;
+                oboro_dies();
+            }
+            break;
+        case CUE_CHASE: {
+            /* kojiro corre atrás dele; hanzo some numa nuvem, e ele para onde hanzo estava */
+            float to = G.hz.x - 18 - r->x;
+            if (crossed(0)) ren_walk(0.9f, true);
+            r->offsetX = G.cueFrom + (to - G.cueFrom) * smooth(t / 0.9f);
+            if (crossed(0.4f) && G.hz.on) {
+                Vector2 at = {G.hz.x, GROUND_LOW - 16};
+                fx_burst(&G.fx, P_DUST, at, 26, 40, 3.14f, -1.57f, (Color){170, 164, 170, 200}, (Color){90, 86, 96, 150});
+                vfx("70", 4, (Vector2){G.hz.x, GROUND_LOW - 8}, false, VFX_FRONT, 20);
+                audio_play(SND_GESTURE, 0.8f, 0.6f);
+                G.hz.on = false;
+            }
+            if (crossed(0.9f)) fighter_idle(&G.renS);
+            break;
+        }
+        default: break;
+    }
+}
+
+/* Os três em cena, sem o duelo: poses, pranchas, a espada cravada, a máscara caindo. */
+static void scene_actors(float dt) {
+    rig_update(&G.ren, dt);
+    rig_update(&G.boss, dt);
+    f_update(&G.renS, dt);
+    f_update(&G.bossS, dt);
+    update_sword(dt);
+    if (G.hz.on) {
+        if (G.hz.t < G.hz.len) {
+            G.hz.t = fminf(G.hz.len, G.hz.t + dt);
+            G.hz.x = G.hz.from + (G.hz.to - G.hz.from) * smooth(G.hz.t / G.hz.len);
+        }
+        f_update(&G.hz.f, dt);
+    }
+    if (G.maskOnGround && G.maskDrop < 1) G.maskDrop = fminf(1, G.maskDrop + dt / 0.35f);
+}
+
+static void scene_done(void) {
+    switch (G.sceneId) {
+        case SCENE_SEAL_1:
+        case SCENE_SEAL_2:
+            /* de volta ao duelo: o grito vem agora, com tempo de acabar antes do próximo golpe */
+            G.duel.phaseEnd = fmax(G.duel.phaseEnd, G.duel.clock + 1.8);
+            set_state(ST_DUEL);
+            break;
+        case SCENE_KNEEL:
+            /* a música corta; fica só o vento */
+            G.choice = -1;
+            G.windOnly = true;
+            set_state(ST_CHOICE);
+            audio_music(MUSIC_WIND);
+            break;
+        default:
+            campaign_mark_cleared(&G.camp, G.camp.index);
+            campaign_advance(&G.camp);
+            save_game();
+            set_state(ST_ENDING);
+            break;
+    }
+}
+
+static void next_beat(void) {
+    G.beatIndex++;
+    G.beatTime = G.beatPrev = 0;
+    G.typeChars = 0;
+    G.cueFrom = G.ren.offsetX;
+    if (G.beatIndex >= G.beatCount) scene_done();
+}
+
+static void start_scene(SceneId id) {
+    G.sceneId = id;
+    G.beats = story_scene(id, &G.beatCount);
+    G.beatIndex = -1;
+    set_state(ST_SCENE);
+    next_beat();
+}
+
+static void update_scene(float dt) {
+    audio_music_duck(G.silence > 0 ? 1 : 0.5f);
+    G.beatPrev = G.beatTime;
+    G.beatTime += dt;
+    scene_cue();
+    scene_actors(dt);
+    const Beat *b = &G.beats[G.beatIndex];
+    float lead = cue_len(b->cue);
+    if (G.beatTime < lead) return;
+    if (!b->text) { next_beat(); return; }
+    int len = (int)strlen(b->text);
+    float before = G.typeChars;
+    G.typeChars += dt * 50;
+    if ((int)G.typeChars / 3 != (int)before / 3 && G.typeChars < len) audio_play(SND_TYPE, 0.5f, strcmp(b->speaker, "kojiro") ? 0.8f : 1.1f);
+    if (!pressed() || G.beatTime - lead < 0.25f) return;
+    if (G.typeChars < len) { G.typeChars = (float)len; return; }
+    audio_play(SND_UI, 0.8f, 1);
+    next_beat();
+}
+
+/* A escolha: sem nada marcado e sem tempo. */
+static const Rectangle CHOICE_BOX[2] = {{UI_W / 2.0f - 300, 420, 240, 96}, {UI_W / 2.0f + 60, 420, 240, 96}};
+
+static void update_choice(float dt) {
+    scene_actors(dt);
+    if (G.stateTime < 1.5f) return;
+    int was = G.choice;
+    if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) G.choice = 0;
+    if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) G.choice = 1;
+    Vector2 v = mouse_ui();
+    int hover = -1;
+    for (int i = 0; i < 2; i++)
+        if (CheckCollisionPointRec(v, CHOICE_BOX[i])) hover = i;
+    if (hover >= 0 && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.choice = hover;
+    bool confirm = IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J);
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && hover >= 0) { G.choice = hover; confirm = true; }
+    if (G.demo && G.stateTime > 3) { G.choice = G.demoChoice; confirm = G.stateTime > 4; }
+    if (G.choice != was) audio_play(SND_UI, 0.8f, 1);
+    if (!confirm || G.choice < 0) return;
+    audio_play(SND_UI, 1, 0.7f);
+    G.ending = G.choice == 0 ? SCENE_SIM : SCENE_NAO;
+    start_scene(G.ending);
+}
+
+static void update_ending(float dt) {
+    scene_actors(dt);
+    if (G.stateTime > 3.5f && pressed()) {
+        G.hasSave = true;
+        G.menuIndex = 0;
+        set_state(ST_TITLE);
+        audio_music(MUSIC_TITLE);
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1763,6 +2114,38 @@ static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Col
     }
 }
 
+/* A máscara de oni que oboro tirou, caindo na frente dos joelhos dele. */
+static void draw_oni_mask(Color light) {
+    static const char *M[] = {".a...a.", "aakkkaa", "akpkpka", "akkkkka", "arkkkra", ".akkka."};
+    float x = G.boss.x + G.boss.offsetX - 16, y = GROUND_LOW - 6 - (1 - G.maskDrop * G.maskDrop) * 22;
+    for (int j = 0; j < 6; j++)
+        for (int i = 0; M[j][i]; i++) {
+            char k = M[j][i];
+            if (k == '.') continue;
+            Color c = k == 'a' ? (Color){137, 30, 43, 255} : k == 'k' ? (Color){196, 36, 48, 255}
+                    : k == 'p' ? (Color){255, 200, 37, 255} : (Color){255, 251, 232, 255};
+            c = (Color){(unsigned char)(c.r * light.r / 255), (unsigned char)(c.g * light.g / 255), (unsigned char)(c.b * light.b / 255), 255};
+            DrawRectangle((int)x + i, (int)y + j, 1, 1, c);
+        }
+}
+
+/* Hanzo nos finais: o mesmo contorno dos lutadores, e some ou aparece pelo alfa. */
+static void draw_hanzo(Color light, Color rim) {
+    if (!G.hz.on || !G.hz.f.set || !G.hz.f.pl.anim || G.hz.alpha <= 0.01f) return;
+    const SprAnim *a = G.hz.f.pl.anim;
+    int frame = G.hz.f.pl.frame;
+    Vector2 feet = {G.hz.x, GROUND_LOW};
+    float al = G.hz.alpha;
+    SprDraw o = {G.hz.faceLeft, 0, true, fadec((Color){16, 12, 18, 255}, al)};
+    static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (int k = 0; k < 4; k++) spr_draw(G.hz.f.set, a, frame, (Vector2){feet.x + off[k][0], feet.y + off[k][1]}, o);
+    o.color = fadec(rim, al);
+    spr_draw(G.hz.f.set, a, frame, (Vector2){feet.x + (G.hz.faceLeft ? 1 : -1), feet.y - 1}, o);
+    o.flat = false;
+    o.color = fadec(light, al);
+    spr_draw(G.hz.f.set, a, frame, feet, o);
+}
+
 static void draw_rigs(Color light) {
     BeginTextureMode(G.actors);
     ClearBackground(BLANK);
@@ -1797,6 +2180,8 @@ static void draw_rigs(Color light) {
         /* sumiu em penas */
     } else if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
     else draw_fighter(&G.boss, light, rim, dark);
+    if (G.maskOnGround) draw_oni_mask(light);
+    draw_hanzo(light, rim);
     if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, false);
     else draw_fighter(&G.ren, light, rim, false);
     draw_pole_flying();
@@ -1873,6 +2258,7 @@ static void draw_arena(void) {
     }
     if (!G.bossHidden) draw_shadow(&G.boss);
     draw_shadow(&G.ren);
+    if (G.hz.on && G.hz.alpha > 0.5f) DrawEllipse((int)G.hz.x, GROUND_LOW, 11, 2, (Color){0, 0, 0, 80});
     vfx_draw(true);
     DrawTexturePro(G.actors.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, (Rectangle){0, 0, LOW_W, LOW_H}, (Vector2){0, 0}, 0, WHITE);
     fx_draw_world(&G.fx);
@@ -1899,7 +2285,7 @@ static void draw_illustration(void (*fn)(int, float), int page, float t, float l
     EndTextureMode();
 }
 
-static void ending_scene(int page, float t) { (void)page; lore_draw_ending(t); }
+static void cabin_scene(int page, float t) { (void)page; lore_draw_cabin(t); }
 
 static void draw_world(void) {
     switch (G.state) {
@@ -1930,8 +2316,8 @@ static void draw_world(void) {
             pix_draw();
             EndTextureMode();
             break;
-        case ST_ENDING: draw_illustration(ending_scene, 0, G.stateTime, 0); break;   /* texto em cima */
-        case ST_SENSEI: draw_illustration(lore_draw_scene, 0, G.time, 18); break;
+        case ST_SENSEI:
+        case ST_VISIT: draw_illustration(cabin_scene, 0, G.time, 18); break;   /* a cabana de hanzo */
         case ST_TRAIL:
             pix_capture_begin();
             begin_world((Vector2){0, 0});
@@ -2009,37 +2395,64 @@ static void ui_hud(void) {
 
 /* Falas. No cenário do duelo a caixa fica em cima, para os lutadores aparecerem
  * inteiros; nas ilustrações (hanzo), embaixo. */
-static void ui_dialogue(const char *header, bool top) {
-    if (top) ui_text(lower(header), UI_W - 48 - ui_width(lower(header), 24), UI_H - 64, 24, (Color){230, 216, 190, 220});
-    else ui_text(lower(header), 48, 30, 24, (Color){230, 216, 190, 220});
-    if (G.lineIndex >= G.lineCount) return;
-    const Line *l = &G.lines[G.lineIndex];
-    bool ren = strcmp(l->speaker, "kojiro") == 0;
+static void ui_say(const char *speaker, const char *text, bool top) {
+    bool ren = strcmp(speaker, "kojiro") == 0;
     Rectangle r = top ? (Rectangle){80, 76, UI_W - 160, 168} : (Rectangle){80, 512, UI_W - 160, 180};
     parchment(r, 1);
     scroll_rods(r, 1);
     /* Caixa do nome separada, como no RPG Maker. */
-    const char *who = lower(l->speaker);
+    const char *who = lower(speaker);
     float nw = ui_width_f(G.uiBold, who, 26) + 44;
     Rectangle nb = {r.x + 24, r.y - 34, nw, 46};
     parchment(nb, 1);
     ink_bold(who, nb.x + 22, nb.y + 10, 26, ren ? (Color){170, 70, 24, 255} : SEAL_RED);
-    int vis = utf8_visible(l->text, G.typeChars);
-    ink_wrapped(l->text, r.x + 36, r.y + 34, r.width - 72, 28, INK_TEXT, vis);
-    if (vis >= (int)strlen(l->text)) {
+    int vis = utf8_visible(text, G.typeChars);
+    ink_wrapped(text, r.x + 36, r.y + 34, r.width - 72, 28, INK_TEXT, vis);
+    if (vis >= (int)strlen(text)) {
         float bob = sinf(G.time * 6) * 3;
         Vector2 c = {r.x + r.width - 40, r.y + r.height - 30 + bob};
         DrawTriangle((Vector2){c.x - 8, c.y - 5}, (Vector2){c.x, c.y + 5}, (Vector2){c.x + 8, c.y - 5}, SEAL_RED);
     }
 }
 
-static void ui_text_band(const char *textStr, int visible, float y) {
-    Rectangle r = {80, y, UI_W - 160, 208};
-    parchment(r, 1);
-    scroll_rods(r, 1);
-    ink_wrapped(textStr, r.x + 36, r.y + 24, r.width - 72, 26, INK_TEXT, visible);
+static void ui_dialogue(const char *header, bool top) {
+    if (top) ui_text(lower(header), UI_W - 48 - ui_width(lower(header), 24), UI_H - 64, 24, (Color){230, 216, 190, 220});
+    else ui_text(lower(header), 48, 30, 24, (Color){230, 216, 190, 220});
+    if (G.lineIndex < G.lineCount) ui_say(G.lines[G.lineIndex].speaker, G.lines[G.lineIndex].text, top);
 }
 
+/* A fala do momento da cena, depois que a ação dele acabou. */
+static void ui_beat(void) {
+    if (G.beatIndex < 0 || G.beatIndex >= G.beatCount) return;
+    const Beat *b = &G.beats[G.beatIndex];
+    if (b->text && G.beatTime >= cue_len(b->cue)) ui_say(b->speaker, b->text, true);
+}
+
+static void ui_choice(void) {
+    float a = clampf(G.stateTime / 1.5f, 0, 1);
+    DrawRectangle(0, 0, UI_W, UI_H, fadec((Color){6, 4, 8, 255}, 0.62f * a));
+    const char *q = "DESEJA MATAR O OBORO?";
+    draw_text_f(G.uiBold, q, UI_W / 2.0f - ui_width_f(G.uiBold, q, 64) / 2, 250, 64, fadec((Color){238, 214, 170, 255}, a), true);
+    if (G.stateTime < 1.5f) return;
+    float b = clampf((G.stateTime - 1.5f) * 2, 0, 1);
+    static const char *OPT[2] = {"SIM", "NÃO"};
+    for (int i = 0; i < 2; i++) {
+        Rectangle r = CHOICE_BOX[i];
+        parchment(r, b);
+        if (G.choice == i) ui_cursor((Rectangle){r.x + 8, r.y + 8, r.width - 16, r.height - 16}, b);
+        ink_bold_center(OPT[i], r.x + r.width / 2, r.y + 28, 40, fadec(G.choice == i ? SEAL_RED : INK_TEXT, b));
+    }
+}
+
+/* O fim: a tela escurece e fica uma palavra. */
+static void ui_ending(void) {
+    float a = clampf(G.stateTime / 2.0f, 0, 1);
+    DrawRectangle(0, 0, UI_W, UI_H, fadec(BLACK, a));
+    if (G.stateTime < 2.2f) return;
+    const char *t = G.ending == SCENE_SIM ? "fim" : "continua";
+    float b = clampf((G.stateTime - 2.2f) / 1.2f, 0, 1);
+    draw_text_f(G.uiBold, t, UI_W / 2.0f - ui_width_f(G.uiBold, t, 80) / 2, 300, 80, fadec((Color){238, 214, 170, 255}, b), false);
+}
 
 /* Quebra um parágrafo em linhas que cabem em `width`. Devolve quantas. */
 static int wrap_lines(const char *t, float size, float width, char lines[][256], int max) {
@@ -2183,10 +2596,6 @@ static void ui_cleared(void) {
 }
 
 
-static const char *ENDING_TEXT =
-    "Oboro caiu de joelhos, sem a katana de Hanzo. Pela primeira vez entendeu que aquela abertura não fora a derrota "
-    "do mestre, e sim a última lição, a que ele se recusou a aprender. Kojiro subiu a serra e devolveu a katana a "
-    "Hanzo. O velho a recebeu sem dizer nada. Não precisava.";
 
 /* Tecla de pixel (a folha de teclas do pack) com o rótulo ao lado; sem a folha,
  * a tecla vai escrita. Devolve a largura usada. */
@@ -2251,12 +2660,9 @@ static void draw_ui(void) {
             ui_dialogue(head, false);
             break;
         }
-        case ST_ENDING:
-            /* o texto fica no céu e os dois, no chão da serra */
-            ui_text_band(ENDING_TEXT, utf8_visible(ENDING_TEXT, G.typeChars), 40);
-            /* "fim" no canto do pergaminho, depois da última linha, fora do desenho */
-            if (G.typeChars > strlen(ENDING_TEXT))
-                draw_text_f(G.uiBold, "fim", UI_W - 80 - 36 - ui_width_f(G.uiBold, "fim", 48), 40 + 208 - 64, 48, SEAL_RED, false);
+        case ST_VISIT:
+            DrawRectangleGradientV(0, 0, UI_W, UI_H, fadec(INK, 0.2f), fadec(INK, 0.6f));
+            ui_dialogue("a cabana de hanzo, na serra", false);
             break;
         default:
             if (G.state == ST_DUEL || G.state == ST_DEFEAT || G.state == ST_FINISHER) ui_hud();
@@ -2264,6 +2670,9 @@ static void draw_ui(void) {
             fx_draw_popups(&G.fx, G.ui, UNIT);
             ui_slash();
             if (G.state == ST_INTRO || G.state == ST_OUTRO) ui_dialogue(G.m->venue, true);
+            if (G.state == ST_SCENE) ui_beat();
+            if (G.state == ST_CHOICE) ui_choice();
+            if (G.state == ST_ENDING) ui_ending();
             if (G.state == ST_DEFEAT) ui_defeat();
             if (G.state == ST_CLEARED) ui_cleared();
             break;
@@ -2350,14 +2759,6 @@ static void intro_done(void) { start_duel(); }
 
 static void outro_done(void) {
     campaign_mark_cleared(&G.camp, G.camp.index);
-    if (G.m->isBigBoss) {
-        campaign_advance(&G.camp);
-        save_game();
-        G.typeChars = 0;
-        set_state(ST_ENDING);
-        audio_music(MUSIC_LORE);
-        return;
-    }
     set_state(ST_CLEARED);
     audio_play(SND_VICTORY, 0.8f, 1);
 }
@@ -2396,6 +2797,11 @@ static void update_defeat(float dt) {
     else { audio_music(MUSIC_TITLE); set_state(ST_TRAIL); }
 }
 
+static void visit_done(void) {
+    audio_music(MUSIC_TITLE);
+    set_state(ST_TRAIL);
+}
+
 static void update_cleared(float dt) {
     rig_update(&G.ren, dt);
     rig_update(&G.boss, dt);
@@ -2405,27 +2811,24 @@ static void update_cleared(float dt) {
     if (G.stateTime > 1.0f && pressed()) {
         campaign_advance(&G.camp);
         save_game();
+        if (G.m->visitCount > 0) {
+            /* a cabana de hanzo: kojiro conta quem venceu, hanzo fala do próximo */
+            start_lines(G.m->visit, G.m->visitCount, ST_VISIT);
+            audio_music(MUSIC_LORE);
+            return;
+        }
         audio_music(MUSIC_TITLE);
         set_state(ST_TRAIL);
     }
 }
 
-static void update_ending(float dt) {
-    G.typeChars += dt * 30;
-    if (G.stateTime > 2 && pressed()) {
-        if (G.typeChars < (float)strlen(ENDING_TEXT)) { G.typeChars = (float)strlen(ENDING_TEXT); return; }
-        G.hasSave = true;
-        G.menuIndex = 0;
-        set_state(ST_TITLE);
-        audio_music(MUSIC_TITLE);
-    }
-}
 
 /* ------------------------------------------------------------------ */
 
 static bool in_arena_state(void) {
     return G.state == ST_INTRO || G.state == ST_DUEL || G.state == ST_FINISHER || G.state == ST_OUTRO ||
-           G.state == ST_CLEARED || G.state == ST_DEFEAT;
+           G.state == ST_CLEARED || G.state == ST_DEFEAT || G.state == ST_SCENE || G.state == ST_CHOICE ||
+           G.state == ST_ENDING;
 }
 
 static void parse_args(int argc, char **argv, int *startMaster, bool *direct, const char **startState) {
@@ -2434,6 +2837,7 @@ static void parse_args(int argc, char **argv, int *startMaster, bool *direct, co
         else if (!strcmp(argv[i], "--duel")) *direct = true;
         else if (!strcmp(argv[i], "--demo")) G.demo = true;
         else if (!strcmp(argv[i], "--state") && i + 1 < argc) *startState = argv[++i];
+        else if (!strcmp(argv[i], "--final") && i + 1 < argc) G.demoChoice = strcmp(argv[++i], "sim") ? 1 : 0;
         else if (!strcmp(argv[i], "--shot") && i + 2 < argc) { G.shotFile = argv[++i]; G.shotTime = (float)atof(argv[++i]); }
         else if (!strcmp(argv[i], "--rec") && i + 3 < argc) {
             G.recDir = argv[++i];
@@ -2472,6 +2876,9 @@ static void step(float dtReal) {
         case ST_CLEARED: update_cleared(dtReal); break;
         case ST_DEFEAT: update_defeat(dtReal); break;
         case ST_SENSEI: update_lines(dtReal, sensei_done); break;
+        case ST_VISIT: update_lines(dtReal, visit_done); break;
+        case ST_SCENE: update_scene(dtReal); break;
+        case ST_CHOICE: update_choice(dtReal); break;
         case ST_ENDING: update_ending(dtReal); break;
     }
     if (in_arena_state()) {
@@ -2507,6 +2914,7 @@ int main(int argc, char **argv) {
     int startMaster = -1;
     bool direct = false;
     const char *startState = NULL;
+    G.demoChoice = 1;
     parse_args(argc, argv, &startMaster, &direct, &startState);
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
@@ -2546,6 +2954,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < startMaster; i++) campaign_mark_cleared(&G.camp, i);
         start_master(startMaster);
         if (startState && !strcmp(startState, "sensei")) start_sensei();
+        else if (startState && !strcmp(startState, "visita")) { start_lines(G.m->visit, G.m->visitCount, ST_VISIT); audio_music(MUSIC_LORE); }
         else if (direct) {
             start_duel();
             if (startState && !strcmp(startState, "pause")) G.paused = true;
@@ -2559,9 +2968,6 @@ int main(int argc, char **argv) {
     } else if (startState && !strcmp(startState, "trail")) {
         set_state(ST_TRAIL);
         audio_music(MUSIC_TITLE);
-    } else if (startState && !strcmp(startState, "ending")) {
-        set_state(ST_ENDING);
-        audio_music(MUSIC_LORE);
     } else {
         set_state(ST_TITLE);
         audio_music(MUSIC_TITLE);
