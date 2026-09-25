@@ -144,7 +144,7 @@ nenhuma com mais de dois contatos; do Shizuku em diante, cinco.
   taiko, meio segundo de silêncio. Execução: tela em duas cores e um traço de
   corte atravessando.
 - Katana 3D (`assets/katana`, convertida do FBX com assimp) na espada que voa no
-  desarme e na tela de título (e nas mãos dos bonecos).
+  desarme (e nas mãos dos bonecos).
 - Interface em janelas de pergaminho de pixel, no jeito RPG Maker (cantos
   cortados, borda de tinta de 1 px, rolos de madeira, gauges e cursor em pixel),
   na fonte de pixel Tiny5 (`assets/fonts`, licença OFL), toda em minúsculo. O
