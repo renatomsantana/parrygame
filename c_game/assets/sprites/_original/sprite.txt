@@ -5,7 +5,9 @@ anim ATTACK_2      hold 1  contact 2
 anim ATTACK_3      hold 1  contact 2
 anim DEFEND        contact 1
 anim HURT
-anim DEATH         stop 5
+anim DEATH         stop 9
 anim STRONG_ATTACK hold 5  contact 6
 anim DASH_ATTACK   hold 3  contact 4
 anim THROW         hold 2  release 4
+anim RUN           loop
+anim JUMP

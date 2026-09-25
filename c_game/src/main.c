@@ -1245,7 +1245,8 @@ static void update_actors(float dt) {
         if (G.state == ST_DUEL && G.staggerTime > 1.3f) {
             rig_pose(b, POSE_IDLE, 0.5f, EASE_INOUT);
             G.staggerTime = 0;
-            const SprAnim *grito = fa(&G.bossS, "GRITO");
+            const SprAnim *grito = fa(&G.bossS, "SHOUT");   /* o grito do pack; sem ele, o montado */
+            if (!grito) grito = fa(&G.bossS, "GRITO");
             if (G.gritoPending && grito) {
                 /* oboro grita e volta em fúria */
                 G.bossS.furia = true;

@@ -17,3 +17,5 @@ anim HURT
 anim HURT_FURIA
 anim RUN                  loop
 anim RUN_FURIA            loop
+anim DEATH                stop 25
+anim SHOUT                ms 90

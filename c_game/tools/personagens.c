@@ -727,6 +727,7 @@ typedef struct {
     bool pack_sem_camisa;                   /* o pack não tem roupa branca: todo branco grosso é rastro */
     bool pack_arma;                         /* a arma do pack fica como é (só ganha a cor e o brilho do elemento) */
     bool sem_arma;                          /* Hanzo: não luta mais; sem espada, sem golpes */
+    Rgb bainha[2];                          /* pack do Hanzo: cores da espada embainhada, que sai */
 } Char;
 
 static bool pack_no_shirt(void) {
@@ -970,6 +971,7 @@ static Char CHARS[] = {
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}}},
     /* Hanzo: um velho que não luta mais. Sem espada; cabelo branco, sem barba, azul escuro. */
     {.id = "hanzo", .titulo = "Hanzo", .arma = {.kind = W_KATANA}, .cabeca = "mestre", .sem_arma = true, .sem_saya = true,
+     .pack = "hanzo", .bainha = {HEX(0x571c27), HEX(0x391f21)},
      .camisa = {HEX(0x8ca0c8), HEX(0x5a70a0), HEX(0x3c4e7c), HEX(0x283658)},
      .hakama = {HEX(0x2a3450), HEX(0x20283e), HEX(0x181e30), HEX(0x121624), HEX(0x0c0f18)},
      .pele = {HEX(0xe0a67e), HEX(0xb87c5a), HEX(0x82543e)},
@@ -2687,6 +2689,49 @@ static void no_weapon(Canvas *cv, const Char *ch) {
         }
 }
 
+/* O Hanzo do próprio pack fica como vem (o cabelo branco confundiria o separador
+ * de lâminas); só a espada embainhada sai: cada mancha das cores da bainha com
+ * 6 px ou mais de largura (as botas e os punhos são menores). */
+static void drop_sheath(Canvas *cv, const Char *ch) {
+    static bool seen[CH][CW];
+    static short stack[CW * CH][2], comp[CW * CH][2];
+    memset(seen, 0, sizeof seen);
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            Color c = cv->a[y][x];
+            bool is = false;
+            for (int k = 0; k < 2 && !is; k++)
+                is = rgb_set(ch->bainha[k]) && c.a && c.r == ch->bainha[k].r && c.g == ch->bainha[k].g && c.b == ch->bainha[k].b;
+            if (seen[y][x] || !is) continue;
+            int n = 0, sp = 0, x0 = x, x1 = x;
+            seen[y][x] = true;
+            stack[sp][0] = (short)x;
+            stack[sp++][1] = (short)y;
+            while (sp > 0) {
+                int cx = stack[--sp][0], cy = stack[sp][1];
+                comp[n][0] = (short)cx;
+                comp[n++][1] = (short)cy;
+                if (cx < x0) x0 = cx;
+                if (cx > x1) x1 = cx;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++) {
+                        int nx = cx + dx, ny = cy + dy;
+                        if (!cv_ok(nx, ny) || seen[ny][nx] || !cv->a[ny][nx].a) continue;
+                        Color d = cv->a[ny][nx];
+                        bool same = false;
+                        for (int k = 0; k < 2 && !same; k++)
+                            same = d.r == ch->bainha[k].r && d.g == ch->bainha[k].g && d.b == ch->bainha[k].b;
+                        if (!same) continue;
+                        seen[ny][nx] = true;
+                        stack[sp][0] = (short)nx;
+                        stack[sp++][1] = (short)ny;
+                    }
+            }
+            if (x1 - x0 >= 6)
+                for (int i = 0; i < n; i++) erase_px(cv, comp[i][0], comp[i][1]);
+        }
+}
+
 /* Tempo de cada quadro dos golpes: leves rápidos, pesados lentos. */
 static int frame_ms(const Char *ch) {
     switch (ch->arma.kind) {
@@ -2709,6 +2754,10 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
             cv->tag[y][x] = lb == NONE ? T_NONE : (lb == SMEAR || lb == BLADE) ? T_WEAPON : T_BODY;
         }
     cv->pen = T_BODY;
+    if (ch->pack && rgb_set(ch->bainha[0])) {
+        drop_sheath(cv, ch);
+        return;
+    }
     recolor(cv, ch);
     accessories(cv, ch, idx);
     if (seg->has_hat) {
@@ -3384,7 +3433,7 @@ static int pack_special_steps(const Strip *strips, int ns, Manifest *man, Specia
 /* ------------------------------------------------------------------------ */
 /* Fontes das pranchas: o Samurai #3 (corpo do Kojiro) e os packs próprios   */
 /* ------------------------------------------------------------------------ */
-#define MAX_PACKS 8
+#define MAX_PACKS 16   /* um por personagem com pack próprio (as cores dele entram na separação) */
 
 typedef struct {
     char dir[PATHLEN], who[32];
@@ -3763,19 +3812,20 @@ int main(int argc, char **argv) {
             nr++;
         }
 
-        /* Sem arma: DESARMADO é quem perdeu a arma no duelo (de joelhos pela DEATH do
-           pack; no Samurai #3, agachado no começo do DASH_ATTACK; no Oboro, que não cai,
-           curvado pelo HURT). Quem não luta e não tem IDLE (Hanzo) ganha o PARADO. */
+        /* Sem arma: DESARMADO é quem perdeu a arma no duelo (no Samurai #3, agachado no
+           começo do DASH_ATTACK, com a lâmina longe do corpo; nos packs, de joelhos pela
+           DEATH; sem nenhum dos dois, curvado pelo HURT). Quem não luta e não tem IDLE
+           ganha o PARADO. */
         if (nr < MAX_REND) {
             const Strip *ss = NULL;
             int f0 = 0, f1 = -1;
             const char *out = ch->sem_arma ? "PARADO" : "DESARMADO";
             if (ch->sem_arma) {
                 if (!source_strip(sc, "IDLE") && (ss = source_strip(sc, "DASH"))) f0 = f1 = ss->nframes - 1;
-            } else if ((ss = source_strip(sc, "DEATH"))) {
-                f1 = ss->nframes * 2 / 5;          /* o quadro em que chega aos joelhos */
             } else if ((ss = source_strip(sc, "DASH_ATTACK"))) {
                 f0 = f1 = ss->nframes > 1 ? 1 : 0;
+            } else if ((ss = source_strip(sc, "DEATH"))) {
+                f1 = ss->nframes * 2 / 5;          /* o quadro em que chega aos joelhos */
             } else if ((ss = source_strip(sc, "HURT"))) {
                 f0 = ss->nframes > 1 ? 1 : 0;       /* o primeiro é o clarão do golpe */
                 f1 = ss->nframes - 1;

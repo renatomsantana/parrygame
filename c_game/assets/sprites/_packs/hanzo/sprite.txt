@@ -1,0 +1,7 @@
+# Hanzo (o velho de cabelo branco) da Mattz Art: corpo do Hanzo. As tiras (PNG) não vão para o git.
+# Uma tira por animação, quadros de 96 x 96 lado a lado, virada para a direita.
+cell 96 96
+anim IDLE          loop
+anim ATTACK_1      hold 3  contact 4
+anim HURT
+anim RUN           loop

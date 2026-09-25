@@ -5,12 +5,12 @@
 
 Os 15 personagens (o protagonista Kojiro, os 12 aprendizes na ordem da trilha,
 Oboro e Hanzo) saem
-de quatro corpos da Mattz Art, e não são só troca de cor. A maioria usa o corpo
+de seis corpos da Mattz Art, e não são só troca de cor. A maioria usa o corpo
 do pack A (o Samurai #3). Os outros têm corpo de outro pack: **Raizo** (o samurai
 do espadão, de chapéu de palha), **Shizuku** (Samurai #4), **Oboro** (o Demon,
-de máscara oni) e os cinco que lutam com uma arma em cada mão, **Arashi, Yoru,
-Garfiel, Karasu e Hayate**, no Samurai #5 (o de duas espadas), cada um com as
-suas cores e a sua arma. Ver
+de máscara oni), **Hanzo** (o velho de barba branca do pack B) e os cinco que
+lutam com uma arma em cada mão, **Arashi, Yoru, Garfiel, Karasu e Hayate**, no
+Samurai #5 (o de duas espadas), cada um com as suas cores e a sua arma. Ver
 [Corpos de outros packs](#corpos-de-outros-packs-raizo-shizuku-arashi-e-oboro).
 O programa `c_game/tools/personagens.c` (C com raylib, igual ao jogo) pega cada
 quadro das pranchas e:
@@ -54,7 +54,7 @@ mesmos pixels.
 | 11 | **Yoru** (noite) | uma adaga em cada mão, **empunhadas ao contrário** (lâmina para trás), brilho roxo | **corpo do samurai de duas espadas**, ninja preto e roxo | preto azulado e roxo | corte duplo, fumaça roxa |
 | 12 | **Jinshi** (montanha) | **katana branca forjada com a lua**, com halo de luar | cabelo grisalho comprido, barba; mais alto | cinza pedra, branco osso | rastro grosso, pedrisco caindo |
 | — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon** (máscara oni), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
-| — | **Hanzo** | **nenhuma**: um velho que não luta mais | coque branco, **sem barba**; mais baixo | azul escuro | sem rastro nem aura |
+| — | **Hanzo** | **nenhuma**: um velho que não luta mais | **pack do Hanzo**: cabelo e barba brancos (sem o pack, coque branco e sem barba) | azul escuro | sem rastro nem aura |
 
 As armas do pedido caíram assim: garras → Garfiel, espada maior → Raizo
 (odachi), florete → Shizuku, adagas roxas → Yoru, espada e lâmina curta →
@@ -69,13 +69,12 @@ nas folhas. As pastas geradas com os nomes antigos (`raijin/`, `kage/`) ficam
 paradas; o programa avisa e elas podem ser apagadas. No jogo o protagonista
 também é o Kojiro.
 
-**Hanzo:** o pedido era o Hanzo do pack B sem a barba. Esse sprite não estava
-aqui, então o Hanzo saiu do corpo do pack A, de coque branco e sem barba. Assim
-ele também combina com o resto. Ele **não luta mais**: não tem espada, bainha, rastro nem aura, e só
-ganha as pranchas que não são de luta (IDLE, RUN, HURT, DEATH, JUMP...; os
-ATTACK, DEFEND, THROW e DASH ficam de fora). O programa **não** apaga o Hanzo do pack B: se
-`assets/sprites/hanzo/` já tiver pranchas de outro pack, o gerado vai para
-`hanzo_gerado/`.
+**Hanzo:** agora sai do pack dele (`_packs/hanzo/`), o velho de cabelo e barba
+brancos, como vem, só sem a espada embainhada. Ele **não luta mais**: não tem
+espada, rastro nem aura, e só ganha as pranchas que não são de luta (IDLE, RUN,
+HURT; o ATTACK_1 fica de fora). Sem a pasta `_packs/hanzo/`, ele volta a sair do
+corpo do Samurai #3, de coque branco e sem barba (e para voltar a esse Hanzo com
+o pack presente, basta tirar o `pack = "hanzo"` da entrada dele).
 
 ## Como rodar
 
@@ -222,11 +221,18 @@ anim ATTACK_1  hold 1  contact 2  alcance 38 -21  ms 100
 Além das pranchas do pack e do ESPECIAL, cada personagem ganha:
 
 - **`DESARMADO`**: a pose de quem perdeu a arma no duelo, sem arma, sem rastro e
-  sem aura. Nos packs com DEATH, os quadros até chegar aos joelhos; no corpo do
-  Samurai #3, agachado (o começo do DASH_ATTACK); no Oboro, que não cai (o Demon
-  não tem DEATH), curvado pelo HURT. No espadão a face larga da lâmina sai junto.
-- **`PARADO`**: só quem não luta e não tem IDLE (o Hanzo), em pé com as mãos
-  vazias (o fim do DASH).
+  sem aura. No corpo do Samurai #3, agachado (o começo do DASH_ATTACK, com a
+  lâmina longe do corpo: na DEATH dele a espada cai por cima da hakama e deixaria
+  um buraco); nos packs, os quadros da DEATH até chegar aos joelhos (o Oboro
+  também, pela DEATH do Demon). No espadão a face larga da lâmina sai junto.
+- **`PARADO`**: só quem não luta e não tem IDLE, em pé com as mãos vazias (o fim
+  do DASH).
+
+**Hanzo** usa o pack dele (`_packs/hanzo/`: o velho de cabelo e barba brancos,
+IDLE, HURT e RUN; o ATTACK_1 fica de fora, porque ele não luta). A prancha
+entra como vem, sem separar as partes (o cabelo branco se confundiria com
+lâmina); só a espada embainhada sai, pelas cores da bainha (`bainha` na entrada
+dele em `CHARS`).
 
 ## No jogo
 
@@ -244,7 +250,7 @@ lutador e toca as pranchas no ritmo do núcleo:
 | Kojiro erra | HURT; sem HURT, o clarão vermelho e o recuo |
 | Kojiro cai | DEATH até o `stop`; sem DEATH, agachado (DASH_ATTACK quadro 0) |
 | Desarme | o mestre em DESARMADO; kojiro avança com o DASH e para com a lâmina baixa |
-| Selo de oboro quebrado | HURT segurado, depois GRITO, e a fúria dali em diante |
+| Selo de oboro quebrado | HURT segurado, depois o SHOUT do Demon (ou o GRITO montado), e a fúria dali em diante |
 
 A escolha do golpe segue a preparação do núcleo: alto → ATTACK_3 (desce), baixo
 → ATTACK_2 (sobe), estocada → DASH_ATTACK (ou ATTACK_1). O último golpe das
@@ -422,17 +428,11 @@ que ela sai com as cores e a aura do Oboro como as outras.
 - Cinco personagens dividem o corpo do Samurai #5: mudam as cores, as armas, o
   rastro e a aura, mas a silhueta e os golpes são os mesmos. As cabeças próprias
   (capuz, cabelo de tigre, penas) só aparecem no corpo do Samurai #3.
-- O Hanzo sai das pranchas do Samurai #3 sem a espada: nas poses em que o
-  corpo segurava a katana, as mãos ficam na mesma posição, vazias.
-- Do Samurai #3 só chegaram ATTACK_1, ATTACK_2, ATTACK_3, DASH e DASH_ATTACK;
-  o `sprite.txt` dele lista também IDLE, DEFEND, HURT, DEATH, STRONG_ATTACK e
-  THROW, que entram assim que as tiras forem para `_original/` (valem para o
-  Kojiro, o Hanzo e os seis aprendizes desse corpo). Até lá o jogo usa os
-  substitutos da tabela de [No jogo](#no-jogo).
+- Sem o pack dele, o Hanzo sai das pranchas do Samurai #3 sem a espada: nas
+  poses em que o corpo segurava a katana, as mãos ficam na mesma posição, vazias.
 - Os packs novos não têm todas as animações do #3 (não há DASH nem
-  DASH_ATTACK), e o Demon não tem DEATH. Do pack do espadão chegaram só
-  ATTACK_1, ATTACK_2, ATTACK_3, DEFEND e DEATH; IDLE, RUN, JUMP e HURT entram
-  quando forem para a pasta `_packs/espadao/`.
+  DASH_ATTACK, então a investida da estocada vira o ATTACK_1). O Demon tem DEATH
+  e SHOUT, mas não JUMP nem THROW.
 - A estocada usa os quadros do corte horizontal: o braço é o mesmo, só a arma e
   o rastro mudam. Uma estocada com o braço esticando de verdade pediria
   desenho novo.
@@ -455,9 +455,7 @@ Para encaixar mais um: pôr as tiras em `_packs/<nome>/` com um `sprite.txt`
 (`cell` e os `hold`/`contact` de cada golpe), apontar `pack` na entrada do
 personagem em `CHARS` e conferir a `deteccao_<nome>.png`.
 
-**Hanzo:** o pack B (a versão grátis, com o Hanzo de barba branca) já é seu. Com
-as pranchas dele (`assets/sprites/hanzo/*.png`), a barba sai do sprite original
-em vez de o Hanzo vir do corpo do Samurai #3.
+O Hanzo de barba branca (pack B) já está encaixado em `_packs/hanzo/`.
 
 ## Arte e repositório
 
