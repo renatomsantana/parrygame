@@ -40,7 +40,7 @@ mesmos pixels.
 
 | # | Personagem | Arma | Cabeça e corpo | Cores | Rastro e aura |
 |---:|---|---|---|---|---|
-| — | **Kojiro** | katana | sem chapéu e **sem máscara**, como o Musashi de Vagabond: cabelo todo puxado para cima num coque pequeno no alto da cabeça, com fiapos espetados e fita vermelha, nuca curta (nada descendo até o ombro) e o rosto liso, sem nariz nem olho | original (branco e preto) | branco, sem aura |
+| — | **Kojiro** | katana | sem chapéu e **sem máscara**, como o Musashi de Vagabond: cabelo rente, todo puxado para cima num coque pequeno no alto da cabeça, com fiapos espetados e fita vermelha, nuca curta (nada descendo até o ombro), rosto liso sem nariz nem olho e barba rala e suja no queixo | original (branco e preto) | branco, sem aura |
 | 1 | **Daichi** (terra) | espada pesada, lâmina larga | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
 | 2 | **Genbu** (tartaruga) | katana simples + casco nas costas | careca, barbicha; atarracado | verde musgo | verde, esporos |
 | 3 | **Raizo** (touro) | **espadão** do próprio pack, do jeito que vem | **corpo do samurai do espadão**, chapéu de palha; a roupa preta virou marrom | marrom, amarelo | ouro, fagulhas subindo |
