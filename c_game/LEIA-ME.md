@@ -114,6 +114,11 @@ nenhuma com mais de dois contatos; do Shizuku em diante, cinco.
 - Tudo em pixel art de 320 × 180, ampliado por número inteiro e sem filtro:
   cenários, trilha, lore, final, lutadores (com contorno escuro e filete de luz na
   cor do cenário) e a interface.
+- Os fundos (cenários, título, lore e trilha) passam por uma paleta curta de 32
+  cores, tirada da própria cena (`src/pixelize.c`): cada pixel vai para a cor mais
+  perto, e só na faixa entre dois tons vizinhos um xadrez de Bayer 4 × 4 mistura
+  os dois. Degradê vira faixas com dithering e brilho vira anéis, como em pixel art
+  feita à mão; os lutadores e a interface não passam por ali.
 - Lutadores com as pranchas geradas (`src/sprites.c`), em tamanho de pixel 1:1.
   A preparação de cada golpe escolhe a prancha (alto desce, baixo sobe, estocada
   é o corte reto ou a investida; o último golpe das sequências longas é o
@@ -161,6 +166,7 @@ de um botão só).
 | `src/rig.c` | Bonecos (quando faltam as pranchas): poses, passos, cansaço, roupas, armas |
 | `src/katana3d.c` | A katana 3D dentro do mundo em pixel |
 | `src/arenas.c` | Os treze cenários dos duelos (e o do título) |
+| `src/pixelize.c` | Paleta curta por cena e dithering ordenado nos fundos |
 | `src/lore.c` | Tela de título, trilha, final e a cena do sensei |
 | `src/fx.c` | Faíscas, estrela, anéis, arcos, flash, tremor |
 | `src/audio.c` | Efeitos e trilha ambiente sintetizados |

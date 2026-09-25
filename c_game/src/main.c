@@ -29,6 +29,7 @@
 #include "fx.h"
 #include "katana3d.h"
 #include "lore.h"
+#include "pixelize.h"
 #include "raylib.h"
 #include "rig.h"
 #include "rlgl.h"
@@ -46,6 +47,11 @@
 #define SWORD_GRAVITY 380.0f
 #define GHOST_MAX 10
 #define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
+#define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
+#define PIX_LORE 41
+#define PIX_TRAIL 42
+#define PIX_SCENE 43
+#define PIX_ENDING 44
 #define SKIP_HOLD 2.0f        /* segundos segurando Esc para pular a abertura */
 
 static const char *POST_FS =
@@ -1580,11 +1586,18 @@ static void draw_arena(void) {
     Color light = arena_light(m->arena, &G.ctx);
     draw_rigs(light);
 
-    BeginTextureMode(G.scene);
-    ClearBackground(BLACK);
+    /* O fundo passa pela paleta curta do cenário, com dithering (pixelize.c). */
     Vector2 sh = fx_shake_offset(&G.fx);
+    pix_capture_begin();
     begin_world(sh);
     arena_draw_back(m->arena, &G.ctx);
+    EndMode2D();
+    pix_capture_end((int)m->arena);
+
+    BeginTextureMode(G.scene);
+    ClearBackground(BLACK);
+    pix_draw();
+    begin_world(sh);
     /* Reflexo no chão polido: a camada dos lutadores espelhada no chão. */
     float refl = arena_reflection(m->arena);
     if (refl > 0) {
@@ -1626,11 +1639,14 @@ static void ending_scene(int page, float t) { (void)page; lore_draw_ending(t); }
 static void draw_world(void) {
     switch (G.state) {
         case ST_TITLE:
-            BeginTextureMode(G.scene);
-            ClearBackground(BLACK);
+            pix_capture_begin();
             begin_world((Vector2){0, 0});
             lore_draw_title(G.time);
             EndMode2D();
+            pix_capture_end(PIX_TITLE);
+            BeginTextureMode(G.scene);
+            ClearBackground(BLACK);
+            pix_draw();
             if (katana3d_ready()) {
                 /* A katana gira devagar no próprio eixo, abaixo do título. */
                 katana3d_begin(LOW_W, LOW_H);
@@ -1642,22 +1658,28 @@ static void draw_world(void) {
             EndTextureMode();
             break;
         case ST_LORE:
-            BeginTextureMode(G.scene);
-            ClearBackground(BLACK);
+            pix_capture_begin();
             begin_world((Vector2){0, 0});
             lore_draw_title(G.time);
             DrawRectangle(0, 0, LOW_W, LOW_H, (Color){10, 6, 8, 110});
             EndMode2D();
+            pix_capture_end(PIX_LORE);
+            BeginTextureMode(G.scene);
+            ClearBackground(BLACK);
+            pix_draw();
             EndTextureMode();
             break;
         case ST_ENDING: draw_illustration(ending_scene, 0, G.stateTime, 0); break;   /* texto em cima */
         case ST_SENSEI: draw_illustration(lore_draw_scene, 0, G.time, 18); break;
         case ST_TRAIL:
-            BeginTextureMode(G.scene);
-            ClearBackground(BLACK);
+            pix_capture_begin();
             begin_world((Vector2){0, 0});
             lore_draw_trail(&G.camp, G.time, G.camp.index);
             EndMode2D();
+            pix_capture_end(PIX_TRAIL);
+            BeginTextureMode(G.scene);
+            ClearBackground(BLACK);
+            pix_draw();
             EndTextureMode();
             break;
         default: draw_arena(); break;
@@ -2245,6 +2267,7 @@ int main(int argc, char **argv) {
     G.locDuo = GetShaderLocation(G.post, "duo");
     katana3d_load("assets/katana");
     spr_init();
+    pix_init(RW, RH);
     G.ui = load_font("assets/fonts/Tiny5-Regular.ttf", 9);  /* 9 = "em" de 8 px, a grade da Tiny5 */
     G.uiBold = G.ui;
     audio_init();
@@ -2383,6 +2406,7 @@ int main(int argc, char **argv) {
     if (G.ui.texture.id != GetFontDefault().texture.id) UnloadFont(G.ui);
     UnloadRenderTexture(G.uiLow);
     spr_shutdown();
+    pix_shutdown();
     CloseWindow();
     return 0;
 }

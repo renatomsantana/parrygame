@@ -18,7 +18,7 @@ ifeq ($(shell uname),Darwin)
 endif
 
 CORE := src/core.c src/roster.c
-GAME := src/main.c src/rig.c src/sprites.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
+GAME := src/main.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
 all: apara
 

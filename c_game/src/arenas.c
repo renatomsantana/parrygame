@@ -142,7 +142,7 @@ static void dojo(const ArenaCtx *c) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 3. Celeiro ao entardecer                                            */
+/* 3. Celeiro ao entardecer: casa de fazenda e varais de arroz         */
 /* ------------------------------------------------------------------ */
 static void celeiro(const ArenaCtx *c) {
     float t = c->t;
@@ -163,30 +163,45 @@ static void celeiro(const ArenaCtx *c) {
         vgrad(x, h2, 1.05f, 60, C(92, 56, 46), C(70, 44, 36));
     }
     vgrad(0, 90, LOW_W, 30, CA(255, 170, 120, 40), CA(255, 170, 120, 0));
-    /* Celeiro com tábuas, telhado de telhas e o lado na sombra. */
-    for (int k = 0; k < 16; k++) plank(20 + k * 5, 66, 5, 64, C(158, 44, 32), k);
-    hgrad(80, 66, 20, 64, CA(0, 0, 0, 0), CA(20, 0, 0, 90));
-    DrawTriangle((Vector2){14, 68}, (Vector2){106, 68}, (Vector2){60, 36}, C(96, 30, 24));
-    for (int r = 0; r < 6; r++) line(14 + r * 7.5f, 68 - r * 5.2f, 106 - r * 7.5f, 68 - r * 5.2f, 0.35f, C(70, 20, 16));
-    rect(44, 90, 32, 40, C(56, 18, 12));
-    for (int s = 0; s < 2; s++) {
-        line(44 + s * 16, 90, 60 + s * 16, 130, 1.1f, C(236, 220, 200));
-        line(60 + s * 16, 90, 44 + s * 16, 130, 1.1f, C(236, 220, 200));
-        DrawRectangleLinesEx((Rectangle){44 + s * 16, 90, 16, 40}, 1, C(236, 220, 200));
+    /* Casa de fazenda (minka): telhado alto de palha, parede de reboco e esteios
+       escuros, a janela de papel acesa e a varanda de madeira. */
+    Color straw = C(184, 146, 74), strawDk = C(138, 102, 50), strawLt = C(214, 178, 98), wood = C(62, 42, 30);
+    rect(18, 96, 84, 34, wood);
+    for (int k = 0; k < 4; k++) rect(22 + k * 20, 99, 16, 18, C(214, 198, 164));   /* reboco */
+    for (int k = 0; k < 4; k++) rect(22 + k * 20, 116, 16, 1, C(170, 150, 118));
+    rect(42, 101, 16, 14, C(255, 206, 128));                                          /* janela de papel acesa */
+    for (int k = 1; k < 4; k++) rect(42 + k * 4, 101, 1, 14, C(150, 96, 56));
+    rect(42, 108, 16, 1, C(150, 96, 56));
+    glow(50, 108, 12, C(255, 170, 80));
+    rect(18, 122, 84, 8, C(84, 58, 40));                                               /* varanda */
+    for (int k = 0; k < 7; k++) rect(20 + k * 12, 122, 1, 8, C(60, 40, 28));
+    rect(18, 121, 84, 1, C(122, 90, 60));
+    DrawTriangle((Vector2){6, 97}, (Vector2){114, 97}, (Vector2){80, 54}, straw);    /* telhado de palha */
+    DrawTriangle((Vector2){6, 97}, (Vector2){80, 54}, (Vector2){40, 54}, straw);
+    for (int r = 0; r < 11; r++) {                                                     /* camadas da palha */
+        float y = 58 + r * 4, half = 20 + (y - 54) * 0.79f;
+        rect(60 - half, y, half * 2, 1, strawDk);
+        for (int k = 0; k < (int)half; k += 3) rect(60 - half + k * 2 + (r % 2) * 2, y + 1, 1, 2, r % 3 ? strawLt : strawDk);
     }
-    rect(52, 50, 16, 12, C(36, 14, 8));
-    glow(60, 56, 10, C(255, 170, 80));
-    /* Cerca e fardos com sombra. */
-    for (int x = 110; x < LOW_W; x += 18) hgrad(x, 118, 2.4f, 22, C(92, 62, 44), C(126, 88, 60));
-    rect(110, 122, 210, 1.6f, C(124, 88, 60));
-    rect(110, 130, 210, 1.6f, C(124, 88, 60));
-    for (int b = 0; b < 3; b++) {
-        float bx = 230 + b * 26, by = 126 - (b == 1) * 14;
-        DrawEllipse((int)(bx + 12), (int)(by + 16), 13, 2, CA(0, 0, 0, 60));
-        vgrad(bx, by, 24, 16, C(226, 188, 96), C(170, 124, 60));
-        for (int k = 0; k < 5; k++) line(bx + 1, by + 2 + k * 3, bx + 23, by + 3 + k * 3, 0.3f, C(150, 108, 50));
-        rect(bx + 7, by, 1, 16, C(120, 80, 40));
-        rect(bx + 16, by, 1, 16, C(120, 80, 40));
+    rect(4, 96, 112, 2, C(104, 74, 38));                                                /* beiral */
+    rect(34, 49, 52, 6, C(78, 56, 36));                                                 /* cumeeira */
+    rect(34, 49, 52, 1, C(120, 88, 56));
+    line(32, 44, 40, 52, 1, C(78, 56, 36));                                             /* chigi nas pontas */
+    line(40, 44, 32, 52, 1, C(78, 56, 36));
+    line(80, 44, 88, 52, 1, C(78, 56, 36));
+    line(88, 44, 80, 52, 1, C(78, 56, 36));
+    /* Varais de arroz (hasakake): esteios, a trave e os feixes pendurados secando. */
+    for (int rk = 0; rk < 2; rk++) {
+        float x0 = 132 + rk * 96, len = 76;
+        for (int k = 0; k <= 3; k++) rect(x0 + k * len / 3, 104, 2, 28, C(96, 66, 40));
+        rect(x0 - 2, 106, len + 6, 2, C(112, 78, 46));
+        for (int k = 0; k < (int)len; k += 4) {
+            float sx = x0 + k + 1, sh = 11 + hash1(k + rk * 7) * 3;
+            rect(sx, 108, 3, sh, C(214, 170, 82));
+            rect(sx, 108 + sh - 3, 3, 3, C(168, 124, 54));
+            rect(sx + 1, 110, 1, sh - 4, C(236, 198, 110));
+            rect(sx, 111, 3, 1, C(120, 84, 40));
+        }
     }
     for (int i = 0; i < 4; i++) {
         float bx = fract(t * 0.02f + i * 0.27f) * 360 - 20, by = 30 + i * 7 + sinf(t + i) * 3, w = sinf(t * 8 + i) * 2;
@@ -728,6 +743,23 @@ static void serra(const ArenaCtx *c) {
 /* Portão do tigre branco                                              */
 /* ------------------------------------------------------------------ */
 /* Tigre de pedra sentado num pedestal, virado para o centro. */
+/* Bordo de outono em pixel: tronco e galhos escuros e a copa em tufos de folhas,
+ * mais claros em cima (a luz da lua) e mais escuros embaixo, com vãos. */
+static void maple(float x, float y, float r, int seed) {
+    rect(x - 1, y, 3, 26, C(50, 34, 30));
+    line(x, y + 4, x - r * 0.5f, y - 2, 1, C(50, 34, 30));
+    line(x + 1, y + 2, x + r * 0.55f, y - 4, 1, C(50, 34, 30));
+    static const Color leaf[4] = {{112, 36, 30, 255}, {150, 52, 36, 255}, {190, 80, 42, 255}, {222, 124, 56, 255}};
+    for (int k = 0; k < 70; k++) {
+        float a = hash1(seed * 97 + k) * 6.2832f, d = sqrtf(hash1(seed * 31 + k * 3)) * r;
+        float lx = x + cosf(a) * d * 1.15f, ly = y - 3 + sinf(a) * d * 0.8f;
+        int shade = (int)((1 - (ly - (y - 3 - r * 0.8f)) / (r * 1.6f)) * 3.2f + hash1(k + seed) * 0.8f);
+        if (shade < 0) shade = 0;
+        if (shade > 3) shade = 3;
+        rect(floorf(lx), floorf(ly), 2 + (k % 3 == 0), 2, leaf[shade]);
+    }
+}
+
 static void stone_tiger(float x, float base, float dir) {
     Color light = C(214, 210, 198), mid = C(170, 166, 156), dark = C(110, 106, 100), stripe = C(60, 58, 60);
     rect(x - 10, base - 10, 20, 10, dark);
@@ -761,10 +793,7 @@ static void templo(const ArenaCtx *c) {
     }
     for (int i = 0; i < 7; i++) {
         float x = 10 + i * 48 + hash1(i + 2) * 12, y = 96 + hash1(i + 5) * 10;
-        rect(x - 1, y, 2.5f, 26, C(50, 34, 30));
-        DrawCircleV((Vector2){x, y - 2}, 11 + hash1(i) * 4, C(150, 52, 36));
-        DrawCircleV((Vector2){x - 5, y + 1}, 7, C(186, 76, 40));
-        DrawCircleV((Vector2){x + 5, y - 4}, 6, C(210, 110, 50));
+        maple(x, y, 12 + hash1(i) * 4, i);
     }
     /* Muro baixo do templo. */
     rect(0, 118, LOW_W, 14, C(88, 80, 84));
@@ -863,10 +892,13 @@ void arena_draw_front(ArenaId id, const ArenaCtx *c) {
         case ARENA_PORTO:
         case ARENA_CACHOEIRA: {
             bool falls = id == ARENA_CACHOEIRA;
-            for (int i = 0; i < (falls ? 16 : 8); i++) {
+            /* névoa em fiapos horizontais (no lugar das bolhas de luz) */
+            for (int i = 0; i < (falls ? 14 : 8); i++) {
                 float x = fract(hash1(i) + t * 0.02f * (1 + hash1(i + 1))) * 400 - 40;
-                float y = (falls ? 105 : 130) + hash1(i + 2) * 50 + sinf(t * 0.5f + i) * 3;
-                DrawCircle((int)x, (int)y, 15 + hash1(i + 3) * 15, CA(220, 235, 245, falls ? 26 : 16));
+                float y = floorf((falls ? 118 : 136) + hash1(i + 2) * 36 + sinf(t * 0.5f + i) * 2);
+                float w = 18 + hash1(i + 3) * 26;
+                rect(floorf(x), y, w, 1, CA(220, 235, 245, falls ? 60 : 40));
+                rect(floorf(x + w * 0.2f), y - 1, w * 0.5f, 1, CA(220, 235, 245, falls ? 36 : 24));
             }
             if (falls) for (int i = 0; i < 40; i++) {
                 float x = hash1(i) * LOW_W, y = fract(hash1(i + 1) + t * 0.9f) * LOW_H;
