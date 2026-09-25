@@ -81,8 +81,10 @@ typedef struct {
  * recua e vem correndo até o alcance; LOOK_JUMP salta e desce cortando, com o
  * contato no instante em que os pés tocam o chão. LOOK_FAR é a estocada de longe
  * (a lança): o mestre fica afastado e a ponta viaja mais, então entre a lâmina
- * partir e chegar passa mais tempo que nos outros golpes (FAR_LEAD). */
-typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST, LOOK_HEAVY, LOOK_DASH, LOOK_JUMP, LOOK_FAR } MoveLook;
+ * partir e chegar passa mais tempo que nos outros golpes (FAR_LEAD). LOOK_WARP é o
+ * sumiço do corvo: ele vira penas no meio da preparação e reaparece na frente de
+ * kojiro para terminar o golpe; o reaparecer é o aviso. */
+typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST, LOOK_HEAVY, LOOK_DASH, LOOK_JUMP, LOOK_FAR, LOOK_WARP } MoveLook;
 #define FAR_LEAD 1.75f            /* a estocada de longe parte 1,75 x mais cedo */
 
 typedef struct {

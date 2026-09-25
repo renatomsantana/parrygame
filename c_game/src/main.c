@@ -48,7 +48,7 @@
 #define GHOST_MAX 10
 #define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
 #define AFTER_MAX 8           /* silhuetas que o mestre deixa nos movimentos rápidos */
-enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR };
+enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP };
 #define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
 #define PIX_LORE 41
 #define PIX_TRAIL 42
@@ -212,6 +212,7 @@ static struct {
     float leapT, leapAt, leapAir; /* tempo na preparação; quando corre ou salta; tempo no ar */
     float hopT, hopLen, hopH; /* arco do pulo do mestre (salto, recuo, ameaça) */
     float landT;              /* amortecendo a queda do salto */
+    bool bossHidden;          /* karasu virou penas: some até reaparecer na frente de kojiro */
     struct { const SprAnim *a; int frame; Vector2 feet; float life; } after[AFTER_MAX];
     int afterHead;
     float afterTimer, lastStep;
@@ -678,6 +679,7 @@ static void setup_actors(void) {
     G.bossStep = G.bossStepTo = 0;
     G.bossStepSpeed = 0;
     G.leap = LEAP_NONE;
+    G.bossHidden = false;
     G.hopT = G.hopLen = 0;
     memset(G.after, 0, sizeof G.after);
     G.gritoPending = false;
@@ -892,7 +894,7 @@ static MoveLook strike_look(void) {
     MoveLook look = mv ? mv->look : LOOK_HIGH;
     int k = G.duel.comboStrike;
     if (k == 0) return look;
-    if (look == LOOK_HEAVY || look == LOOK_JUMP) return k % 2 ? LOOK_LOW : LOOK_HIGH;
+    if (look == LOOK_HEAVY || look == LOOK_JUMP || look == LOOK_WARP) return k % 2 ? LOOK_LOW : LOOK_HIGH;
     if (look == LOOK_THRUST || look == LOOK_DASH || look == LOOK_FAR) return k % 2 ? LOOK_HIGH : LOOK_THRUST;
     if (k % 2 == 0) return look;
     return look == LOOK_HIGH ? LOOK_LOW : LOOK_HIGH;
@@ -933,7 +935,7 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
     if (mv && mv->strikes >= 3 && G.duel.comboStrike == mv->strikes - 1 && (a = fa(f, "ESPECIAL"))) return a;
     /* a investida e a estocada de longe acabam na estocada; o salto desce com o corte alto */
     if (look == LOOK_DASH || look == LOOK_FAR) look = LOOK_THRUST;
-    if (look == LOOK_JUMP) look = LOOK_HIGH;
+    if (look == LOOK_JUMP || look == LOOK_WARP) look = LOOK_HIGH;
     if (look == LOOK_THRUST && (a = fa(f, "DASH_ATTACK"))) return a;
     const char *base = look == LOOK_LOW ? "ATTACK_2" : (look == LOOK_THRUST ? "ATTACK_1" : "ATTACK_3");
     if (G.m->isBigBoss) {
@@ -959,6 +961,15 @@ static void boss_hop(float len, float h) {
     G.hopT = 0;
     G.hopLen = len;
     G.hopH = h;
+}
+
+/* Penas pretas e vermelhas: o corvo sumindo ou reaparecendo. */
+static void feathers(void) {
+    Vector2 at = {G.boss.x + G.boss.offsetX, GROUND_LOW - 26};
+    fx_burst(&G.fx, P_PETAL, at, 26, 80, 3.14f, -1.57f, (Color){26, 20, 30, 255}, (Color){60, 44, 56, 255});
+    fx_burst(&G.fx, P_PETAL, at, 8, 60, 3.14f, -1.57f, (Color){170, 24, 36, 255}, (Color){110, 16, 26, 255});
+    vfx("64", 8, at, true, VFX_BACK, 26);
+    audio_play(SND_SWING, 0.45f, 0.7f);
 }
 
 static const SprAnim *boss_run(void) {
@@ -1013,6 +1024,17 @@ static void sprite_windup(void) {
     }
     /* a preparação anda devagar até o hold (cada quadro pelo menos 0,12 s) e segura */
     float antic = fmaxf((hold + 1) * a->frameTime * 1.8f, (hold + 1) * 0.12f);
+    if (first && look == LOOK_WARP && w > 0.3f) {
+        /* o corvo prepara, vira penas e some; reaparece na frente de kojiro com a
+         * lâmina no alto, um instante antes de a lâmina partir */
+        G.leap = LEAP_WARP;
+        G.leapAt = w * 0.4f;
+        G.leapAir = fmaxf(G.leapAt + 0.1f, w - 0.16f);
+        f_add(f, a, 0, hold, G.leapAt);
+        f_add(f, a, hold, hold, w - G.leapAt);
+        G.bossStepTo = G.bossStep;
+        return;
+    }
     if (first && look == LOOK_FAR) {
         /* a lança: ele se afasta, recolhe a ponta e espera; o bote atravessa a distância */
         G.leap = LEAP_FAR;
@@ -1037,6 +1059,7 @@ static void sprite_launch(void) {
     const SprAnim *a = f->strike;
     int hold = anim_hold(a), c = anim_contact(a);
     float lead = duel_strike_lead(&G.duel);
+    if (G.bossHidden) { G.bossHidden = false; feathers(); }
     G.bossStepTo = G.bossStrikeStep;
     G.bossStepSpeed = fabsf(G.bossStrikeStep - G.bossStep) / fmaxf(0.05f, lead - 0.02f);
     f_clear(f, false);
@@ -1099,6 +1122,7 @@ static void sprite_impact(const DuelEvent *e) {
         G.bossStepSpeed = 40;
         G.hopT = G.hopLen;
         G.leap = LEAP_NONE;
+        G.bossHidden = false;
     }
     if (r->set) {
         if ((e->judgement == J_PERFEITO || e->judgement == J_BOM) && !(e->i & 2)) {
@@ -1431,6 +1455,20 @@ static void fighters_update(float dt) {
     if (!G.bossS.set) return;
     bool landed = G.hopT >= G.hopLen;
     /* investida e salto: depois do recuo (ou de agachar) ele arranca */
+    if (G.leap == LEAP_WARP && G.bossWinding) {
+        G.leapT += dt;
+        if (G.leapStage == 0 && G.leapT >= G.leapAt) {
+            G.leapStage = 1;
+            feathers();
+            G.bossHidden = true;
+            G.bossStep = G.bossStepTo = G.bossStrikeStep;     /* já está onde vai reaparecer */
+        } else if (G.leapStage == 1 && G.leapT >= G.leapAir) {
+            G.leapStage = 2;
+            G.bossHidden = false;
+            G.boss.offsetX = G.bossKnock + G.bossStep;
+            feathers();
+        }
+    }
     if ((G.leap == LEAP_DASH || G.leap == LEAP_JUMP) && G.bossWinding) {
         G.leapT += dt;
         if (G.leapStage == 0 && G.leapT >= G.leapAt) {
@@ -1716,7 +1754,7 @@ static void draw_rigs(Color light) {
         c.a = (unsigned char)(150 * G.ghosts[i].life);
         rig_draw_flat(&G.ghosts[i].rig, c);
     }
-    if (G.bossS.set && !dark) {
+    if (G.bossS.set && !dark && !G.bossHidden) {
         /* as silhuetas do movimento, na cor do elemento de cada mestre */
         static const Color AFTER_TINT[ROSTER_SIZE] = {
             {230, 150, 80, 255}, {130, 210, 150, 255}, {235, 90, 70, 255}, {110, 180, 255, 255},
@@ -1732,7 +1770,9 @@ static void draw_rigs(Color light) {
             spr_draw(G.bossS.set, G.after[i].a, G.after[i].frame, G.after[i].feet, o);
         }
     }
-    if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
+    if (G.bossHidden) {
+        /* sumiu em penas */
+    } else if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
     else draw_fighter(&G.boss, light, rim, dark);
     if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, false);
     else draw_fighter(&G.ren, light, rim, false);
@@ -1808,7 +1848,7 @@ static void draw_arena(void) {
                        (Vector2){0, 0}, 0, fadec(WHITE, refl));
         EndScissorMode();
     }
-    draw_shadow(&G.boss);
+    if (!G.bossHidden) draw_shadow(&G.boss);
     draw_shadow(&G.ren);
     vfx_draw(true);
     DrawTexturePro(G.actors.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, (Rectangle){0, 0, LOW_W, LOW_H}, (Vector2){0, 0}, 0, WHITE);

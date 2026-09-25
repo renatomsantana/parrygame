@@ -613,9 +613,11 @@ static void test_traits(void) {
     for (int k = 0; k < roster_get(9)->moveCount; k++) arashiDual += roster_get(9)->moves[k].dual != 0;
     for (int k = 0; k < roster_get(5)->moveCount; k++) karasuDual += roster_get(5)->moves[k].dual != 0;
     CHECK(arashiDual > karasuDual, "arashi usa as duas lâminas mais que karasu (%d x %d)", arashiDual, karasuDual);
-    bool far = false;
+    bool far = false, warp = false;
     for (int k = 0; k < roster_get(8)->moveCount; k++) far |= roster_get(8)->moves[k].look == LOOK_FAR;
+    for (int k = 0; k < roster_get(5)->moveCount; k++) warp |= roster_get(5)->moves[k].look == LOOK_WARP;
     CHECK(far, "suiren ataca de longe");
+    CHECK(warp, "karasu some em penas e reaparece na frente de kojiro");
     CHECK(roster_get(10)->blackoutChance >= 0.6f, "yoru apaga as luzes quase sempre");
     int looks = 0;
     for (int l = LOOK_HIGH; l <= LOOK_FAR; l++) {

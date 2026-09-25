@@ -98,7 +98,9 @@ longe: **correndo** (recua num pulinho, firma os pés e vem correndo até o
 alcance), **saltando** (agacha, salta e desce cortando; o contato é o pouso) e,
 só com a lança do suiren, **de longe** (ele se afasta e a ponta viaja: entre a
 lâmina partir e chegar passa 1,75 vez o tempo dos outros golpes, então quem
-aparar no susto da partida chega cedo). **⚔** é o golpe de **duas lâminas**
+aparar no susto da partida chega cedo). O karasu tem ainda o **sumiço**: no meio
+da preparação ele vira penas e some, e reaparece na frente de kojiro com a lâmina
+no alto, pouco antes de ela partir; é o reaparecer que avisa. **⚔** é o golpe de **duas lâminas**
 (o corte cruzado, anunciado por um brilho duplo e um tinido duplo): um parry só
 segura as duas se for perfeito; no bom, a segunda entra; no erro, entram as
 duas. Todos têm de sete a dez sequências. Daichi, Genbu e Raizo nunca passam de
@@ -113,7 +115,7 @@ repertório mais variado e o ritmo irregular.
 | raizo | corte do touro (1) · investida dupla (2: 0,85) · coice (1) · marrada (2: 1,00) · estouro da boiada (1) correndo · pisada (2: 0,70) saltando · **chifrada** (forte) |
 | shizuku | gota (1) · correnteza (2: 0,45) · garoa (2: 0,40) · queda d'água (3: 0,45 0,40) · chuvisco (4: 0,40 0,40 0,40) · remanso (1) · corredeira (1) correndo · salto do peixe (2: 0,45) saltando · **tsunami** (forte) |
 | garfiel | patada (1) · garras cruzadas (2: 0,40) · rasgo (3: 0,40 0,40) · bote do tigre (3: 0,40 0,85) · fúria do tigre (6: 0,40 0,40 0,40 0,40 0,40) · caçada (7: 0,40 0,40 0,45 0,40 0,40 0,70) correndo · rugido (8: 0,40 0,40 0,40 0,40 0,40 0,40 0,80) · pulo do gato (2: 0,45) saltando · **salto do tigre** (forte) |
-| karasu | bicada (1) · garra (2: 0,55) · espreita (3: 0,60 0,60) · revoada (3: 0,50 0,90) ⚔ no 3º · bando (4: 0,45 0,45 0,45) ⚔ no 4º · duas penas (1) ⚔ · voo rasante (1) correndo · asa quebrada (2: 0,50) saltando · **mergulho** (forte) |
+| karasu | bicada (1) · garra (2: 0,55) · sumiço (1) sumindo · corvo fantasma (2: 0,55) sumindo · revoada (3: 0,50 0,90) ⚔ no 3º · bando (4: 0,45 0,45 0,45) ⚔ no 4º · duas penas (1) ⚔ · voo rasante (1) correndo · asa quebrada (2: 0,50) saltando · **mergulho** (forte) |
 | hayate | rajada (1) · redemoinho (2: 0,45) · vendaval (3: 0,50 0,90) · brisa cortante (2: 0,40) · tufão (5: 0,40 0,40 0,40 0,60) · foices gêmeas (2: 0,45) ⚔ no 2º · lufada (1) correndo · folha ao vento (2: 0,55) saltando · **ciclone** (forte) |
 | enjin | brasa (2: 0,50) · labareda (3: 0,45 0,45) · incêndio (4: 0,45 0,45 0,80) · **erupção** (forte) · fagulhas (3: 0,40 0,40) · chama viva (1) correndo · cinzas (2: 0,45) · fogo alto (3: 0,45 0,45) saltando |
 | suiren | onda (1) · arpão (1) de longe · linha d'água (2: 0,60) de longe · maré longa (3: 0,60 0,50) de longe · maré baixa (2: 0,45) · arrebentação (3: 0,45 0,45) · maremoto (4: 0,55 0,50 0,45) · espuma (1) correndo · salto da baleia (2: 0,60) saltando · **vagalhão** (forte) |

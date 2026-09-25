@@ -127,7 +127,8 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .moves = {
             {"bicada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST},
             {"garra", 2, {0.55f}, 2.0f, -1, 0, LOOK_HIGH},
-            {"espreita", 3, {0.60f, 0.60f}, 1.5f, -1, 0, LOOK_HIGH},
+            {"sumiço", 1, {0}, 1.5f, -1, 0, LOOK_WARP},
+            {"corvo fantasma", 2, {0.55f}, 1.0f, -1, 0, LOOK_WARP},
             {"revoada", 3, {0.50f, 0.90f}, 1.0f, -1, 0, LOOK_LOW, 0x4},
             {"bando", 4, {0.45f, 0.45f, 0.45f}, 1.0f, -1, 0, LOOK_THRUST, 0x8},
             {"duas penas", 1, {0}, 0.7f, -1, 0, LOOK_HIGH, 0x1},
@@ -135,11 +136,11 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"asa quebrada", 2, {0.50f}, 1.0f, -1, 0, LOOK_JUMP},
             {"mergulho", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY},
         },
-        .moveCount = 9,
+        .moveCount = 10,
         .intro = {{"karasu", "Eu sigo quem ganha. Hoje é oboro. Não se ofenda se eu apostar contra você."},
                   {"kojiro", "Aposta. Eu não jogo."}}, .introCount = 2,
         .outro = {{"karasu", "Hm. Parece que vou ter que mudar de lado. De novo."}}, .outroCount = 1,
-        .sensei = {{"hanzo", "O corvo sempre faz uma pausa antes de roubar. É nela que ele te pega."},
+        .sensei = {{"hanzo", "O corvo some em penas e volta onde você não olha. Apare quando ele reaparecer, não quando sumir."},
                    {"hanzo", "Ele luta com uma mão só, até a outra aparecer. Aí são duas lâminas: só o perfeito segura."}}, .senseiCount = 2,
     },
     {
