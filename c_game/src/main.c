@@ -12,9 +12,10 @@
  *   --master N     começa direto nas falas do mestre N (1 a 13)
  *   --duel         pula as falas e vai direto ao duelo
  *   --state S      title | lore | trail | ending (com --master N: sensei;
- *                  com --master N --duel: pause | defeat | cleared)
+ *                  com --master N --duel: pause | defeat | finisher | cleared)
  *   --demo         um robô apara no tempo perfeito e avança as telas
  *   --shot F T     salva uma captura em F depois de T segundos e sai
+ *   --rec D T0 T1  salva os quadros de T0 a T1 segundos em D (30 por segundo, tempo fixo)
  */
 #include <math.h>
 #include <stdio.h>
@@ -31,10 +32,11 @@
 #include "raylib.h"
 #include "rig.h"
 #include "rlgl.h"
+#include "sprites.h"
 
 #define REN_X 124.0f
 #define BOSS_X 190.0f
-#define ACTOR_SCALE 1.25f     /* tamanho dos bonecos provisórios */
+#define ACTOR_SCALE 1.25f     /* tamanho dos bonecos (sem as pranchas dos sprites) */
 #define UI_W 1280
 #define UI_H 720
 #define UNIT 4.0f             /* px da interface por px do mundo */
@@ -77,7 +79,8 @@ static const Color INK_SOFT = {76, 52, 32, 255};
 static const Color INK_LINE = {52, 32, 18, 255};
 static const Color SEAL_RED = {150, 44, 32, 255};
 
-/* Visual provisório de cada lutador (troque quando a pixel art chegar).
+/* Visual de cada lutador como boneco, usado quando faltam as pranchas em
+ * assets/sprites (e para a cor da arma que voa no desarme).
  * Roupa de acordo com o lugar de cada mestre; katana com lâmina, cabo e largura próprios. */
 #define RGB(r, g, b) ((Color){r, g, b, 255})
 
@@ -153,6 +156,21 @@ static KatanaStyle katana_style(const Look *l) {
     return k;
 }
 
+/* Lutador em pixel art: as pranchas de assets/sprites tocadas no ritmo do duelo.
+ * Sem as pranchas (set == NULL) o lutador é o boneco de rig.c. */
+typedef struct { const SprAnim *a; int from, to; float dur; } FSeg;
+typedef struct {
+    const SprSet *set;
+    SprPlayer pl;
+    FSeg q[4];
+    int qn;
+    bool fresh;               /* o próximo f_add toca na hora */
+    bool idle;                /* parado na guarda */
+    bool autoIdle;            /* volta para a guarda quando a fila acaba */
+    bool furia;               /* oboro depois do grito */
+    const SprAnim *strike;    /* golpe (ou parry) em curso */
+} Fighter;
+
 /* A espada do mestre voando depois do desarme. */
 typedef struct {
     bool active, stuck;
@@ -178,6 +196,10 @@ static struct {
     int ghostHead;
     float ghostTimer;
     Rig ren, boss;
+    Fighter renS, bossS;
+    float bossStep, bossStepTo, bossStepSpeed; /* passo do mestre até o alcance do golpe */
+    float bossStrikeStep;     /* onde ele precisa estar no contato */
+    bool gritoPending;
     Fx fx;
     FlySword sword;
 
@@ -227,6 +249,9 @@ static struct {
     bool demo;
     const char *shotFile;
     float shotTime;
+    const char *recDir;       /* --rec: quadros a 30 por segundo, para GIFs */
+    float recStart, recEnd;
+    int recFrame;
 } G;
 
 /* ------------------------------------------------------------------ */
@@ -240,7 +265,7 @@ static float smooth(float t) { t = clampf(t, 0, 1); return t * t * (3 - 2 * t); 
 static bool pressed(void) {
     /* No modo demonstração, o robô também avança falas e painéis. */
     if (G.demo && G.state != ST_DUEL && fmodf(G.stateTime, 0.9f) < GetFrameTime()) return true;
-    if (G.demo && G.shotFile) return false; /* capturas: só o robô joga */
+    if (G.demo && (G.shotFile || G.recDir)) return false; /* capturas: só o robô joga */
     return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER);
 }
 
@@ -490,6 +515,85 @@ static void set_state(State s) {
     G.stateTime = 0;
 }
 
+/* ------------------------------------------------------------------ */
+/* Lutadores em pixel art                                              */
+/* ------------------------------------------------------------------ */
+
+static const SprAnim *fa(const Fighter *f, const char *name) { return spr_anim(f->set, name); }
+
+static int anim_contact(const SprAnim *a) {
+    if (!a) return 0;
+    return a->contact >= 0 ? a->contact : a->frames / 2;
+}
+static int anim_hold(const SprAnim *a) {
+    if (!a) return 0;
+    int c = anim_contact(a);
+    int h = a->hold >= 0 ? a->hold : c - 1;
+    return h < 0 ? 0 : (h > c ? c : h);
+}
+
+/* Guarda parada: IDLE (a da fúria, para oboro depois do grito), PARADO, ou o
+ * primeiro quadro do corte, que é a guarda de quem não tem prancha parada. */
+static void fighter_idle(Fighter *f) {
+    if (!f->set) return;
+    const SprAnim *a = f->furia ? fa(f, "IDLE_FURIA") : NULL;
+    if (!a) a = fa(f, "IDLE");
+    if (a) spr_loop(&f->pl, a);
+    else {
+        a = fa(f, "PARADO");
+        if (!a) a = fa(f, "ATTACK_1");
+        spr_play(&f->pl, a, 0, 0, 1);
+    }
+    f->qn = 0;
+    f->fresh = false;
+    f->idle = true;
+    f->autoIdle = false;
+    f->strike = NULL;
+}
+
+/* Nova sequência de trechos: o primeiro toca já, os outros entram em fila. */
+static void f_clear(Fighter *f, bool autoIdle) {
+    f->qn = 0;
+    f->fresh = true;
+    f->idle = false;
+    f->autoIdle = autoIdle;
+}
+
+static void f_add(Fighter *f, const SprAnim *a, int from, int to, float dur) {
+    if (!f->set || !a) return;
+    if (f->fresh) {
+        spr_play(&f->pl, a, from, to, dur);
+        f->fresh = false;
+    } else if (f->qn < 4) {
+        f->q[f->qn++] = (FSeg){a, from, to, dur};
+    }
+}
+
+static void f_update(Fighter *f, float dt) {
+    if (!f->set) return;
+    spr_update(&f->pl, dt);
+    if (f->idle || !spr_done(&f->pl)) return;
+    if (f->qn > 0) {
+        FSeg sg = f->q[0];
+        memmove(f->q, f->q + 1, sizeof(FSeg) * (size_t)(f->qn - 1));
+        f->qn--;
+        spr_play(&f->pl, sg.a, sg.from, sg.to, sg.dur);
+    } else if (f->autoIdle) {
+        fighter_idle(f);
+    }
+}
+
+static void fighter_load(Fighter *f, const char *id) {
+    memset(f, 0, sizeof *f);
+    f->set = spr_get(id);
+    /* sem golpe desenhado não dá para lutar: fica o boneco */
+    if (f->set && !spr_anim(f->set, "ATTACK_1")) f->set = NULL;
+    fighter_idle(f);
+}
+
+/* Onde a lâmina de kojiro espera o golpe, a partir dos pés dele. */
+static int ren_guard_x(void) { return G.renS.set && G.renS.set->hasGuard ? G.renS.set->guardX : 12; }
+
 static void setup_actors(void) {
     int idx = G.camp.index < ROSTER_SIZE ? G.camp.index : ROSTER_SIZE - 1;
     Look rl = REN_LOOK, bl = MASTER_LOOKS[idx];
@@ -505,6 +609,11 @@ static void setup_actors(void) {
     G.renKnock = G.bossKnock = 0;
     G.staggerTime = 0;
     memset(&G.sword, 0, sizeof G.sword);
+    fighter_load(&G.renS, "kojiro");
+    fighter_load(&G.bossS, G.m ? G.m->name : "");
+    G.bossStep = G.bossStepTo = 0;
+    G.bossStepSpeed = 0;
+    G.gritoPending = false;
 }
 
 static void start_master(int index) {
@@ -551,11 +660,13 @@ static void start_duel(void) {
 /* Desarme: a espada do mestre voa, gira e crava no chão               */
 /* ------------------------------------------------------------------ */
 
+static void boss_blade(Vector2 *butt, Vector2 *tip);
+
 static void start_disarm(void) {
     Rig *b = &G.boss, *r = &G.ren;
     FlySword *s = &G.sword;
     Vector2 h, t;
-    rig_sword_line(b, &h, &t);
+    boss_blade(&h, &t);
     s->active = true;
     s->stuck = false;
     s->len = sqrtf((t.x - h.x) * (t.x - h.x) + (t.y - h.y) * (t.y - h.y));
@@ -575,6 +686,13 @@ static void start_disarm(void) {
 
     rig_pose(b, POSE_DISARMED, 0.12f, EASE_OUT);
     rig_then(b, POSE_KNEEL, 0.9f, EASE_INOUT);
+    if (G.bossS.set) {
+        /* sem a arma, de joelhos (ou curvado, quem não cai) */
+        const SprAnim *d = fa(&G.bossS, "DESARMADO");
+        f_clear(&G.bossS, false);
+        if (d) f_add(&G.bossS, d, 0, d->frames - 1, 0.7f);
+        else fighter_idle(&G.bossS);
+    }
     b->breath = 0.4f;
     rig_pose(r, POSE_DEFLECT, 0.05f, EASE_OUT);
     G.renStepFrom = r->offsetX;
@@ -682,7 +800,21 @@ static void draw_sword(void) {
 /* Reação aos eventos do duelo                                         */
 /* ------------------------------------------------------------------ */
 
-static Vector2 clash_point(void) { return rig_sword_mid(&G.ren); }
+/* Onde as lâminas se encontram: a guarda de kojiro, na altura do golpe do mestre. */
+static Vector2 clash_point(void) {
+    if (!G.renS.set) return rig_sword_mid(&G.ren);
+    const SprAnim *a = G.bossS.strike;
+    float y = a && a->hasReach ? GROUND_LOW + a->reachY : GROUND_LOW - 22;
+    return (Vector2){G.ren.x + G.ren.offsetX + ren_guard_x(), y};
+}
+
+/* Empunhadura e ponta da arma do mestre (no sprite, uma estimativa pela altura). */
+static void boss_blade(Vector2 *butt, Vector2 *tip) {
+    if (!G.bossS.set) { rig_sword_line(&G.boss, butt, tip); return; }
+    float bx = G.boss.x + G.boss.offsetX, h = (float)G.bossS.set->height;
+    *butt = (Vector2){bx - 4, GROUND_LOW - h * 0.5f};
+    *tip = (Vector2){bx - 4 - fmaxf(10, G.boss.look.bladeLen * 0.9f), GROUND_LOW - h * 0.75f};
+}
 
 /* Tipo do golpe k da sequência: o primeiro é o da sequência; os seguintes alternam. */
 static MoveLook strike_look(void) {
@@ -699,6 +831,150 @@ static Pose windup_pose(MoveLook l) { return l == LOOK_LOW ? POSE_WINDUP_LOW : (
 static Pose rearm_pose(MoveLook l) { return l == LOOK_LOW ? POSE_REARM_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_REARM_HIGH); }
 static Pose contact_pose(MoveLook l) { return l == LOOK_LOW ? POSE_CONTACT_LOW : (l == LOOK_THRUST ? POSE_CONTACT_THRUST : POSE_CONTACT); }
 static Pose parry_pose(MoveLook l) { return l == LOOK_LOW ? POSE_PARRY_LOW : (l == LOOK_THRUST ? POSE_PARRY_THRUST : POSE_PARRY); }
+
+/* Golpe do mestre em pixel art. A preparação escolhe a prancha: alto desce
+ * (ATTACK_3), baixo sobe (ATTACK_2), estocada é o corte reto ou a investida.
+ * O último golpe das sequências longas é o especial; oboro ataca com o eco da
+ * postura em que está e, depois do grito, com a fúria. */
+static const SprAnim *boss_strike_anim(MoveLook look) {
+    const Fighter *f = &G.bossS;
+    const SprAnim *a = NULL;
+    char name[64];
+    if (G.special) {
+        a = f->furia ? fa(f, "STRONG_ATTACK_FURIA") : NULL;
+        if (!a) a = fa(f, "STRONG_ATTACK");
+        if (!a) a = fa(f, "ESPECIAL");
+        if (a) return a;
+    }
+    const Move *mv = duel_move(&G.duel);
+    if (mv && mv->strikes >= 3 && G.duel.comboStrike == mv->strikes - 1 && (a = fa(f, "ESPECIAL"))) return a;
+    if (look == LOOK_THRUST && (a = fa(f, "DASH_ATTACK"))) return a;
+    const char *base = look == LOOK_LOW ? "ATTACK_2" : (look == LOOK_THRUST ? "ATTACK_1" : "ATTACK_3");
+    if (G.m->isBigBoss) {
+        const char *stance = duel_stance(&G.duel)->name;
+        for (int i = 0; i < MASTER_COUNT && stance; i++) {
+            const MasterProfile *src = roster_get(i);
+            if (strcmp(src->style, stance)) continue;
+            snprintf(name, sizeof name, "%s_ECO_%s", base, src->name);
+            for (char *u = name; *u; u++)
+                if (*u >= 'a' && *u <= 'z') *u = (char)(*u - 32);
+            if ((a = fa(f, name))) return a;
+        }
+    }
+    if (f->furia) {
+        snprintf(name, sizeof name, "%s_FURIA", base);
+        if ((a = fa(f, name))) return a;
+    }
+    if ((a = fa(f, base))) return a;
+    return fa(f, "ATTACK_1");
+}
+
+/* Preparação: os quadros até o `hold` e ele parado ali até a lâmina partir,
+ * andando até a ponta da arma encontrar a guarda de kojiro no contato. */
+static void sprite_windup(void) {
+    Fighter *f = &G.bossS;
+    if (!f->set) return;
+    const SprAnim *a = boss_strike_anim(strike_look());
+    int hold = anim_hold(a);
+    f_clear(f, false);
+    f_add(f, a, 0, hold, fminf(G.windupLen, (hold + 1) * a->frameTime * 1.8f));
+    f->strike = a;
+    /* chega perto na preparação e dá o bote (o resto do passo) quando a lâmina parte */
+    float reach = a->hasReach ? (float)a->reachX : 36;
+    G.bossStrikeStep = clampf(REN_X + ren_guard_x() + reach - G.bossHome, -70, 16);
+    G.bossStepTo = G.bossStep + (G.bossStrikeStep - G.bossStep) * 0.4f;
+    G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.06f, G.windupLen * 0.8f);
+}
+
+/* A lâmina parte: os quadros entre o hold e o contato; o contato sai no impacto. */
+static void sprite_launch(void) {
+    Fighter *f = &G.bossS;
+    if (!f->set || !f->strike) return;
+    const SprAnim *a = f->strike;
+    int hold = anim_hold(a), c = anim_contact(a);
+    G.bossStepTo = G.bossStrikeStep;
+    G.bossStepSpeed = fabsf(G.bossStrikeStep - G.bossStep) / fmaxf(0.05f, G.settings.attackLead - 0.02f);
+    f_clear(f, false);
+    if (c - 1 > hold) f_add(f, a, hold + 1, c - 1, G.settings.attackLead);
+    else f_add(f, a, hold, hold, G.settings.attackLead);
+}
+
+/* O gesto de kojiro: a guarda (DEFEND) ou um corte rápido de encontro ao golpe. */
+static void sprite_press(void) {
+    Fighter *f = &G.renS;
+    if (!f->set) return;
+    const SprAnim *a = fa(f, "DEFEND");
+    f_clear(f, true);
+    if (a) {
+        int c = anim_contact(a);
+        f_add(f, a, 0, c, 0.05f);
+        f_add(f, a, c, c, 0.25f);
+        if (c + 1 < a->frames) f_add(f, a, c + 1, a->frames - 1, 0);
+    } else {
+        MoveLook l = G.duel.phase == PH_WINDUP ? strike_look() : LOOK_HIGH;
+        /* corte reto contra o alto e a estocada (termina de volta na guarda); para baixo contra o baixo */
+        a = fa(f, l == LOOK_LOW ? "ATTACK_3" : "ATTACK_1");
+        if (!a) a = fa(f, "ATTACK_1");
+        int h = anim_hold(a), c = anim_contact(a);
+        f_add(f, a, h, c, 0.06f);
+        if (c + 1 < a->frames) f_add(f, a, c + 1, a->frames - 1, (a->frames - 1 - c) * 0.07f);
+    }
+    f->strike = a;
+}
+
+/* Choque: os dois param no quadro de contato (o hitstop segura) e seguem. */
+static void sprite_impact(const DuelEvent *e) {
+    Fighter *b = &G.bossS, *r = &G.renS;
+    if (b->set) {
+        const SprAnim *a = b->strike ? b->strike : fa(b, "ATTACK_1");
+        const SprAnim *hurt = b->furia ? fa(b, "HURT_FURIA") : NULL;
+        if (!hurt) hurt = fa(b, "HURT");
+        int c = anim_contact(a);
+        f_clear(b, true);
+        f_add(b, a, c, c, 0.06f);
+        if (e->flag) {
+            /* postura quebrada: cambaleia e fica curvado até se recompor */
+            if (hurt) f_add(b, hurt, 0, hurt->frames - 1, 0);
+            else if (c + 1 < a->frames) f_add(b, a, c + 1, a->frames - 1, 0);
+            b->autoIdle = false;
+        } else if (e->judgement == J_PERFEITO && hurt) {
+            f_add(b, hurt, 0, hurt->frames - 1, 0);
+        } else if (c + 1 < a->frames) {
+            f_add(b, a, c + 1, a->frames - 1, 0);
+        }
+        b->strike = NULL;
+        G.bossStepTo = 0;
+        G.bossStepSpeed = 40;
+    }
+    if (r->set) {
+        if (e->judgement == J_PERFEITO || e->judgement == J_BOM) {
+            const SprAnim *a = r->strike ? r->strike : fa(r, "ATTACK_1");
+            int c = anim_contact(a);
+            f_clear(r, true);
+            f_add(r, a, c, c, 0.08f);
+            if (c + 1 < a->frames) f_add(r, a, c + 1, a->frames - 1, 0);
+        } else {
+            const SprAnim *hurt = fa(r, "HURT");
+            if (hurt) {
+                f_clear(r, true);
+                f_add(r, hurt, 0, hurt->frames - 1, 0);
+            } else {
+                fighter_idle(r);   /* o clarão vermelho e o recuo contam o golpe */
+            }
+        }
+        r->strike = NULL;
+    }
+}
+
+/* Kojiro cai: a DEATH do pack, ou agachado com a espada (Samurai #3). */
+static void sprite_fall(void) {
+    Fighter *r = &G.renS;
+    if (!r->set) return;
+    const SprAnim *d = fa(r, "DEATH");
+    f_clear(r, false);
+    if (d) f_add(r, d, 0, d->stop >= 0 ? d->stop : d->frames - 1, 0);
+    else if ((d = fa(r, "DASH_ATTACK"))) f_add(r, d, 0, 0, 0.1f);
+}
 
 static void on_impact(const DuelEvent *e) {
     Vector2 at = clash_point();
@@ -779,7 +1055,7 @@ static void on_impact(const DuelEvent *e) {
 static void tell_fx(void) {
     Rig *b = &G.boss;
     Vector2 butt, tip;
-    rig_sword_line(b, &butt, &tip);
+    boss_blade(&butt, &tip);
     Vector2 mid = {(butt.x + tip.x) / 2, (butt.y + tip.y) / 2};
     Vector2 feet = {b->x + b->offsetX - 9 * b->look.size, GROUND_LOW - 1};
     /* tom do gesto de cada mestre, na ordem da trilha */
@@ -799,6 +1075,20 @@ static void tell_fx(void) {
         default: fx_burst(&G.fx, P_DUST, mid, 18, 16, 3.14f, 0, (Color){150, 90, 200, 150}, (Color){90, 50, 130, 130}); break;
     }
     audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
+}
+
+/* A postura de kojiro quebra: ele cai e o painel de derrota aparece. */
+static void ren_falls(void) {
+    rig_pose(&G.ren, POSE_FALLEN, 0.7f, EASE_OUT);
+    sprite_fall();
+    G.ren.breath = 0;
+    G.slowmo = 0.4f;
+    G.slowmoTime = 0.9f;
+    fx_popup(&G.fx, "postura quebrada", (Vector2){160, 44}, 1.2f, VERMILION);
+    audio_play(SND_DEFEAT, 0.9f, 1);
+    G.defeatsHere++;
+    G.defeatIndex = 0;
+    set_state(ST_DEFEAT);
 }
 
 static void handle_events(void) {
@@ -822,6 +1112,7 @@ static void handle_events(void) {
                     tell_fx();
                 }
                 else rig_pose(b, rearm_pose(strike_look()), G.windupLen, EASE_OUT);
+                sprite_windup();
                 G.blackoutTarget = G.duel.blackout ? 1 : 0;
                 if (m->arena == ARENA_PORTO) { audio_play(SND_DRUM, 0.9f, 1); G.ctx.beat = 1; }
                 break;
@@ -843,6 +1134,7 @@ static void handle_events(void) {
                 /* O corte chega em POSE_CONTACT exatamente no instante do contato. */
                 rig_pose(b, contact_pose(strike_look()), G.settings.attackLead, EASE_IN);
                 b->trail = true;
+                sprite_launch();
                 audio_play(SND_SWING, 0.9f, 1);
                 break;
             case EV_CUE:
@@ -850,12 +1142,14 @@ static void handle_events(void) {
                 break;
             case EV_PRESS:
                 rig_pose(r, G.duel.phase == PH_WINDUP ? parry_pose(strike_look()) : POSE_PARRY, 0.06f, EASE_OUT);
+                sprite_press();
                 G.renParryTime = 0;
                 audio_play(SND_GESTURE, 0.8f, 1 + (rand() % 7) * 0.02f);
                 break;
             case EV_IMPACT:
-                G.special = false;
                 on_impact(e);
+                sprite_impact(e);
+                G.special = false;
                 G.renParryTime = -1;
                 G.blackoutTarget = 0;
                 break;
@@ -869,6 +1163,7 @@ static void handle_events(void) {
                 audio_play(SND_THUNDER, 0.8f, 1);
                 G.ctx.seal = e->i;
                 G.ctx.lightning = 1;
+                G.gritoPending = true;
                 audio_music_intensity(e->i / 2.0f);
                 break;
             }
@@ -882,15 +1177,7 @@ static void handle_events(void) {
                 if (e->flag) {
                     start_disarm();
                 } else {
-                    rig_pose(r, POSE_FALLEN, 0.7f, EASE_OUT);
-                    r->breath = 0;
-                    G.slowmo = 0.4f;
-                    G.slowmoTime = 0.9f;
-                    fx_popup(&G.fx, "postura quebrada", (Vector2){160, 44}, 1.2f, VERMILION);
-                    audio_play(SND_DEFEAT, 0.9f, 1);
-                    G.defeatsHere++;
-                    G.defeatIndex = 0;
-                    set_state(ST_DEFEAT);
+                    ren_falls();
                 }
                 break;
         }
@@ -905,7 +1192,8 @@ static void handle_events(void) {
 static void update_ghosts(float dt) {
     for (int i = 0; i < GHOST_MAX; i++) G.ghosts[i].life = fmaxf(0, G.ghosts[i].life - dt * 4);
     Rig *src = G.boss.trail ? &G.boss : ((G.ren.trail || (G.renParryTime >= 0 && G.renParryTime < 0.12f)) ? &G.ren : NULL);
-    if (!src) return;
+    /* nas pranchas o rastro do golpe já vem desenhado */
+    if (!src || (src == &G.boss && G.bossS.set) || (src == &G.ren && G.renS.set)) return;
     G.ghostTimer -= dt;
     if (G.ghostTimer > 0) return;
     G.ghostTimer = 0.03f;
@@ -916,8 +1204,22 @@ static void update_ghosts(float dt) {
     G.ghosts[G.ghostHead].color = (G.ghostHead % 2) ? (Color){80, 220, 255, 255} : (Color){255, 70, 200, 255};
 }
 
+/* Pranchas e o passo do mestre até o alcance do golpe (e de volta ao lugar). */
+static void fighters_update(float dt) {
+    f_update(&G.renS, dt);
+    f_update(&G.bossS, dt);
+    if (!G.bossS.set) return;
+    if (G.bossS.idle && !G.bossWinding) {
+        G.bossStepTo = 0;
+        G.bossStepSpeed = fmaxf(G.bossStepSpeed, 30);
+    }
+    float d = G.bossStepTo - G.bossStep, mv = G.bossStepSpeed * dt;
+    G.bossStep = fabsf(d) <= mv ? G.bossStepTo : G.bossStep + (d > 0 ? mv : -mv);
+}
+
 static void update_actors(float dt) {
     Rig *b = &G.boss, *r = &G.ren;
+    fighters_update(dt);
     rig_update(r, dt);
     rig_update(b, dt);
     /* Gesto sem golpe: Ren volta à guarda sozinho. */
@@ -943,6 +1245,16 @@ static void update_actors(float dt) {
         if (G.state == ST_DUEL && G.staggerTime > 1.3f) {
             rig_pose(b, POSE_IDLE, 0.5f, EASE_INOUT);
             G.staggerTime = 0;
+            const SprAnim *grito = fa(&G.bossS, "GRITO");
+            if (G.gritoPending && grito) {
+                /* oboro grita e volta em fúria */
+                G.bossS.furia = true;
+                f_clear(&G.bossS, true);
+                f_add(&G.bossS, grito, 0, grito->frames - 1, 0);
+            } else {
+                fighter_idle(&G.bossS);
+            }
+            G.gritoPending = false;
         }
     }
     if (G.hopTime > 0) {
@@ -960,7 +1272,7 @@ static void update_actors(float dt) {
     G.renKnock *= expf(-dt * 9);
     G.bossKnock *= expf(-dt * 7);
     r->offsetX = -G.renKnock;
-    b->offsetX = G.bossKnock;
+    b->offsetX = G.bossKnock + (G.bossS.set ? G.bossStep : 0);
 }
 
 static void update_ctx(float dt) {
@@ -990,7 +1302,8 @@ static void update_duel(float dtReal) {
     float dt = dtReal * G.slowmo;
     if (G.slowmoTime > 0) { G.slowmoTime -= dtReal; if (G.slowmoTime <= 0) G.slowmo = 1; }
     bool press = pressed();
-    if (G.demo && G.duel.phase == PH_WINDUP && !G.duel.attempted && G.duel.strikeAt - G.duel.clock <= 0.03) press = true;
+    /* o robô aperta no meio do quadro (ver abaixo), logo antes do contato */
+    if (G.demo && G.duel.phase == PH_WINDUP && !G.duel.attempted && G.duel.strikeAt - G.duel.clock <= dt * 0.5 + 0.04) press = true;
 
     /* Hitstop congela o duelo e as poses. */
     if (G.hitstop > 0) {
@@ -1017,12 +1330,22 @@ static void update_finisher(float dt) {
     /* O mestre perde a espada: ela voa, gira e crava; ele cai de joelhos e Ren aponta a lâmina. */
     float t = G.stateTime;
     Rig *r = &G.ren, *b = &G.boss;
-    if (t > 0.45f && r->to.sword != POSE_POINT.sword) rig_pose(r, POSE_POINT, 0.6f, EASE_INOUT);
+    if (t > 0.45f && r->to.sword != POSE_POINT.sword) {
+        rig_pose(r, POSE_POINT, 0.6f, EASE_INOUT);
+        /* kojiro avança e para com a lâmina baixa, apontada para o mestre */
+        const SprAnim *dash = fa(&G.renS, "DASH");
+        if (dash) {
+            f_clear(&G.renS, false);
+            f_add(&G.renS, dash, 0, dash->frames - 1, 0.6f);
+        }
+    }
     r->offsetX = G.renStepFrom + (14 - G.renStepFrom) * smooth((t - 0.45f) / 0.6f);
     G.bossKnock *= expf(-dt * 3);
-    b->offsetX = G.bossKnock;
+    b->offsetX = G.bossKnock + (G.bossS.set ? G.bossStep : 0);
     rig_update(r, dt);
     rig_update(b, dt);
+    f_update(&G.renS, dt);
+    f_update(&G.bossS, dt);
     update_sword(dt);
     if (G.sword.stuck && G.sword.stuckTime > 1.1f) start_lines(G.m->outro, G.m->outroCount, ST_OUTRO);
 }
@@ -1067,6 +1390,38 @@ static void draw_fighter(const Rig *r, Color light, Color rim, bool dark) {
     rig_draw(r, light);
 }
 
+/* O mesmo contorno escuro e o filete de luz dos bonecos, em volta do sprite. */
+static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Color rim, bool dark) {
+    const SprAnim *a = f->pl.anim;
+    if (!a) return;
+    int frame = f->pl.frame;
+    Vector2 feet = {r->x + r->offsetX, r->y - r->hopY};
+    int breath = 0;
+    if (f->idle && !a->loop) {
+        /* quem não tem prancha parada respira: o tronco desce 1 px, mais rápido cansado */
+        float period = 1.8f - 0.8f * r->fatigue;
+        breath = fmodf(r->time, period) > period * 0.5f ? 1 : 0;
+    }
+    SprDraw o = {r->faceLeft, breath, true, (Color){16, 12, 18, 255}};
+    static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (int k = 0; k < 4; k++) spr_draw(f->set, a, frame, (Vector2){feet.x + off[k][0], feet.y + off[k][1]}, o);
+    if (dark) {
+        o.color = (Color){24, 20, 36, 255};
+        spr_draw(f->set, a, frame, feet, o);
+        return;
+    }
+    o.color = rim;
+    spr_draw(f->set, a, frame, (Vector2){feet.x + (r->faceLeft ? 1 : -1), feet.y - 1}, o);
+    o.flat = false;
+    o.color = light;
+    spr_draw(f->set, a, frame, feet, o);
+    if (r->flash > 0) {
+        o.flat = true;
+        o.color = fadec(r->flashColor, fminf(1, r->flash) * 0.6f);
+        spr_draw(f->set, a, frame, feet, o);
+    }
+}
+
 static void draw_rigs(Color light) {
     BeginTextureMode(G.actors);
     ClearBackground(BLANK);
@@ -1081,12 +1436,15 @@ static void draw_rigs(Color light) {
         c.a = (unsigned char)(150 * G.ghosts[i].life);
         rig_draw_flat(&G.ghosts[i].rig, c);
     }
-    draw_fighter(&G.boss, light, rim, dark);
-    draw_fighter(&G.ren, light, rim, false);
+    if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
+    else draw_fighter(&G.boss, light, rim, dark);
+    if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, false);
+    else draw_fighter(&G.ren, light, rim, false);
     draw_pole_flying();
     if (G.crack > 0) {
         /* Rachadura branca atravessando o mestre de cima a baixo. */
         float x = G.boss.x + G.boss.offsetX, top = GROUND_LOW - 56 * G.boss.look.size;
+        if (G.bossS.set) top = GROUND_LOW - G.bossS.set->height - 4;
         Vector2 prev = {x - 4, top};
         for (int k = 1; k <= 7; k++) {
             Vector2 p = {x + ((k % 2) ? 4.0f : -4.0f) + (k * 7 % 3) - 1, top + k * (GROUND_LOW - 4 - top) / 7};
@@ -1101,17 +1459,19 @@ static void draw_rigs(Color light) {
         /* Quem olha para a direita segura com meia volta: fio para baixo, ponta subindo. */
         KatanaStyle bs = katana_style(&G.boss.look), rs = katana_style(&G.ren.look);
         Color bossLight = dark ? (Color){40, 34, 54, 255} : light;
-        if (!G.boss.noSword && G.boss.look.weapon == WEAPON_KATANA) {
+        if (!G.boss.noSword && G.boss.look.weapon == WEAPON_KATANA && !G.bossS.set) {
             rig_sword_line(&G.boss, &butt, &tip);
             katana3d_draw(butt, tip, G.boss.faceLeft ? 0 : 180, &bs, bossLight);
         }
-        if (rig_offhand_line(&G.boss, &butt, &tip)) {
+        if (!G.bossS.set && rig_offhand_line(&G.boss, &butt, &tip)) {
             KatanaStyle os = bs;
             os.width *= 0.9f;
             katana3d_draw(butt, tip, G.boss.faceLeft ? 0 : 180, &os, bossLight);
         }
-        rig_sword_line(&G.ren, &butt, &tip);
-        katana3d_draw(butt, tip, G.ren.faceLeft ? 0 : 180, &rs, light);
+        if (!G.renS.set) {
+            rig_sword_line(&G.ren, &butt, &tip);
+            katana3d_draw(butt, tip, G.ren.faceLeft ? 0 : 180, &rs, light);
+        }
         draw_sword_3d(light);
         katana3d_end();
     } else {
@@ -1161,11 +1521,11 @@ static void draw_arena(void) {
     EndTextureMode();
 }
 
-/* As ilustrações sobem 18 px para o chão ficar acima da faixa de texto. */
-static void draw_illustration(void (*fn)(int, float), int page, float t) {
+/* As ilustrações sobem `lift` px para o chão ficar acima da caixa de texto de baixo. */
+static void draw_illustration(void (*fn)(int, float), int page, float t, float lift) {
     BeginTextureMode(G.scene);
     ClearBackground((Color){20, 16, 14, 255});
-    begin_world((Vector2){0, -18});
+    begin_world((Vector2){0, -lift});
     fn(page, t);
     EndMode2D();
     EndTextureMode();
@@ -1200,8 +1560,8 @@ static void draw_world(void) {
             EndMode2D();
             EndTextureMode();
             break;
-        case ST_ENDING: draw_illustration(ending_scene, 0, G.stateTime); break;
-        case ST_SENSEI: draw_illustration(lore_draw_scene, 0, G.time); break;
+        case ST_ENDING: draw_illustration(ending_scene, 0, G.stateTime, 0); break;   /* texto em cima */
+        case ST_SENSEI: draw_illustration(lore_draw_scene, 0, G.time, 18); break;
         case ST_TRAIL:
             BeginTextureMode(G.scene);
             ClearBackground(BLACK);
@@ -1257,7 +1617,7 @@ static void ui_hud(void) {
               pressure ? (Color){150, 40, 30, 255} : (Color){78, 62, 104, 255}, pressure ? (Color){200, 80, 50, 255} : (Color){134, 108, 160, 255});
     Rectangle bot = {UI_W / 2 - 230, UI_H - 92, 460, 76};
     bool low = G.shownRen <= G.settings.renPosture * 0.25f;
-    ui_status(bot, "musashi", NULL, 0, 0, G.shownRen, G.ghostRen, G.settings.renPosture,
+    ui_status(bot, "kojiro", NULL, 0, 0, G.shownRen, G.ghostRen, G.settings.renPosture,
               low ? (Color){150, 40, 30, 255} : (Color){170, 76, 30, 255}, low ? (Color){210, 70, 50, 255} : (Color){226, 142, 60, 255});
 
     if (G.bannerTime > 0) {
@@ -1271,12 +1631,15 @@ static void ui_hud(void) {
     }
 }
 
-static void ui_dialogue(const char *header) {
-    ui_text(lower(header), 48, 30, 24, (Color){230, 216, 190, 220});
+/* Falas. No cenário do duelo a caixa fica em cima, para os lutadores aparecerem
+ * inteiros; nas ilustrações (hanzo), embaixo. */
+static void ui_dialogue(const char *header, bool top) {
+    if (top) ui_text(lower(header), UI_W - 48 - ui_width(lower(header), 24), UI_H - 64, 24, (Color){230, 216, 190, 220});
+    else ui_text(lower(header), 48, 30, 24, (Color){230, 216, 190, 220});
     if (G.lineIndex >= G.lineCount) return;
     const Line *l = &G.lines[G.lineIndex];
-    bool ren = strcmp(l->speaker, "musashi") == 0;
-    Rectangle r = {80, 512, UI_W - 160, 180};
+    bool ren = strcmp(l->speaker, "kojiro") == 0;
+    Rectangle r = top ? (Rectangle){80, 76, UI_W - 160, 168} : (Rectangle){80, 512, UI_W - 160, 180};
     parchment(r, 1);
     scroll_rods(r, 1);
     /* Caixa do nome separada, como no RPG Maker. */
@@ -1294,8 +1657,8 @@ static void ui_dialogue(const char *header) {
     }
 }
 
-static void ui_text_band(const char *textStr, int visible) {
-    Rectangle r = {80, 492, UI_W - 160, 208};
+static void ui_text_band(const char *textStr, int visible, float y) {
+    Rectangle r = {80, y, UI_W - 160, 208};
     parchment(r, 1);
     scroll_rods(r, 1);
     ink_wrapped(textStr, r.x + 36, r.y + 24, r.width - 72, 26, INK_TEXT, visible);
@@ -1446,7 +1809,7 @@ static void ui_cleared(void) {
 
 static const char *ENDING_TEXT =
     "Oboro caiu de joelhos, sem a katana de Hanzo. Pela primeira vez entendeu que aquela abertura não fora a derrota "
-    "do mestre, e sim a última lição, a que ele se recusou a aprender. Musashi subiu a serra e devolveu a katana a "
+    "do mestre, e sim a última lição, a que ele se recusou a aprender. Kojiro subiu a serra e devolveu a katana a "
     "Hanzo. O velho a recebeu sem dizer nada. Não precisava.";
 
 static void ui_pause(void) {
@@ -1480,18 +1843,19 @@ static void draw_ui(void) {
             DrawRectangleGradientV(0, 0, UI_W, UI_H, fadec(INK, 0.2f), fadec(INK, 0.6f));
             char head[96];
             snprintf(head, sizeof head, "hanzo fala sobre %s", G.m->name);
-            ui_dialogue(head);
+            ui_dialogue(head, false);
             break;
         }
         case ST_ENDING:
-            ui_text_band(ENDING_TEXT, utf8_visible(ENDING_TEXT, G.typeChars));
-            if (G.typeChars > strlen(ENDING_TEXT)) ui_center("fim", UI_W / 2.0f, 40, 72, OCHRE);
+            /* o texto fica no céu e os dois, no chão da serra */
+            ui_text_band(ENDING_TEXT, utf8_visible(ENDING_TEXT, G.typeChars), 40);
+            if (G.typeChars > strlen(ENDING_TEXT)) ui_center("fim", UI_W / 2.0f, 272, 72, OCHRE);
             break;
         default:
             if (G.state == ST_DUEL || G.state == ST_DEFEAT || G.state == ST_FINISHER) ui_hud();
             fx_draw_popups(&G.fx, G.ui, UNIT);
             ui_slash();
-            if (G.state == ST_INTRO || G.state == ST_OUTRO) ui_dialogue(G.m->venue);
+            if (G.state == ST_INTRO || G.state == ST_OUTRO) ui_dialogue(G.m->venue, true);
             if (G.state == ST_DEFEAT) ui_defeat();
             if (G.state == ST_CLEARED) ui_cleared();
             break;
@@ -1565,7 +1929,7 @@ static void update_lines(float dt, void (*done)(void)) {
     int len = (int)strlen(l->text);
     float before = G.typeChars;
     G.typeChars += dt * 50;
-    if ((int)G.typeChars / 3 != (int)before / 3 && G.typeChars < len) audio_play(SND_TYPE, 0.5f, strcmp(l->speaker, "musashi") ? 0.8f : 1.1f);
+    if ((int)G.typeChars / 3 != (int)before / 3 && G.typeChars < len) audio_play(SND_TYPE, 0.5f, strcmp(l->speaker, "kojiro") ? 0.8f : 1.1f);
     if (!pressed() || G.stateTime < 0.25f) return;
     if (G.typeChars < len) { G.typeChars = (float)len; return; }
     audio_play(SND_UI, 0.8f, 1);
@@ -1627,6 +1991,8 @@ static void update_defeat(float dt) {
 static void update_cleared(float dt) {
     rig_update(&G.ren, dt);
     rig_update(&G.boss, dt);
+    f_update(&G.renS, dt);
+    f_update(&G.bossS, dt);
     update_sword(dt);
     if (G.stateTime > 1.0f && pressed()) {
         campaign_advance(&G.camp);
@@ -1661,6 +2027,11 @@ static void parse_args(int argc, char **argv, int *startMaster, bool *direct, co
         else if (!strcmp(argv[i], "--demo")) G.demo = true;
         else if (!strcmp(argv[i], "--state") && i + 1 < argc) *startState = argv[++i];
         else if (!strcmp(argv[i], "--shot") && i + 2 < argc) { G.shotFile = argv[++i]; G.shotTime = (float)atof(argv[++i]); }
+        else if (!strcmp(argv[i], "--rec") && i + 3 < argc) {
+            G.recDir = argv[++i];
+            G.recStart = (float)atof(argv[++i]);
+            G.recEnd = (float)atof(argv[++i]);
+        }
     }
 }
 
@@ -1686,6 +2057,8 @@ static void step(float dtReal) {
             update_lines(dtReal, outro_done);
             rig_update(&G.ren, dtReal);
             rig_update(&G.boss, dtReal);
+            f_update(&G.renS, dtReal);
+            f_update(&G.bossS, dtReal);
             update_sword(dtReal);
             break;
         case ST_CLEARED: update_cleared(dtReal); break;
@@ -1747,6 +2120,7 @@ int main(int argc, char **argv) {
     G.locDesat = GetShaderLocation(G.post, "desat");
     G.locDuo = GetShaderLocation(G.post, "duo");
     katana3d_load("assets/katana");
+    spr_init();
     G.ui = load_font("assets/fonts/Tiny5-Regular.ttf", 9);  /* 9 = "em" de 8 px, a grade da Tiny5 */
     G.uiBold = G.ui;
     audio_init();
@@ -1765,7 +2139,8 @@ int main(int argc, char **argv) {
         else if (direct) {
             start_duel();
             if (startState && !strcmp(startState, "pause")) G.paused = true;
-            else if (startState && !strcmp(startState, "defeat")) set_state(ST_DEFEAT);
+            else if (startState && !strcmp(startState, "defeat")) ren_falls();
+            else if (startState && !strcmp(startState, "finisher")) start_disarm();
             else if (startState && !strcmp(startState, "cleared")) set_state(ST_CLEARED);
         } else start_lines(G.m->intro, G.m->introCount, ST_INTRO);
     } else if (startState && !strcmp(startState, "lore")) {
@@ -1784,14 +2159,14 @@ int main(int argc, char **argv) {
 
     double wall = 0;
     while (!WindowShouldClose()) {
-        float dtReal = GetFrameTime();
+        float dtReal = G.recDir ? 1.0f / 30 : GetFrameTime();
         wall += dtReal;
         /* Travamento longo: pausa em vez de engolir o golpe. */
         if (dtReal > 0.2f) {
             dtReal = 0;
-            if (G.state == ST_DUEL && !G.shotFile) G.paused = true;
+            if (G.state == ST_DUEL && !G.shotFile && !G.recDir) G.paused = true;
         }
-        if (!IsWindowFocused() && G.state == ST_DUEL && !G.shotFile) G.paused = true;
+        if (!IsWindowFocused() && G.state == ST_DUEL && !G.shotFile && !G.recDir) G.paused = true;
         if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
         if (IsKeyPressed(KEY_F)) G.fx.shakeEnabled = !G.fx.shakeEnabled;
         if (IsKeyPressed(KEY_ESCAPE) && in_arena_state()) G.paused = !G.paused;
@@ -1854,6 +2229,16 @@ int main(int argc, char **argv) {
         DrawTexturePro(G.uiLow.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, dst, (Vector2){0, 0}, 0, WHITE);
         EndBlendMode();
 
+        if (G.recDir && wall >= G.recStart) {
+            char path[512];
+            snprintf(path, sizeof path, "%s/q%04d.png", G.recDir, G.recFrame++);
+            Image img = LoadImageFromScreen();
+            ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+            ImageResize(&img, UI_W / 2, UI_H / 2);
+            ExportImage(img, path);
+            UnloadImage(img);
+            if (wall >= G.recEnd) { EndDrawing(); break; }
+        }
         if (G.shotFile && wall >= G.shotTime) {
             Image img = LoadImageFromScreen();
             ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
@@ -1873,6 +2258,7 @@ int main(int argc, char **argv) {
     UnloadRenderTexture(G.actors);
     if (G.ui.texture.id != GetFontDefault().texture.id) UnloadFont(G.ui);
     UnloadRenderTexture(G.uiLow);
+    spr_shutdown();
     CloseWindow();
     return 0;
 }

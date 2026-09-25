@@ -24,7 +24,8 @@
  *          direita). Na primeira vez é copiada de assets/sprites/musashi/ (onde
  *          fica o pack original); o protagonista gerado sai em kojiro/.
  * Saída:   assets/sprites/<personagem>/<ANIM>.png e sprite.txt (com o alcance
- *          do golpe), e assets/sprites/_folhas/ com as folhas.
+ *          do golpe), mais ESPECIAL.png e DESARMADO.png (sem a arma, para o
+ *          desarme no jogo), e assets/sprites/_folhas/ com as folhas.
  * Detalhes e o elenco em docs/PERSONAGENS.md.
  */
 #include <math.h>
@@ -2636,6 +2637,54 @@ static void no_weapon(Canvas *cv, const Char *ch) {
                 else erase_px(cv, x, y);
             }
         }
+    /* no espadão (arma do próprio pack) a face larga da lâmina ficou como "outro":
+       some o que for "outro" e encostar na lâmina */
+    static short stack[CW * CH][2];
+    static bool seen[CH][CW];
+    memset(seen, 0, sizeof seen);
+    int sp = 0;
+    if (ch->pack && ch->pack_arma)
+        for (int y = 0; y < CH; y++)
+            for (int x = 0; x < CW; x++)
+                if (s->lab[y][x] == BLADE || s->lab[y][x] == SMEAR) { seen[y][x] = true; stack[sp][0] = (short)x; stack[sp++][1] = (short)y; }
+    while (sp > 0) {
+        int x = stack[--sp][0], y = stack[sp][1];
+        for (int i = 0; i < 4; i++) {
+            int nx = x + d[i][0], ny = y + d[i][1];
+            if (!cv_ok(nx, ny) || seen[ny][nx] || s->lab[ny][nx] != OTHER) continue;
+            seen[ny][nx] = true;
+            erase_px(cv, nx, ny);
+            stack[sp][0] = (short)nx;
+            stack[sp++][1] = (short)ny;
+        }
+    }
+    /* e os restos soltos da lâmina (até 4 pixels longe do corpo) */
+    memset(seen, 0, sizeof seen);
+    static short comp[CW * CH][2];
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            if (seen[y][x] || !cv->a[y][x].a) continue;
+            int n = 0;
+            sp = 0;
+            seen[y][x] = true;
+            stack[sp][0] = (short)x;
+            stack[sp++][1] = (short)y;
+            while (sp > 0) {
+                int cx = stack[--sp][0], cy = stack[sp][1];
+                comp[n][0] = (short)cx;
+                comp[n++][1] = (short)cy;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++) {
+                        int nx = cx + dx, ny = cy + dy;
+                        if (!cv_ok(nx, ny) || seen[ny][nx] || !cv->a[ny][nx].a) continue;
+                        seen[ny][nx] = true;
+                        stack[sp][0] = (short)nx;
+                        stack[sp++][1] = (short)ny;
+                    }
+            }
+            if (n <= 4)
+                for (int i = 0; i < n; i++) erase_px(cv, comp[i][0], comp[i][1]);
+        }
 }
 
 /* Tempo de cada quadro dos golpes: leves rápidos, pesados lentos. */
@@ -3345,6 +3394,12 @@ typedef struct {
     Manifest man;
 } Source;
 
+static const Strip *source_strip(const Source *sc, const char *name) {
+    for (int i = 0; i < sc->ns; i++)
+        if (!strcmp(sc->strips[i].name, name)) return &sc->strips[i];
+    return NULL;
+}
+
 static Source *SOURCES[MAX_PACKS + 1];
 static int NSOURCES;
 
@@ -3706,6 +3761,47 @@ int main(int argc, char **argv) {
                 fprintf(mf, "\n");
             }
             nr++;
+        }
+
+        /* Sem arma: DESARMADO é quem perdeu a arma no duelo (de joelhos pela DEATH do
+           pack; no Samurai #3, agachado no começo do DASH_ATTACK; no Oboro, que não cai,
+           curvado pelo HURT). Quem não luta e não tem IDLE (Hanzo) ganha o PARADO. */
+        if (nr < MAX_REND) {
+            const Strip *ss = NULL;
+            int f0 = 0, f1 = -1;
+            const char *out = ch->sem_arma ? "PARADO" : "DESARMADO";
+            if (ch->sem_arma) {
+                if (!source_strip(sc, "IDLE") && (ss = source_strip(sc, "DASH"))) f0 = f1 = ss->nframes - 1;
+            } else if ((ss = source_strip(sc, "DEATH"))) {
+                f1 = ss->nframes * 2 / 5;          /* o quadro em que chega aos joelhos */
+            } else if ((ss = source_strip(sc, "DASH_ATTACK"))) {
+                f0 = f1 = ss->nframes > 1 ? 1 : 0;
+            } else if ((ss = source_strip(sc, "HURT"))) {
+                f0 = ss->nframes > 1 ? 1 : 0;       /* o primeiro é o clarão do golpe */
+                f1 = ss->nframes - 1;
+            }
+            if (ss && f1 >= f0) {
+                Char tmp = *ch;
+                tmp.sem_arma = true;
+                Rendered *r = &rend[si][nr];
+                r->name = out;
+                r->n = f1 - f0 + 1;
+                r->frames = calloc((size_t)r->n, sizeof(Frame));
+                const AnimInfo *info = find_anim(&sc->man, ss->name);
+                for (int j = f0; j <= f1; j++) {
+                    Ctx cx = make_ctx(ss->name, j, ss->nframes, info, -1);
+                    render(&ss->frames[j], &ss->segs[j], &tmp, &cx, &cv);
+                    memcpy(r->frames[j - f0].p, cv.a, sizeof cv.a);
+                }
+                snprintf(fn, sizeof fn, "%s.png", out);
+                path_join(p, d, fn);
+                save_strip(p, r->frames, r->n, sc->cw, sc->ch);
+                if (mf) {
+                    if (r->n > 1) fprintf(mf, "anim %-13s  stop %d\n", out, r->n - 1);
+                    else fprintf(mf, "anim %s\n", out);
+                }
+                nr++;
+            }
         }
 
         /* Oboro: cada ataque em cada uma das onze posturas, e a cena do grito */

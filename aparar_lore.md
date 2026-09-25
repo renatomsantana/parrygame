@@ -32,11 +32,11 @@ Dominou todas.
 
 Mas jamais encontrou a resposta que procurava.
 
-Anos depois, Hanzo encontra um jovem chamado Musashi.
+Anos depois, Hanzo encontra um jovem chamado Kojiro.
 
 Pela primeira vez, ele acredita ter encontrado alguém capaz de compreender a Arte do Aparar.
 
-Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
+Kojiro inicia então sua jornada pela Trilha dos 12 Aprendizes.
 
 ---
 
@@ -48,7 +48,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Firme e tradicional
 - **Visão sobre Oboro:** Aceitou sua liderança apenas pela tradição
 - **Visão sobre Hanzo:** Continua sendo seu verdadeiro mestre
-- **Visão sobre Musashi:** Só vai respeitar se ele provar seu valor
+- **Visão sobre Kojiro:** Só vai respeitar se ele provar seu valor
 
 ### 2. Genbu | Postura da Tartaruga
 
@@ -56,7 +56,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Paciente e sábio
 - **Visão sobre Oboro:** Sente pena dele
 - **Visão sobre Hanzo:** Acredita que Hanzo tentou ajudá-lo até o fim
-- **Visão sobre Musashi:** Torce secretamente por ele
+- **Visão sobre Kojiro:** Torce secretamente por ele
 
 ### 3. Raizo | Postura do Touro
 
@@ -64,7 +64,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Honrado, direto e obstinado
 - **Visão sobre Oboro:** Acredita que Oboro conquistou tudo o que possui
 - **Visão sobre Hanzo:** Respeita Hanzo, mas acredita que ele exigia demais de Oboro
-- **Visão sobre Musashi:** Acha que será derrotado rapidamente
+- **Visão sobre Kojiro:** Acha que será derrotado rapidamente
 
 ### 4. Shizuku | Postura da Água
 
@@ -72,7 +72,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Serena e analítica
 - **Visão sobre Oboro:** Acredita que ele mudou após assumir o dojo
 - **Visão sobre Hanzo:** Nunca conseguiu entender completamente o mestre
-- **Visão sobre Musashi:** Curiosa para ver até onde ele chegará
+- **Visão sobre Kojiro:** Curiosa para ver até onde ele chegará
 
 ### 5. Garfiel | Postura do Tigre
 
@@ -80,7 +80,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Feroz, leal e barulhento; o tigre branco que guarda o portão do oeste
 - **Visão sobre Oboro:** Segue a tradição que deu o dojo a ele, mas não confia em quem não sangra junto
 - **Visão sobre Hanzo:** Deve a ele o portão que guarda
-- **Visão sobre Musashi:** Respeita quem cai e levanta
+- **Visão sobre Kojiro:** Respeita quem cai e levanta
 
 ### 6. Karasu | Postura do Corvo
 
@@ -88,7 +88,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Sarcástico e oportunista
 - **Visão sobre Oboro:** Segue-o apenas porque venceu
 - **Visão sobre Hanzo:** Nunca confiou totalmente nele
-- **Visão sobre Musashi:** Não acredita que ele chegará ao fim
+- **Visão sobre Kojiro:** Não acredita que ele chegará ao fim
 
 ### 7. Hayate | Postura do Vento
 
@@ -96,7 +96,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Impulsivo e competitivo
 - **Visão sobre Oboro:** Sempre o admirou
 - **Visão sobre Hanzo:** Acredita que Hanzo foi injusto
-- **Visão sobre Musashi:** Quer testar sua força
+- **Visão sobre Kojiro:** Quer testar sua força
 
 ### 8. Enjin | Postura da Chama
 
@@ -104,7 +104,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Explosivo e agressivo
 - **Visão sobre Oboro:** Odeia o homem que ele se tornou
 - **Visão sobre Hanzo:** Acredita que ele deveria ter impedido Oboro
-- **Visão sobre Musashi:** Deseja que ele o derrube
+- **Visão sobre Kojiro:** Deseja que ele o derrube
 
 ### 9. Suiren | Postura do Mar
 
@@ -112,7 +112,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Leal e gentil
 - **Visão sobre Oboro:** Era seu melhor amigo
 - **Visão sobre Hanzo:** Respeita profundamente
-- **Visão sobre Musashi:** Vê semelhanças com o antigo Oboro
+- **Visão sobre Kojiro:** Vê semelhanças com o antigo Oboro
 
 ### 10. Arashi | Postura da Tempestade
 
@@ -120,7 +120,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Arrogante e orgulhoso
 - **Visão sobre Oboro:** Ainda o considera o maior espadachim vivo
 - **Visão sobre Hanzo:** Acredita que envelheceu e foi superado
-- **Visão sobre Musashi:** Subestima completamente
+- **Visão sobre Kojiro:** Subestima completamente
 
 ### 11. Yoru | Postura da Noite
 
@@ -128,7 +128,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Desconfiado e silencioso
 - **Visão sobre Oboro:** Suspeita que existe algo oculto sobre a vitória contra Hanzo
 - **Visão sobre Hanzo:** Acredita que ele escondia algo de todos
-- **Visão sobre Musashi:** Enxerga potencial
+- **Visão sobre Kojiro:** Enxerga potencial
 
 ### 12. Jinshi | Postura da Montanha
 
@@ -136,7 +136,7 @@ Musashi inicia então sua jornada pela Trilha dos 12 Aprendizes.
 - **Personalidade:** Reservado e reflexivo
 - **Visão sobre Oboro:** Nunca o perdoou
 - **Visão sobre Hanzo:** Acredita que ele falhou como mestre
-- **Visão sobre Musashi:** Talvez seja a última chance do dojo
+- **Visão sobre Kojiro:** Talvez seja a última chance do dojo
 
 ---
 
@@ -163,19 +163,19 @@ O jogador inicialmente acredita que Oboro é o homem que dominou a Arte do Apara
 
 **O verdadeiro plot twist é que ele jamais a compreendeu.**
 
-Seu ódio por Musashi nasce da crença de que Hanzo viu nele algo que nunca enxergou em Oboro.
+Seu ódio por Kojiro nasce da crença de que Hanzo viu nele algo que nunca enxergou em Oboro.
 
-Para Oboro, Musashi recebeu gratuitamente aquilo pelo qual ele sacrificou a própria vida.
+Para Oboro, Kojiro recebeu gratuitamente aquilo pelo qual ele sacrificou a própria vida.
 
 ---
 
 ## Em aberto
 
-- Postura e arma de Musashi (a katana de Hanzo está com Oboro)
+- Postura e arma de Kojiro (a katana de Hanzo está com Oboro)
 - Postura de Hanzo
 - Pares de posturas parecidas: Terra (Daichi) e Montanha (Jinshi), Água (Shizuku) e Mar (Suiren)
 - Nome do Enjin (em japonês soa como "engine", motor)
 - Motivo de Jinshi nunca ter perdoado Oboro
-- Qual semelhança Suiren vê entre Musashi e o jovem Oboro
+- Qual semelhança Suiren vê entre Kojiro e o jovem Oboro
 - Qual fragmento da história cada aprendiz revela
 - Final: o que acontece com Oboro, Hanzo e o dojo depois da luta

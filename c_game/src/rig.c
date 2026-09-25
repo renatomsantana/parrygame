@@ -332,7 +332,7 @@ static Color lighter(Color c, float k) {
     return (Color){(unsigned char)fminf(255, c.r * k + 12), (unsigned char)fminf(255, c.g * k + 12), (unsigned char)fminf(255, c.b * k + 12), c.a};
 }
 
-/* Cabelo de musashi: volume até o ombro atrás, mecha atrás da orelha e franja cheia na testa. */
+/* Cabelo de kojiro: volume até o ombro atrás, mecha atrás da orelha e franja cheia na testa. */
 static void draw_shoulder_hair(const Paint *pt, Vector2 h, float s, Color hair) {
     limb(pt, add(h, v2(-2.6f * s, -1.0f * s)), add(h, v2(-3.2f * s, 4.2f * s)), 4.2f * s, hair);
     limb(pt, add(h, v2(-1.2f * s, -0.4f * s)), add(h, v2(-1.5f * s, 3.4f * s)), 1.4f * s, hair);

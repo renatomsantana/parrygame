@@ -9,9 +9,17 @@ todos código daqui. História em `../aparar_lore.md`; direção de arte em
 
 ```sh
 brew install raylib   # uma vez
+make sprites          # gera os lutadores em pixel art (precisa dos packs, abaixo)
 make run              # compila e abre o jogo
 make test             # regras do núcleo, sem janela
 ```
+
+Os lutadores são sprites gerados por `tools/personagens.c` a partir de packs
+pagos da Mattz Art, que não vão para o git (o repositório é público). Para ter
+os sprites no jogo, coloque as tiras PNG do Samurai #3 em
+`assets/sprites/_original/` e as dos outros packs em
+`assets/sprites/_packs/<pack>/` (os `sprite.txt` já estão lá) e rode
+`make sprites`. Sem as tiras, o jogo roda com os bonecos de `src/rig.c`.
 
 Controles: **clique, Espaço, J ou Enter** aparam e avançam as falas.
 Esc pausa (T volta à trilha, M volta ao menu, Q sai). Na trilha, o botão "menu"
@@ -24,23 +32,23 @@ Hattori Hanzo criou a Arte do Aparar e reuniu treze aprendizes em busca de um
 sucessor. Oboro, o mais promissor, venceu o mestre depois de incontáveis
 desafios e tomou o dojo, como manda a tradição, mas percebeu que Hanzo lhe
 concedera a abertura. Passou anos aprendendo as posturas dos outros doze.
-Anos depois, Hanzo encontra Musashi, e Musashi sobe a trilha para mostrar que o
+Anos depois, Hanzo encontra Kojiro, e Kojiro sobe a trilha para mostrar que o
 estilo do mestre é inabalável. A abertura é narrada sobre o pôr do sol da serra
 (segurar Esc enche um anel e pula; segurar o clique acelera).
 
 ## Regras
 
-- **Não existe vida, só postura.** Musashi e o adversário têm uma barra de postura cada.
+- **Não existe vida, só postura.** Kojiro e o adversário têm uma barra de postura cada.
 - Nenhum adversário finta, e o jogo não avisa os golpes: o jogador aprende o moveset.
 - Entre um gesto e outro há 0,3 s de espera, que zera a cada golpe novo.
 
-| Resultado | musashi | Adversário |
+| Resultado | kojiro | Adversário |
 |---|---:|---:|
 | Perfeito | +20 | −20 (+2 por aprendiz vencido) |
 | Bom | −4 | −6 (+0,5 por aprendiz vencido) |
 | Ruim (cedo ou sem defesa) | um "golpe" (tabela abaixo) | +20 do 5º em diante |
 
-musashi começa com 250 de postura e ganha +25 a cada aprendiz vencido. Com
+kojiro começa com 250 de postura e ganha +25 a cada aprendiz vencido. Com
 metade da postura, o adversário acelera a preparação (o ritmo dentro de uma
 sequência nunca muda). Quebrar a postura **desarma**: a arma voa, crava no chão
 e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
@@ -97,27 +105,37 @@ na lâmina, brasas, penas, névoa…). Os três primeiros têm só dois golpes.
 ## Visual e som
 
 - Tudo em pixel art de 320 × 180, ampliado por número inteiro e sem filtro:
-  cenários, trilha, lore, final, lutadores (com contorno escuro, filete de luz na
-  cor do cenário e rastros nos golpes) e a interface.
-- Bonecos por articulação (`src/rig.c`): poses interpoladas, braços e pernas por
-  IK, pés que dão passos nos golpes.
-- A postura aparece no corpo: respiração mais curta e guarda mais baixa depois de
-  40% perdidos, ofegante e com a lâmina tremendo depois de 75%.
+  cenários, trilha, lore, final, lutadores (com contorno escuro e filete de luz na
+  cor do cenário) e a interface.
+- Lutadores com as pranchas geradas (`src/sprites.c`), em tamanho de pixel 1:1.
+  A preparação de cada golpe escolhe a prancha (alto desce, baixo sobe, estocada
+  é o corte reto ou a investida; o último golpe das sequências longas é o
+  especial). O mestre chega perto na preparação e dá o bote quando a lâmina
+  parte, para a ponta da arma encontrar a guarda de kojiro no quadro de
+  contato, que sai junto com o som do choque; o hitstop segura esse quadro.
+  Kojiro apara com um corte de encontro ao golpe (ou com a DEFEND, quando a
+  prancha existir). Parry perfeito: o mestre acusa (HURT). Desarme: o mestre fica
+  de joelhos sem a arma (DESARMADO) e kojiro avança com a lâmina baixa. Oboro
+  ataca com o eco da postura em que está e, a cada selo quebrado, grita (GRITO)
+  e volta em fúria. Quem não tem prancha parada respira (o tronco desce 1 px).
+- Sem as pranchas: bonecos por articulação (`src/rig.c`), com poses interpoladas,
+  IK, respiração e cansaço.
 - Parry perfeito: estrela branca e dourada, anel de choque, flash e sino.
   Quebra de postura: tela sem cor, bordas escuras, rachadura branca, cerâmica e
   taiko, meio segundo de silêncio. Execução: tela em duas cores e um traço de
   corte atravessando.
-- Katana 3D (`assets/katana`, convertida do FBX com assimp) nas mãos; lança
-  desenhada; a segunda lâmina (adaga, wakizashi, garra, foice) na mão de trás.
+- Katana 3D (`assets/katana`, convertida do FBX com assimp) na espada que voa no
+  desarme e na tela de título (e nas mãos dos bonecos).
 - Interface em janelas de pergaminho de pixel, no jeito RPG Maker (cantos
   cortados, borda de tinta de 1 px, rolos de madeira, gauges e cursor em pixel),
   na fonte de pixel Tiny5 (`assets/fonts`, licença OFL), toda em minúsculo. O
   layout é pensado em 1280 × 720, mas tudo cai na grade de 320 × 180.
-- musashi: casaco laranja escuro, cabelo preto até o ombro com franja, sem bandana.
+- As falas do duelo ficam numa caixa no alto, para os lutadores aparecerem
+  inteiros; na cena de hanzo e no final, hanzo e kojiro também são os sprites.
 - Trilha sonora sintetizada por cenário; vitória e derrota com sons curtos e sutis.
 
 Da direção de arte ficaram de fora os golpes imbloqueáveis e a esquiva (o jogo é
-de um botão só) e o visual índigo do Musashi (fica o laranja escuro).
+de um botão só).
 
 ## Código
 
@@ -126,16 +144,18 @@ de um botão só) e o visual índigo do Musashi (fica o laranja escuro).
 | `src/core.c`, `core.h` | Regras puras: relógio, tentativa, postura, selos, moveset, trilha. Sem raylib. |
 | `src/roster.c` | Os treze lutadores (doze aprendizes e oboro), falas, conselhos de hanzo e a lore. **Balanceamento é aqui.** |
 | `src/main.c` | Telas, coreografia, interface, visuais de cada lutador (`MASTER_LOOKS`) |
-| `src/rig.c` | Bonecos: poses, passos, cansaço, roupas, armas |
+| `src/sprites.c` | Lê as pranchas geradas (`sprite.txt` e tiras) e desenha e toca os lutadores em pixel art |
+| `src/rig.c` | Bonecos (quando faltam as pranchas): poses, passos, cansaço, roupas, armas |
 | `src/katana3d.c` | A katana 3D dentro do mundo em pixel |
 | `src/arenas.c` | Os treze cenários dos duelos (e o do título) |
 | `src/lore.c` | Tela de título, trilha, final e a cena do sensei |
 | `src/fx.c` | Faíscas, estrela, anéis, arcos, flash, tremor |
 | `src/audio.c` | Efeitos e trilha ambiente sintetizados |
 | `tests/core_test.c` | Verificações do núcleo (`make test`) |
-| `tools/personagens.c` | Gera os 15 lutadores (cabeça, arma, corpo, rastro, aura, golpe especial), uma pasta por nome (kojiro, raizo, yoru, garfiel...), a partir do Samurai #3 e dos packs de `assets/sprites/_packs/` (Raizo com o espadão, Shizuku, Arashi, Oboro com as posturas dos outros e o grito): `make sprites`; ver `../docs/PERSONAGENS.md` |
+| `tools/personagens.c` | Gera os 15 lutadores (cabeça, arma, corpo, rastro, aura, golpe especial, pose desarmada), uma pasta por nome (kojiro, raizo, yoru, garfiel...), a partir do Samurai #3 e dos packs de `assets/sprites/_packs/` (Raizo com o espadão, Shizuku, Arashi, Oboro com as posturas dos outros e o grito): `make sprites`; ver `../docs/PERSONAGENS.md` |
 
 Para testar sem jogar: `./apara --master 13 --duel --demo` põe um robô aparando
 contra oboro; `--shot arquivo.png 5` salva uma captura depois de 5 segundos;
-`--state pause|defeat|cleared` (com `--master N --duel`) abre direto a pausa, a
-derrota ou a vitória.
+`--state pause|defeat|finisher|cleared` (com `--master N --duel`) abre direto a
+pausa, a derrota, o desarme ou a vitória; `--rec pasta 1 5` salva os quadros de
+1 a 5 segundos (30 por segundo, tempo fixo), para GIFs.

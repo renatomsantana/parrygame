@@ -60,7 +60,7 @@ static Tally play(const MasterProfile *m, uint32_t seed, double lead, double lim
 static void test_settings(void) {
     Settings s;
     settings_default(&s);
-    CHECK(s.renPosture == 250, "musashi começa com 250 de postura");
+    CHECK(s.renPosture == 250, "kojiro começa com 250 de postura");
     CHECK(s.perfectBossDamage > s.goodBossDamage, "perfeito vale mais que bom");
     CHECK(s.goodRenCost < s.badPostureDamage, "bom custa menos que ruim");
 }
@@ -151,7 +151,7 @@ static void test_perfect_victory(void) {
 static void test_no_defense(void) {
     Tally t = play(roster_get(0), 7, -1, 120);
     CHECK(t.finished == 1 && !t.victory, "sem defesa, Ren cai");
-    CHECK(t.impacts[J_RUIM] == 50, "contra o primeiro mestre, musashi aguenta 50 erros (%d)", t.impacts[J_RUIM]);
+    CHECK(t.impacts[J_RUIM] == 50, "contra o primeiro mestre, kojiro aguenta 50 erros (%d)", t.impacts[J_RUIM]);
     for (int i = 0; i < MASTER_COUNT; i++) {
         Tally k = play(roster_get(i), 7, -1, 600);
         CHECK(k.impacts[J_RUIM] == roster_get(i)->hitsToFall, "%s derruba Ren em %d erros (%d)", roster_get(i)->name,

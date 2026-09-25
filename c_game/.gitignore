@@ -9,3 +9,7 @@ apara_save.txt
 assets/sprites/**/*.png
 assets/sprites/_folhas/
 assets/sprites/**/.gerado
+# O sprite.txt de cada personagem também sai do gerador (os das pranchas de origem,
+# _original/ e _packs/, vão para o git).
+assets/sprites/*/sprite.txt
+!assets/sprites/_original/sprite.txt

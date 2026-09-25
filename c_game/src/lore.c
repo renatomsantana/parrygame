@@ -7,6 +7,7 @@
 #include <math.h>
 
 #include "raylib.h"
+#include "sprites.h"
 
 #define C(r, g, b) ((Color){r, g, b, 255})
 #define CA(r, g, b, a) ((Color){r, g, b, a})
@@ -46,6 +47,29 @@ static void person(float x, float feet, float h, Color c, bool sword) {
     rect(x + h * 0.03f, feet - h * 0.4f, h * 0.09f, h * 0.4f, c);
     if (sword) DrawLine((int)(x + h * 0.1f), (int)(feet - h * 0.55f), (int)(x + h * 0.5f), (int)(feet - h * 0.85f), c);
 }
+/* O personagem das pranchas, parado e calmo (IDLE, PARADO, o fim da corrida
+ * com a lâmina baixa ou a guarda), com o contorno escuro do duelo. Sem as
+ * pranchas, devolve false e a ilustração usa a silhueta. */
+static bool sprite_person(const char *id, float x, float feet, bool faceLeft, float t) {
+    const SprSet *s = spr_get(id);
+    if (!s) return false;
+    const SprAnim *a = spr_anim(s, "IDLE");
+    int frame = 0;
+    if (a) frame = (int)(t / a->frameTime) % a->frames;
+    else if ((a = spr_anim(s, "PARADO"))) frame = 0;
+    else if ((a = spr_anim(s, "DASH"))) frame = a->frames - 1;
+    else if ((a = spr_anim(s, "ATTACK_1"))) frame = 0;
+    if (!a) return false;
+    int breath = (!a->loop && fract(t / 1.8f) > 0.5f) ? 1 : 0;
+    SprDraw o = {faceLeft, breath, true, C(24, 16, 20)};
+    static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (int k = 0; k < 4; k++) spr_draw(s, a, frame, (Vector2){x + off[k][0], feet + off[k][1]}, o);
+    o.flat = false;
+    o.color = WHITE;
+    spr_draw(s, a, frame, (Vector2){x, feet}, o);
+    return true;
+}
+
 static void rain(float t, int n, Color c) {
     for (int i = 0; i < n; i++) {
         float x = fract(hash1(i) + t * 0.1f) * 340 - 10, y = fract(hash1(i + 7) + t * 1.4f) * 190 - 10;
@@ -68,8 +92,8 @@ void lore_draw_scene(int page, float t) {
             mountain(60, 90, 180, C(200, 120, 110));
             rect(0, 140, 320, 40, C(120, 80, 60));
             dojo_gate(160, 140, C(90, 40, 36));
-            person(130, 142, 56, C(40, 26, 30), true);    /* Hanzo */
-            person(186, 142, 34, C(220, 100, 40), true);  /* Ren, de laranja */
+            if (!sprite_person("hanzo", 138, 142, false, t)) person(130, 142, 56, C(40, 26, 30), true);  /* Hanzo */
+            if (!sprite_person("kojiro", 182, 142, true, t + 0.7f)) person(186, 142, 34, C(220, 100, 40), true);  /* Kojiro */
             for (int i = 0; i < 18; i++) {
                 float x = fract(hash1(i) + t * 0.05f) * 340 - 10, y = fract(hash1(i + 3) + t * 0.08f) * 180;
                 DrawEllipse((int)x, (int)y, 2, 1, C(255, 180, 200));
@@ -181,11 +205,14 @@ void lore_draw_ending(float t) {
     DrawCircle(160, 110, 40 + sinf(t * 0.5f) * 2, C(255, 245, 220));
     mountain(160, 70, 180, C(200, 130, 120));
     rect(0, 150, 320, 30, C(120, 80, 70));
-    rect(170, 130, 12, 22, C(110, 100, 100));   /* lápide de Hanzo */
-    rect(166, 126, 20, 5, C(120, 110, 110));
-    rect(158, 144, 4, 8, C(80, 70, 70));
-    glow(160, 142, 12 * (0.85f + 0.15f * sinf(t * 8)), C(255, 170, 80));
-    person(120, 152, 44, C(220, 100, 40), true);
+    /* Kojiro devolve a katana a Hanzo no alto da serra (sem as pranchas, a lápide e a silhueta) */
+    rect(152, 144, 4, 8, C(80, 70, 70));
+    glow(154, 142, 12 * (0.85f + 0.15f * sinf(t * 8)), C(255, 170, 80));
+    if (!sprite_person("hanzo", 184, 152, true, t)) {
+        rect(170, 130, 12, 22, C(110, 100, 100));
+        rect(166, 126, 20, 5, C(120, 110, 110));
+    }
+    if (!sprite_person("kojiro", 126, 152, false, t + 0.7f)) person(120, 152, 44, C(220, 100, 40), true);
     for (int i = 0; i < 24; i++) {
         float x = fract(hash1(i) + t * 0.04f) * 340 - 10, y = fract(hash1(i + 3) + t * 0.06f) * 180;
         DrawEllipse((int)x, (int)y, 2, 1, C(255, 190, 210));

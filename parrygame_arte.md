@@ -2,7 +2,7 @@
 
 ## A história em uma linha
 
-Hanzo era o sensei de todos. Oboro, o mais forte dos alunos, se voltou contra ele e o derrotou. Os outros alunos se espalharam, cada um distorcendo o que aprendeu. Musashi, o 13º aluno, vai enfrentar os 12 um por um pra provar que o estilo de Hanzo ainda vive.
+Hanzo era o sensei de todos. Oboro, o mais forte dos alunos, se voltou contra ele e o derrotou. Os outros alunos se espalharam, cada um distorcendo o que aprendeu. Kojiro, o 13º aluno, vai enfrentar os 12 um por um pra provar que o estilo de Hanzo ainda vive.
 
 > Observação: aqui o Oboro está contado como o 12º e último vilão. Se ele for um chefe separado dos 12, é só mover ele pra fora da lista e criar mais um aluno.
 
@@ -10,9 +10,9 @@ Hanzo era o sensei de todos. Oboro, o mais forte dos alunos, se voltou contra el
 
 ## Regras de combate que a arte precisa mostrar
 
-- **Não existe vida, só postura.** Todo mundo (Musashi e vilões) tem uma barra de postura. Encheu, a guarda quebra e o próximo golpe mata.
-- **Parry bom:** defendeu no tempo, mas não perfeito. Musashi ainda perde um pouco de postura, o inimigo perde um pouco.
-- **Parry perfeito:** defendeu no frame certo. Musashi não perde nada, o inimigo perde muito.
+- **Não existe vida, só postura.** Todo mundo (Kojiro e vilões) tem uma barra de postura. Encheu, a guarda quebra e o próximo golpe mata.
+- **Parry bom:** defendeu no tempo, mas não perfeito. Kojiro ainda perde um pouco de postura, o inimigo perde um pouco.
+- **Parry perfeito:** defendeu no frame certo. Kojiro não perde nada, o inimigo perde muito.
 - **Postura quebrada:** o personagem fica aberto por um tempo curto. Se levar golpe nessa janela, morre.
 
 Como não tem barra de vida, **a postura tem que aparecer no corpo do personagem**, não só na interface. O jogador deve olhar pro sprite e saber quem tá quase caindo.
@@ -92,7 +92,7 @@ Todo personagem precisa de variações de idle conforme a postura:
 ### Parry bom
 - Faísca pequena, 5 frames, laranja e amarela
 - Hitstop curto (congela uns 3 frames)
-- Musashi desliza uns pixels pra trás
+- Kojiro desliza uns pixels pra trás
 
 ### Parry perfeito
 - Faísca grande em forma de estrela, 7 frames, branca no centro e dourada nas pontas
@@ -129,7 +129,7 @@ Cada vilão também tem um **som de tell** próprio (listado na ficha), que toca
 
 ---
 
-## Protagonista: Musashi
+## Protagonista: Kojiro
 
 - **Quem é:** o 13º e último aluno de Hanzo. O mais novo, o que menos acreditavam.
 - **Arma:** katana simples, bainha com uma fita branca (luto pelo Hanzo)
@@ -137,7 +137,7 @@ Cada vilão também tem um **som de tell** próprio (listado na ficha), que toca
 - **Cor de destaque:** branco da fita
 - **Silhueta:** média, equilibrada, postura baixa e firme. Tem que parecer "o estilo correto" no meio de 12 versões tortas.
 
-### Animações do Musashi
+### Animações do Kojiro
 
 | Animação | Frames | Obs |
 |---|---|---|
@@ -162,7 +162,7 @@ Cada vilão também tem um **som de tell** próprio (listado na ficha), que toca
 
 ## Os 12 alunos (vilões)
 
-Cada um aprendeu o mesmo estilo de Hanzo e deformou num caminho diferente. A arte deve mostrar isso: **roupa parecida com a de Musashi na base (índigo e cinza da escola), mas corrompida pela personalidade de cada um.**
+Cada um aprendeu o mesmo estilo de Hanzo e deformou num caminho diferente. A arte deve mostrar isso: **roupa parecida com a de Kojiro na base (índigo e cinza da escola), mas corrompida pela personalidade de cada um.**
 
 ---
 
@@ -211,7 +211,7 @@ Cada um aprendeu o mesmo estilo de Hanzo e deformou num caminho diferente. A art
 - **Som de tell:** lâminas raspando uma na outra
 - **Animações únicas:**
   - Combo de 7 cortes (o jogador precisa parry em ritmo)
-  - Salto por cima do Musashi com corte nas costas
+  - Salto por cima do Kojiro com corte nas costas
   - Rodopio no chão
   - Morte: as duas espadas caem em X no chão, ele cai de lado
 
@@ -223,12 +223,12 @@ Cada um aprendeu o mesmo estilo de Hanzo e deformou num caminho diferente. A art
 - **Silhueta:** médio, corrente sempre balançando em volta
 - **Visual:** chapéu de palha largo (kasa), capa de palha, rosto escondido
 - **Cor de destaque:** amarelo palha
-- **Estilo:** ataca de longe, puxa o Musashi pra perto
+- **Estilo:** ataca de longe, puxa o Kojiro pra perto
 - **Tell visual:** gira o peso acima da cabeça, a velocidade do giro indica quando vai soltar
 - **Som de tell:** corrente chacoalhando, acelerando
 - **Animações únicas:**
   - Arremesso do peso (timing variável, ele finge às vezes)
-  - Corrente enrola a katana do Musashi e puxa (não dá pra defender, tem que esquivar)
+  - Corrente enrola a katana do Kojiro e puxa (não dá pra defender, tem que esquivar)
   - Corte com a foice depois de puxar
   - Morte: a corrente cai enrolando nele mesmo
 
@@ -245,7 +245,7 @@ Cada um aprendeu o mesmo estilo de Hanzo e deformou num caminho diferente. A art
 - **Som de tell:** clique da lâmina saindo da bainha
 - **Animações únicas:**
   - Saque instantâneo (ativo de 1 frame, antecipação quase invisível)
-  - Idle longo com o ouvido virado pro Musashi
+  - Idle longo com o ouvido virado pro Kojiro
   - Série de 3 saques em sequência
   - Morte: embainha a espada, senta devagar e fica imóvel
 
@@ -355,16 +355,16 @@ Cada um aprendeu o mesmo estilo de Hanzo e deformou num caminho diferente. A art
 
 ### 12. Oboro, o Traidor (Big Boss)
 
-- **Arma:** katana igual à de Musashi, mas com a lâmina escurecida
-- **Silhueta:** do tamanho do Musashi, espelho dele. Célula 160x160 só na fase 2.
+- **Arma:** katana igual à de Kojiro, mas com a lâmina escurecida
+- **Silhueta:** do tamanho do Kojiro, espelho dele. Célula 160x160 só na fase 2.
 - **Visual:** mesmo uniforme da escola, mas preto e roxo, cabelo longo solto, cicatriz no rosto. Carrega a fita branca de Hanzo amarrada no punho (troféu).
 - **Cor de destaque:** roxo da névoa (oboro = lua enevoada)
-- **Estilo:** usa o estilo de Hanzo quase perfeito, com os mesmos golpes do Musashi, só que mais rápidos e com névoa
+- **Estilo:** usa o estilo de Hanzo quase perfeito, com os mesmos golpes do Kojiro, só que mais rápidos e com névoa
 - **Tell visual:** a névoa se junta na lâmina antes do golpe
 - **Som de tell:** sino baixo, igual ao do parry perfeito, só que invertido
 
 **Fase 1 (espelho):**
-- Usa as mesmas animações de ataque do Musashi, redesenhadas com a paleta dele
+- Usa as mesmas animações de ataque do Kojiro, redesenhadas com a paleta dele
 - Parry perfeito dele mesmo: se o jogador ataca no tempo errado, Oboro faz parry
 
 **Fase 2 (névoa):**
@@ -374,7 +374,7 @@ Cada um aprendeu o mesmo estilo de Hanzo e deformou num caminho diferente. A art
 
 **Morte:**
 - A névoa some, a fita branca de Hanzo solta do punho dele e cai no chão
-- Última cena: Musashi pega a fita
+- Última cena: Kojiro pega a fita
 
 ---
 
@@ -394,9 +394,9 @@ Todo vilão precisa ter no mínimo:
 
 ## Ordem sugerida de produção
 
-1. Musashi completo (é ele que o jogador vê o tempo todo)
+1. Kojiro completo (é ele que o jogador vê o tempo todo)
 2. VFX de parry bom, perfeito e postura quebrando
 3. Jirō (golpes lentos, bom pra testar timing)
-4. Oboro fase 1 (reaproveita a base do Musashi)
+4. Oboro fase 1 (reaproveita a base do Kojiro)
 5. Resto dos vilões em ordem de dificuldade
 6. Oboro fase 2 por último, porque depende dos frames dos outros

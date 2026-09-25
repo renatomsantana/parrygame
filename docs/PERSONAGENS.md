@@ -66,8 +66,8 @@ espada de fogo → Enjin, lança de água → Suiren.
 `karasu`, `arashi`, `jinshi`, `garfiel`, `oboro` e `hanzo`. O `id` em `CHARS` é
 o nome da pasta e das tiras (`ATTACK_1_ECO_KARASU`); o `titulo` é o que aparece
 nas folhas. As pastas geradas com os nomes antigos (`raijin/`, `kage/`) ficam
-paradas; o programa avisa e elas podem ser apagadas. Os diálogos do jogo ainda
-chamam o protagonista de `musashi` (não mexi no jogo).
+paradas; o programa avisa e elas podem ser apagadas. No jogo o protagonista
+também é o Kojiro.
 
 **Hanzo:** o pedido era o Hanzo do pack B sem a barba. Esse sprite não estava
 aqui, então o Hanzo saiu do corpo do pack A, de coque branco e sem barba. Assim
@@ -216,6 +216,48 @@ anim ATTACK_1  hold 1  contact 2  alcance 38 -21  ms 100
 - A **âncora** é de cada personagem, porque o corpo muda de largura.
 - Quem tem corpo de outro pack sai com o `cell` daquele pack (Shizuku 96 × 96,
   Arashi 96 × 64, Oboro 128 × 108) e com as animações que o pack tem.
+
+### Sem arma: DESARMADO e PARADO
+
+Além das pranchas do pack e do ESPECIAL, cada personagem ganha:
+
+- **`DESARMADO`**: a pose de quem perdeu a arma no duelo, sem arma, sem rastro e
+  sem aura. Nos packs com DEATH, os quadros até chegar aos joelhos; no corpo do
+  Samurai #3, agachado (o começo do DASH_ATTACK); no Oboro, que não cai (o Demon
+  não tem DEATH), curvado pelo HURT. No espadão a face larga da lâmina sai junto.
+- **`PARADO`**: só quem não luta e não tem IDLE (o Hanzo), em pé com as mãos
+  vazias (o fim do DASH).
+
+## No jogo
+
+O jogo (`src/sprites.c` e a coreografia em `src/main.c`) lê a pasta de cada
+lutador e toca as pranchas no ritmo do núcleo:
+
+| Momento | Prancha |
+|---|---|
+| Guarda | IDLE (IDLE_FURIA depois do grito); sem IDLE, o primeiro quadro do ATTACK_1 com respiração de 1 px |
+| Preparação | o golpe escolhido, do quadro 0 até o `hold`, e parado no `hold` |
+| A lâmina parte (0,22 s antes do contato) | os quadros entre o `hold` e o `contact`; o mestre dá o bote até o alcance |
+| Contato | o quadro `contact`, no mesmo quadro de jogo do som do choque; o hitstop segura |
+| Parry perfeito | o mestre acusa com o HURT (o primeiro quadro é o clarão) |
+| Gesto de kojiro | DEFEND até o contato; sem DEFEND, um corte rápido do `hold` ao `contact` (reto contra o alto e a estocada, para baixo contra o baixo) |
+| Kojiro erra | HURT; sem HURT, o clarão vermelho e o recuo |
+| Kojiro cai | DEATH até o `stop`; sem DEATH, agachado (DASH_ATTACK quadro 0) |
+| Desarme | o mestre em DESARMADO; kojiro avança com o DASH e para com a lâmina baixa |
+| Selo de oboro quebrado | HURT segurado, depois GRITO, e a fúria dali em diante |
+
+A escolha do golpe segue a preparação do núcleo: alto → ATTACK_3 (desce), baixo
+→ ATTACK_2 (sobe), estocada → DASH_ATTACK (ou ATTACK_1). O último golpe das
+sequências de três ou mais é o ESPECIAL; o golpe especial de oboro é o
+STRONG_ATTACK. Oboro usa `ATTACK_n_ECO_<NOME>` da postura em que está.
+
+**Distância:** o mestre anda até `x de kojiro + guarda + alcance do golpe`
+(guarda de 12 px enquanto o Samurai #3 não tiver DEFEND): 40% do passo na
+preparação e o resto como bote enquanto a lâmina parte. No contato, a ponta da
+arma chega à guarda de kojiro.
+
+Sem as tiras (quem clonou o repositório sem os packs), o jogo usa os bonecos de
+`src/rig.c` para quem não tiver pasta.
 
 ### Como o corpo se move no golpe
 
@@ -382,11 +424,15 @@ que ela sai com as cores e a aura do Oboro como as outras.
   (capuz, cabelo de tigre, penas) só aparecem no corpo do Samurai #3.
 - O Hanzo sai das pranchas do Samurai #3 sem a espada: nas poses em que o
   corpo segurava a katana, as mãos ficam na mesma posição, vazias.
+- Do Samurai #3 só chegaram ATTACK_1, ATTACK_2, ATTACK_3, DASH e DASH_ATTACK;
+  o `sprite.txt` dele lista também IDLE, DEFEND, HURT, DEATH, STRONG_ATTACK e
+  THROW, que entram assim que as tiras forem para `_original/` (valem para o
+  Kojiro, o Hanzo e os seis aprendizes desse corpo). Até lá o jogo usa os
+  substitutos da tabela de [No jogo](#no-jogo).
 - Os packs novos não têm todas as animações do #3 (não há DASH nem
   DASH_ATTACK), e o Demon não tem DEATH. Do pack do espadão chegaram só
   ATTACK_1, ATTACK_2, ATTACK_3, DEFEND e DEATH; IDLE, RUN, JUMP e HURT entram
-  quando forem para a pasta `_packs/espadao/`. O que o jogo pedir e o pack não tiver
-  precisa de um substituto no carregador (por exemplo, HURT segurado).
+  quando forem para a pasta `_packs/espadao/`.
 - A estocada usa os quadros do corte horizontal: o braço é o mesmo, só a arma e
   o rastro mudam. Uma estocada com o braço esticando de verdade pediria
   desenho novo.
@@ -417,4 +463,6 @@ em vez de o Hanzo vir do corpo do Samurai #3.
 
 O repositório é público e as pranchas são do pack pago da Mattz Art, então os
 PNGs de `c_game/assets/sprites/` (os originais e os gerados, que saem deles)
-estão no `.gitignore`. O programa e os `sprite.txt` vão para o git normalmente.
+estão no `.gitignore`. O programa e os `sprite.txt` das pranchas de origem
+(`_original/` e `_packs/`) vão para o git; os `sprite.txt` gerados em cada pasta
+de personagem saem do `make sprites`, como as tiras.
