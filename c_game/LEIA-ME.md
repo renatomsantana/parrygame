@@ -96,8 +96,9 @@ na lâmina, brasas, penas, névoa…). Os três primeiros têm só dois golpes.
 
 ## Visual e som
 
-- Cenários desenhados em 1280 × 720; lutadores em pixel art de 320 × 180 por cima,
-  com contorno escuro, filete de luz na cor do cenário e rastros nos golpes.
+- Tudo em pixel art de 320 × 180, ampliado por número inteiro e sem filtro:
+  cenários, trilha, lore, final, lutadores (com contorno escuro, filete de luz na
+  cor do cenário e rastros nos golpes) e a interface.
 - Bonecos por articulação (`src/rig.c`): poses interpoladas, braços e pernas por
   IK, pés que dão passos nos golpes.
 - A postura aparece no corpo: respiração mais curta e guarda mais baixa depois de
@@ -108,8 +109,10 @@ na lâmina, brasas, penas, névoa…). Os três primeiros têm só dois golpes.
   corte atravessando.
 - Katana 3D (`assets/katana`, convertida do FBX com assimp) nas mãos; lança
   desenhada; a segunda lâmina (adaga, wakizashi, garra, foice) na mão de trás.
-- Interface em pergaminho escuro, no jeito RPG Maker, em Montserrat
-  (`assets/fonts`, licença OFL), toda em minúsculo.
+- Interface em janelas de pergaminho de pixel, no jeito RPG Maker (cantos
+  cortados, borda de tinta de 1 px, rolos de madeira, gauges e cursor em pixel),
+  na fonte de pixel Tiny5 (`assets/fonts`, licença OFL), toda em minúsculo. O
+  layout é pensado em 1280 × 720, mas tudo cai na grade de 320 × 180.
 - musashi: casaco laranja escuro, cabelo preto até o ombro com franja, sem bandana.
 - Trilha sonora sintetizada por cenário; vitória e derrota com sons curtos e sutis.
 
@@ -132,5 +135,7 @@ de um botão só) e o visual índigo do Musashi (fica o laranja escuro).
 | `tests/core_test.c` | Verificações do núcleo (`make test`) |
 | `tools/personagens.c` | Gera os 15 lutadores (cabeça, arma, corpo, rastro, aura, golpe especial), uma pasta por nome (kojiro, raizo, yoru, garfiel...), a partir do Samurai #3 e dos packs de `assets/sprites/_packs/` (Raizo com o espadão, Shizuku, Arashi, Oboro com as posturas dos outros e o grito): `make sprites`; ver `../docs/PERSONAGENS.md` |
 
-Para testar sem jogar: `./apara --master 12 --duel --demo` põe um robô aparando
-contra oboro; `--shot arquivo.png 5` salva uma captura depois de 5 segundos.
+Para testar sem jogar: `./apara --master 13 --duel --demo` põe um robô aparando
+contra oboro; `--shot arquivo.png 5` salva uma captura depois de 5 segundos;
+`--state pause|defeat|cleared` (com `--master N --duel`) abre direto a pausa, a
+derrota ou a vitória.

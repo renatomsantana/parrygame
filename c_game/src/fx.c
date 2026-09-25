@@ -230,14 +230,17 @@ void fx_draw_popups(const Fx *fx, Font font, float unit) {
         if (p->life <= 0) continue;
         float t = p->life / p->maxLife;
         float pop = 1 + 0.25f * powf(fmaxf(0, t - 0.8f) * 5, 2);
-        float size = 40 * p->scale * pop;
-        Vector2 m = MeasureTextEx(font, p->text, size, 2);
-        Vector2 at = {p->pos.x * unit - m.x / 2, p->pos.y * unit - m.y / 2};
+        /* fonte de pixel: só em múltiplos de 9 px de linha (36 unidades), presa na grade de 4 */
+        float k = floorf(40 * p->scale * pop / 36 + 0.7f);
+        if (k < 1) k = 1;
+        float size = 36 * k, sp = 0;
+        Vector2 m = MeasureTextEx(font, p->text, size, sp);
+        Vector2 at = {floorf((p->pos.x * unit - m.x / 2) / 4) * 4, floorf((p->pos.y * unit - m.y / 2) / 4) * 4};
         Color sh = {20, 16, 12, (unsigned char)(160 * fminf(1, t * 2))};
         Color c = p->color;
         c.a = (unsigned char)(255 * fminf(1, t * 2));
-        DrawTextEx(font, p->text, (Vector2){at.x + 2, at.y + 3}, size, 2, sh);
-        DrawTextEx(font, p->text, at, size, 2, c);
+        DrawTextEx(font, p->text, (Vector2){at.x + 4 * k, at.y + 4 * k}, size, sp, sh);
+        DrawTextEx(font, p->text, at, size, sp, c);
     }
 }
 

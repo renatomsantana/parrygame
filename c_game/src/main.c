@@ -1,8 +1,9 @@
 /*
  * main.c - APARAR: A Trilha dos Doze Aprendizes.
- * O mundo é desenhado em 320 x 180 e ampliado por número inteiro, sem filtro.
- * A interface vai por cima, em alta resolução (1280 x 720 virtuais), com fonte
- * serifada e paleta antiga: tinta, papel envelhecido, dourado gasto e vermelhão.
+ * Tudo em pixel art de 320 x 180, ampliado por número inteiro, sem filtro.
+ * A interface é montada em coordenadas de 1280 x 720 (4 por pixel), mas desenhada
+ * numa camada de 320 x 180, presa na grade, com a fonte de pixel Tiny5 e paleta
+ * antiga: tinta, papel envelhecido, dourado gasto e vermelhão.
  *
  * Controles: clique esquerdo, Espaço, J ou Enter = aparar / avançar.
  * Esc = pausa. F = liga/desliga o tremor de tela. F11 = tela cheia.
@@ -10,7 +11,8 @@
  * Opções de teste (sem efeito no jogo normal):
  *   --master N     começa direto nas falas do mestre N (1 a 13)
  *   --duel         pula as falas e vai direto ao duelo
- *   --state S      title | lore | trail | ending (com --master N: sensei)
+ *   --state S      title | lore | trail | ending (com --master N: sensei;
+ *                  com --master N --duel: pause | defeat | cleared)
  *   --demo         um robô apara no tempo perfeito e avança as telas
  *   --shot F T     salva uma captura em F depois de T segundos e sai
  */
@@ -36,7 +38,7 @@
 #define UI_W 1280
 #define UI_H 720
 #define UNIT 4.0f             /* px da interface por px do mundo */
-#define RS 4                  /* o cenário é desenhado em 1280 x 720; os lutadores em pixel art de 320 x 180 */
+#define RS 1                  /* tudo em pixel art de 320 x 180, ampliado por número inteiro */
 #define RW (LOW_W * RS)
 #define RH (LOW_H * RS)
 #define SWORD_GRAVITY 380.0f
@@ -161,9 +163,9 @@ typedef struct {
 } FlySword;
 
 static struct {
-    RenderTexture2D scene, actors;
+    RenderTexture2D scene, actors, uiLow;
     Font ui, uiBold;
-    Texture2D parch;
+
     Shader post;
     int locAberr, locRes, locDesat, locDuo;
     float aberr;              /* aberração cromática (px), decai sozinha */
@@ -257,18 +259,33 @@ static void banner(const char *s, Color c) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Interface em alta resolução                                         */
+/* Interface em pixel art                                              */
 /* ------------------------------------------------------------------ */
+/* A interface continua pensada em 1280 x 720, mas é desenhada numa tela de
+ * 320 x 180 (1 pixel = 4 unidades) e ampliada sem filtro, como o mundo. A
+ * fonte é a Tiny5, nítida no tamanho de 8 px de "em" (9 px de altura de linha na
+ * raylib, que mede ascendente + descendente) e nos múltiplos: 9 px = 36 unidades. */
+#define PX 4.0f                                   /* unidades da interface por pixel */
 
-static float ui_spacing(float size) { return size * 0.01f; }
+static float snap(float v) { return floorf(v / PX + 0.5f) * PX; }
 
-static float ui_width_f(Font f, const char *s, float size) { return MeasureTextEx(f, s, size, ui_spacing(size)).x; }
+/* Tamanho pedido -> tamanho da fonte de pixel (9, 18, 27, 36 px de linha...). */
+static float px_size(float size) {
+    float k = floorf(size / 36.0f + 0.7f);
+    return (k < 1 ? 1 : k) * 36.0f;
+}
+static float ui_spacing(float size) { (void)size; return 0; }  /* a Tiny5 já traz 1 px entre as letras */
+
+static float ui_width_f(Font f, const char *s, float size) { return MeasureTextEx(f, s, px_size(size), ui_spacing(size)).x; }
 static float ui_width(const char *s, float size) { return ui_width_f(G.ui, s, size); }
 
-/* Texto sobre a cena: sombra escura. Texto sobre pergaminho: tinta, sem sombra. */
+/* Texto sobre a cena: sombra escura de 1 px. Texto sobre pergaminho: tinta, sem sombra.
+ * O texto fica centrado na altura que o layout pediu e preso na grade de pixels. */
 static void draw_text_f(Font f, const char *s, float x, float y, float size, Color c, bool shadow) {
-    if (shadow) DrawTextEx(f, s, (Vector2){x + 2, y + 2}, size, ui_spacing(size), fadec((Color){12, 8, 6, 255}, c.a / 255.0f * 0.75f));
-    DrawTextEx(f, s, (Vector2){x, y}, size, ui_spacing(size), c);
+    float ps = px_size(size), sp = ui_spacing(size), k = ps / 36.0f;
+    Vector2 p = {snap(x), snap(y + (size - ps) * 0.5f)};
+    if (shadow) DrawTextEx(f, s, (Vector2){p.x + PX * k, p.y + PX * k}, ps, sp, fadec((Color){12, 8, 6, 255}, c.a / 255.0f * 0.85f));
+    DrawTextEx(f, s, p, ps, sp, c);
 }
 
 static void ui_text(const char *s, float x, float y, float size, Color c) { draw_text_f(G.ui, s, x, y, size, c, true); }
@@ -276,10 +293,11 @@ static void ui_center(const char *s, float cx, float y, float size, Color c) { u
 
 /* Tinta no pergaminho; bold para nomes e títulos. */
 static void ink(const char *s, float x, float y, float size, Color c) { draw_text_f(G.ui, s, x, y, size, c, false); }
+/* Na fonte de pixel o destaque vem do tamanho e da cor (negrito borra letras de 1 px). */
 static void ink_bold(const char *s, float x, float y, float size, Color c) { draw_text_f(G.uiBold, s, x, y, size, c, false); }
 static void ink_center(const char *s, float cx, float y, float size, Color c) { ink(s, cx - ui_width(s, size) / 2, y, size, c); }
 static void ink_bold_center(const char *s, float cx, float y, float size, Color c) {
-    draw_text_f(G.uiBold, s, cx - ui_width_f(G.uiBold, s, size) / 2, y, size, c, false);
+    ink_bold(s, cx - ui_width_f(G.uiBold, s, size) / 2, y, size, c);
 }
 static void ink_right(const char *s, float rx, float y, float size, Color c) { ink(s, rx - ui_width(s, size), y, size, c); }
 
@@ -323,7 +341,7 @@ static void ink_wrapped(const char *s, float x, float y, float width, float size
             if (show < lineLen) line[show] = 0;
             ink(line, x, ly, size, c);
             used += lineLen + 1;
-            ly += size * 1.4f;
+            ly += px_size(size) + PX;   /* linha de 9 px e 1 px de respiro */
             snprintf(line, sizeof line, "%s", word);
             lineLen = wl;
         } else {
@@ -350,71 +368,71 @@ static float hashf(int x, int y) {
     return (float)((h ^ (h >> 16)) & 0xFFFF) / 65535.0f;
 }
 
-static float vnoise(float x, float y) {
-    int xi = (int)floorf(x), yi = (int)floorf(y);
-    float fx = x - xi, fy = y - yi;
-    fx = fx * fx * (3 - 2 * fx);
-    fy = fy * fy * (3 - 2 * fy);
-    float a = hashf(xi, yi), b = hashf(xi + 1, yi), c = hashf(xi, yi + 1), d = hashf(xi + 1, yi + 1);
-    return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+/* Retângulo preso na grade de pixels. */
+static void px_rect(float x, float y, float w, float h, Color c) {
+    float x0 = snap(x), y0 = snap(y), x1 = snap(x + w), y1 = snap(y + h);
+    if (x1 > x0 && y1 > y0) DrawRectangleRec((Rectangle){x0, y0, x1 - x0, y1 - y0}, c);
 }
 
-/* Papel envelhecido: manchas, fibras e bordas queimadas. Gerado uma vez. */
-static Texture2D make_parchment(int w, int h) {
-    Image img = GenImageColor(w, h, BLANK);
-    Color *px = img.data;
-    for (int y = 0; y < h; y++)
-        for (int x = 0; x < w; x++) {
-            float n = vnoise(x / 40.0f, y / 40.0f) * 0.5f + vnoise(x / 13.0f, y / 13.0f) * 0.3f + vnoise(x / 4.0f, y / 4.0f) * 0.2f;
-            float fiber = vnoise(x / 60.0f, y / 2.5f) * 0.08f;
-            float e = fminf(fminf(x, w - 1 - x), fminf(y, h - 1 - y)) / 26.0f;
-            float burn = e >= 1 ? 0 : (1 - e) * (1 - e);
-            float k = (0.86f + 0.16f * n - fiber) * (1 - 0.5f * burn);
-            px[y * w + x] = (Color){(unsigned char)fminf(255, 178 * k), (unsigned char)fminf(255, 150 * k), (unsigned char)fminf(255, 108 * k), 255};
-        }
-    Texture2D t = LoadTextureFromImage(img);
-    UnloadImage(img);
-    SetTextureFilter(t, TEXTURE_FILTER_BILINEAR);
-    return t;
-}
-
-/* Janela de pergaminho no jeito RPG Maker: papel, borda dupla de tinta. */
+/* Janela de papel no jeito RPG Maker, em pixel: cantos cortados, borda de tinta de
+ * 1 px, luz em cima e sombra embaixo, filete interno e fibras do papel. */
 static void parchment(Rectangle r, float alpha) {
-    DrawRectangle((int)r.x + 4, (int)r.y + 6, (int)r.width, (int)r.height, fadec((Color){10, 6, 4, 255}, 0.35f * alpha));
-    DrawTexturePro(G.parch, (Rectangle){0, 0, (float)G.parch.width, (float)G.parch.height}, r, (Vector2){0, 0}, 0, fadec(WHITE, alpha));
-    DrawRectangleLinesEx(r, 2, fadec(INK_LINE, 0.9f * alpha));
-    DrawRectangleLinesEx((Rectangle){r.x + 7, r.y + 7, r.width - 14, r.height - 14}, 1, fadec(INK_LINE, 0.4f * alpha));
+    float x = snap(r.x), y = snap(r.y), w = snap(r.width), h = snap(r.height);
+    Color ink = fadec(INK_LINE, alpha), paper = fadec((Color){212, 186, 138, 255}, alpha);
+    px_rect(x + PX, y + h, w - PX, PX, fadec((Color){10, 6, 4, 255}, 0.45f * alpha));   /* sombra */
+    px_rect(x + w, y + PX, PX, h - PX, fadec((Color){10, 6, 4, 255}, 0.45f * alpha));
+    px_rect(x + PX, y, w - 2 * PX, h, ink);
+    px_rect(x, y + PX, w, h - 2 * PX, ink);
+    px_rect(x + PX, y + PX, w - 2 * PX, h - 2 * PX, paper);
+    px_rect(x + 2 * PX, y + PX, w - 4 * PX, PX, fadec((Color){238, 220, 180, 255}, alpha));
+    px_rect(x + 2 * PX, y + h - 2 * PX, w - 4 * PX, PX, fadec((Color){170, 140, 94, 255}, alpha));
+    Color line = fadec((Color){150, 116, 76, 255}, 0.7f * alpha);            /* filete interno */
+    px_rect(x + 3 * PX, y + 3 * PX, w - 6 * PX, PX, line);
+    px_rect(x + 3 * PX, y + h - 4 * PX, w - 6 * PX, PX, line);
+    px_rect(x + 3 * PX, y + 4 * PX, PX, h - 8 * PX, line);
+    px_rect(x + w - 4 * PX, y + 4 * PX, PX, h - 8 * PX, line);
+    /* fibras: pixels um pouco mais escuros, sempre nos mesmos lugares do papel */
+    Color fiber = fadec((Color){190, 162, 116, 255}, alpha);
+    for (float py = y + 5 * PX; py < y + h - 5 * PX; py += PX)
+        for (float px = x + 5 * PX; px < x + w - 5 * PX; px += PX)
+            if (hashf((int)(px / PX) * 7 + (int)(w / PX), (int)(py / PX) * 13 + (int)(h / PX)) < 0.05f) px_rect(px, py, PX, PX, fiber);
 }
 
 /* Bastões de madeira nas pontas, como um rolo aberto. */
 static void scroll_rods(Rectangle r, float alpha) {
     for (int side = 0; side < 2; side++) {
-        float x = side ? r.x + r.width - 8 : r.x - 10;
-        Rectangle rod = {x, r.y - 10, 18, r.height + 20};
-        DrawRectangleGradientH((int)rod.x, (int)rod.y, 9, (int)rod.height, fadec((Color){70, 42, 24, 255}, alpha), fadec((Color){130, 84, 48, 255}, alpha));
-        DrawRectangleGradientH((int)rod.x + 9, (int)rod.y, 9, (int)rod.height, fadec((Color){130, 84, 48, 255}, alpha), fadec((Color){60, 36, 20, 255}, alpha));
-        DrawCircle((int)(rod.x + 9), (int)rod.y, 8, fadec((Color){150, 44, 32, 255}, alpha));
-        DrawCircle((int)(rod.x + 9), (int)(rod.y + rod.height), 8, fadec((Color){150, 44, 32, 255}, alpha));
+        float x = snap(side ? r.x + r.width - 2 * PX : r.x - 2 * PX), y = snap(r.y - 2 * PX), h = snap(r.height + 4 * PX);
+        px_rect(x, y, 4 * PX, h, fadec((Color){60, 36, 20, 255}, alpha));
+        px_rect(x + PX, y, PX, h, fadec((Color){150, 100, 58, 255}, alpha));
+        px_rect(x + 2 * PX, y, PX, h, fadec((Color){110, 70, 38, 255}, alpha));
+        for (int e = 0; e < 2; e++) {
+            float ky = e ? y + h - PX : y - 2 * PX;
+            px_rect(x - PX, ky, 6 * PX, 3 * PX, fadec((Color){150, 44, 32, 255}, alpha));
+            px_rect(x, ky, 2 * PX, PX, fadec((Color){206, 90, 60, 255}, alpha));
+        }
     }
 }
 
 /* Cursor de seleção: faixa escura translúcida e a seta à esquerda. */
 static void ui_cursor(Rectangle r, float alpha) {
     float pulse = 0.6f + 0.4f * sinf(G.time * 5);
-    DrawRectangleRec(r, fadec((Color){90, 56, 30, 255}, 0.22f * pulse * alpha));
-    DrawRectangleLinesEx(r, 1, fadec(INK_LINE, 0.5f * alpha));
-    float cy = r.y + r.height / 2, cx = r.x + 16 + sinf(G.time * 6) * 2;
-    DrawTriangle((Vector2){cx, cy - 7}, (Vector2){cx, cy + 7}, (Vector2){cx + 10, cy}, fadec(SEAL_RED, alpha));
+    px_rect(r.x, r.y, r.width, r.height, fadec((Color){90, 56, 30, 255}, 0.22f * pulse * alpha));
+    float cy = snap(r.y + r.height / 2), cx = snap(r.x + 12 + (sinf(G.time * 6) > 0 ? PX : 0));
+    for (int k = 0; k < 4; k++) px_rect(cx + k * PX, cy - (3 - k) * PX, PX, (7 - 2 * k) * PX, fadec(SEAL_RED, alpha));
 }
 
 /* Gauge no jeito RPG Maker: trilho escuro, preenchimento em degradê, rastro claro. */
 static void ui_gauge(float x, float y, float w, float value, float ghost, float max, Color a, Color b) {
-    float h = 10, k = clampf(value / max, 0, 1), g = clampf(ghost / max, 0, 1);
-    DrawRectangle((int)x - 1, (int)y - 1, (int)w + 2, (int)h + 2, INK_LINE);
-    DrawRectangle((int)x, (int)y, (int)w, (int)h, (Color){46, 34, 26, 255});
-    DrawRectangle((int)x, (int)y, (int)(w * g), (int)h, (Color){246, 232, 196, 170});
-    DrawRectangleGradientH((int)x, (int)y, (int)(w * k), (int)h, a, b);
-    DrawRectangle((int)x, (int)y + 1, (int)(w * k), 2, (Color){255, 245, 220, 60});
+    float h = 3 * PX, k = clampf(value / max, 0, 1), g = clampf(ghost / max, 0, 1);
+    x = snap(x); y = snap(y); w = snap(w);
+    px_rect(x - PX, y - PX, w + 2 * PX, h + 2 * PX, INK_LINE);
+    px_rect(x, y, w, h, (Color){46, 34, 26, 255});
+    px_rect(x, y, w * g, h, (Color){246, 232, 196, 170});
+    float fill = snap(w * k);
+    if (fill > 0) {
+        DrawRectangleGradientH((int)x, (int)y, (int)fill, (int)h, a, b);
+        px_rect(x, y, fill, PX, (Color){255, 245, 220, 90});
+    }
 }
 
 /* Linha de menu dentro de uma janela de pergaminho. */
@@ -1197,34 +1215,49 @@ static void draw_world(void) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Interface (1280 x 720)                                              */
+/* Interface (coordenadas de 1280 x 720, pixels de 320 x 180)         */
 /* ------------------------------------------------------------------ */
 
-/* Placa de status no jeito RPG Maker: pergaminho pequeno com nome e gauge de postura. */
-static void ui_status(Rectangle r, const char *name, const char *note, float value, float ghost, float max, Color a, Color b) {
+/* Selo de oboro: losango de pixel, vermelho enquanto está de pé, apagado quando cai.
+ * (x, y) é o canto de cima à esquerda do desenho de 5 x 5. */
+static void ui_seal(float x, float y, bool broken) {
+    static const char *SHAPE[5] = {"..#..", ".#o#.", "#ooo#", ".#o#.", "..#.."};
+    Color fill = broken ? (Color){150, 128, 100, 255} : SEAL_RED;
+    x = snap(x); y = snap(y);
+    for (int j = 0; j < 5; j++)
+        for (int i = 0; i < 5; i++)
+            if (SHAPE[j][i] != '.') px_rect(x + i * PX, y + j * PX, PX, PX, SHAPE[j][i] == '#' ? INK_LINE : fill);
+    if (!broken) px_rect(x + 2 * PX, y + PX, PX, PX, (Color){236, 130, 100, 255});   /* brilho */
+}
+
+#define SEAL_STEP 24.0f   /* distância entre os selos, em unidades da interface */
+
+/* Placa de status no jeito RPG Maker: pergaminho pequeno com nome, selos e gauge de postura. */
+static void ui_status(Rectangle r, const char *name, const char *note, int seals, int broken, float value, float ghost, float max, Color a, Color b) {
     parchment(r, 0.96f);
     ink_bold(name, r.x + 18, r.y + 12, 24, INK_TEXT);
-    if (note && note[0]) ink_right(note, r.x + r.width - 18, r.y + 16, 18, INK_SOFT);
+    for (int i = 0; i < seals; i++)
+        ui_seal(r.x + 18 + ui_width_f(G.uiBold, name, 24) + 12 + i * SEAL_STEP, r.y + 14, i < broken);
+    if (note && note[0]) ink_right(note, r.x + r.width - 18, r.y + 12, 18, INK_SOFT);
     ink("postura", r.x + 18, r.y + 46, 16, INK_SOFT);
-    ui_gauge(r.x + 96, r.y + 49, r.width - 116, value, ghost, max, a, b);
+    float gx = r.x + 18 + ui_width("postura", 16) + 16;   /* o medidor começa depois da palavra */
+    ui_gauge(gx, r.y + 50, r.x + r.width - 20 - gx, value, ghost, max, a, b);
 }
 
 static void ui_hud(void) {
     const MasterProfile *m = G.m;
     bool pressure = duel_under_pressure(&G.duel) && m->sealCount <= 1;
-    const char *note = m->sealCount > 1 ? duel_stance(&G.duel)->name : m->style;
-    Rectangle top = {UI_W / 2 - 230, 16, 460, 76};
-    ui_status(top, lower(m->name), lower(note), G.shownBoss, G.ghostBoss, m->posture,
+    const char *name = lower(m->name), *note = lower(m->sealCount > 1 ? duel_stance(&G.duel)->name : m->style);
+    int seals = m->sealCount > 1 ? m->sealCount : 0;
+    /* A placa cresce para caber nome, selos e postura na mesma linha. */
+    float need = 18 + ui_width_f(G.uiBold, name, 24) + (seals ? 16 + seals * SEAL_STEP : 0) + 32 + ui_width(note, 18) + 18;
+    float tw = snap(fmaxf(460, need));
+    Rectangle top = {snap(UI_W / 2 - tw / 2), 16, tw, 76};
+    ui_status(top, name, note, seals, G.duel.seal, G.shownBoss, G.ghostBoss, m->posture,
               pressure ? (Color){150, 40, 30, 255} : (Color){78, 62, 104, 255}, pressure ? (Color){200, 80, 50, 255} : (Color){134, 108, 160, 255});
-    if (m->sealCount > 1)
-        for (int i = 0; i < m->sealCount; i++) {
-            Vector2 c = {top.x + 30 + ui_width_f(G.uiBold, lower(m->name), 24) + 14 + i * 20.0f, top.y + 25};
-            DrawCircleV(c, 7, i < G.duel.seal ? (Color){120, 100, 80, 160} : SEAL_RED);
-            DrawCircleLines((int)c.x, (int)c.y, 7, INK_LINE);
-        }
     Rectangle bot = {UI_W / 2 - 230, UI_H - 92, 460, 76};
     bool low = G.shownRen <= G.settings.renPosture * 0.25f;
-    ui_status(bot, "musashi", NULL, G.shownRen, G.ghostRen, G.settings.renPosture,
+    ui_status(bot, "musashi", NULL, 0, 0, G.shownRen, G.ghostRen, G.settings.renPosture,
               low ? (Color){150, 40, 30, 255} : (Color){170, 76, 30, 255}, low ? (Color){210, 70, 50, 255} : (Color){226, 142, 60, 255});
 
     if (G.bannerTime > 0) {
@@ -1262,10 +1295,10 @@ static void ui_dialogue(const char *header) {
 }
 
 static void ui_text_band(const char *textStr, int visible) {
-    Rectangle r = {80, 512, UI_W - 160, 180};
+    Rectangle r = {80, 492, UI_W - 160, 208};
     parchment(r, 1);
     scroll_rods(r, 1);
-    ink_wrapped(textStr, r.x + 36, r.y + 22, r.width - 72, 26, INK_TEXT, visible);
+    ink_wrapped(textStr, r.x + 36, r.y + 24, r.width - 72, 26, INK_TEXT, visible);
 }
 
 
@@ -1675,8 +1708,16 @@ static Font load_font(const char *path, int size) {
     cps[n++] = 0x201C;
     Font f = LoadFontEx(path, size, cps, n);
     if (f.texture.id == 0 || f.glyphCount == 0) return GetFontDefault();
-    GenTextureMipmaps(&f.texture);
-    SetTextureFilter(f.texture, TEXTURE_FILTER_TRILINEAR);
+    /* Fonte de pixel: cada pixel do atlas fica cheio ou vazio (o mesmo corte do
+     * FONT_BITMAP da raylib), sem a borda suavizada, e ampliado sem filtro. */
+    Image atlas = LoadImageFromTexture(f.texture);
+    ImageFormat(&atlas, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    Color *px = atlas.data;
+    for (int i = 0; i < atlas.width * atlas.height; i++) px[i] = px[i].a >= 80 ? WHITE : BLANK;
+    UnloadTexture(f.texture);
+    f.texture = LoadTextureFromImage(atlas);
+    UnloadImage(atlas);
+    SetTextureFilter(f.texture, TEXTURE_FILTER_POINT);
     return f;
 }
 
@@ -1696,7 +1737,9 @@ int main(int argc, char **argv) {
 
     G.scene = LoadRenderTexture(RW, RH);
     G.actors = LoadRenderTexture(LOW_W, LOW_H);
-    SetTextureFilter(G.scene.texture, TEXTURE_FILTER_BILINEAR);
+    G.uiLow = LoadRenderTexture(LOW_W, LOW_H);
+    SetTextureFilter(G.uiLow.texture, TEXTURE_FILTER_POINT);
+    SetTextureFilter(G.scene.texture, TEXTURE_FILTER_POINT);   /* pixel art: ampliação sem filtro */
     SetTextureFilter(G.actors.texture, TEXTURE_FILTER_POINT);
     G.post = LoadShaderFromMemory(NULL, POST_FS);
     G.locAberr = GetShaderLocation(G.post, "aberr");
@@ -1704,9 +1747,8 @@ int main(int argc, char **argv) {
     G.locDesat = GetShaderLocation(G.post, "desat");
     G.locDuo = GetShaderLocation(G.post, "duo");
     katana3d_load("assets/katana");
-    G.ui = load_font("assets/fonts/Montserrat-Medium.ttf", 96);
-    G.uiBold = load_font("assets/fonts/Montserrat-SemiBold.ttf", 96);
-    G.parch = make_parchment(512, 256);
+    G.ui = load_font("assets/fonts/Tiny5-Regular.ttf", 9);  /* 9 = "em" de 8 px, a grade da Tiny5 */
+    G.uiBold = G.ui;
     audio_init();
     fx_init(&G.fx);
     settings_default(&G.settings);
@@ -1720,8 +1762,12 @@ int main(int argc, char **argv) {
         for (int i = 0; i < startMaster; i++) campaign_mark_cleared(&G.camp, i);
         start_master(startMaster);
         if (startState && !strcmp(startState, "sensei")) start_sensei();
-        else if (direct) start_duel();
-        else start_lines(G.m->intro, G.m->introCount, ST_INTRO);
+        else if (direct) {
+            start_duel();
+            if (startState && !strcmp(startState, "pause")) G.paused = true;
+            else if (startState && !strcmp(startState, "defeat")) set_state(ST_DEFEAT);
+            else if (startState && !strcmp(startState, "cleared")) set_state(ST_CLEARED);
+        } else start_lines(G.m->intro, G.m->introCount, ST_INTRO);
     } else if (startState && !strcmp(startState, "lore")) {
         set_state(ST_LORE);
         audio_music(MUSIC_LORE);
@@ -1767,6 +1813,19 @@ int main(int argc, char **argv) {
         if (G.silence > 0) { G.silence -= dtReal; audio_music_duck(G.silence > 0 ? 1 : 0); }
         if (!G.paused) step(dtReal);
         draw_world();
+        /* Interface em 320 x 180. Cor e alfa acumulados separados: a camada sai com
+         * alfa pré-multiplicado e pousa certa por cima da cena. */
+        BeginTextureMode(G.uiLow);
+        ClearBackground(BLANK);
+        rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD);
+        BeginBlendMode(BLEND_CUSTOM_SEPARATE);
+        rlPushMatrix();
+        rlScalef(1 / PX, 1 / PX, 1);
+        draw_ui();
+        rlDrawRenderBatchActive();
+        rlPopMatrix();
+        EndBlendMode();
+        EndTextureMode();
 
         /* Mundo: ampliação só por número inteiro e sem filtro. Sem mistura,
          * o alfa acumulado na textura não escurece a imagem. */
@@ -1790,13 +1849,10 @@ int main(int argc, char **argv) {
         EndShaderMode();
         rlDrawRenderBatchActive();
         rlEnableColorBlend();
-        /* Interface: coordenadas de 1280 x 720, esticadas até o tamanho do mundo na tela. */
-        rlPushMatrix();
-        rlTranslatef(dst.x, dst.y, 0);
-        rlScalef(dst.width / UI_W, dst.width / UI_W, 1);
-        draw_ui();
-        rlDrawRenderBatchActive();
-        rlPopMatrix();
+        /* Interface: já desenhada em 320 x 180 (alfa pré-multiplicado), ampliada como o mundo. */
+        BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
+        DrawTexturePro(G.uiLow.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, dst, (Vector2){0, 0}, 0, WHITE);
+        EndBlendMode();
 
         if (G.shotFile && wall >= G.shotTime) {
             Image img = LoadImageFromScreen();
@@ -1816,8 +1872,7 @@ int main(int argc, char **argv) {
     UnloadRenderTexture(G.scene);
     UnloadRenderTexture(G.actors);
     if (G.ui.texture.id != GetFontDefault().texture.id) UnloadFont(G.ui);
-    if (G.uiBold.texture.id != GetFontDefault().texture.id) UnloadFont(G.uiBold);
-    UnloadTexture(G.parch);
+    UnloadRenderTexture(G.uiLow);
     CloseWindow();
     return 0;
 }
