@@ -1,5 +1,5 @@
 /*
- * arenas.h - os catorze cenários, desenhados em código e animados.
+ * arenas.h - os treze cenários, desenhados em código e animados.
  * Tudo é pintado em 320 x 180 e ampliado por número inteiro, sem filtro.
  * A frente (chuva, névoa, brasas) vai por cima dos lutadores.
  */
@@ -21,6 +21,7 @@ typedef struct {
     float impact;     /* 0..1: impacto recente */
     int seal;         /* selo atual do BIG BOSS */
     float lightning;  /* 0..1: relâmpago */
+    float bolt;       /* 0..1: onde cai o raio desse relâmpago */
 } ArenaCtx;
 
 void arena_draw_back(ArenaId id, const ArenaCtx *c);

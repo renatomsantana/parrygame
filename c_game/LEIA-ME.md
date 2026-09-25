@@ -75,7 +75,7 @@ e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
 | 7 | hayate | vento (ritmo quebrado) | duas foices pequenas | Ponte de corda no desfiladeiro | 390 | 69 / 178 ms | 22 |
 | 8 | enjin | chama | katana de fogo | Forja | 390 | 66 / 172 ms | 20 |
 | 9 | suiren | mar (acelerando) | lança | Porto | 420 | 63 / 166 ms | 18 |
-| 10 | arashi | tempestade | duas katanas | Salão dourado do castelo | 420 | 60 / 160 ms | 15 |
+| 10 | arashi | tempestade | duas katanas | Salão do castelo na tempestade | 420 | 60 / 160 ms | 15 |
 | 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 450 | 58 / 155 ms | 12 |
 | 12 | jinshi | montanha (sem som) | katana branca forjada com a lua | Encosta da serra | 450 | 55 / 150 ms | 10 |
 | 13 | **oboro** | as doze, trocando a cada duas sequências | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
@@ -124,8 +124,9 @@ diante, de sete a nove, com combos de até cinco golpes.
 - Todos os cenários são do Japão antigo: casa de fazenda, jardim de pedras com a
   ilha da tartaruga, pátio do dojo, cachoeira, portão do tigre, telhados da vila
   do castelo na chuva (com os corvos na cumeeira), ponte de corda sobre o
-  desfiladeiro no vento, forja, porto dos tambores, salão dourado do castelo com
-  os biombos da tempestade, bambuzal, encosta da serra e o dojo de Hanzo.
+  desfiladeiro no vento, forja, porto dos tambores, salão do castelo numa noite de
+  tempestade (biombos de ouro, as portas abertas para a chuva e os raios que
+  clareiam a luta, com trovão), bambuzal, encosta da serra e o dojo de Hanzo.
 - Os fundos (cenários, título, lore e trilha) passam por uma paleta curta de 32
   cores, tirada da própria cena (`src/pixelize.c`): cada pixel vai para a cor mais
   perto, e só na faixa entre dois tons vizinhos um xadrez de Bayer 4 × 4 mistura

@@ -397,79 +397,94 @@ static void porto(const ArenaCtx *c) {
     rect(0, GROUND_LOW - 6, LOW_W, 1.5f, C(140, 98, 66));
 }
 
+
 /* ------------------------------------------------------------------ */
-/* 7. Salão dourado do castelo, com os biombos da tempestade          */
+/* 7. Salão do castelo, noite de tempestade                            */
 /* ------------------------------------------------------------------ */
 static void salao(const ArenaCtx *c) {
-    float t = c->t;
+    float t = c->t, fl = c->lightning;
     /* Forro em caixotões de laca e ouro. */
-    vgrad(0, 0, LOW_W, 22, C(30, 16, 14), C(46, 26, 20));
-    for (int x = 0; x < LOW_W; x += 16) rect(x, 0, 1, 20, C(150, 110, 50));
-    for (int y = 4; y < 20; y += 8) rect(0, y, LOW_W, 1, C(150, 110, 50));
-    /* Biombos de folha de ouro com a tempestade pintada: nuvens escuras, raios e
-     * ondas; cada folha do biombo pega a luz de um jeito. */
-    vgrad(0, 22, LOW_W, 106, C(214, 172, 80), C(170, 128, 56));
-    for (int x = 0; x < LOW_W; x += 7)
-        for (int y = 24; y < 128; y += 7)
-            if (hash1(x * 0.13f + y * 0.71f) > 0.6f) rect(x, y, 7, 7, CA(255, 230, 150, 40));
-    for (int f = 0; f < 8; f++) rect(f * 40, 22, 20, 106, CA(0, 0, 0, 22));
-    for (int i = 0; i < 7; i++) {
-        float cx = 20 + i * 46 + hash1(i) * 12, cy = 44 + hash1(i + 3) * 24, drift = sinf(t * 0.2f + i) * 2;
-        for (int k = 0; k < 4; k++)
-            DrawEllipse((int)(cx + drift + k * 7 - 10), (int)(cy + (k % 2) * 3), 9, 5, C(52, 50, 66));
-        DrawEllipse((int)(cx + drift), (int)(cy - 3), 12, 3, C(80, 78, 96));
+    vgrad(0, 0, LOW_W, 22, C(20, 12, 12), C(34, 20, 18));
+    for (int x = 0; x < LOW_W; x += 16) rect(x, 0, 1, 20, mix(C(96, 70, 36), C(200, 170, 110), fl));
+    for (int y = 4; y < 20; y += 8) rect(0, y, LOW_W, 1, mix(C(96, 70, 36), C(200, 170, 110), fl));
+    /* Pelas portas abertas, a tempestade: nuvens pesadas rolando, a serra e a vila lá
+     * embaixo que só aparecem no clarão, o raio e a chuva caindo de lado. */
+    const float ox = 78, ow = 164;
+    vgrad(ox, 22, ow, 106, mix(C(8, 8, 22), C(150, 150, 204), fl * 0.85f), mix(C(28, 26, 52), C(110, 110, 160), fl * 0.85f));
+    for (int i = 0; i < 9; i++) {
+        float w = 40 + hash1(i + 60) * 40, x = ox - 30 + fract(hash1(i + 61) + t * 0.01f * (1 + i % 3)) * (ow + 60);
+        float y = 26 + hash1(i + 62) * 34;
+        Color body = mix(C(22, 20, 40), C(120, 120, 170), fl * 0.7f), rim = mix(C(40, 38, 66), C(230, 230, 255), fl);
+        for (int k = 0; k < 4; k++) DrawEllipse((int)(x + k * w * 0.25f), (int)(y + (k % 2) * 3), w * 0.2f, 5, body);
+        rect(x - 4, y + 5, w * 0.9f, 1, rim);
     }
-    float strike = fract(t * 0.23f);
-    for (int b = 0; b < 3; b++) {
-        float bx = 60 + b * 100, y = 50, x = bx;
-        Color bolt = strike < 0.06f && b == (int)(t * 0.23f) % 3 ? C(255, 255, 240) : C(236, 214, 150);
-        for (int k = 0; k < 6; k++) {
-            float nx = x + (k % 2 ? -5 : 6), ny = y + 9;
-            line(x, y, nx, ny, 1.2f, bolt);
-            x = nx;
-            y = ny;
+    for (int x = (int)ox; x < ox + ow; x++) {
+        float h = 98 + sinf(x * 0.05f) * 6 + sinf(x * 0.13f + 1) * 2;
+        rect(x, h, 1, 30, mix(C(12, 12, 26), C(70, 70, 110), fl));
+        if (hash1(x * 0.7f) > 0.93f && h > 99) rect(x, h + 6, 1, 1, C(255, 190, 110));   /* janelas da vila */
+    }
+    for (int i = 0; i < 70; i++) {
+        float x = ox + fract(hash1(i) + t * 0.35f) * (ow + 30) - 10, y = 22 + fract(hash1(i + 5) + t * (1.8f + hash1(i + 2))) * 106;
+        if (x > ox && x < ox + ow - 4) line(x, y, x - 3, y + 7, 0.6f, mix(C(90, 96, 140), C(220, 224, 255), fl));
+    }
+    /* O parapeito da varanda, molhado. */
+    rect(ox, 112, ow, 2, C(28, 16, 14));
+    rect(ox, 112, ow, 1, mix(C(70, 50, 40), C(200, 190, 200), fl));
+    rect(ox, 122, ow, 2, C(28, 16, 14));
+    for (int x = (int)ox + 6; x < ox + ow; x += 14) rect(x, 112, 2, 14, C(28, 16, 14));
+    /* Os biombos de ouro dos lados, na luz das lanternas (e no clarão). */
+    for (int side = 0; side < 2; side++) {
+        float x0 = side ? ox + ow : 0, w = side ? LOW_W - x0 : ox;
+        vgrad(x0, 22, w, 106, mix(C(150, 112, 50), C(250, 220, 150), fl * 0.6f), mix(C(110, 78, 34), C(220, 190, 120), fl * 0.6f));
+        for (int x = (int)x0; x < x0 + w; x += 7)
+            for (int y = 24; y < 128; y += 7)
+                if (hash1(x * 0.13f + y * 0.71f) > 0.6f) rect(x, y, 7, 7, CA(255, 220, 140, 30));
+        for (int k = 0; k < 3; k++) {
+            float cx = x0 + 12 + k * 26 + hash1(k + side * 7) * 8, cy = 40 + hash1(k + 3 + side) * 30;
+            for (int q = 0; q < 3; q++) DrawEllipse((int)(cx + q * 7 - 7), (int)(cy + (q % 2) * 3), 8, 4, C(46, 42, 58));
         }
-    }
-    for (int x = 0; x < LOW_W; x++) {
-        float y = 116 + sinf(x * 0.12f + t * 0.5f) * 3;
-        rect(x, y, 1, 128 - y, C(44, 70, 96));
-        if (((int)(x + t * 6)) % 12 < 3) rect(x, y, 1, 1, C(236, 232, 214));
-    }
-    /* Molduras de laca preta, os puxadores redondos e os pilares. */
-    for (int f = 0; f <= 4; f++) {
-        rect(f * 80 - 2, 22, 4, 106, C(24, 14, 12));
-        if (f < 4) {
-            DrawCircleV((Vector2){f * 80 + 70, 84}, 2.5f, C(24, 14, 12));
-            DrawCircleV((Vector2){f * 80 + 70, 84}, 1.5f, C(190, 150, 70));
+        float bx = x0 + w * 0.5f, by = 52;
+        for (int k = 0; k < 5; k++) {
+            float nx = bx + (k % 2 ? -5 : 5), ny = by + 9;
+            line(bx, by, nx, ny, 1.2f, mix(C(220, 190, 120), C(255, 255, 240), fl));
+            bx = nx;
+            by = ny;
         }
+        for (int x = (int)x0; x < x0 + w; x++) {
+            float y = 116 + sinf(x * 0.12f + t * 0.5f) * 3;
+            rect(x, y, 1, 128 - y, C(36, 54, 76));
+            if (((int)(x + t * 6)) % 12 < 3) rect(x, y, 1, 1, C(220, 214, 196));
+        }
+        for (int f = 1; f < 2; f++) rect(x0 + w * f / 2 - 1, 22, 2, 106, C(24, 14, 12));
     }
-    plank(0, 18, LOW_W, 6, C(60, 30, 22), 3);
+    /* Pilares de laca, a viga com as ferragens de ouro e o rodapé. */
+    for (int p = 0; p < 3; p++) plank(p == 0 ? ox - 4 : (p == 1 ? ox + ow / 2 - 3 : ox + ow - 2), 18, 6, 112, C(46, 22, 16), p * 2.3f);
+    plank(0, 18, LOW_W, 6, C(52, 26, 18), 3);
     for (int k = 0; k < 10; k++) {
-        rect(k * 36 + 14, 19, 3, 3, C(214, 170, 80));
-        rect(k * 36 + 15, 20, 1, 1, C(120, 80, 40));
+        rect(k * 36 + 14, 19, 3, 3, C(190, 150, 70));
+        rect(k * 36 + 15, 20, 1, 1, C(110, 72, 36));
     }
-    for (int p = 0; p < 2; p++) plank(p ? LOW_W - 10 : 0, 18, 10, 112, C(56, 28, 20), p * 5.0f);
-    rect(0, 126, LOW_W, 4, C(30, 16, 12));
-    /* Lanternas de papel no chão (andon), acesas. */
+    rect(0, 126, LOW_W, 4, C(24, 12, 10));
+    /* Lanternas de papel no chão (andon), a chama tremendo com o vento que entra. */
     for (int l = 0; l < 2; l++) {
-        float lx = l ? 290 : 30, fl = 0.9f + 0.1f * sinf(t * 7 + l * 3);
-        glow(lx, 116, 22 * fl, C(255, 170, 80));
-        rect(lx - 6, 104, 12, 22, C(60, 34, 22));
-        vgrad(lx - 5, 105, 10, 20, C(255, 226, 170), C(240, 190, 120));
-        rect(lx - 6, 114, 12, 1, C(60, 34, 22));
-        rect(lx - 1, 105, 1, 20, C(200, 150, 90));
+        float lx = l ? 294 : 26, flk = 0.8f + 0.2f * sinf(t * 9 + l * 3) * sinf(t * 5.3f + l);
+        glow(lx, 116, 24 * flk, C(255, 160, 70));
+        rect(lx - 6, 104, 12, 22, C(54, 30, 20));
+        vgrad(lx - 5, 105, 10, 20, fade(C(255, 220, 160), 0.7f + 0.3f * flk), fade(C(236, 180, 110), 0.7f + 0.3f * flk));
+        rect(lx - 6, 114, 12, 1, C(54, 30, 20));
+        rect(lx - 1, 105, 1, 20, C(190, 140, 84));
     }
-    /* Assoalho de madeira encerada, com o reflexo das lanternas. */
-    floor_shade(C(96, 56, 36), C(44, 24, 18));
-    for (int y = GROUND_LOW - 5; y < LOW_H; y += 5) rect(0, y, LOW_W, 1, C(56, 30, 20));
-    for (int k = 0; k < 30; k++) {
-        int row = k % 6;
-        float x = hash1(k + 7) * LOW_W;
-        rect(x, GROUND_LOW - 5 + row * 5, 1, 5, C(56, 30, 20));
+    /* Assoalho encerado: as tábuas, o brilho das lanternas e o clarão entrando pela porta. */
+    floor_shade(C(80, 46, 30), C(36, 20, 16));
+    for (int y = GROUND_LOW - 5; y < LOW_H; y += 5) rect(0, y, LOW_W, 1, C(46, 24, 16));
+    for (int k = 0; k < 30; k++) rect(hash1(k + 7) * LOW_W, GROUND_LOW - 5 + (k % 6) * 5, 1, 5, C(46, 24, 16));
+    for (int l = 0; l < 2; l++) vgrad(l ? 288 : 20, GROUND_LOW - 4, 12, 30, CA(255, 190, 120, 60), CA(255, 190, 120, 0));
+    if (fl > 0) vgrad(ox, GROUND_LOW - 6, ow, 30, fade(C(200, 200, 255), fl * 0.35f), CA(200, 200, 255, 0));
+    for (int i = 0; i < 8; i++) {   /* poças da chuva que entra */
+        float x = ox + 10 + hash1(i + 90) * (ow - 20), y = GROUND_LOW - 3 + hash1(i + 91) * 10;
+        rect(x, y, 6 + hash1(i) * 8, 1, mix(C(90, 70, 70), C(210, 210, 240), fl));
     }
-    vgrad(0, GROUND_LOW - 6, LOW_W, 14, CA(255, 200, 130, 40), CA(255, 200, 130, 0));
-    for (int l = 0; l < 2; l++) vgrad(l ? 284 : 24, GROUND_LOW - 4, 12, 30, CA(255, 200, 130, 70), CA(255, 200, 130, 0));
-    rect(0, GROUND_LOW - 6, LOW_W, 1, C(150, 100, 60));
+    rect(0, GROUND_LOW - 6, LOW_W, 1, C(120, 80, 50));
 }
 
 /* ------------------------------------------------------------------ */
@@ -1044,13 +1059,24 @@ void arena_draw_front(ArenaId id, const ArenaCtx *c) {
             break;
         }
         case ARENA_SALAO:
-            BeginBlendMode(BLEND_ADDITIVE);
-            for (int i = 0; i < 18; i++) {
-                float x = hash1(i) * LOW_W, y = fract(hash1(i + 1) + t * 0.03f) * LOW_H;
-                float b = fmaxf(0, sinf(t * 3 + i));
-                DrawPixel((int)x, (int)y, fade(C(255, 230, 160), b * 0.8f));
+            /* o raio pela porta aberta (fora da paleta do fundo, para sair branco) */
+            if (c->lightning > 0.15f) {
+                float x = 98 + c->bolt * 124, y = 24;
+                Color bolt = fade(C(250, 250, 255), fminf(1, c->lightning * 1.4f));
+                while (y < 96) {
+                    float nx = x + (hash1(x * 3.1f + y) - 0.5f) * 10, ny = y + 6 + hash1(y + x) * 6;
+                    DrawLine((int)x, (int)y, (int)nx, (int)ny, bolt);
+                    DrawLine((int)x + 1, (int)y, (int)nx + 1, (int)ny, fade(C(170, 180, 255), c->lightning));
+                    if (y > 40 && y < 52) DrawLine((int)nx, (int)ny, (int)nx + 8, (int)ny + 8, bolt);
+                    x = nx;
+                    y = ny;
+                }
             }
-            EndBlendMode();
+            /* respingos de chuva que o vento joga para dentro */
+            for (int i = 0; i < 14; i++) {
+                float x = fract(hash1(i) - t * 0.5f) * 360 - 20, y = fract(hash1(i + 1) + t * (1.1f + hash1(i + 2) * 0.6f)) * 190 - 10;
+                DrawLine((int)x, (int)y, (int)(x - 4), (int)(y + 5), CA(170, 180, 230, 70 + (int)(c->lightning * 120)));
+            }
             break;
         case ARENA_PONTE:
             /* rajadas de vento e folhas arrancadas dos pinheiros */
@@ -1126,7 +1152,7 @@ Color arena_light(ArenaId id, const ArenaCtx *c) {
         case ARENA_CELEIRO: base = C(255, 215, 175); break;
         case ARENA_TELHADOS: base = C(200, 210, 240); break;
         case ARENA_PORTO: base = C(205, 205, 235); break;
-        case ARENA_SALAO: base = C(255, 230, 200); break;
+        case ARENA_SALAO: base = C(236, 214, 200); break;
         case ARENA_PONTE: base = C(222, 230, 226); break;
         case ARENA_CACHOEIRA: base = C(225, 240, 245); break;
         case ARENA_BAMBUZAL: base = C(190, 200, 225); break;
@@ -1145,7 +1171,7 @@ Color arena_rim(ArenaId id) {
     static const Color rim[ARENA_COUNT] = {
         {255, 190, 120, 255}, /* dojo */      {255, 170, 120, 255}, /* serra */
         {255, 150, 80, 255},  /* celeiro */   {150, 176, 236, 255}, /* telhados */
-        {140, 170, 255, 255}, /* porto */     {255, 210, 140, 255}, /* salão */
+        {140, 170, 255, 255}, /* porto */     {190, 200, 255, 255}, /* salão */
         {170, 236, 214, 255}, /* ponte */      {190, 240, 255, 255}, /* cachoeira */
         {170, 255, 140, 255}, /* bambuzal */  {255, 120, 40, 255},  /* forja */
         {160, 210, 255, 255}, /* jardim */    {255, 90, 120, 255},  /* cidadela */

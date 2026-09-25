@@ -1507,12 +1507,16 @@ static void update_ctx(float dt) {
     G.ctx.beat *= expf(-dt * 6);
     G.ctx.blackout += (G.blackoutTarget - G.ctx.blackout) * (1 - expf(-dt * (G.blackoutTarget > G.ctx.blackout ? 5 : 3)));
     G.ctx.lightning = fmaxf(0, G.ctx.lightning - dt * 3);
-    if (G.m->arena == ARENA_CIDADELA && G.ctx.seal >= 1) {
+    /* tempestade: no dojo de oboro depois do primeiro selo, e a noite toda no castelo de arashi */
+    bool storm = (G.m->arena == ARENA_CIDADELA && G.ctx.seal >= 1) || G.m->arena == ARENA_SALAO;
+    if (storm) {
         G.lightningTimer -= dt;
         if (G.lightningTimer <= 0) {
-            G.lightningTimer = 3 + frand(0, 5);
+            bool castle = G.m->arena == ARENA_SALAO;
+            G.lightningTimer = castle ? 2.5f + frand(0, 4) : 3 + frand(0, 5);
             G.ctx.lightning = 1;
-            audio_play(SND_THUNDER, 0.6f, frand(0.8f, 1.1f));
+            G.ctx.bolt = frand(0, 1);
+            audio_play(SND_THUNDER, castle ? 0.5f : 0.6f, frand(0.8f, 1.1f));
         }
     }
 }

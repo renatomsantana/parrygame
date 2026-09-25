@@ -204,7 +204,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                    {"hanzo", "Quando a onda recua, o mar respira. Respire junto."}}, .senseiCount = 2,
     },
     {
-        .id = 10, .name = "arashi", .style = "postura da tempestade", .title = "O Orgulhoso", .venue = "Salão dourado do castelo",
+        .id = 10, .name = "arashi", .style = "postura da tempestade", .title = "O Orgulhoso", .venue = "Salão do castelo, noite de tempestade",
         .special = "Duas espadas: raios curtos e colados, três de cada vez.",
         .arena = ARENA_SALAO, .posture = 420, .hitsToFall = 15, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE0D0F0FF,
         .stances = {STANCE("", 0.060f, 0.160f, 0.80f, 0.90f, 0.75f)}, .stanceCount = 1,
