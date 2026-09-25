@@ -52,7 +52,7 @@ mesmos pixels.
 | 9 | **Suiren** (mar) | lança com ponta em folha, anel e fita, **estoca** | cabelo curto, faixa turquesa | azul mar, turquesa | água, bolhas |
 | 10 | **Arashi** (tempestade) | duas katanas com raios | **corpo do Samurai #5**, cabelo prateado, olhos de raio | preto, azul elétrico | raios nas lâminas e no corpo |
 | 11 | **Yoru** (noite) | uma adaga em cada mão, **empunhadas ao contrário** (lâmina para trás), brilho roxo | **corpo do samurai de duas espadas**, ninja preto e roxo | preto azulado e roxo | corte duplo, fumaça roxa |
-| 12 | **Jinshi** (lua) | **katana bem branca, forjada com a lua**, com halo de luar | **corpo do Samurai #4** (o da Shizuku), cabelo roxo do pack comprido, caindo até a cintura | roxo e verde | rastro branco, halo pálido e poeira de prata subindo |
+| 12 | **Jinshi** (lua) | **katana bem branca, forjada com a lua**, com halo de luar | **corpo do Samurai #4** (o da Shizuku), cabelo roxo do pack solto e comprido, até a cintura (o rabo de cavalo sai) | roxo e verde | rastro branco, halo pálido e poeira de prata subindo |
 | — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon** (máscara oni), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
 | — | **Hanzo** | **nenhuma**: um velho que não luta mais | **pack do Hanzo**: cabelo e barba brancos (sem o pack, coque branco e sem barba) | azul escuro | sem rastro nem aura |
 

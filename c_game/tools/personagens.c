@@ -737,6 +737,7 @@ typedef struct {
     bool pack_arma;                         /* a arma do pack fica como é (só ganha a cor e o brilho do elemento) */
     bool sem_arma;                          /* Hanzo: não luta mais; sem espada, sem golpes */
     Rgb bainha[2];                          /* pack do Hanzo: cores da espada embainhada, que sai */
+    Rgb rastro_pack[3];                     /* pack cujo rastro usa as cores da camisa: longe do corpo, vira rastro */
 } Char;
 
 static bool pack_no_shirt(void) {
@@ -967,6 +968,7 @@ static Char CHARS[] = {
      .lamina = {HEX(0xffffff), HEX(0xf2f5ff)},
      .rastro = {HEX(0xffffff), HEX(0xe6ecff), HEX(0xb8c4ec)}, .elemento = EL_LUA, .largura = -1,
      .especial = SP_SALTO, .efeito = FX_CHOQUE,
+     .rastro_pack = {HEX(0xffffff), HEX(0xc7cfdd), HEX(0x92a1b9)},
      .pack = "samurai4",
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0xf9e6cf), 'S'}},
      .troca = {{HEX(0x0e071b), HEX(0x1c0c30)}, {HEX(0x3b1443), HEX(0x4e1e68)}, {HEX(0x622461), HEX(0x8040a0)},
@@ -1257,6 +1259,32 @@ static void recolor(Canvas *cv, const Char *ch) {
                         break;
                     }
             }
+    /* O rastro de alguns packs usa as mesmas cores da camisa: o que estiver longe do
+       resto do corpo (cabelo, hakama, pele, contorno) é rastro, e fica nas cores dele. */
+    if (ch->pack && rgb_set(ch->rastro_pack[0])) {
+        static Mask core, near;
+        for (int y = 0; y < CH; y++)
+            for (int x = 0; x < CW; x++) {
+                Color o = cv->orig->p[y][x];
+                bool trail = false;
+                for (int i = 0; i < 3; i++)
+                    trail |= rgb_set(ch->rastro_pack[i]) && o.r == ch->rastro_pack[i].r && o.g == ch->rastro_pack[i].g &&
+                             o.b == ch->rastro_pack[i].b;
+                core[y][x] = o.a && !trail && s->lab[y][x] != SMEAR && s->lab[y][x] != BLADE;
+            }
+        mask_dilate(near, core, 4, false);
+        for (int y = 0; y < CH; y++)
+            for (int x = 0; x < CW; x++) {
+                Color o = cv->orig->p[y][x];
+                if (!o.a || near[y][x] || s->lab[y][x] == BLADE) continue;
+                for (int i = 0; i < 3; i++)
+                    if (rgb_set(ch->rastro_pack[i]) && o.r == ch->rastro_pack[i].r && o.g == ch->rastro_pack[i].g &&
+                        o.b == ch->rastro_pack[i].b) {
+                        set_rgb(cv, x, y, ch->rastro[i]);
+                        break;
+                    }
+            }
+    }
     /* Bainha: quem não usa espada comprida não carrega a saya. */
     if (ch->sem_saya)
         for (int y = 0; y < CH; y++)
@@ -1537,6 +1565,15 @@ static const char *SHELL[] = {
     "..aaaaaa..",
 };
 
+static bool is_hair(const Canvas *cv, const Char *ch, int x, int y) {
+    if (!cv_ok(x, y)) return false;
+    Color c = cv->a[y][x];
+    if (!c.a) return false;
+    for (int h = 0; h < 3; h++)
+        if (c.r == ch->cabelo[h].r && c.g == ch->cabelo[h].g && c.b == ch->cabelo[h].b) return true;
+    return false;
+}
+
 static void accessories(Canvas *cv, const Char *ch, int idx) {
     const Seg *s = cv->seg;
     for (int a = 0; a < 3; a++) {
@@ -1576,38 +1613,95 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                     }
                 break;
             case AC_CABELO_LONGO: {
-                /* a ponta do cabelo do pack (o fio mais baixo e mais para trás na cabeça)
-                   continua descendo pelas costas, em três mechas que o vento mexe */
-                int tx = -1, ty = -1;
-                double best = -1e9;
-                for (int y = 0; y < CH && y <= s->oy + 18; y++)
+                /* Cabelo solto e comprido no lugar do rabo de cavalo do pack. O cabelo da
+                   cabeça é a mancha de cabelo que chega mais à frente (o rosto olha para a
+                   direita); as outras manchas atrás dela, na altura da cabeça, são o rabo de
+                   cavalo e saem. Depois o cabelo desce da nuca, reto, até a cintura. */
+                static signed char comp[CH][CW];
+                memset(comp, -1, sizeof comp);
+                /* só o alto da figura: o cabo roxo da espada lá embaixo não conta */
+                int ytop = -1;
+                for (int y = 0; y < CH && ytop < 0; y++)
+                    for (int x = 0; x < CW; x++)
+                        if (is_hair(cv, ch, x, y)) { ytop = y; break; }
+                if (ytop < 0) break;
+                int ymax = ytop + 16 < CH ? ytop + 16 : CH;
+                int n = 0, cx0[32], cx1[32], cy0[32], cy1[32];
+                for (int y = 0; y < ymax; y++)
                     for (int x = 0; x < CW; x++) {
-                        Color c = cv->a[y][x];
-                        if (!c.a) continue;
-                        bool hair = false;
-                        for (int h = 0; h < 3; h++)
-                            hair |= c.r == ch->cabelo[h].r && c.g == ch->cabelo[h].g && c.b == ch->cabelo[h].b;
-                        if (!hair) continue;
-                        double sc = y - x * 0.8;
-                        if (sc > best) { best = sc; tx = x; ty = y; }
+                        if (comp[y][x] >= 0 || !is_hair(cv, ch, x, y) || n >= 32) continue;
+                        /* mancha de cabelo (8 vizinhos) */
+                        static int st[CH * CW][2];
+                        int sp = 0;
+                        st[sp][0] = x; st[sp][1] = y; sp++;
+                        comp[y][x] = (signed char)n;
+                        cx0[n] = cx1[n] = x; cy0[n] = cy1[n] = y;
+                        while (sp > 0) {
+                            sp--;
+                            int px = st[sp][0], py = st[sp][1];
+                            if (px < cx0[n]) cx0[n] = px;
+                            if (px > cx1[n]) cx1[n] = px;
+                            if (py < cy0[n]) cy0[n] = py;
+                            if (py > cy1[n]) cy1[n] = py;
+                            for (int dy = -1; dy <= 1; dy++)
+                                for (int dx = -1; dx <= 1; dx++) {
+                                    int qx = px + dx, qy = py + dy;
+                                    if (!cv_ok(qx, qy) || qy >= ymax || comp[qy][qx] >= 0 || !is_hair(cv, ch, qx, qy)) continue;
+                                    comp[qy][qx] = (signed char)n;
+                                    st[sp][0] = qx; st[sp][1] = qy; sp++;
+                                }
+                        }
+                        n++;
                     }
-                if (tx < 0) break;
-                /* a mecha cai quase reta, um pouco para trás, afinando; balança com o quadro */
-                int len = 16;
-                double sway = sin(idx * 0.9) * 1.2;
+                if (!n) break;
+                int head = -1;
+                for (int k = 0; k < n; k++)
+                    if (cy1[k] - cy0[k] >= 3 && (head < 0 || cx1[k] > cx1[head])) head = k;
+                if (head < 0) break;
+                /* o rabo de cavalo (e a fita dele) sai; quando ele encosta na cabeça, o que
+                   passa de uma cabeça de largura (10 px a partir da frente) também sai */
+                for (int y = 0; y < ymax; y++)
+                    for (int x = 0; x < CW; x++) {
+                        int k = comp[y][x];
+                        if (k < 0) continue;
+                        bool tail = k != head ? cx1[k] <= cx0[head] + 3 : x < cx1[head] - 10;
+                        if (!tail) continue;
+                        cv_clear(cv, x, y);
+                        cv->empty[y][x] = true;      /* o cabelo solto pode ocupar o lugar */
+                    }
+                for (int y = 0; y < ymax; y++)
+                    for (int x = 0; x < CW; x++)
+                        if (comp[y][x] == head && x < cx1[head] - 10) comp[y][x] = -1;
+                cx0[head] = cx1[head] - 10 > cx0[head] ? cx1[head] - 10 : cx0[head];
+                for (int y = cy0[head]; y <= cy0[head] + 4 && y < CH; y++)
+                    for (int x = cx0[head] - 3; x < cx0[head]; x++)
+                        if (cv_ok(x, y) && cv->a[y][x].a && !is_hair(cv, ch, x, y) && s->lab[y][x] != BLADE &&
+                            cv->tag[y][x] != T_WEAPON) {
+                            cv_clear(cv, x, y);
+                            cv->empty[y][x] = true;
+                        }
+                /* o cabelo solto: da nuca para baixo, colado nas costas, abrindo um pouco
+                   para trás e com as pontas desencontradas */
+                int top = cy0[head] + 2, len = 24;
+                double sway = sin(idx * 0.8) * 1.0;
                 for (int i = 0; i < len; i++) {
+                    int y = top + i;
+                    if (y >= CH) break;
                     double u = (double)i / len;
-                    int w = (int)(5 - u * 4 + 0.5);
-                    int cx = tx + 1 - (int)floor(u * 5 + sway * u + 0.5), y = ty + i;
-                    for (int k = 0; k < w; k++) {
-                        Rgb c = k == 0 ? ch->cabelo[0] : (k == w - 1 && i % 3 != 2 ? ch->cabelo[2] : ch->cabelo[1]);
-                        if (k == 1 && i % 4 == 1) c = ch->cabelo[0];          /* os fios separados */
-                        cv_behind(cv, cx - w + 1 + k, y, c);
+                    int back = cx0[head];
+                    for (int x = cx0[head]; x <= cx1[head]; x++)
+                        if (y <= cy1[head] && comp[y][x] == head) { back = x; break; }
+                    int left = back - 3 - (int)floor(u * 3.5 + sway * u + 0.5), right = back + 3;
+                    for (int x = left; x <= right; x++) {
+                        int col = x - left;
+                        /* cada fio termina numa altura: as pontas ficam desencontradas */
+                        if (i > len - 5 && hsh4("fio", "cabelo", col, 0, 1) * 5 < i - (len - 5)) continue;
+                        Rgb c = col == 0 ? ch->cabelo[0]
+                              : (col % 3 == 1 ? ch->cabelo[2] : ch->cabelo[1]);
+                        if (col == 1 && i % 5 == 2) c = ch->cabelo[1];
+                        cv_behind(cv, x, y, c);
                     }
                 }
-                /* dois fios soltos na ponta */
-                cv_behind(cv, tx - 4 - (int)(sway + 0.5), ty + len, ch->cabelo[1]);
-                cv_behind(cv, tx - 6 - (int)(sway + 0.5), ty + len + 1, ch->cabelo[0]);
                 break;
             }
             case AC_TRAPO:
