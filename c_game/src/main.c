@@ -82,7 +82,6 @@ static const Color INK = {24, 19, 16, 255};
 static const Color PAPER = {236, 222, 192, 255};
 static const Color AGED_GOLD = {201, 160, 82, 255};
 static const Color VERMILION = {184, 62, 40, 255};
-static const Color OCHRE = {214, 140, 58, 255};
 static const Color INK_TEXT = {36, 22, 12, 255};
 static const Color INK_SOFT = {76, 52, 32, 255};
 static const Color INK_LINE = {52, 32, 18, 255};
@@ -1938,7 +1937,7 @@ static void ui_hud(void) {
         float a = clampf(G.bannerTime * 2, 0, 1);
         const char *t = lower(G.banner);
         float w = ui_width_f(G.uiBold, t, 34) + 100;
-        Rectangle r = {UI_W / 2 - w / 2, 262, w, 64};
+        Rectangle r = {UI_W / 2 - w / 2, 116, w, 64};      /* abaixo da placa do mestre, acima dos saltos */
         parchment(r, a);
         scroll_rods(r, a);
         ink_bold_center(t, UI_W / 2.0f, r.y + 14, 34, fadec(INK_TEXT, a));
@@ -2158,7 +2157,7 @@ static void ui_first_hint(void) {
     if (a <= 0) return;
     Color c = fadec((Color){236, 222, 192, 255}, a);
     float w = ui_width("aparar", 26) + 24 + 128 + 24 + ui_width("ou clique", 26);
-    float x = UI_W / 2.0f - w / 2, y = 348;   /* acima das cabeças, abaixo da faixa da postura */
+    float x = UI_W / 2.0f - w / 2, y = 196;   /* abaixo da faixa da postura, acima até dos saltos */
     ui_text("aparar", x, y + 14, 26, c);
     x += ui_width("aparar", 26) + 24;
     float kw = spr_key("SPACE", x, y, PX, fmodf(G.time, 1.2f) < 0.2f, fadec(WHITE, a));
@@ -2192,7 +2191,9 @@ static void draw_ui(void) {
         case ST_ENDING:
             /* o texto fica no céu e os dois, no chão da serra */
             ui_text_band(ENDING_TEXT, utf8_visible(ENDING_TEXT, G.typeChars), 40);
-            if (G.typeChars > strlen(ENDING_TEXT)) ui_center("fim", UI_W / 2.0f, 272, 72, OCHRE);
+            /* "fim" no canto do pergaminho, depois da última linha, fora do desenho */
+            if (G.typeChars > strlen(ENDING_TEXT))
+                draw_text_f(G.uiBold, "fim", UI_W - 80 - 36 - ui_width_f(G.uiBold, "fim", 48), 40 + 208 - 64, 48, SEAL_RED, false);
             break;
         default:
             if (G.state == ST_DUEL || G.state == ST_DEFEAT || G.state == ST_FINISHER) ui_hud();

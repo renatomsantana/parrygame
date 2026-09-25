@@ -168,7 +168,7 @@ void lore_trail_point(int index, float *x, float *y) {
     /* Ziguezague subindo a serra até a cidadela. */
     float k = index / (float)(ROSTER_SIZE - 1);
     *x = 40 + (index % 2 ? 1 : -1) * 18 + k * 200 + sinf(index * 1.3f) * 10;
-    *y = 118 - k * 96;
+    *y = 108 - k * 86;          /* a primeira parada fica acima do painel da trilha */
     if (index == ROSTER_SIZE - 1) { *x = 250; *y = 16; }
 }
 
