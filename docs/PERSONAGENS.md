@@ -52,7 +52,7 @@ mesmos pixels.
 | 9 | **Suiren** (mar) | lança com ponta em folha, anel e fita, **estoca** | cabelo curto, faixa turquesa | azul mar, turquesa | água, bolhas |
 | 10 | **Arashi** (tempestade) | duas katanas com raios | **corpo do Samurai #5**, cabelo prateado, olhos de raio | preto, azul elétrico | raios nas lâminas e no corpo |
 | 11 | **Yoru** (noite) | uma adaga em cada mão, **empunhadas ao contrário** (lâmina para trás), brilho roxo | **corpo do samurai de duas espadas**, ninja preto e roxo | preto azulado e roxo | corte duplo, fumaça roxa |
-| 12 | **Jinshi** (lua) | **katana bem branca, forjada com a lua**, com halo de luar | **corpo do Samurai #4** (o da Shizuku), cabelo roxo do pack solto e comprido, até a cintura (o rabo de cavalo sai) | roxo e verde | rastro branco, halo pálido e poeira de prata subindo |
+| 12 | **Jinshi** (lua) | **katana bem branca, forjada com a lua**, com halo de luar | **corpo do Samurai #4** (o da Shizuku), cabelo roxo do pack solto e comprido, até a cintura (o rabo de cavalo sai) | roxo e verde | o rastro de cada golpe é uma lua crescente (branca, prata na borda); halo pálido e poeira de prata subindo |
 | — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon**, de rosto descoberto (`oboro`) e de máscara oni (`oboro_mascara`), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
 | — | **Hanzo** | **nenhuma**: um velho aposentado que não luta mais | **pack do Hanzo**: cabelo e barba brancos (sem o pack, coque branco e sem barba); `hanzo_mascara`, com a máscara de oni | branco e cinza | sem rastro nem aura |
 
@@ -143,7 +143,10 @@ e, na mão da frente, fica deitada por cima do antebraço), espada curta 11 px, 
 wakizashi do Karasu 13 px, garras 10 px, foice do tamanho da espada, quase
 toda cabo (0,8× a katana), com anel de metal e a lâmina curva de 6 px na ponta;
 as garras saem direto dos nós dos dedos, três lâminas abertas em leque; a katana branca do
-Jinshi tem um halo azulado de luar em volta da lâmina. Só a lâmina que sai da mão é
+Jinshi tem um halo azulado de luar em volta da lâmina, e o rastro dos golpes dele
+(e do eco da lua do Oboro) vira uma **lua crescente**: o disco do tamanho do
+rastro, menos um disco deslocado para o lado do corpo, branco no meio, prata na
+borda de fora e azulado na de dentro. Só a lâmina que sai da mão é
 trocada ou alongada (também a que começa mais longe, quando a mão está no
 prolongamento dela: o chapéu ou a cabeça escondiam o pedaço de baixo, como a
 lança da Suiren erguida acima da cabeça); um pedaço solto dela aparecendo no

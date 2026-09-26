@@ -806,7 +806,8 @@ static void start_disarm(void) {
     G.renStepFrom = r->offsetX;
 
     audio_play(SND_SWING, 1, 1.4f);
-    fx_popup(&G.fx, "desarmado", (Vector2){160, 44}, 1.2f, PAPER);
+    G.bannerTime = 0;   /* a faixa da postura sai: o "desarmado" fica sozinho */
+    fx_popup(&G.fx, "desarmado", (Vector2){160, 56}, 1.2f, PAPER);
     G.duo = 0.3f;
     G.slash = 0.35f;
     G.silence = 1.0f;
@@ -1331,7 +1332,8 @@ static void ren_falls(void) {
     G.ren.breath = 0;
     G.slowmo = 0.4f;
     G.slowmoTime = 0.9f;
-    fx_popup(&G.fx, "kojiro caiu", (Vector2){160, 44}, 1.2f, VERMILION);
+    G.bannerTime = 0;
+    fx_popup(&G.fx, "kojiro caiu", (Vector2){160, 56}, 1.2f, VERMILION);
     audio_play(SND_DEFEAT, 0.9f, 1);
     G.defeatsHere++;
     G.defeatIndex = 0;

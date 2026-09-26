@@ -2808,6 +2808,55 @@ static int grito(const Strip *idle, const Strip *fury, const Char *ch, Canvas *c
 /* ----- corte de vento (Hayate) ---------------------------------------------- */
 /* No contato e nos dois quadros seguintes, uma meia-lua de vento sai da ponta da
    arma e voa para a frente, abrindo. É efeito: não entra no alcance do parry. */
+/* Postura da lua: o rastro do golpe vira uma lua crescente. O disco do tamanho do
+ * rastro, menos um disco deslocado para o lado do corpo (a curva do corte abraça
+ * quem golpeia): branco no meio, prata na borda de fora, azulado na de dentro. */
+static void moon_slash(Canvas *cv, const Char *ch, const char *anim) {
+    if (!strstr(anim, "ATTACK") && !strstr(anim, "ESPECIAL")) return;
+    static Mask tr;
+    int n = 0, x0 = CW, x1 = -1, y0 = CH, y1 = -1, nb = 0;
+    double sx = 0, sy = 0, bxs = 0, bys = 0;
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            Color c = cv->a[y][x];
+            bool trail = false;
+            if (c.a && cv->seg->lab[y][x] != BLADE)
+                for (int i = 0; i < 3 && !trail; i++) trail = c.r == ch->rastro[i].r && c.g == ch->rastro[i].g && c.b == ch->rastro[i].b;
+            trail = trail && (cv->seg->lab[y][x] == SMEAR || cv->tag[y][x] == T_WEAPON || cv->tag[y][x] == T_FX || ch->pack);
+            tr[y][x] = trail;
+            if (trail) {
+                n++; sx += x; sy += y;
+                if (x < x0) x0 = x;
+                if (x > x1) x1 = x;
+                if (y < y0) y0 = y;
+                if (y > y1) y1 = y;
+            } else if (c.a && cv->tag[y][x] == T_BODY) {
+                nb++; bxs += x; bys += y;
+            }
+        }
+    if (n < 14 || nb == 0) return;
+    double cx = (x0 + x1) / 2.0, cy = (y0 + y1) / 2.0, R = fmax(x1 - x0, y1 - y0) / 2.0 + 1;
+    if (R < 6) R = 6;
+    if (R > 26) R = 26;
+    double dx = bxs / nb - sx / n, dy = bys / nb - sy / n, dl = sqrt(dx * dx + dy * dy);
+    if (dl < 1e-6) return;
+    dx /= dl; dy /= dl;
+    double ix = cx + dx * R * 0.55, iy = cy + dy * R * 0.55, ir = R * 0.9;
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++)
+            if (tr[y][x]) erase_px(cv, x, y);
+    cv->pen = T_WEAPON;
+    for (int y = (int)(cy - R) - 1; y <= (int)(cy + R) + 1; y++)
+        for (int x = (int)(cx - R) - 1; x <= (int)(cx + R) + 1; x++) {
+            if (!cv_ok(x, y)) continue;
+            double o = hypot(x - cx, y - cy), in = hypot(x - ix, y - iy);
+            if (o > R || in < ir) continue;
+            if (cv->a[y][x].a && cv->tag[y][x] == T_BODY) continue;   /* o corpo fica na frente */
+            Rgb c = o > R - 1.3 ? ch->rastro[1] : in < ir + 1.3 ? ch->rastro[2] : ch->rastro[0];
+            cv_put(cv, x, y, c);
+        }
+}
+
 static void wind_slash(Canvas *cv, const Char *ch, const Ctx *ctx) {
     if (ctx->contact < 0 || ctx->idx < ctx->contact || ctx->idx > ctx->contact + 2) return;
     int age = ctx->idx - ctx->contact, xm = -1;
@@ -3163,6 +3212,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         smear_style(cv, ch);
         aura(cv, ch, ctx);
         if (ch->elemento == EL_VENTO) wind_slash(cv, ch, ctx);
+        if (ch->elemento == EL_LUA) moon_slash(cv, ch, anim);
     }
     for (int i = 0; i < seg->nerase; i++)
         for (int y = seg->erase[i][1] < 0 ? 0 : seg->erase[i][1]; y <= seg->erase[i][3] && y < CH; y++)
