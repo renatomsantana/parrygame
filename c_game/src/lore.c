@@ -5,6 +5,7 @@
 #include "lore.h"
 
 #include <math.h>
+#include <stddef.h>
 
 #include "raylib.h"
 #include "sprites.h"
@@ -47,13 +48,17 @@ static void person(float x, float feet, float h, Color c, bool sword) {
     rect(x + h * 0.03f, feet - h * 0.4f, h * 0.09f, h * 0.4f, c);
     if (sword) DrawLine((int)(x + h * 0.1f), (int)(feet - h * 0.55f), (int)(x + h * 0.5f), (int)(feet - h * 0.85f), c);
 }
-/* O personagem das pranchas, parado e calmo (IDLE, PARADO, o fim da corrida
- * com a lâmina baixa ou a guarda), com o contorno escuro do duelo. Sem as
+/* O personagem das pranchas, parado e calmo (EMBAINHADO, IDLE, PARADO, o fim da
+ * corrida com a lâmina baixa ou a guarda), com o contorno escuro do duelo. Sem as
  * pranchas, devolve false e a ilustração usa a silhueta. */
-static bool sprite_person_lit(const char *id, float x, float feet, bool faceLeft, float t, Color tint, Color rim) {
+static bool sprite_person_pose(const char *id, const char *pose, float x, float feet, bool faceLeft, float t, Color tint,
+                               Color rim) {
     const SprSet *s = spr_get(id);
     if (!s) return false;
-    const SprAnim *a = spr_anim(s, "IDLE");
+    /* a pose pedida (o Hanzo sentado); fora da luta, a katana de Kojiro fica na bainha */
+    const SprAnim *a = pose ? spr_anim(s, pose) : NULL;
+    if (!a) a = spr_anim(s, "EMBAINHADO");
+    if (!a) a = spr_anim(s, "IDLE");
     int frame = 0;
     if (a) frame = (int)(t / a->frameTime) % a->frames;
     else if ((a = spr_anim(s, "PARADO"))) frame = 0;
@@ -73,6 +78,10 @@ static bool sprite_person_lit(const char *id, float x, float feet, bool faceLeft
     o.color = tint;
     spr_draw(s, a, frame, (Vector2){x, feet}, o);
     return true;
+}
+
+static bool sprite_person_lit(const char *id, float x, float feet, bool faceLeft, float t, Color tint, Color rim) {
+    return sprite_person_pose(id, NULL, x, feet, faceLeft, t, tint, rim);
 }
 
 static bool sprite_person(const char *id, float x, float feet, bool faceLeft, float t) {
@@ -130,7 +139,9 @@ void lore_draw_cabin(float t) {
         float k = fract(t * 0.6f + hash1(i));
         DrawPixel((int)(fx + sinf(i * 3 + t * 2) * 4), (int)(fy - 6 - k * 26), CA(255, 200, 120, (unsigned char)(255 * (1 - k))));
     }
-    if (!sprite_person("hanzo", 140, 142, false, t)) person(140, 142, 40, C(200, 200, 204), false);
+    /* Hanzo sentado em seiza, as mãos nas coxas, olhando o fogo */
+    if (!sprite_person_pose("hanzo", "SENTADO", 142, 142, false, t, WHITE, CA(0, 0, 0, 0)))
+        person(140, 142, 40, C(200, 200, 204), false);
     if (!sprite_person("kojiro", 206, 142, true, t + 0.7f)) person(206, 142, 36, C(220, 100, 40), true);
 }
 

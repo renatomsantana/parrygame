@@ -648,6 +648,30 @@ static void fighter_load(Fighter *f, const char *id) {
     fighter_idle(f);
 }
 
+/* Kojiro fora da luta (a conversa antes do duelo, o mestre falando): a katana na
+ * bainha, na cintura. Sem a tira EMBAINHADO, o parado de sempre. */
+static void ren_sheathed(void) {
+    Fighter *f = &G.renS;
+    const SprAnim *a = fa(f, "EMBAINHADO");
+    if (!a) return;
+    spr_loop(&f->pl, a);
+    f->qn = 0;
+    f->fresh = false;
+    f->idle = true;
+}
+
+/* No começo de cada luta, Kojiro saca: a tira DESEMBAINHAR termina no quadro 0 do
+ * IDLE, a guarda em que ele fica depois (autoIdle). Dura menos que a pausa antes do
+ * primeiro golpe do mestre (firstWindupDelay). */
+static void ren_draw_sword(void) {
+    Fighter *f = &G.renS;
+    const SprAnim *a = fa(f, "DESEMBAINHAR");
+    if (!a) return;
+    f_clear(f, true);
+    f_add(f, a, 0, a->frames - 1, 0.42f);
+    audio_play(SND_SWING, 0.55f, 1.25f);
+}
+
 /* Efeitos das folhas do pack (assets/sprites/_fx): tocam uma vez. Os de energia
  * (brilho, raios, fogo) vão atrás dos lutadores e somam luz; poeira e sangue vão
  * na frente. Sem a folha, ficam só as partículas. */
@@ -709,6 +733,7 @@ static void setup_actors(void) {
     G.staggerTime = 0;
     memset(&G.sword, 0, sizeof G.sword);
     fighter_load(&G.renS, "kojiro");
+    ren_sheathed();
     fighter_load(&G.bossS, G.m ? G.m->name : "");
     G.bossStep = G.bossStepTo = 0;
     G.bossStepSpeed = 0;
@@ -745,6 +770,7 @@ static void start_duel(void) {
     G.special = false;
     duel_init(&G.duel, &G.settings, G.m, (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919));
     setup_actors();
+    ren_draw_sword();
     fx_clear(&G.fx);
     vfx_clear();
     G.shownRen = G.ghostRen = G.settings.renPosture;
