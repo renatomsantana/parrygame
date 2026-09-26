@@ -4607,30 +4607,51 @@ static void paint_px(Canvas *cv, int x, int y, char k) {
 }
 
 
-/* A cabeça do Oboro sem o elmo, de perfil (virada para a direita), construída como
- * a do Hanzo, mas moço: cabelo preto curto rente ao crânio (com os fios em cinza
- * escuro), a nuca e a orelha à mostra, a testa e o nariz na luz, a sobrancelha
- * pesada sobre o olho firme, e a barba preta curta e cheia, do queixo às
- * costeletas, com o bigode. Coluna 0 = olho de trás do elmo menos 9, a primeira
- * linha é a -6 (a dos olhos é a 0). */
-#define OBORO_TOPO 6
+/* A cabeça do Oboro sem o elmo, de perfil (virada para a direita), no tamanho da
+ * dos outros (ele é maior pelo corpo e pela armadura, não pela cabeça): o cabelo
+ * preto curto em três massas (a base, a sombra e uma faixa de luz no alto), preso num
+ * coque baixo na nuca com o cordão vermelho; o rosto do Hanzo moço, com a sobrancelha
+ * e o olho de 1 px; a barba curta em dois tons acompanhando a mandíbula, da costeleta
+ * ao queixo, com a bochecha à mostra; o pescoço e a gola da armadura por baixo, que
+ * emendam a cabeça no tronco. Coluna 0 = olho de trás do elmo menos 9, a primeira
+ * linha é a -5 (a dos olhos é a 0). As duas últimas linhas (a gola) só pintam onde
+ * não há nada. */
+#define OBORO_TOPO 5
 static const char *const OBORO_CABECA[] = {
-    "........LLLLL.......",
-    "......LLSYSYSLL.....",
-    ".....LSYSSYSSYSL....",
-    "....LSSSYSSSSYSLL...",
-    "....LSYSSSSSSSLWWL..",
-    "....LSSSSXuSLLLWWX..",
-    "....LSSSXVuXXRLXWX..",
-    ".....LSSuVXXXXXXWWX.",
-    ".....LVuXXXXXXXLLu..",
-    "......VuSXXSYSSLLL..",
-    "......LSSSSYSSSYSL..",
-    ".......LSSYSSSYSSL..",
-    "........LLSSSSSLL...",
-    ".........VuuuuV.....",
+    ".......LLLLLL.....",
+    "......LYYSSSSL....",
+    ".....LYgYSSSSSL...",
+    ".....LYYSSSSSLWW..",
+    "...LSLSSSSTSLXSS..",
+    "...LYASSSSuXXXLXW.",
+    "...LSLSSSVuXXXXXW.",
+    "......LSSSXXXXuu..",
+    ".......LVSSXXSSS..",
+    "........VuLSSSSL..",
+    "........VuuLLLL...",
+    ".......DVuuD......",
+    "......DBBBBBD.....",
 };
 #define OBORO_LINHAS ((int)(sizeof OBORO_CABECA / sizeof OBORO_CABECA[0]))
+/* A mesma cabeça vista de trás (o corpo de costas, no giro dos golpes): só o cabelo
+   em massas, o coque baixo no meio da nuca com o cordão, as orelhas dos dois lados,
+   o pescoço e a gola. Nada de rosto. Mesmas linhas e colunas do molde de frente. */
+static const char *const OBORO_NUCA[] = {
+    ".......LLLLLL.....",
+    "......LYYgYSSL....",
+    ".....LYYYYSSSSL...",
+    ".....LSYYSSSSSL...",
+    ".....LSSSSSSSSL...",
+    ".....uSSSLLSSSu...",
+    ".....VSSLYALSSV...",
+    "......LSLSSLSL....",
+    ".......LVuuVL.....",
+    "........VuuV......",
+    "........VuuV......",
+    ".......DVuuVD.....",
+    "......DBBBBBBD....",
+};
+
 
 /* O cabelo comprido e a barba longa do pack (os pretos e cinzas escuros) presos à
    cabeça: a mancha que sai da caixa da cabeça, sem descer além de `r1`. */
@@ -4667,7 +4688,33 @@ static void armor_fill(Canvas *cv, bool (*gone)[CW], int ex, int ey, int r0, int
 /* Troca o elmo (e o cabelo comprido e a barba longa) pela cabeça nova, com a
    armadura por baixo do que era barba e cabelo. (ex, ey): a coluna 0 e a linha dos
    olhos do molde de frente. `r1`: até onde descem o cabelo e a barba do pack. */
+/* A inclinação do tronco: quanto a cabeça (o meio do elmo) está à frente do meio do
+   corpo logo abaixo dela, por linha. */
+static double oboro_lean(const Canvas *cv, int ex, int ey) {
+    double sx = 0;
+    int n = 0;
+    for (int y = ey + 8; y <= ey + 20 && y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            if (!cv->orig->p[y][x].a) continue;
+            int lb = lab_at(cv, x, y);
+            if (lb == BLADE || lb == SMEAR || lb == HANDLE) continue;
+            sx += x;
+            n++;
+        }
+    if (n < 20) return 0;
+    return ((ex + 11) - sx / n) / 14.0;
+}
+
+static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *molde, double k);
 static void oboro_head(Canvas *cv, int ex, int ey, int r1) {
+    /* inclinado para a frente (a estocada, a corrida, a queda): a cabeça tomba junto
+       com o tronco, cada linha um pouco mais à frente que a de baixo (o pescoço fica) */
+    double lean = oboro_lean(cv, ex, ey), k = lean > 0.52 ? (lean - 0.52) * 1.15 : 0;
+    if (k > 0.8) k = 0.8;
+    oboro_head_t(cv, ex, ey, r1, OBORO_CABECA, k);
+}
+
+static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *molde, double k) {
     static bool gone[CH][CW];
     static short st[CW * CH][2];
     memset(gone, 0, sizeof gone);
@@ -4705,12 +4752,15 @@ static void oboro_head(Canvas *cv, int ex, int ey, int r1) {
         for (int x = 0; x < CW; x++)
             if (gone[y][x] && cv->a[y][x].a && oboro_dark(cv->orig->p[y][x])) cv_clear(cv, x, y);
     armor_fill(cv, gone, ex, ey, 3, r1, -16, 26);
+    if (getenv("DBG_NOHEAD")) return;
+    int drop = (int)floor(k * 2.5 + 0.5);   /* tombando, a cabeça também desce */
     for (int r = 0; r < OBORO_LINHAS; r++)
-        for (int c = 0; OBORO_CABECA[r][c]; c++) {
-            int x = ex + c, y = ey + r - OBORO_TOPO;
-            if (OBORO_CABECA[r][c] == '.' || !cv_ok(x, y)) continue;
+        for (int c = 0; molde[r][c]; c++) {
+            int x = ex + c + (int)floor((OBORO_LINHAS - 3 - r) * k + 0.5), y = ey + r - OBORO_TOPO + drop;
+            if (molde[r][c] == '.' || !cv_ok(x, y)) continue;
             if (hand_blade_px(cv, x, y) || lab_at(cv, x, y) == SMEAR) continue;   /* a espada passa na frente */
-            paint_px(cv, x, y, OBORO_CABECA[r][c]);
+            if (r >= OBORO_LINHAS - 2 && cv->a[y][x].a) continue;                /* a gola: só no vão */
+            paint_px(cv, x, y, molde[r][c]);
             cv->tag[y][x] = T_BODY;
         }
 }
@@ -4750,12 +4800,11 @@ static void oboro_head_lying(Canvas *cv, int bx, int by) {
     for (int y = 0; y < CH; y++)
         for (int x = 0; x < CW; x++)
             if (gone[y][x] && cv->a[y][x].a && oboro_dark(cv->orig->p[y][x])) cv_clear(cv, x, y);
-    int X0 = bx + 9, Y0 = by - 5;
-    for (int r = 0; r < OBORO_LINHAS; r++)
+    int X0 = bx + 7, Y0 = by - 4;   /* o pescoço encostado nos ombros */
+    for (int r = 0; r < OBORO_LINHAS - 2; r++)
         for (int c = 0; OBORO_CABECA[r][c]; c++) {
             char k = OBORO_CABECA[r][c];
             if (k == '.') continue;
-            if (k == 'R') k = 'u';   /* o olho fechado */
             int x = X0 - (r - OBORO_TOPO), y = Y0 + c;
             if (!cv_ok(x, y)) continue;
             paint_px(cv, x, y, k);
@@ -4781,37 +4830,32 @@ static bool oni_find_loose(const Canvas *cv, int *bx, int *by) {
     return best * 100 >= total * 50;
 }
 
-/* Oboro de máscara, de costas (o giro do ATTACK_1, o começo do ATTACK_2): o elmo vira
- * de perfil por cima do ombro, com a máscara de oni à mostra, no lugar do elmo visto
- * de trás. O cabelo comprido fica. */
-static void mask_turn(Canvas *cv) {
-    int bx, by;
-    if (oni_find(cv, ONI, ONI_ROWS, ONI_TOP + 3, &bx, &by)) return;
-    if (!chifres_find(cv, &bx, &by)) return;
-    clear_helm(cv, bx, by, -3, 20, 0, 11);
-    for (int r = 0; r < ONI_ROWS; r++)
-        for (int c = 0; ONI[r][c]; c++) {
-            int x = bx + 1 + c, y = by + r;
-            if (ONI[r][c] == '.' || !cv_ok(x, y)) continue;
-            if (hand_blade_px(cv, x, y) || lab_at(cv, x, y) == SMEAR) continue;
-            paint_px(cv, x, y, ONI[r][c]);
-            cv->tag[y][x] = T_BODY;
-        }
-}
-
 /* De frente, de costas ou caído: o primeiro molde que achar vale. De costas ele vira
  * a cabeça para a frente (o rosto por cima do ombro) e o cabelo comprido sai, com a
  * armadura das costas por baixo. */
+/* Sem o elmo, o fogo dourado do enfeite e dos olhos (a morte) que subia dele some. */
+static void drop_helm_fire(Canvas *cv, int top) {
+    for (int y = 0; y < top && y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            Color o = cv->orig->p[y][x], c = cv->a[y][x];
+            uint32_t v = (uint32_t)o.r << 16 | (uint32_t)o.g << 8 | o.b;
+            if (o.a && (v == 0xffc825 || v == 0xffa214) && c.a && c.r == o.r && c.g == o.g && c.b == o.b &&
+                !hand_blade_px(cv, x, y))
+                cv_clear(cv, x, y);
+        }
+}
+
 static void unmask(Canvas *cv) {
     int bx, by;
     if (oni_find(cv, ONI, ONI_ROWS, ONI_TOP + 3, &bx, &by)) {
+        if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: frente %s:%d %d %d lean %.2f\n", g_dbg_anim, g_dbg_idx, bx, by + ONI_TOP, oboro_lean(cv, bx, by + ONI_TOP));
         oboro_head(cv, bx, by + ONI_TOP, 16);   /* coluna 0 = olho de trás menos 9, linha 0 = a dos olhos */
         return;
     }
     if (chifres_find(cv, &bx, &by)) {
         if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: costas %s:%d\n", g_dbg_anim, g_dbg_idx);
         clear_helm(cv, bx, by, -3, 20, 0, 11);
-        oboro_head(cv, bx + 1, by + ONI_TOP, 18);
+        oboro_head_t(cv, bx + 1, by + ONI_TOP, 18, OBORO_NUCA, 0);
         return;
     }
     if (oni_find(cv, DEITADO, (int)(sizeof DEITADO / sizeof DEITADO[0]), 15, &bx, &by)) {
@@ -4822,6 +4866,7 @@ static void unmask(Canvas *cv) {
     if (oni_find_loose(cv, &bx, &by)) {
         if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: solto %s:%d\n", g_dbg_anim, g_dbg_idx);
         oboro_head(cv, bx, by + ONI_TOP, 16);
+        drop_helm_fire(cv, by + ONI_TOP - OBORO_TOPO);
         return;
     }
     if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: nada em %s:%d\n", g_dbg_anim, g_dbg_idx);
@@ -5018,8 +5063,9 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
     recolor(cv, ch, anim);
     g_dbg_anim = anim;
     g_dbg_idx = idx;
+    /* de máscara, de costas fica a traseira do kabuto que o pack desenha (a máscara só
+       aparece de frente) */
     if (ch->sem_mascara) unmask(cv);
-    else if (ch->ecos) mask_turn(cv);
     accessories(cv, ch, idx);
     if (ch->sem_pano) s5_face(cv, ch);
     if (ch->cab_frente) s5_hair(cv, ch, idx, anim);
@@ -6395,9 +6441,15 @@ int main(int argc, char **argv) {
                     }
                 if (n == 0 || wh * 10 < n * 6) continue;
                 const Frame *nb = &r->frames[j + 1 < st->nframes ? j + 1 : j - 1];
+                /* só o corpo: as partículas soltas da aura (menos de três vizinhos) ficam de fora */
                 for (int y = 0; y < CH; y++)
-                    for (int x = 0; x < CW; x++)
-                        r->frames[j].p[y][x] = nb->p[y][x].a ? (Color){255, 255, 255, 255} : (Color){0, 0, 0, 0};
+                    for (int x = 0; x < CW; x++) {
+                        int v = 0;
+                        for (int dy = -1; dy <= 1; dy++)
+                            for (int dx = -1; dx <= 1; dx++)
+                                v += (dx || dy) && cv_ok(x + dx, y + dy) && nb->p[y + dy][x + dx].a;
+                        r->frames[j].p[y][x] = nb->p[y][x].a && v >= 3 ? (Color){255, 255, 255, 255} : (Color){0, 0, 0, 0};
+                    }
             }
             /* o rastro vermelho da fúria tem as cores da máscara: o alcance é o do golpe normal,
                que tem o mesmo desenho e o mesmo tempo */
