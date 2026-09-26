@@ -309,7 +309,7 @@ static const Style STYLES[MUSIC_WIND + 1] = {
     /* SERRA     */ {62, {98, 146.8f, 196}, 0.04f, 0.05f, 0.012f},
     /* CELEIRO   */ {80, {98, 146.8f, 196}, 0.045f, 0.01f, 0.03f},
     /* TELHADOS  */ {90, {73.4f, 110, 138.6f}, 0.05f, 0.03f, 0.015f},
-    /* PORTO     */ {100, {82.4f, 123.5f, 0}, 0.04f, 0.03f, 0.03f},
+    /* PORTO     */ {80, {82.4f, 123.5f, 0}, 0.04f, 0.04f, 0.02f},
     /* SALAO     */ {96, {130.8f, 196, 261.6f}, 0.035f, 0.0f, 0.02f},
     /* PONTE     */ {84, {61.7f, 92.5f, 0}, 0.04f, 0.06f, 0.05f},
     /* CACHOEIRA */ {60, {65.4f, 98, 0}, 0.04f, 0.16f, 0.12f},
@@ -345,10 +345,10 @@ static void sequencer_step(int style, int step, float intensity) {
             if (bar16 % 8 == 0) voice(V_TONE, 73.4f, 0.09f, 2.5f, 0);
             if (bar16 == 6 && step % 32 == 6) voice(V_BELL, 220, 0.04f, 1.5f, 0);
             break;
-        case 4: /* porto: tambores taiko */
-            if (bar16 == 0 || bar16 == 6 || bar16 == 10) voice(V_KICK, 70, 0.45f, 6, 0);
-            if (bar16 == 12 || bar16 == 14) voice(V_KICK, 95, 0.3f, 9, 0);
-            if (bar16 % 4 == 2) voice(V_NOISE, 0, 0.03f, 50, 0.4f);
+        case 4: /* porto: as ondas no píer, o sino de um barco e um shamisen ao longe */
+            if (bar16 == 0 || bar16 == 9) voice(V_NOISE, 0, 0.07f, 1.6f, 0.06f);
+            if (bar16 == 4 && mrand() < 0.35f) voice(V_BELL, 660, 0.025f, 2.5f, 0);
+            if (bar16 % 4 == 2 && mrand() < 0.5f) voice(V_PLUCK, note(PENTA[(int)(mrand() * 6)]), 0.07f, 4, 0);
             break;
         case 5: /* salão do castelo: koto em arpejo e o trovão do taiko */
             if (bar16 % 2 == 0) voice(V_PLUCK, note(PENTA[(step / 2) % 8]), 0.05f, 4, 0);

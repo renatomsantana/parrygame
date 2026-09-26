@@ -248,11 +248,11 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                   {"hanzo", "..."},
                   {"kojiro", "O homem que matou meu pai usava uma."},
                   {"hanzo", "Então você já sabe o que vai encontrar lá em cima."},
-                  {"hanzo", "O próximo é suiren, no porto dos tambores. Uma lança: ataca de longe, em ondas."},
+                  {"hanzo", "O próximo é suiren, no porto do farol. Uma lança: ataca de longe, em ondas."},
                   {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 6,
     },
     {
-        .id = 9, .name = "suiren", .style = "postura do mar", .title = "O Amigo de Oboro", .venue = "Porto dos tambores",
+        .id = 9, .name = "suiren", .style = "postura do mar", .title = "O Amigo de Oboro", .venue = "Porto do farol",
         .special = "Lança: ataca de longe, e a ponta demora mais para chegar do que parece; as ondas aceleram e recuam.",
         .arena = ARENA_PORTO, .posture = 420, .hitsToFall = 18, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8D8FFFF,
         .accelSteps = 5, .accelFactor = 0.82f,

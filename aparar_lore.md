@@ -84,7 +84,7 @@ Cada um pensa uma coisa de Hanzo e de Oboro. São quatro grupos:
 | 6 | Karasu | Corvo | katana e wakizashi | telhados da vila do castelo, na chuva | sarcástico, oportunista | fala mal de Hanzo |
 | 7 | Hayate | Vento | duas foices pequenas | ponte de corda sobre o desfiladeiro | impulsivo, competitivo | fala mal de Hanzo |
 | 8 | Enjin | Chama | katana de fogo (deixa em brasas) | forja dentro da cratera | explosivo | fala mal de Hanzo, desconfia de Oboro |
-| 9 | Suiren | Mar | lança (ataca de longe) | porto | leal, gentil | deve a vida a Oboro |
+| 9 | Suiren | Mar | lança (ataca de longe) | porto do farol | leal, gentil | deve a vida a Oboro |
 | 10 | Arashi | Tempestade | duas katanas | salão do castelo, noite de tempestade | arrogante | deve a vida a Oboro |
 | 11 | Yoru | Noite | duas adagas invertidas | bambuzal à meia-noite | desconfiado | sabe a verdade |
 | 12 | Jinshi | Lua | katana branca forjada com a lua | encosta da serra | reservado | sabe a verdade |

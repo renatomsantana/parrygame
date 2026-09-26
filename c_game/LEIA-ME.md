@@ -140,12 +140,17 @@ repertório mais variado e o ritmo irregular.
 - Tudo em pixel art de 320 × 180, ampliado por número inteiro e sem filtro:
   cenários, trilha, lore, final, lutadores (com contorno escuro e filete de luz na
   cor do cenário) e a interface.
-- Todos os cenários são do Japão antigo: casa de fazenda, jardim de pedras com a
-  ilha da tartaruga, pátio do dojo, cachoeira, portão do tigre, telhados da vila
-  do castelo na chuva (com os corvos na cumeeira), ponte de corda sobre o
-  desfiladeiro no vento, forja, porto dos tambores, salão do castelo numa noite de
-  tempestade (biombos de ouro, as portas abertas para a chuva e os raios que
-  clareiam a luta, com trovão), bambuzal, encosta da serra e o dojo de Hanzo.
+- Todos os cenários são do Japão antigo: casa de fazenda, jardim de pedras com o
+  laguinho de carpas e a ilha da tartaruga, pátio do dojo, cachoeira entre
+  árvores, o portão de dois andares do tigre branco (bandeiras listradas,
+  lanternas de pedra, bordos), telhados da vila do castelo na chuva (uma fileira
+  de casas iguais de janelas quadradas, a lua crescente e os corvos na cumeeira),
+  ponte de corda sobre o desfiladeiro no vento (serras de picos na névoa), a forja
+  dentro da cratera (lago e cascata de lava, o barracão com a corda sagrada, a
+  fornalha de barro e as katanas esfriando), o porto do farol, o salão do castelo
+  numa noite de tempestade (biombos de ouro, as portas abertas para a chuva e os
+  raios que clareiam a luta, com trovão), bambuzal, a encosta da serra com a lua
+  cheia grande e o dojo de Hanzo.
 - Os fundos (cenários, título, lore e trilha) passam por uma paleta curta de 32
   cores, tirada da própria cena (`src/pixelize.c`): cada pixel vai para a cor mais
   perto, e só na faixa entre dois tons vizinhos um xadrez de Bayer 4 × 4 mistura

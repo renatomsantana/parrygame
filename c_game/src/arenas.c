@@ -108,6 +108,61 @@ static void conifer(float x, float base, float h, float lean, Color body, Color 
     }
 }
 
+/* Lua crescente: o disco menos um disco deslocado, linha por linha (o céu atrás fica
+ * como está, sem um círculo da cor do céu por cima). */
+static void crescent(float cx, float cy, float r, float ox, float oy, Color c) {
+    for (int y = (int)floorf(cy - r); y <= (int)ceilf(cy + r); y++) {
+        float dy = y + 0.5f - cy, hw = r * r - dy * dy;
+        if (hw <= 0) continue;
+        hw = sqrtf(hw);
+        float dy2 = y + 0.5f - (cy + oy), cut = r * r * 0.9f - dy2 * dy2;
+        for (int x = (int)floorf(cx - hw); x <= (int)ceilf(cx + hw); x++) {
+            float dx2 = x + 0.5f - (cx + ox);
+            if (cut > 0 && dx2 * dx2 < cut) continue;
+            if ((x + 0.5f - cx) * (x + 0.5f - cx) > hw * hw) continue;
+            rect(x, y, 1, 1, c);
+        }
+    }
+}
+
+/* Lua cheia grande, com mares escuras e a borda clara. */
+static void full_moon(float cx, float cy, float r, float t) {
+    glow(cx, cy, r * 2.3f, C(170, 170, 220));
+    DrawCircleV((Vector2){cx, cy}, r + 1, C(206, 204, 222));
+    DrawCircleGradient((Vector2){cx, cy}, r, C(255, 253, 244), C(232, 228, 218));
+    /* os mares: manchas irregulares e claras, feitas de pontos (não círculos) */
+    for (int k = 0; k < 90; k++) {
+        float a = hash1(k * 3.7f) * 6.2832f, d = sqrtf(hash1(k * 1.3f + 5)) * r * 0.8f;
+        float px = cx + cosf(a) * d, py = cy + sinf(a) * d;
+        float m = sinf(px * 0.35f + 1) * sinf(py * 0.42f + 2) + 0.3f * sinf(px * 0.9f - py * 0.7f);
+        if (m > 0.25f) rect(floorf(px), floorf(py), 1, 1, C(196, 192, 200));
+    }
+    DrawRing((Vector2){cx, cy}, r - 1, r, 200, 340, 24, CA(255, 255, 255, 180));
+    DrawRing((Vector2){cx, cy}, r * 1.35f, r * 1.35f + 0.6f, 0, 360, 48, CA(220, 220, 255, (unsigned char)(40 + 20 * sinf(t * 0.7f))));
+}
+
+/* Cumeeira de montanhas com picos: ondas triangulares somadas. */
+static float tri(float u) { return 1 - fabsf(2 * fract(u) - 1); }
+static void ridge(float base, float amp, float freq, float seed, Color top, Color bot) {
+    for (int x = 0; x < LOW_W; x++) {
+        float u = x * freq + seed;
+        float h = base - amp * (0.6f * tri(u) + 0.3f * tri(u * 2.3f + seed) + 0.1f * tri(u * 5.1f + seed * 2));
+        vgrad(x, floorf(h), 1, LOW_H - floorf(h), top, bot);
+    }
+}
+
+/* Árvore de folhas em tufos redondos: sombra embaixo, luz em cima. */
+static void leafy(float x, float y, float r, Color dark, Color mid, Color light, int seed) {
+    rect(floorf(x) - 1, y, 2, r * 1.4f, mix(dark, C(20, 14, 12), 0.5f));
+    for (int k = 0; k < 9; k++) {
+        float a = hash1(seed * 13 + k) * 6.2832f, d = hash1(seed * 7 + k * 3) * r * 0.8f;
+        float cx = x + cosf(a) * d * 1.2f, cy = y + sinf(a) * d * 0.7f, rr = r * (0.45f + 0.25f * hash1(seed + k));
+        DrawCircleV((Vector2){floorf(cx), floorf(cy)}, rr, dark);
+        DrawCircleV((Vector2){floorf(cx - rr * 0.2f), floorf(cy - rr * 0.25f)}, rr * 0.75f, mid);
+        DrawCircleV((Vector2){floorf(cx - rr * 0.35f), floorf(cy - rr * 0.45f)}, rr * 0.35f, light);
+    }
+}
+
 /* Castelo em silhueta no alto: a base de pedra, três andares de parede e telhado
  * e as janelas que ainda têm luz. */
 static void castle(float cx, float base, float s, Color wall, Color roofc, Color ridge, float t) {
@@ -173,10 +228,6 @@ static void dojo(const ArenaCtx *c) {
         for (int x = 0; KAMAE[y][x]; x++)
             if (KAMAE[y][x] == '#') rect(152 + x, 54 + y, 1, 1, C(24, 16, 14));
     rect(163, 76, 3, 3, C(170, 40, 30));
-    /* Suporte com espadas de madeira à direita. */
-    rect(262, 96, 30, 2, C(60, 38, 24));
-    rect(262, 112, 30, 2, C(60, 38, 24));
-    for (int k = 0; k < 3; k++) line(266 + k * 8, 90, 268 + k * 8, 126, 1.2f, C(150, 112, 70));
     /* Lanternas de papel. */
     for (int l = 0; l < 2; l++) {
         float lx = l ? 262 : 58, sway = sinf(t * 1.3f + l) * 1.5f;
@@ -279,9 +330,8 @@ static void telhados(const ArenaCtx *c) {
     vgrad(0, 0, LOW_W, 70, C(8, 10, 22), C(26, 26, 50));
     vgrad(0, 70, LOW_W, 60, C(26, 26, 50), C(58, 50, 78));
     stars(18, 4, 40, 1.5f, t);
-    glow(62, 32, 26, C(120, 130, 190));
-    DrawCircleV((Vector2){62, 32}, 9, C(226, 228, 236));
-    DrawCircleV((Vector2){66, 29}, 8, C(15, 17, 32)); /* a cor do céu nessa altura: sobra a lua minguante */
+    glow(62, 32, 30, C(120, 130, 190));
+    crescent(62, 32, 11, 5, -3, C(232, 234, 242));   /* a lua crescente do corvo */
     /* Nuvens de chuva passando devagar. */
     for (int i = 0; i < 5; i++) {
         float w = 70 + hash1(i + 3) * 60, x = fract(hash1(i) + t * 0.008f * (1 + i % 2)) * (LOW_W + w) - w, y = floorf(8 + i * 9 + hash1(i + 1) * 6);
@@ -294,22 +344,37 @@ static void telhados(const ArenaCtx *c) {
         rect(x, y, 1, 60, C(30, 30, 56));
     }
     castle(228, 90, 1.0f, C(52, 52, 84), C(24, 24, 44), C(92, 96, 140), t);
-    /* A vila: três fileiras de casas com telhado de telha, as de trás mais claras
-     * na névoa, janelas de papel acesas. */
+    /* A vila: três fileiras de casas iguais, lado a lado como numa rua de machiya,
+     * as de trás mais claras na névoa; janelas quadradas de papel, umas acesas. */
     for (int layer = 0; layer < 3; layer++) {
         Color wall = layer == 0 ? C(44, 42, 72) : (layer == 1 ? C(32, 30, 56) : C(20, 20, 36));
         Color roofc = layer == 0 ? C(38, 36, 64) : (layer == 1 ? C(24, 24, 44) : C(14, 14, 28));
         Color ridge = layer == 0 ? C(70, 70, 106) : (layer == 1 ? C(62, 64, 100) : C(56, 60, 96));
-        float baseY = 116 + layer * 7;
-        for (int b = 0; b < 14 - layer * 2; b++) {
-            float w = 20 + hash1(b + layer * 30) * 16, h = 8 + hash1(b * 2 + layer * 30) * (8 + layer * 3);
-            float x = b * (24 + layer * 4) - 10 + layer * 11 + hash1(b + 9) * 6, y = baseY - h;
-            rect(x, y, w, h + 30, wall);
-            roof(x - 3, y - 5, w + 6, 5, roofc, ridge);
-            for (int k = 0; k < 3; k++) {
-                if (hash1(b * 5 + k + layer * 17) < 0.5f) continue;
+        Color seam = mix(wall, C(0, 0, 0), 0.35f);
+        float w = 22 + layer * 4, h = 10 + layer * 3, baseY = 114 + layer * 8, off = layer * 11 - 8, rh = 6 + layer;
+        int n = (int)(LOW_W / w) + 2;
+        for (int b = 0; b < n; b++) {
+            float x = floorf(off + b * w), y = baseY - h, cx = x + w / 2;
+            rect(x, y, w - 1, h + 30, wall);
+            rect(x + w - 1, y, 1, h + 30, seam);                    /* a divisa entre as casas */
+            for (int k = 3; k < w - 3; k += 3) rect(x + k, y + h - 3, 1, 3, seam);   /* a grade de ripas embaixo */
+            /* o telhado de duas águas de frente, igual em todas: a fileira vira um serrote */
+            for (int r = 0; r <= rh; r++) {
+                float half = floorf(1 + r * (w / 2 + 1) / rh);
+                rect(cx - half, y - rh + r, half * 2, 1, roofc);
+                rect(cx - half, y - rh + r, 1, 1, ridge);
+                rect(cx + half - 1, y - rh + r, 1, 1, ridge);
+            }
+            rect(x - 1, y, w + 1, 1, ridge);
+            for (int k = 0; k < 2; k++) {
+                float wx = floorf(x + 3 + k * (w - 10));
+                bool lit = hash1(b * 5 + k + layer * 17) < 0.55f;
                 float on = 0.8f + 0.2f * sinf(t * 3 + b + k);
-                rect(x + 3 + k * (w - 6) / 3, y + 3, 3, 2, fade(C(255, 196, 120), on));
+                rect(wx, y + 3, 4, 4, lit ? fade(C(255, 196, 120), on) : seam);
+                if (lit) {   /* a cruz do caixilho: a janela de papel em quatro quadradinhos */
+                    rect(wx + 1.5f, y + 3, 1, 4, fade(C(170, 110, 60), on));
+                    rect(wx, y + 4.5f, 4, 1, fade(C(170, 110, 60), on));
+                }
             }
         }
     }
@@ -348,7 +413,7 @@ static void telhados(const ArenaCtx *c) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 6. Porto dos tambores                                               */
+/* 6. Porto do farol                                                   */
 /* ------------------------------------------------------------------ */
 static void porto(const ArenaCtx *c) {
     float t = c->t;
@@ -386,18 +451,22 @@ static void porto(const ArenaCtx *c) {
         float x = i * 28 + 6, y = 66 + sinf(i * 0.5f) * 6 + sinf(t * 1.1f + i) * 1.2f;
         paper_lantern(x, y, 2.4f, C(214, 60, 40), t, i);
     }
-    /* Taikos com corda e couro. */
-    for (int d = 0; d < 2; d++) {
-        float dx = d ? 286 : 34, r = 20 + c->beat * 2.5f;
-        hgrad(dx - 18, 134, 36, 16, C(60, 34, 22), C(96, 58, 36));
-        DrawEllipse((int)dx, 120, r, r * 1.05f, C(120, 52, 30));
-        DrawCircleGradient((Vector2){dx, 120}, r * 0.82f, C(236, 220, 186), C(200, 180, 140));
-        for (int k = 0; k < 12; k++) {
-            float ang = k * 0.52f;
-            DrawCircleV((Vector2){dx + cosf(ang) * r * 0.92f, 120 + sinf(ang) * r * 0.96f}, 0.9f, C(60, 30, 20));
-        }
-        DrawCircleV((Vector2){dx, 120}, r * 0.26f, fade(C(190, 40, 30), 0.85f));
+    /* Caixotes de carga e um barril à esquerda; o poste de amarração com a corda à direita. */
+    for (int k = 0; k < 3; k++) {
+        float bx = 14 + (k == 2 ? 9 : k * 18), by = k == 2 ? 118 : 131, bw = 16, bh = k == 2 ? 13 : 13;
+        rect(bx, by, bw, bh, C(92, 64, 40));
+        rect(bx, by, bw, 1, C(140, 104, 66));
+        rect(bx, by + bh / 2, bw, 1, C(66, 44, 28));
+        line(bx + 1, by + 1, bx + bw - 1, by + bh - 1, 0.6f, C(66, 44, 28));
+        rect(bx, by, 1, bh, C(66, 44, 28));
+        rect(bx + bw - 1, by, 1, bh, C(66, 44, 28));
     }
+    hgrad(52, 128, 11, 16, C(70, 46, 30), C(110, 76, 48));
+    for (int k = 0; k < 3; k++) rect(52, 130 + k * 5, 11, 1, C(50, 50, 58));
+    hgrad(286, 124, 8, 20, C(58, 38, 26), C(100, 68, 42));
+    rect(285, 122, 10, 3, C(118, 82, 52));
+    for (int k = 0; k < 3; k++) rect(285, 128 + k * 2, 10, 1, C(176, 150, 104));
+    line(285, 131, 262, 146, 0.8f, C(150, 126, 88));
     /* Píer de tábuas. */
     floor_shade(C(96, 64, 42), C(52, 34, 22));
     for (int x = 0; x < LOW_W; x += 14) line(x, GROUND_LOW - 6, x - 4, LOW_H, 0.5f, C(44, 28, 18));
@@ -509,30 +578,32 @@ static void ponte(const ArenaCtx *c) {
         rect(x + w * 0.2f, y - 1, w * 0.5f, 1, C(170, 184, 178));
         rect(x + w * 0.1f, y + 2, w * 0.7f, 1, C(92, 110, 126));
     }
-    /* Serras ao longe. */
-    for (int l = 0; l < 2; l++)
-        for (int x = 0; x < LOW_W; x++) {
-            float h = 86 + l * 12 + sinf((x + l * 70) * 0.03f) * 10 + sinf(x * 0.09f + l) * 3;
-            rect(x, h, 1, 80, l ? C(86, 104, 118) : C(116, 134, 142));
-        }
-    /* O desfiladeiro: os paredões convergindo e o rio lá no fundo, na névoa. */
-    vgrad(110, 118, 100, 40, C(92, 110, 120), C(52, 64, 80));
-    for (int k = 0; k < 3; k++) rect(150 + k * 4 - (k == 1 ? 6 : 0), 128 + k * 3, 20 - k * 4, 1, C(200, 214, 212));
-    for (int side = 0; side < 2; side++) {
-        for (int y = 30; y < LOW_H; y++) {
-            float u = (y - 30) / 150.0f, edge = 60 + u * 70 + sinf(y * 0.21f) * 3 + sinf(y * 0.05f) * 6;
-            if (side) edge = LOW_W - (52 + u * 66 + sinf(y * 0.17f + 2) * 3 + sinf(y * 0.06f) * 5);
-            float x0 = side ? edge : 0, w = side ? LOW_W - edge : edge;
-            rect(x0, y, w, 1, side ? C(40, 44, 58) : C(46, 48, 62));
-            rect(side ? edge : edge - 2, y, 2, 1, side ? C(64, 70, 86) : C(96, 104, 116));
-            if ((y % 9) == 0) rect(side ? edge + 6 : 4, y, w - 12 > 0 ? w - 12 : 0, 1, C(34, 36, 50));
-        }
-    }
-    /* Pinheiros agarrados à rocha, entortados pelo vento. */
+    /* Serras ao longe: três cumeeiras de picos, a névoa da madrugada entre elas. */
+    ridge(96, 40, 0.011f, 0.35f, C(128, 146, 154), C(150, 166, 168));
+    vgrad(0, 72, LOW_W, 34, CA(206, 218, 214, 0), CA(206, 218, 214, 80));
+    ridge(106, 28, 0.017f, 2.15f, C(94, 112, 126), C(114, 130, 140));
+    vgrad(0, 88, LOW_W, 30, CA(206, 218, 214, 0), CA(206, 218, 214, 90));
+    ridge(118, 18, 0.029f, 5.3f, C(64, 80, 96), C(78, 94, 108));
+    /* O fundo do desfiladeiro: a névoa descendo e o rio brilhando lá embaixo. */
+    vgrad(0, 116, LOW_W, 44, C(74, 90, 106), C(38, 48, 64));
     for (int k = 0; k < 5; k++) {
-        float px = k < 3 ? 10 + k * 20 : 284 + (k - 3) * 22, py = 32 + (k % 2) * 2;
-        float sw = sinf(t * 2.2f + k) * 1.2f;
-        conifer(px, py, 14 + hash1(k + 8) * 8, 5 + sw, C(28, 40, 42), C(96, 120, 116));
+        float rx = 90 + k * 30 + sinf(t * 0.6f + k) * 3;
+        rect(floorf(rx), 138 + (k % 2), 10 + hash1(k + 60) * 8, 1, CA(200, 214, 212, 120));
+    }
+    /* Os paredões só nas pontas, onde a ponte se prende: rocha em camadas e pinheiros. */
+    for (int side = 0; side < 2; side++) {
+        for (int y = 92; y < LOW_H; y++) {
+            float edge = 26 + (y - 92) * 0.1f + sinf(y * 0.23f + side * 3) * 2 + sinf(y * 0.07f + side) * 3;
+            float x0 = side ? LOW_W - edge : 0;
+            hgrad(x0, y, edge, 1, side ? C(58, 62, 78) : C(40, 44, 58), side ? C(40, 44, 58) : C(66, 72, 88));
+            rect(side ? x0 : edge - 1, y, 1, 1, C(112, 120, 132));
+            if (y % 7 == 0) rect(side ? x0 + 3 : 3, y, edge - 6, 1, C(34, 38, 50));
+        }
+        rect(side ? LOW_W - 26 : 0, 91, 26, 1, C(90, 110, 90));   /* o capim na borda */
+    }
+    for (int k = 0; k < 4; k++) {
+        float px = k < 2 ? 6 + k * 13 : 300 + (k - 2) * 13, sw = sinf(t * 2.2f + k) * 1.2f;
+        conifer(px, 94, 16 + hash1(k + 8) * 8, 4 + sw, C(28, 40, 42), C(96, 120, 116));
     }
     vgrad(0, 126, LOW_W, 30, CA(210, 220, 214, 0), CA(210, 220, 214, 70)); /* névoa subindo do rio */
     /* A ponte de corda: o corrimão balançando, as cordas descendo até as tábuas e as
@@ -587,10 +658,14 @@ static void cachoeira(const ArenaCtx *c) {
         hgrad(r, y, LOW_W - r, 1.05f, C(84, 102, 92), C(40, 54, 50));
         if (y % 9 == 0) { rect(l - 10, y, 10, 1.4f, C(80, 130, 70)); rect(r, y + 3, 8, 1.4f, C(80, 130, 70)); }
     }
+    /* Árvores de folha agarradas no alto dos paredões, pendendo para a queda. */
     for (int k = 0; k < 4; k++) {
-        float tx = k < 2 ? 14 + k * 26 : 250 + (k - 2) * 30;
-        DrawTriangle((Vector2){tx, 20}, (Vector2){tx - 12, 60}, (Vector2){tx + 12, 60}, C(40, 70, 50));
-        DrawTriangle((Vector2){tx, 34}, (Vector2){tx - 15, 76}, (Vector2){tx + 15, 76}, C(34, 60, 44));
+        float tx = k < 2 ? 16 + k * 36 : 246 + (k - 2) * 40, ty = k % 2 ? 34 : 24;
+        leafy(tx, ty, 13 + (k % 2) * 3, C(24, 52, 40), C(42, 82, 56), C(92, 146, 86), k + 3);
+    }
+    for (int k = 0; k < 6; k++) {   /* cipós */
+        float vx = k < 3 ? 76 + k * 5 : 234 + (k - 3) * 6, vy = 40 + hash1(k + 40) * 20;
+        line(vx, vy, vx + sinf(t * 0.8f + k) * 1.2f, vy + 18 + hash1(k + 41) * 14, 0.6f, C(52, 96, 60));
     }
     /* A queda d'água em degradê com fios descendo. */
     vgrad(96, 0, 130, 120, C(200, 232, 244), C(236, 250, 255));
@@ -683,37 +758,95 @@ static void bambuzal(const ArenaCtx *c) {
 /* ------------------------------------------------------------------ */
 static void forja(const ArenaCtx *c) {
     float t = c->t;
-    vgrad(0, 0, LOW_W, GROUND_LOW, C(18, 6, 6), C(90, 26, 12));
-    /* Paredes de rocha com a luz da lava subindo nelas. */
+    float fl = 0.88f + 0.12f * sinf(t * 7) * sinf(t * 3.3f);
+    /* O céu pela boca da cratera: fumaça avermelhada e cinza caindo. */
+    vgrad(0, 0, LOW_W, 70, C(20, 8, 12), C(72, 24, 20));
+    for (int i = 0; i < 7; i++) {
+        float w = 50 + hash1(i + 1) * 60, x = fract(hash1(i) + t * 0.006f * (1 + i % 3)) * (LOW_W + w) - w, y = 8 + hash1(i + 2) * 40;
+        DrawEllipse((int)(x + w / 2), (int)y, w / 2, 4, CA(40, 16, 18, 200));
+        DrawEllipse((int)(x + w / 2), (int)y - 1, w / 3, 2, CA(90, 36, 30, 160));
+    }
+    /* A parede do fundo da cratera: basalto em camadas, mais claro embaixo com a luz da lava. */
     for (int x = 0; x < LOW_W; x++) {
-        float h = 20 + sinf(x * 0.05f) * 10 + sinf(x * 0.13f) * 6;
-        vgrad(x, 0, 1.05f, h, C(24, 10, 8), C(50, 18, 12));
-        float h2 = 70 + sinf(x * 0.03f + 1) * 12;
-        vgrad(x, h2, 1.05f, 60, C(80, 30, 18), C(40, 14, 10));
+        float top = 46 + tri(x * 0.013f + 0.4f) * 18 + tri(x * 0.041f + 1.7f) * 6;
+        vgrad(x, floorf(top), 1, 120 - floorf(top), C(38, 18, 20), C(118, 44, 26));
+        if (((int)(top + x * 0.2f)) % 9 == 0) rect(x, floorf(top) + 8, 1, 1, C(70, 30, 26));
     }
-    /* Rio de lava com correnteza e bolhas. */
-    vgrad(0, 110, LOW_W, 24, C(255, 200, 80), C(190, 40, 10));
-    for (int k = 0; k < 40; k++) {
-        float x = fract(hash1(k) + t * 0.03f) * 360 - 20, y = 112 + hash1(k + 1) * 20;
-        rect(x, y, 6 + hash1(k + 2) * 10, 0.8f, CA(255, 240, 160, 150));
+    for (int k = 0; k < 5; k++) rect(0, 70 + k * 10 + (k % 2) * 3, LOW_W, 1, CA(24, 10, 12, 120));   /* os estratos */
+    /* As paredes dos lados, fechando a cratera, escuras. */
+    for (int y = 0; y < GROUND_LOW; y++) {
+        float l = 34 - y * 0.12f + sinf(y * 0.17f) * 3, r = LOW_W - (40 - y * 0.14f + sinf(y * 0.13f + 2) * 3);
+        if (l > 0) hgrad(0, y, l, 1, C(16, 8, 10), C(46, 20, 18));
+        if (r < LOW_W) hgrad(r, y, LOW_W - r, 1, C(46, 20, 18), C(16, 8, 10));
     }
-    for (int i = 0; i < 8; i++) {
-        float ph = fract(t * 0.5f + hash1(i)), x = hash1(i + 10) * LOW_W;
-        if (ph < 0.3f) DrawCircleLines((int)x, 116, ph * 10, C(255, 236, 140));
+    /* A cascata de lava descendo o paredão e o lago de lava no fundo, com a crosta boiando. */
+    for (int k = 0; k < 7; k++) {
+        float lx = 196 + k * 1.6f;
+        vgrad(lx, 62 + k % 3, 1.6f, 52, C(255, 214, 110), C(240, 110, 30));
     }
-    glow(160, 122, 150, C(170, 50, 10));
-    /* Forno de tijolos com a boca acesa, fole e bigorna. */
-    for (int r = 0; r < 8; r++)
-        for (int k = 0; k < 5; k++) rect(250 + k * 10 + (r % 2) * 5, 82 + r * 6, 9.4f, 5.4f, C(70 + (k * 7 + r * 5) % 20, 34, 26));
-    DrawCircleGradient((Vector2){275, 108}, 12, C(255, 220, 120), C(255, 100, 20));
-    glow(275, 107, 36 * (0.9f + 0.1f * sinf(t * 7)), C(255, 110, 30));
-    hgrad(26, 116, 36, 9, C(40, 40, 48), C(84, 84, 96));
-    DrawTriangle((Vector2){26, 116}, (Vector2){26, 125}, (Vector2){14, 118}, C(50, 50, 58));
-    hgrad(36, 125, 16, 16, C(34, 34, 40), C(64, 64, 74));
-    line(40, 112, 58, 104, 1.2f, C(110, 80, 60));
-    rect(55, 101, 6, 4, C(70, 70, 80));
+    for (int i = 0; i < 6; i++) rect(197 + hash1(i) * 9, 62 + fract(hash1(i + 1) + t * 0.8f) * 50, 1, 4, C(255, 244, 190));
+    glow(201, 90, 30 * fl, C(255, 110, 30));
+    vgrad(0, 112, LOW_W, 22, C(214, 110, 40), C(120, 34, 14));
+    for (int k = 0; k < 14; k++) {   /* os veios mais quentes entre as placas de crosta */
+        float vx = fract(hash1(k + 30) + t * 0.012f) * (LOW_W + 30) - 15, vy = 113 + hash1(k + 31) * 18;
+        rect(floorf(vx), floorf(vy), 6 + hash1(k + 32) * 12, 1, C(255, 214, 120));
+    }
+    for (int k = 0; k < 9; k++) {
+        float cx = fract(hash1(k + 40) + t * 0.01f) * (LOW_W + 40) - 20, cy = 116 + hash1(k + 41) * 14, w = 10 + hash1(k + 42) * 16;
+        DrawEllipse((int)cx, (int)cy, w / 2, 1.5f, C(70, 26, 16));
+        rect(cx - w / 4, cy - 1, w / 2, 1, C(110, 40, 20));
+    }
+    for (int i = 0; i < 6; i++) {
+        float ph = fract(t * 0.6f + hash1(i + 50)), x = hash1(i + 51) * LOW_W;
+        if (ph < 0.35f) DrawCircleLines((int)x, 118 + (int)(hash1(i + 52) * 10), ph * 8, C(255, 236, 150));
+    }
+    glow(160, 124, 120, C(110, 30, 8));
+    /* A forja: o barracão de madeira com teto de palha, a corda sagrada com as tiras de
+     * papel, a fornalha de barro acesa, o fole de caixa e as lâminas esfriando. */
+    for (int k = 0; k < 3; k++) hgrad(222 + k * 36, 96, 4, 48, C(40, 24, 18), C(80, 50, 32));
+    for (int r = 0; r < 12; r++) {   /* o teto de palha, mais largo embaixo, com o fio da palha */
+        float rx = 222 - r * 1.2f, rw = 84 + r * 2.4f;
+        rect(rx, 84 + r, rw, 1, r < 2 ? C(150, 116, 70) : C(116 - r * 3, 86 - r * 2, 54 - r));
+        for (int k = 2; k < rw; k += 5) rect(rx + k + (r % 2) * 2, 84 + r, 1, 1, C(84 - r, 60 - r, 36));
+    }
+    rect(210, 96, 108, 3, C(60, 36, 24));
+    for (int k = 0; k < 104; k += 2) rect(212 + k, 99 + sinf(k * 0.2f) * 1.2f, 2, 2, C(196, 170, 110));   /* a corda */
+    for (int k = 0; k < 4; k++) {
+        float sx = 222 + k * 26, sw = sinf(t * 2 + k) * 0.8f;
+        for (int j = 0; j < 3; j++) rect(sx + sw + (j % 2), 101 + j * 2, 2, 2, C(244, 240, 226));   /* as tiras em zigue-zague */
+    }
+    glow(262, 136, 26 * fl, C(255, 120, 40));
+    DrawEllipse(262, 134, 15, 12, C(92, 54, 40));                        /* a fornalha de barro, com a chaminé */
+    rect(247, 134, 30, 10, C(92, 54, 40));
+    DrawEllipse(259, 130, 9, 6, C(122, 74, 52));
+    rect(258, 112, 8, 12, C(86, 50, 38));
+    rect(257, 111, 10, 2, C(110, 66, 48));
+    DrawEllipse(262, 139, 5, 3, C(255, 196, 90));                        /* a boca acesa */
+    DrawEllipse(262, 140, 2, 1, C(255, 250, 210));
+    for (int i = 0; i < 5; i++) rect(260 + hash1(i + 60) * 5, 110 - fract(hash1(i + 61) + t * 1.4f) * 24, 1, 1, C(255, 190, 90));
+    hgrad(284, 130, 22, 14, C(70, 46, 30), C(104, 70, 44));                /* o fole */
+    rect(284, 130, 22, 1, C(140, 100, 64));
+    rect(296, 124, 2, 6, C(60, 40, 26));
+    /* o suporte de katanas, com as lâminas recém-forjadas deitadas */
+    for (int k = 0; k < 2; k++) {
+        hgrad(34 + k * 26, 118, 3, 26, C(50, 30, 22), C(84, 54, 34));
+        rect(33 + k * 26, 142, 5, 2, C(60, 40, 28));
+    }
+    for (int k = 0; k < 3; k++) {
+        float by = 121 + k * 7;
+        for (int x = 0; x < 34; x++) {
+            float y = by - (x - 17) * (x - 17) * 0.004f;
+            rect(30 + x, floorf(y), 1, 1, x < 8 ? C(60, 30, 26) : C(214, 210, 218));
+            if (x >= 8) rect(30 + x, floorf(y) - 1, 1, 1, C(255, 244, 236));
+        }
+        rect(37, by - 1, 2, 3, C(190, 150, 60));   /* a guarda */
+    }
+    hgrad(70, 134, 20, 10, C(60, 60, 70), C(100, 100, 112));               /* a bigorna num toco */
+    rect(66, 132, 28, 3, C(120, 120, 134));
+    DrawTriangle((Vector2){66, 132}, (Vector2){66, 135}, (Vector2){60, 133}, C(120, 120, 134));
+    hgrad(74, 144, 12, 6, C(60, 40, 28), C(96, 64, 40));
     /* Chão de basalto rachado com veios em brasa. */
-    floor_shade(C(44, 30, 28), C(20, 14, 14));
+    floor_shade(C(52, 32, 30), C(22, 14, 14));
     for (int i = 0; i < 12; i++) {
         float x = hash1(i) * LOW_W, g = 0.6f + 0.4f * sinf(t * 2 + i);
         line(x, GROUND_LOW - 4, x + 14, GROUND_LOW + 10, 0.8f, fade(C(255, 130, 40), g));
@@ -749,8 +882,8 @@ static void jardim(const ArenaCtx *c) {
     floor_shade(C(176, 182, 204), C(126, 130, 156));
     vgrad(0, 128, LOW_W, GROUND_LOW - 128 - 6, C(150, 154, 180), C(170, 176, 200));
     for (int y = 129; y < LOW_H; y += 2) rect(0, y, LOW_W, 1, y < GROUND_LOW - 6 ? C(126, 130, 158) : C(138, 142, 170));
-    static const float rocks[][3] = {{64, 138, 1.0f}, {262, 136, 0.8f}, {160, 170, 0.7f}};
-    for (int r = 0; r < 3; r++) {
+    static const float rocks[][3] = {{262, 136, 0.8f}, {160, 170, 0.7f}};
+    for (int r = 0; r < 2; r++) {
         float rx = rocks[r][0], ry = rocks[r][1], sc = rocks[r][2];
         for (int k = 4; k >= 1; k--) {
             Color ring = k % 2 ? C(122, 124, 146) : C(190, 194, 210);
@@ -758,14 +891,36 @@ static void jardim(const ArenaCtx *c) {
         }
         DrawEllipse((int)rx, (int)ry, 18 * sc, 4 * sc, C(150, 152, 172));
     }
-    /* A ilha da tartaruga: a pedra do casco, a cabeça esticada e o musgo. */
-    DrawEllipse(64, 134, 14, 7, C(70, 72, 84));
-    DrawEllipse(62, 132, 11, 5, C(96, 98, 112));
-    rect(55, 128, 12, 1, C(140, 144, 160));
-    DrawEllipse(80, 136, 4, 3, C(84, 86, 98));
-    rect(79, 133, 3, 1, C(140, 144, 160));
-    DrawEllipse(52, 138, 9, 2, C(52, 76, 58));
-    DrawEllipse(72, 139, 7, 2, C(60, 86, 64));
+    /* O laguinho de carpas no cascalho: a borda de pedras, a água escura com o brilho
+     * da lua, as folhas de lótus, duas carpas dando voltas e a ilha da tartaruga no meio. */
+    float px = 74, py = 137;
+    DrawEllipse((int)px, (int)py, 46, 9, C(104, 106, 126));
+    for (int k = 0; k < 26; k++) {
+        float a = k / 26.0f * 6.2832f;
+        DrawEllipse((int)(px + cosf(a) * 44), (int)(py + sinf(a) * 8.4f), 3, 2, k % 3 ? C(150, 152, 170) : C(96, 98, 118));
+    }
+    DrawEllipse((int)px, (int)py, 41, 7, C(44, 66, 112));
+    DrawEllipse((int)px, (int)py + 1, 38, 5, C(58, 86, 138));
+    rect(px - 38, py - 6, 76, 1, C(36, 52, 92));                           /* a sombra da borda na água */
+    for (int k = 0; k < 7; k++) {
+        float wx = px - 30 + hash1(k + 70) * 56 + sinf(t * 0.8f + k) * 2, wy = floorf(py - 4 + k * 1.3f);
+        rect(floorf(wx), wy, 4 + hash1(k + 71) * 6, 1, C(150, 176, 226));
+    }
+    for (int k = 0; k < 2; k++) {
+        float a = t * 0.45f + k * 3.1f, fx = px + cosf(a) * 28, fy = py + sinf(a) * 3.6f + 1, dir = -sinf(a) > 0 ? 1 : -1;
+        rect(floorf(fx), floorf(fy), 3, 1, k ? C(240, 236, 226) : C(236, 120, 50));
+        rect(floorf(fx + (dir > 0 ? 1 : 0)), floorf(fy), 1, 1, C(236, 120, 50));
+        rect(floorf(fx - dir * 1), floorf(fy), 1, 1, CA(236, 150, 90, 180));
+    }
+    static const float pads[][2] = {{44, 135}, {50, 139}, {104, 136}, {98, 140}};
+    for (int k = 0; k < 4; k++) DrawEllipse((int)pads[k][0], (int)pads[k][1], 3, 1, C(58, 96, 64));
+    rect(104, 135, 1, 1, C(236, 170, 190));
+    DrawEllipse((int)px - 4, (int)py - 1, 12, 5, C(70, 72, 84));        /* a ilha da tartaruga: o casco */
+    DrawEllipse((int)px - 6, (int)py - 3, 9, 3, C(96, 98, 112));
+    rect(px - 13, py - 6, 10, 1, C(140, 144, 160));
+    DrawEllipse((int)px + 10, (int)py, 3, 2, C(84, 86, 98));             /* a cabeça esticada */
+    rect(px + 9, py - 2, 3, 1, C(140, 144, 160));
+    DrawEllipse((int)px - 8, (int)py + 3, 6, 1, C(52, 76, 58));          /* o musgo na beira */
     /* A pedra da garça (vertical) e as menores. */
     rect(256, 118, 9, 18, C(80, 82, 96));
     rect(258, 116, 6, 3, C(80, 82, 96));
@@ -859,15 +1014,12 @@ static void cidadela(const ArenaCtx *c) {
 /* ------------------------------------------------------------------ */
 static void serra(const ArenaCtx *c) {
     float t = c->t;
-    vgrad(0, 0, LOW_W, 70, C(58, 40, 72), C(190, 110, 110));
+    vgrad(0, 0, LOW_W, 70, C(34, 26, 60), C(176, 104, 112));
     vgrad(0, 70, LOW_W, 60, C(190, 110, 110), C(255, 176, 110));
     glow(172, 104, 80, C(255, 150, 70));
     DrawCircleGradient((Vector2){172, 104}, 22, C(255, 240, 196), C(255, 200, 130));
-    /* a lua de jinshi já nasce no céu do entardecer, pálida */
-    glow(262, 30, 22, C(230, 220, 255));
-    DrawCircleV((Vector2){262, 30}, 8, C(236, 226, 240));
-    DrawCircleV((Vector2){259, 28}, 2, C(214, 204, 226));
-    DrawCircleV((Vector2){265, 33}, 1.5f, C(218, 208, 230));
+    /* a lua de jinshi, grande e cheia, já no alto do céu do entardecer */
+    full_moon(246, 34, 17, t);
     for (int i = 0; i < 6; i++) {
         float x = fract(hash1(i) + t * 0.004f * (1 + i % 3)) * 380 - 30, y = 20 + hash1(i + 4) * 44;
         DrawEllipse((int)x, (int)y, 28 + hash1(i + 1) * 16, 3, CA(250, 180, 150, 120));
@@ -906,88 +1058,87 @@ static void serra(const ArenaCtx *c) {
 /* ------------------------------------------------------------------ */
 /* Portão do tigre branco                                              */
 /* ------------------------------------------------------------------ */
-/* Tigre de pedra sentado num pedestal, virado para o centro. */
-/* Bordo de outono em pixel: tronco e galhos escuros e a copa em tufos de folhas,
- * mais claros em cima (a luz da lua) e mais escuros embaixo, com vãos. */
+/* Bordo de outono: a copa em tufos redondos, vermelhos e laranja, mais claros em cima. */
 static void maple(float x, float y, float r, int seed) {
-    rect(x - 1, y, 3, 26, C(50, 34, 30));
-    line(x, y + 4, x - r * 0.5f, y - 2, 1, C(50, 34, 30));
-    line(x + 1, y + 2, x + r * 0.55f, y - 4, 1, C(50, 34, 30));
-    static const Color leaf[4] = {{112, 36, 30, 255}, {150, 52, 36, 255}, {190, 80, 42, 255}, {222, 124, 56, 255}};
-    for (int k = 0; k < 70; k++) {
-        float a = hash1(seed * 97 + k) * 6.2832f, d = sqrtf(hash1(seed * 31 + k * 3)) * r;
-        float lx = x + cosf(a) * d * 1.15f, ly = y - 3 + sinf(a) * d * 0.8f;
-        int shade = (int)((1 - (ly - (y - 3 - r * 0.8f)) / (r * 1.6f)) * 3.2f + hash1(k + seed) * 0.8f);
-        if (shade < 0) shade = 0;
-        if (shade > 3) shade = 3;
-        rect(floorf(lx), floorf(ly), 2 + (k % 3 == 0), 2, leaf[shade]);
-    }
+    leafy(x, y, r, C(110, 30, 26), C(170, 60, 36), C(226, 124, 60), seed);
 }
 
-static void stone_tiger(float x, float base, float dir) {
-    Color light = C(214, 210, 198), mid = C(170, 166, 156), dark = C(110, 106, 100), stripe = C(60, 58, 60);
-    rect(x - 10, base - 10, 20, 10, dark);
-    rect(x - 11, base - 12, 22, 3, mid);
-    float bx = x - dir * 2;
-    DrawEllipse((int)bx, (int)(base - 19), 8, 7, mid);                       /* corpo sentado */
-    DrawEllipse((int)(bx - dir * 1.5f), (int)(base - 20), 5, 5, light);
-    DrawCircleV((Vector2){x + dir * 5, base - 30}, 5, light);                /* cabeça */
-    DrawTriangle((Vector2){x + dir * 2, base - 35}, (Vector2){x + dir * 4, base - 38}, (Vector2){x + dir * 6, base - 35}, mid);
-    DrawTriangle((Vector2){x + dir * 6, base - 35}, (Vector2){x + dir * 8, base - 38}, (Vector2){x + dir * 9, base - 34}, mid);
-    for (int k = 0; k < 3; k++) line(bx - 5 + k * 4, base - 24, bx - 3 + k * 4, base - 15, 0.7f, stripe);
-    line(x + dir * 3, base - 32, x + dir * 5, base - 29, 0.6f, stripe);
-    rect(x + dir * 1 - 1, base - 14, 2.5f, 3, light);                        /* patas */
-    rect(x + dir * 5 - 1, base - 14, 2.5f, 3, light);
-    line(bx - dir * 8, base - 14, bx - dir * 12, base - 26, 1.2f, mid);     /* cauda */
+/* Lanterna de pedra (tōrō): base, haste, a caixa com a luz, o chapéu e a joia. */
+static void toro(float x, float base, float t, float seed) {
+    Color st = C(132, 126, 124), dk = C(92, 88, 90), lt = C(170, 166, 162);
+    rect(x - 6, base - 3, 12, 3, dk);
+    rect(x - 2, base - 16, 4, 13, st);
+    rect(x - 2, base - 16, 1, 13, lt);
+    rect(x - 5, base - 18, 10, 2, st);
+    rect(x - 4, base - 25, 8, 7, dk);
+    float fl = 0.85f + 0.15f * sinf(t * 7 + seed);
+    rect(x - 2, base - 24, 4, 4, fade(C(255, 196, 120), fl));
+    glow(x, base - 22, 12 * fl, C(255, 170, 80));
+    for (int k = 0; k < 4; k++) rect(x - 7 + k, base - 27 - k, 14 - k * 2, 1, k ? st : lt);
+    rect(x - 1, base - 32, 2, 2, st);
+}
+
+/* Bandeira nobori branca com as listras do tigre. */
+static void nobori(float x, float top, float t, float seed) {
+    rect(x, top - 4, 1, GROUND_LOW - top, C(60, 44, 34));
+    rect(x + 1, top - 3, 9, 1, C(60, 44, 34));
+    float sw = sinf(t * 1.6f + seed) * 1.2f;
+    for (int y = 0; y < 36; y++) {
+        float off = sw * y / 36.0f;
+        rect(x + 1 + off, top + y, 8, 1, C(236, 232, 222));
+        if ((y + (int)seed) % 7 < 2) rect(x + 2 + off + (y % 3), top + y, 4, 1, C(40, 36, 40));   /* listras */
+    }
 }
 
 static void templo(const ArenaCtx *c) {
     float t = c->t;
-    vgrad(0, 0, LOW_W, GROUND_LOW, C(18, 16, 34), C(86, 70, 92));
-    stars(60, 53, 90, 1.0f, t);
-    /* Lua cheia do oeste. */
-    glow(250, 38, 40, C(255, 236, 200));
-    DrawCircleV((Vector2){250, 38}, 13, C(250, 244, 226));
-    DrawCircleV((Vector2){246, 35}, 3, C(232, 224, 204));
-    DrawCircleV((Vector2){254, 42}, 2, C(236, 228, 208));
-    /* Serra ao fundo e bordos de outono. */
-    for (int i = 0; i < 6; i++) {
-        float x = i * 64 - 10, h = 36 + hash1(i + 9) * 22;
-        DrawTriangle((Vector2){x - 50, 118}, (Vector2){x + 70, 118}, (Vector2){x + 10, 118 - h}, C(40, 34, 56));
+    vgrad(0, 0, LOW_W, 80, C(18, 16, 40), C(70, 52, 84));
+    vgrad(0, 80, LOW_W, 70, C(70, 52, 84), C(120, 76, 90));
+    stars(60, 53, 70, 1.0f, t);
+    full_moon(268, 30, 11, t);
+    /* Morros de mata atrás do templo. */
+    ridge(112, 26, 0.012f, 1.3f, C(40, 32, 56), C(50, 40, 64));
+    for (int k = 0; k < 16; k++) conifer(8 + k * 21 + hash1(k + 3) * 6, 112 - hash1(k + 9) * 10, 10 + hash1(k) * 8, 0, C(30, 26, 44), C(52, 44, 70));
+    /* O muro de taipa branco dos dois lados, com a faixa e o telhadinho. */
+    for (int side = 0; side < 2; side++) {
+        float x0 = side ? 226 : 0, w = side ? LOW_W - 226 : 94;
+        vgrad(x0, 110, w, 24, C(214, 206, 196), C(176, 168, 160));
+        rect(x0, 124, w, 1, C(150, 142, 138));
+        roof(x0 - 2, 105, w + 4, 5, C(46, 42, 56), C(96, 92, 110));
     }
-    for (int i = 0; i < 7; i++) {
-        float x = 10 + i * 48 + hash1(i + 2) * 12, y = 96 + hash1(i + 5) * 10;
-        maple(x, y, 12 + hash1(i) * 4, i);
+    /* O portão de dois andares: pilares vermelhos, o telhado de baixo, o andar de cima
+     * com as paredes brancas e a placa do tigre, e o telhado grande com as pontas erguidas. */
+    Color ver = C(176, 46, 36), verd = C(120, 30, 26), tile = C(40, 38, 52), tidge = C(104, 100, 124);
+    vgrad(126, 80, 68, 54, C(24, 16, 20), C(40, 26, 26));                /* o vão escuro */
+    paper_lantern(160, 94, 4, C(236, 200, 120), t, 3);
+    for (int k = 0; k < 4; k++) {
+        float px = k == 0 ? 100 : k == 1 ? 124 : k == 2 ? 191 : 215;
+        hgrad(px, 78, 5, 56, verd, ver);
+        rect(px - 1, 132, 7, 2, C(90, 84, 86));
     }
-    /* Muro baixo do templo. */
-    rect(0, 118, LOW_W, 14, C(88, 80, 84));
-    rect(0, 116, LOW_W, 3, C(120, 110, 112));
-    for (int x = 0; x < LOW_W; x += 16) line(x, 119, x, 132, 0.4f, C(60, 54, 60));
-    /* O portão de pedra clara (torii do oeste). */
-    Color stone = C(222, 218, 206), shade = C(170, 164, 152);
-    hgrad(122, 40, 7, 92, shade, stone);
-    hgrad(191, 40, 7, 92, shade, stone);
-    vgrad(110, 38, 100, 5, stone, shade);
-    DrawTriangle((Vector2){106, 38}, (Vector2){112, 33}, (Vector2){112, 38}, stone);
-    DrawTriangle((Vector2){208, 33}, (Vector2){214, 38}, (Vector2){208, 38}, stone);
-    rect(112, 33, 96, 5, C(236, 232, 222));
-    rect(116, 52, 88, 4, shade);
-    vgrad(151, 44, 18, 14, C(40, 34, 40), C(28, 24, 30));                    /* placa com o tigre */
-    line(155, 48, 165, 48, 0.8f, C(230, 220, 190));
-    line(157, 51, 163, 55, 0.8f, C(230, 220, 190));
-    line(163, 51, 157, 55, 0.8f, C(230, 220, 190));
-    /* Tigres de pedra e lanternas de pedra. */
-    stone_tiger(88, 140, 1);
-    stone_tiger(232, 140, -1);
-    for (int l = 0; l < 2; l++) {
-        float lx = l ? 284 : 36;
-        rect(lx - 2, 118, 4, 22, C(120, 114, 110));
-        rect(lx - 6, 110, 12, 8, C(150, 144, 138));
-        rect(lx - 4, 112, 8, 4, C(255, 196, 120));
-        DrawTriangle((Vector2){lx - 8, 110}, (Vector2){lx + 8, 110}, (Vector2){lx, 104}, C(110, 104, 100));
-        glow(lx, 114, 14 * (0.85f + 0.15f * sinf(t * 7 + l * 2)), C(255, 170, 80));
-    }
-    /* Pátio de lajes claras sob a lua. */
+    rect(96, 76, 128, 4, ver);
+    rect(96, 80, 128, 1, verd);
+    roof(86, 64, 148, 12, tile, tidge);
+    rect(112, 48, 96, 16, C(222, 214, 202));                             /* o andar de cima */
+    for (int k = 0; k < 5; k++) rect(112 + k * 23.5f, 48, 3, 16, ver);
+    rect(108, 62, 104, 2, verd);                                          /* a varanda */
+    for (int k = 0; k < 13; k++) rect(110 + k * 8, 59, 1, 3, verd);
+    rect(150, 50, 20, 10, C(24, 20, 26));                                 /* a placa: o tigre branco */
+    rect(150, 50, 20, 1, C(190, 150, 70));
+    rect(150, 59, 20, 1, C(190, 150, 70));
+    for (int k = 0; k < 4; k++) rect(153 + k * 4, 52 + (k % 2), 2, 5, C(236, 232, 222));
+    roof(94, 30, 132, 18, tile, tidge);
+    rect(92, 46, 2, 2, tile);
+    rect(226, 46, 2, 2, tile);
+    rect(156, 26, 8, 4, tidge);
+    /* Bandeiras do tigre, lanternas de pedra e os bordos. */
+    nobori(78, 84, t, 1);
+    nobori(234, 84, t, 4);
+    toro(58, 138, t, 1);
+    toro(262, 138, t, 2);
+    maple(18, 92, 17, 1);
+    maple(302, 94, 16, 2);
+    /* Pátio de lajes claras sob a lua, com folhas caídas. */
     floor_shade(C(150, 144, 150), C(70, 64, 74));
     for (int i = 0; i < 12; i++) line(i * 32 - 16 + 16, GROUND_LOW - 6, i * 32 - 60, LOW_H, 0.5f, C(96, 90, 100));
     line(0, 160, LOW_W, 160, 0.5f, C(96, 90, 100));
