@@ -1012,6 +1012,83 @@ static void cidadela(const ArenaCtx *c) {
 /* ------------------------------------------------------------------ */
 /* Encosta da serra (jinshi): pôr do sol, serras em camadas, vento     */
 /* ------------------------------------------------------------------ */
+/* Pinheiro-negro torcido pelo vento (kuromatsu), pixel a pixel: o tronco com volume
+ * subindo torto, galhos para o lado do vento e a copa em almofadas de agulhas, cada
+ * uma com a borda irregular e quatro tons, com a luz de cima à esquerda. */
+static float h2(int x, int y, int s) { return hash1(x * 12.7f + y * 71.3f + s * 3.1f); }
+
+/* Almofada de agulhas: fundo mais reto que o topo, borda recortada, e riscos de
+ * agulha trocando de tom no meio da massa. tone[0] é a borda e a sombra. */
+static void needle_pad(float cx, float cy, float rx, float ry, const Color tone[4], int seed) {
+    for (int y = (int)floorf(cy - ry - 2); y <= (int)ceilf(cy + ry + 1); y++)
+        for (int x = (int)floorf(cx - rx - 2); x <= (int)ceilf(cx + rx + 2); x++) {
+            float dx = (x + 0.5f - cx) / rx, dy = (y + 0.5f - cy) / ry;
+            if (dy > 0) dy *= 1.7f;
+            float ang = atan2f(dy, dx), d = sqrtf(dx * dx + dy * dy);
+            float edge = 1 + 0.16f * sinf(ang * 5 + seed) + 0.1f * sinf(ang * 11 + seed * 2.3f) + (h2(x, y, seed) - 0.5f) * 0.24f;
+            if (d > edge) continue;
+            float lit = -dx * 0.55f - dy * 0.9f + (h2(x, y, seed + 7) - 0.5f) * 0.3f;
+            int k = lit > 0.6f ? 3 : lit > 0.05f ? 2 : lit > -0.55f ? 1 : 0;
+            if (d > edge - 0.22f && lit < 0.35f) k = 0;          /* a borda de baixo e da direita */
+            if (k == 2 && h2(x, y, seed + 11) < 0.14f) k = 1;    /* tufos de agulha */
+            if (k == 1 && h2(x, y, seed + 13) < 0.10f) k = 2;
+            rect(x, y, 1, 1, tone[k]);
+        }
+}
+
+static void wind_pine(float x, float base, float h, float lean, float t, int seed) {
+    static const Color bark[4] = {C(28, 18, 22), C(56, 36, 36), C(86, 58, 50), C(126, 88, 70)};
+    static const Color leaf[4] = {C(26, 30, 28), C(44, 58, 44), C(72, 86, 56), C(128, 124, 74)};
+    float sway = sinf(t * 0.9f + seed);
+    int b = (int)base, top = (int)(base - h);
+    /* o eixo do tronco: sobe inclinado para o lado do vento, com uma dobra no meio */
+    float axis[200];
+    for (int y = b; y >= top && b - y < 200; y--) {
+        float u = (base - y) / h;
+        axis[b - y] = x + lean * h * (0.42f * u * u + 0.08f * sinf(u * 6.0f + seed)) + roundf(sway * u * u);
+    }
+    for (int y = b; y >= top && b - y < 200; y--) {
+        float u = (base - y) / h, w = 7.0f - 4.4f * u + (b - y < 4 ? 3.0f - (b - y) * 0.75f : 0);
+        int xl = (int)floorf(axis[b - y] - w / 2), xr = (int)floorf(axis[b - y] + w / 2);
+        for (int px = xl; px <= xr; px++) {
+            int k = px == xl ? 3 : px == xr ? 0 : px - xl == 1 ? 2 : 1;
+            if (k && h2(px, y, seed) < 0.13f) k--;               /* casca */
+            rect(px, y, 1, 1, bark[k]);
+        }
+    }
+    /* galhos e as almofadas na ponta deles */
+    const float at[4] = {0.42f, 0.58f, 0.72f, 0.86f};
+    const float len[4] = {0.46f, 0.38f, 0.30f, 0.20f};
+    for (int i = 0; i < 4; i++) {
+        int yb = (int)(base - h * at[i]);
+        float sx = axis[b - yb], dir = (i == 1) ? -1.0f : 1.0f;    /* só um galho contra o vento */
+        float L = h * len[i] * (dir < 0 ? 0.6f : 1.0f), sw = roundf(sway * at[i] * 1.5f);
+        float ex = sx + dir * L * (lean >= 0 ? 1 : -1) + sw, ey = yb - 3 - i;
+        int n = (int)fabsf(ex - sx) + 1;
+        for (int j = 0; j <= n; j++) {
+            float u = (float)j / n, gx = sx + (ex - sx) * u, gy = yb + (ey - yb) * u + sinf(u * PI_F) * 2.0f;
+            rect(floorf(gx), floorf(gy), 1, 1, bark[0]);
+            rect(floorf(gx), floorf(gy) - 1, 1, 1, u < 0.5f ? bark[2] : bark[1]);
+            if (u < 0.3f) rect(floorf(gx), floorf(gy) - 2, 1, 1, bark[1]);
+        }
+        /* a massa de agulhas: uma almofada grande e uma menor por cima, mais para trás */
+        float rx = 8.5f + L * 0.12f, ry = 4.4f;
+        needle_pad(ex - dir * 3, ey - 4, rx * 0.6f, ry * 0.8f, leaf, seed * 5 + i + 20);
+        needle_pad(ex, ey - 1, rx, ry, leaf, seed * 5 + i);
+    }
+    float cx = axis[b - top] + roundf(sway);                                       /* a copa */
+    needle_pad(cx - 3, top - 1, 6.0f, 3.6f, leaf, seed * 5 + 30);
+    needle_pad(cx + 2, top + 2, 8.5f, 4.2f, leaf, seed * 5 + 9);
+}
+
+/* Pinheirinho longe, na encosta: a mesma forma em dois tons da névoa. */
+static void far_pine(float x, float base, float h, Color body, Color lit, int seed) {
+    rect(floorf(x), base - h * 0.4f, 2, h * 0.4f, body);
+    const Color tone[4] = {body, body, lit, lit};
+    needle_pad(x + 2, base - h * 0.4f, 5.0f, 2.6f, tone, seed);
+    needle_pad(x + 1, base - h * 0.68f, 4.2f, 2.4f, tone, seed + 1);
+    needle_pad(x + 1, base - h * 0.92f, 3.0f, 2.0f, tone, seed + 2);
+}
 static void serra(const ArenaCtx *c) {
     float t = c->t;
     vgrad(0, 0, LOW_W, 70, C(34, 26, 60), C(176, 104, 112));
@@ -1034,17 +1111,19 @@ static void serra(const ArenaCtx *c) {
         }
         vgrad(0, 76 + l * 20, LOW_W, 20, CA(255, 190, 150, 0), CA(255, 190, 150, 36));
     }
-    /* Pagode distante e pinheiros torcidos pelo vento. */
+    /* Pagode distante, pinheirinhos na encosta e, na frente, dois pinheiros-negros
+     * torcidos pelo vento. */
     rect(58, 88, 8, 14, C(70, 40, 54));
     for (int k = 0; k < 3; k++) {
         float w = 16 - k * 4, y = 88 - k * 6;
         DrawTriangle((Vector2){62 - w / 2, y}, (Vector2){62 + w / 2, y}, (Vector2){62, y - 5}, C(70, 40, 54));
     }
-    for (int k = 0; k < 2; k++) {
-        float px = k ? 268 : 28, sw = sinf(t * 0.9f + k) * 2;
-        line(px, GROUND_LOW - 4, px + 2 + sw, 96, 2.2f, C(40, 26, 30));
-        for (int b = 0; b < 3; b++) DrawEllipse((int)(px + 6 + sw + b * 2), (int)(100 + b * 10), 12 - b * 2, 3, C(46, 50, 44));
+    for (int k = 0; k < 6; k++) {
+        float fx = 96 + k * 37 + hash1(k + 21) * 12, fb = 112 + hash1(k + 5) * 10;
+        far_pine(fx, fb, 13 + hash1(k + 2) * 6, C(96, 62, 82), C(120, 82, 98), 40 + k);
     }
+    wind_pine(22, GROUND_LOW + 2, 66, 1.0f, t, 1);
+    wind_pine(276, GROUND_LOW + 2, 54, 0.6f, t, 2);
     /* Campo de capim com as pontas pegando o sol. */
     floor_shade(C(84, 58, 52), C(44, 30, 30));
     for (int i = 0; i < 200; i++) {

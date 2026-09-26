@@ -53,13 +53,13 @@ Quem conta essa versão é o próprio Hanzo, na abertura e nas visitas entre as 
 
 ### Hattori Hanzo (o verdadeiro vilão)
 
-- **Visual:** velho aposentado, de cabelo e barba brancos, todo em branco e cinza. Não luta durante o jogo. Nos finais, pega do chão a máscara de oni que Oboro tirou e põe no rosto: é o homem que matou o pai de Kojiro.
+- **Visual:** velho aposentado, de cabelo e barba brancos, roupa quase toda branca. Não luta durante o jogo. Nos finais, pega do chão a máscara de oni que Oboro tirou e põe: o elmo inteiro da armadura, grande demais para a cabeça dele. É o homem que matou o pai de Kojiro.
 - Aparece entre as lutas, na cabana dele na serra: gentil, sábio, paciente. É o único que trata Kojiro bem.
 - Despreza todos os aprendizes (para ele, são falhas). Nunca conta por que parou de lutar no duelo com Oboro.
 
 ### Oboro (o mestre das doze posturas)
 
-- **Visual:** armadura vermelha e azul e a katana dourada que era de Hanzo. **A máscara de oni só aparece na terceira forma**; nas duas primeiras ele luta de rosto descoberto, um homem cansado, de barba preta.
+- **Visual:** armadura vermelha e azul e a katana dourada que era de Hanzo. **A máscara de oni (o elmo inteiro) só aparece na terceira forma**; nas duas primeiras ele luta sem elmo, de rosto descoberto: um homem cansado, mais velho que Kojiro, de barba preta grande e cabelo preso.
 - O anti-herói que ninguém entendeu. Devorou as posturas de todos os aprendizes, mas não consegue dar o último passo: não quer matar ninguém, nem Kojiro.
 - É um mártir: morre nos dois finais.
 
@@ -79,17 +79,17 @@ Cada um pensa uma coisa de Hanzo e de Oboro. São quatro grupos:
 | 1 | Daichi | Terra | katana, bem lenta | celeiro ao entardecer | firme, tradicional | fala bem de Hanzo |
 | 2 | Genbu | Tartaruga | katana simples | jardim de pedras do mosteiro | paciente, sábio | deve a vida a Oboro |
 | 3 | Raizo | Touro | odachi | pátio do dojo | honrado, direto | fala bem de Hanzo |
-| 4 | Shizuku | Água | florete | cachoeira do trovão | serena, analítica | fala mal de Hanzo |
+| 4 | Shizuku | Gelo | florete com geada | cachoeira do trovão | serena, analítica | fala mal de Hanzo |
 | 5 | Garfiel | Tigre | garras nas duas mãos | portão do tigre branco | feroz, leal, barulhento | deve a vida a Oboro |
 | 6 | Karasu | Corvo | katana e wakizashi | telhados da vila do castelo, na chuva | sarcástico, oportunista | fala mal de Hanzo |
 | 7 | Hayate | Vento | duas foices pequenas | ponte de corda sobre o desfiladeiro | impulsivo, competitivo | fala mal de Hanzo |
 | 8 | Enjin | Chama | katana de fogo (deixa em brasas) | forja dentro da cratera | explosivo | fala mal de Hanzo, desconfia de Oboro |
-| 9 | Suiren | Mar | lança (ataca de longe) | porto do farol | leal, gentil | deve a vida a Oboro |
+| 9 | Suiren | Mar | lança (ataca de longe) | porto do farol | mulher; leal, gentil | deve a vida a Oboro |
 | 10 | Arashi | Tempestade | duas katanas | salão do castelo, noite de tempestade | arrogante | deve a vida a Oboro |
 | 11 | Yoru | Noite | duas adagas invertidas | bambuzal à meia-noite | desconfiado | sabe a verdade |
 | 12 | Jinshi | Lua | katana branca forjada com a lua | encosta da serra | reservado | sabe a verdade |
 
-Jinshi usa o corpo da Shizuku, roupa roxa com verde, cabelo roxo comprido e olhos verdes.
+Jinshi usa o corpo da Shizuku e da Suiren, roupa roxa com verde, cabelo roxo comprido e olhos verdes. Entre os aprendizes, só Yoru cobre o rosto com um pano.
 
 ---
 

@@ -7,7 +7,7 @@ Os 15 personagens (o protagonista Kojiro, os 12 aprendizes na ordem da trilha,
 Oboro e Hanzo) saem
 de seis corpos da Mattz Art, e não são só troca de cor. A maioria usa o corpo
 do pack A (o Samurai #3). Os outros têm corpo de outro pack: **Raizo** (o samurai
-do espadão, de chapéu de palha), **Shizuku** e **Jinshi** (Samurai #4), **Oboro** (o Demon,
+do espadão, de chapéu de palha), **Shizuku**, **Suiren** e **Jinshi** (Samurai #4), **Oboro** (o Demon,
 de máscara oni), **Hanzo** (o velho de barba branca do pack B) e os cinco que
 lutam com uma arma em cada mão, **Arashi, Yoru, Garfiel, Karasu e Hayate**, no
 Samurai #5 (o de duas espadas), cada um com as suas cores e a sua arma. Ver
@@ -16,8 +16,14 @@ O programa `c_game/tools/personagens.c` (C com raylib, igual ao jogo) pega cada
 quadro das pranchas e:
 
 - **tira o chapéu** e desenha a cabeça no lugar (coque, rabo de cavalo, capuz,
-  careca, cabelo em chamas...). Só o Daichi fica de chapéu (palha). O Kojiro
-  fica **sem chapéu e sem máscara, de coque solto**;
+  careca, cabelo em chamas...). O Daichi fica de chapéu (palha), e o Hayate ganha
+  um igual. O Kojiro fica **sem chapéu e sem máscara, de coque solto**. Os rostos
+  seguem a construção do dele: a sobrancelha fazendo sombra no olho, a pele em
+  três tons com a luz de cima à esquerda;
+- **tira as máscaras**: entre os aprendizes, só o Yoru usa pano no rosto. No
+  corpo de duas espadas, o pano verde do pack vira rosto (Garfiel, Karasu,
+  Hayate, Arashi). A máscara de oni só existe no Oboro e no Hanzo mascarados, e é
+  a mesma peça (o elmo inteiro);
 - **troca a arma** seguindo a reta da katana em cada quadro, sempre do mesmo
   tamanho, e lança e florete passam a **estocar** no golpe reto em vez de
   cortar em arco;
@@ -42,24 +48,25 @@ mesmos pixels.
 |---:|---|---|---|---|---|
 | — | **Kojiro** | katana | sem chapéu e **sem máscara**, como o Musashi de Vagabond: cabelo rente, todo puxado para cima e amarrado com fita vermelha no alto da cabeça, de onde sai um tufo curto e desgrenhado, com fiapos caindo para trás (como o Musashi rezando em Vagabond), nuca curta (nada descendo até o ombro), rosto liso sem nariz nem olho e barba por fazer, clarinha, no maxilar | original (branco e preto) | branco, sem aura |
 | 1 | **Daichi** (terra) | katana (o primeiro da trilha é de katana, e bem lento) | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
-| 2 | **Genbu** (tartaruga) | katana simples + casco nas costas | careca, barbicha; atarracado | verde musgo | verde, esporos |
+| 2 | **Genbu** (tartaruga) | katana simples + casco nas costas | careca com a cabeça em três tons, sobrancelha grossa grisalha, bigode e barbicha brancos; atarracado (a cabeça não alarga com o corpo) | verde musgo | verde, esporos |
 | 3 | **Raizo** (touro) | **espadão** do próprio pack, do jeito que vem | **corpo do samurai do espadão**, chapéu de palha; a roupa preta virou marrom | marrom, amarelo | ouro, fagulhas subindo |
-| 4 | **Shizuku** (água) | **florete de esgrima**: lâmina reta e fina, copo na mão | **corpo do Samurai #4**, cabelo roxo virou azul petróleo | azul claro, ciano, hakama azul | água, bolhas |
-| 5 | **Garfiel** (tigre branco, Byakko) | **garras nas duas mãos** (três lâminas em cada) | **corpo do samurai de duas espadas**, cabelo loiro, roupa preta listrada de vermelho | preto e vermelho, cabelo loiro | terra, três riscos de garra |
-| 6 | **Karasu** (corvo) | **katana e wakizashi**: a longa (0,95× a katana) na mão da frente, a curta (13 px) na outra | **corpo do samurai de duas espadas**, preto e vermelho, trapo vermelho | preto e vermelho | eco da segunda lâmina, penas caindo |
-| 7 | **Hayate** (vento) | **duas foices** (kama) do tamanho de uma espada: cabo longo e a lâmina curva na ponta | **corpo do samurai de duas espadas**, verde claro e limão, cachecol | verde claro, limão | vento; no golpe, **cortes de vento** voam para a frente |
-| 8 | **Enjin** (chama) | katana de fogo | cabelo em chamas; 1 px mais largo | vermelho e amarelo | fogo, labaredas e brasas |
-| 9 | **Suiren** (mar) | lança com ponta em folha, anel e fita, **estoca** | cabelo curto, faixa turquesa | azul mar, turquesa | água, bolhas |
-| 10 | **Arashi** (tempestade) | duas katanas com raios | **corpo do Samurai #5**, cabelo prateado, olhos de raio | preto, azul elétrico | raios nas lâminas e no corpo |
-| 11 | **Yoru** (noite) | uma adaga em cada mão, **empunhadas ao contrário** (lâmina para trás), brilho roxo | **corpo do samurai de duas espadas**, ninja preto e roxo | preto azulado e roxo | corte duplo, fumaça roxa |
-| 12 | **Jinshi** (lua) | **katana bem branca, forjada com a lua**, com halo de luar | **corpo do Samurai #4** (o da Shizuku), cabelo roxo do pack solto e comprido, até a cintura (o rabo de cavalo sai) | roxo e verde | o rastro de cada golpe é uma lua crescente (branca, prata na borda); halo pálido e poeira de prata subindo |
-| — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon**, de rosto descoberto (`oboro`) e de máscara oni (`oboro_mascara`), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
-| — | **Hanzo** | **nenhuma**: um velho aposentado que não luta mais | **pack do Hanzo**: cabelo e barba brancos (sem o pack, coque branco e sem barba); `hanzo_mascara`, com a máscara de oni | branco e cinza | sem rastro nem aura |
+| 4 | **Shizuku** (gelo) | **florete de esgrima**: lâmina reta e fina, copo na mão, com geada no fio | **corpo do Samurai #4**, cabelo prateado preso num coque baixo com um grampo de cristal de gelo (o rabo de cavalo sai), olhos azul-claros, a tsuba prateada | branco, prata, azul-gelo | gelo: brilho azul-claro, flocos descendo, o bafo gelado saindo da boca, lascas e cristais no rastro |
+| 5 | **Garfiel** (tigre branco, Byakko) | **garras nas duas mãos** (três lâminas maiores em cada, com brilho, saindo dos punhos) | **corpo do samurai de duas espadas**, sem o pano, topete loiro espetado para cima e para a frente, roupa preta listrada de vermelho; parado, fica na guarda com as mãos à frente, mostrando as garras | preto e vermelho, cabelo loiro | terra, três riscos de garra |
+| 6 | **Karasu** (corvo) | **katana e wakizashi**: a longa (0,95× a katana) na mão da frente, a curta (13 px) na outra | **corpo do samurai de duas espadas**, sem o pano (rosto à mostra), preto e vermelho, trapo vermelho | preto e vermelho | eco da segunda lâmina, penas caindo |
+| 7 | **Hayate** (vento) | **duas foices** (kama) do tamanho de uma espada: cabo longo e a lâmina curva na ponta | **corpo do samurai de duas espadas**, sem o pano, **chapéu de palha** igual ao do Daichi (fica na cabeça até girando de costas), cachecol; parado, a foice descansa com a lâmina para baixo | verde claro, limão | vento; no golpe, **cortes de vento** voam para a frente |
+| 8 | **Enjin** (chama) | katana de fogo | cabelo em chamas; rosto do Kojiro com a sobrancelha descendo para a frente (sempre bravo) e queixo quadrado; 1 px mais largo (a cabeça não) | vermelho e amarelo | fogo, labaredas e brasas |
+| 9 | **Suiren** (mar) | lança com ponta em folha, anel e fita; parada, correndo e pulando, a lança fica em pé na mão da frente | **corpo do Samurai #4**, o visual que era da Shizuku: mulher, rabo de cavalo azul petróleo, quimono claro e hakama azul do mar; a katana embainhada do pack sai | azul claro, azul mar, turquesa | água, bolhas |
+| 10 | **Arashi** (tempestade) | duas katanas com raios | **corpo do Samurai #5**, sem o pano, cabelo prateado, olhos de raio | preto, azul elétrico | raios nas lâminas e no corpo |
+| 11 | **Yoru** (noite) | uma adaga em cada mão, **empunhadas ao contrário** (lâmina para trás), brilho roxo | **corpo do samurai de duas espadas**, ninja preto e roxo, o único de pano no rosto, com mechas roxas no cabelo | preto azulado e roxo | corte duplo, fumaça roxa |
+| 12 | **Jinshi** (lua) | **katana bem branca, forjada com a lua**, com halo de luar | **corpo do Samurai #4** (o da Shizuku e da Suiren), cabelo roxo do pack solto e comprido, até a cintura (o rabo de cavalo sai), inteiro em todos os quadros; caído, o cabelo fica deitado no chão | roxo e verde | o rastro de cada golpe é uma lua crescente (branca, prata na borda); halo pálido e poeira de prata subindo |
+| — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon**, de rosto descoberto (`oboro`: sem o elmo, o rosto do Kojiro mais velho, barba preta grande em três tons com fios de luz e pontas irregulares, cabelo preso num coque com cordão vermelho, têmpora grisalha; de frente, de costas e caído) e de máscara oni (`oboro_mascara`), com as versões de fúria (o fogo da lâmina limpo: sem os pontos soltos, laranja no fio e vermelho em volta) | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
+| — | **Hanzo** | **nenhuma**: um velho aposentado que não luta mais | **pack do Hanzo**: cabelo e barba brancos, roupa quase branca com a sombra em cinza claro, sem o cinto preto (sem o pack, coque branco e sem barba); `hanzo_mascara`, com o elmo de oni inteiro do Oboro, maior que a cabeça dele | branco e cinza | sem rastro nem aura |
 
 As armas do pedido caíram assim: garras → Garfiel, espada maior → Raizo
 (odachi), florete → Shizuku, adagas roxas → Yoru, espada e lâmina curta →
 Karasu, duas foices → Hayate, espadas com raios → Arashi,
-espada de fogo → Enjin, lança de água → Suiren.
+espada de fogo → Enjin, lança de água → Suiren. Florete e gelo: a Shizuku é a
+postura do gelo.
 
 **Nomes e pastas:** cada personagem tem uma pasta com o nome atual: `kojiro`,
 `raizo`, `shizuku`, `yoru`, `daichi`, `hayate`, `genbu`, `enjin`, `suiren`,
@@ -71,9 +78,11 @@ também é o Kojiro.
 
 **Hanzo:** agora sai do pack dele (`_packs/hanzo/`), o velho de cabelo e barba
 brancos, sem a espada embainhada e todo em branco e cinza (o manto azul do pack
-vira cinza pela `troca`). O `hanzo_mascara` é o mesmo com uma máscara de oni
-pequena pintada no rosto (o programa acha a faixa escura dos olhos e a frente do
-rosto em cada quadro): é o Hanzo dos finais, depois que pega a máscara do chão. Ele **não luta mais**: não tem
+vira branco e cinza claro pela `troca`, e o cinto preto some). O `hanzo_mascara`
+é o mesmo com o **elmo de oni inteiro do Oboro** (o mesmo molde `ONI`: chifres,
+o enfeite dourado da testa, o rosto vermelho com as presas) posto na cabeça,
+maior que ela, acompanhando a cabeça em cada quadro: é o Hanzo dos finais,
+depois que pega a máscara do chão. Ele **não luta mais**: não tem
 espada, rastro nem aura, e só ganha as pranchas que não são de luta (IDLE, RUN,
 HURT; o ATTACK_1 fica de fora). Sem a pasta `_packs/hanzo/`, ele volta a sair do
 corpo do Samurai #3, de coque branco e sem barba (e para voltar a esse Hanzo com
@@ -191,7 +200,7 @@ preparação (mais longa e mais legível) e o impacto.
 | Garfiel | três riscos de garra |
 | Arashi | raio caindo do céu |
 | Oboro | corte em X de sombra com fagulhas de ouro |
-| Shizuku | coroa de água no ponto da estocada |
+| Shizuku | cristais de gelo de seis pontas no ponto da estocada e lascas subindo do chão |
 | Suiren | onda de água rolando para a frente |
 | Hayate | redemoinho de vento |
 | Genbu | escudo de casco que se abre e racha |
@@ -213,7 +222,7 @@ tempo do golpe, e o `contact` cai no quadro do contato do núcleo.
 ## O `sprite.txt` de cada personagem
 
 ```
-cell 106 84
+cell 122 84
 ancora 54 74                   # pés do IDLE quadro 0 deste personagem
 guarda dx dy                   # ponta da lâmina do DEFEND no contato (aparece quando houver DEFEND.png)
 anim ATTACK_1  hold 1  contact 2  alcance 38 -21  ms 100
@@ -226,8 +235,13 @@ anim ATTACK_1  hold 1  contact 2  alcance 38 -21  ms 100
   100 (peso). O `hold` continua esticando até o contato do núcleo; o `ms` muda
   a preparação antes do hold, o golpe entre o hold e o contato e a volta.
 - A **âncora** é de cada personagem, porque o corpo muda de largura.
-- Quem tem corpo de outro pack sai com o `cell` daquele pack (Shizuku 96 × 96,
-  Arashi 96 × 64, Oboro 128 × 108) e com as animações que o pack tem.
+- Quem tem corpo de outro pack sai com o `cell` daquele pack e com as animações
+  que o pack tem.
+- A prancha sai **16 px mais larga** que o quadro de origem, do lado da frente
+  (até 128 px): o cabelo, o rastro e os efeitos que passavam da borda não são
+  mais cortados. A âncora conta da esquerda, então não muda: Samurai #3 106 → 122,
+  Samurai #4 (Shizuku, Suiren, Jinshi) e Hanzo 96 → 112, Samurai #5 96 → 112,
+  espadão 98 → 114; o Oboro fica em 128 × 108.
 
 ### Sem arma: DESARMADO e PARADO
 
@@ -311,7 +325,7 @@ Além disso, no ATTACK_3 o pé da frente **avança uns 20 px dentro do quadro**,
 e o DASH_ATTACK **começa 18 px atrás** da âncora (agachado) e dispara para a
 frente. Com os dois lutadores a uma distância fixa, o ATTACK_2 não alcança e o
 ATTACK_3 passa do ponto. É o "às vezes está atacando longe demais". Com as
-armas novas os números mudam por personagem (a estocada da Suiren chega a 52),
+armas novas os números mudam por personagem (o especial da Shizuku chega a 49),
 e cada `sprite.txt` traz os seus.
 
 Regra para o duelo: **no quadro de contato, a distância entre as âncoras dos
@@ -428,7 +442,7 @@ o programa gera **cada ataque dele na postura de cada aprendiz**:
 (36 tiras). A **espada continua a dele** (a katana dourada do Demon, do mesmo
 tamanho e no mesmo tempo); o que muda é a aura: o rastro, o brilho na lâmina e
 as partículas do elemento de cada aprendiz (fogo do Enjin, raios do Arashi,
-água da Shizuku, os cortes de vento do Hayate...). Cada eco tem o próprio
+gelo da Shizuku, os cortes de vento do Hayate...). Cada eco tem o próprio
 `alcance` no `sprite.txt`, para o parry.
 
 As versões de **fúria** do pack (`*_FURIA`: lâmina vermelha, rastro de sangue)

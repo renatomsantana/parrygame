@@ -112,10 +112,10 @@ static const Look MASTER_LOOKS[ROSTER_SIZE] = {
      .hair = RGB(24, 20, 20), .blade = RGB(232, 232, 238), .hat = HAT_KASA, .size = 1.2f, .bladeLen = 30,
      .robe = 0.6f, .flare = 0.3f, .pantsWidth = 1.6f, .trim = RGB(150, 110, 60), .extra = RGB(96, 96, 106), .extras = EX_PAULDRONS,
      .handle = RGB(110, 30, 30), .bladeWidth = 1.25f},
-    /* shizuku: quimono azul-claro até o chão, cabelo longo, florete fino. */
-    {.coat = RGB(150, 190, 214), .sleeve = RGB(230, 236, 240), .pants = RGB(70, 90, 120), .skin = RGB(240, 206, 180),
-     .hair = RGB(30, 30, 50), .blade = RGB(240, 244, 255), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 26,
-     .robe = 2, .flare = 0.6f, .trim = RGB(236, 240, 246), .handle = RGB(190, 196, 210), .bladeWidth = 0.5f},
+    /* shizuku: quimono branco e azul-gelo até o chão, cabelo prateado, florete fino. */
+    {.coat = RGB(214, 236, 248), .sleeve = RGB(246, 252, 255), .pants = RGB(138, 180, 214), .skin = RGB(246, 210, 184),
+     .hair = RGB(164, 184, 212), .blade = RGB(246, 252, 255), .hat = HAT_LONG_HAIR, .size = 1, .bladeLen = 26,
+     .robe = 2, .flare = 0.6f, .trim = RGB(158, 240, 255), .handle = RGB(190, 214, 236), .bladeWidth = 0.5f},
     /* garfiel: o tigre; roupa preta com detalhes vermelhos, cabelo loiro, uma garra em cada mão. */
     {.coat = RGB(34, 30, 38), .sleeve = RGB(44, 40, 48), .pants = RGB(24, 22, 28), .skin = RGB(234, 186, 146),
      .hair = RGB(232, 184, 60), .blade = RGB(250, 246, 236), .hat = HAT_NONE, .size = 1.1f, .bladeLen = 9,
@@ -135,9 +135,9 @@ static const Look MASTER_LOOKS[ROSTER_SIZE] = {
     {.coat = RGB(170, 40, 26), .sleeve = RGB(214, 150, 110), .pants = RGB(40, 26, 24), .skin = RGB(214, 150, 110),
      .hair = RGB(200, 70, 30), .blade = RGB(255, 184, 124), .hat = HAT_NONE, .size = 1.05f, .bladeLen = 21,
      .trim = RGB(220, 170, 70), .handle = RGB(50, 30, 24), .bladeWidth = 1.1f},
-    /* suiren: azul-marinho com acabamento verde-água, cabelo longo, lança. */
-    {.coat = RGB(40, 60, 110), .sleeve = RGB(200, 214, 230), .pants = RGB(30, 40, 70), .skin = RGB(226, 186, 154),
-     .hair = RGB(20, 30, 50), .blade = RGB(226, 236, 246), .hat = HAT_LONG_HAIR, .size = 1.05f, .bladeLen = 34,
+    /* suiren: quimono azul-claro, hakama azul-marinho, rabo de cavalo azul petróleo, lança. */
+    {.coat = RGB(190, 226, 246), .sleeve = RGB(238, 248, 255), .pants = RGB(40, 74, 124), .skin = RGB(242, 194, 156),
+     .hair = RGB(21, 80, 108), .blade = RGB(226, 236, 246), .hat = HAT_LONG_HAIR, .size = 1.05f, .bladeLen = 34,
      .robe = 0.9f, .trim = RGB(90, 200, 190), .weapon = WEAPON_SPEAR, .bladeWidth = 1},
     /* arashi: violeta e prata, ombreiras, cabelo branco, duas espadas. */
     {.coat = RGB(84, 70, 110), .sleeve = RGB(60, 50, 84), .pants = RGB(30, 26, 40), .skin = RGB(236, 204, 184),
