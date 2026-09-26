@@ -66,7 +66,14 @@ static void parse_anim(SprSet *s, char *line, const char *dir) {
     if (!tok) return;
     snprintf(a.name, sizeof a.name, "%s", tok);
     int ms = 0;
-    while ((tok = strtok(NULL, " \t\r\n"))) {
+    tok = strtok(NULL, " \t\r\n");
+    while (tok) {
+        /* `tempos 120 150 40`: a duração de cada quadro, em ms (o preparo devagar, o golpe rápido) */
+        if (!strcmp(tok, "tempos")) {
+            while ((tok = strtok(NULL, " \t\r\n")) && tok[0] >= '0' && tok[0] <= '9')
+                if (a.ntimes < 16) a.times[a.ntimes++] = atoi(tok) / 1000.0f;
+            continue;
+        }
         if (!strcmp(tok, "loop")) a.loop = true;
         else if (!strcmp(tok, "hold")) { tok = strtok(NULL, " \t\r\n"); if (tok) a.hold = atoi(tok); }
         else if (!strcmp(tok, "contact")) { tok = strtok(NULL, " \t\r\n"); if (tok) a.contact = atoi(tok); }
@@ -76,6 +83,7 @@ static void parse_anim(SprSet *s, char *line, const char *dir) {
             char *x = strtok(NULL, " \t\r\n"), *y = x ? strtok(NULL, " \t\r\n") : NULL;
             if (x && y) { a.reachX = atoi(x); a.reachY = atoi(y); a.hasReach = true; }
         }
+        tok = strtok(NULL, " \t\r\n");
     }
     a.frameTime = ms > 0 ? ms / 1000.0f : (a.loop ? 0.11f : 0.08f);
     char path[512];
@@ -258,6 +266,23 @@ float spr_mouse(int button, float x, float y, float unit, Color tint) {
     return dst.width;
 }
 
+/* Com `tempos`, a duração natural do trecho e o quadro no instante t (o trecho esticado
+ * ou encolhido por igual até `dur`). */
+static bool timed(const SprAnim *a, int to) { return a->ntimes > to; }
+static float timed_len(const SprAnim *a, int from, int to) {
+    float s = 0;
+    for (int k = from; k <= to; k++) s += a->times[k];
+    return s;
+}
+static int timed_frame(const SprAnim *a, int from, int to, float t, float dur) {
+    float nat = timed_len(a, from, to), scale = nat > 0 && dur > 0 ? dur / nat : 1, acc = 0;
+    for (int k = from; k <= to; k++) {
+        acc += a->times[k] * scale;
+        if (t < acc) return k;
+    }
+    return to;
+}
+
 void spr_play(SprPlayer *p, const SprAnim *a, int from, int to, float dur) {
     p->anim = a;
     p->loop = false;
@@ -271,7 +296,7 @@ void spr_play(SprPlayer *p, const SprAnim *a, int from, int to, float dur) {
     if (to < from) to = from;
     p->from = from;
     p->to = to;
-    p->dur = dur > 0 ? dur : (to - from + 1) * a->frameTime;
+    p->dur = dur > 0 ? dur : timed(a, to) ? timed_len(a, from, to) : (to - from + 1) * a->frameTime;
     p->frame = from;
 }
 
@@ -291,12 +316,17 @@ void spr_update(SprPlayer *p, float dt) {
     int n = p->to - p->from + 1;
     if (p->loop) {
         float per = p->dur / n;
-        p->frame = p->from + (int)(fmodf(p->t, p->dur) / per) % n;
+        if (timed(p->anim, p->to)) p->frame = timed_frame(p->anim, p->from, p->to, fmodf(p->t, p->dur), p->dur);
+        else p->frame = p->from + (int)(fmodf(p->t, p->dur) / per) % n;
         return;
     }
     if (p->t >= p->dur && p->after) {
         const SprAnim *next = p->after;
         spr_loop(p, next);
+        return;
+    }
+    if (timed(p->anim, p->to)) {
+        p->frame = timed_frame(p->anim, p->from, p->to, p->t, p->dur);
         return;
     }
     int k = p->dur > 0 ? (int)(p->t / p->dur * n) : n - 1;

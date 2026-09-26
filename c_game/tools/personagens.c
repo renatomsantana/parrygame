@@ -3211,11 +3211,56 @@ static void bolt_arcs(Canvas *cv, const Char *ch, const Ctx *ctx) {
     cv->pen = pen;
 }
 
-/* Kojiro com a katana na bainha (EMBAINHADO, e o começo do DESEMBAINHAR): some a
-   lâmina e o cabo da guarda; o cabo sai da boca da bainha, na cintura, para a frente
-   e para cima (o contrário da bainha), com a tsuba na boca. No DESEMBAINHAR, o
-   polegar solta a tsuba (um brilho na boca), a espada sai num corte subindo com o
-   clarão do saque e desce até a guarda do IDLE (o último quadro é o IDLE 0). */
+/* Kojiro com a katana na bainha (EMBAINHADO) e o saque de iaido (DESEMBAINHAR). Na
+   bainha, somem a lâmina e o cabo da guarda e o cabo sai da boca da bainha, na
+   cintura, para a frente e para cima (o contrário da bainha), com a tsuba na boca;
+   a mão de perto fica na boca da bainha. O saque usa os corpos do THROW:
+     0 (THROW 1)  a mão de longe vai ao cabo;
+     1 (THROW 2)  o corpo desce, a mão fecha no cabo e o polegar empurra a tsuba
+                  (o primeiro dedo de lâmina brilha na boca: o clique);
+     2 (THROW 3)  o saque, em smear: o braço já esticado, a lâmina saindo da boca
+                  da bainha, borrada, com a faixa do movimento;
+     3 (THROW 4)  a lâmina toda fora, reta para a frente, com o brilho na ponta;
+     4 (THROW 6)  a lâmina desce passando da guarda (o arco curto do movimento);
+   o último quadro da tira é o IDLE 0, a guarda (volta um pouco para cima). */
+static const Rgb IAI_BRANCO = {255, 255, 255}, IAI_CLARO = {199, 207, 221}, IAI_AZUL = {146, 161, 185};
+
+/* A mão esticada no saque: o pixel de pele mais à frente abaixo do rosto. */
+static bool iai_far_hand(const Canvas *cv, double *hx, double *hy) {
+    const Seg *s = cv->seg;
+    int fb = -1, mx = -1, my = 0;
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++)
+            if (s->lab[y][x] == FACE && y > fb) fb = y;
+    for (int y = fb < 0 ? 0 : fb; y < CH; y++)
+        for (int x = 0; x < CW; x++)
+            if (s->lab[y][x] == SKIN && cv->a[y][x].a && x > mx) { mx = x; my = y; }
+    if (mx < 0) return false;
+    *hx = mx;
+    *hy = my;
+    return true;
+}
+
+/* Faixa de smear de (x0, y0) a (x1, y1): um fio na cauda que engrossa até `w` px
+   perto da frente e fecha em ponta; miolo branco, borda clara e a de baixo azulada.
+   Pinta por cima do corpo (é o borrão da lâmina passando na frente). */
+static void iai_smear(Canvas *cv, double x0, double y0, double x1, double y1, double w) {
+    double dx = x1 - x0, dy = y1 - y0, L = sqrt(dx * dx + dy * dy);
+    if (L < 1) return;
+    double ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+    if (ny < 0) { nx = -nx; ny = -ny; }   /* n aponta para baixo */
+    for (double t = 0; t <= L; t += 0.5) {
+        double f = t / L, half = f < 0.8 ? w * f / 0.8 : w * (1 - f) / 0.2;
+        for (double e = 0; e <= half; e += 0.5) {
+            int x = pyround(x0 + ux * t + nx * e), y = pyround(y0 + uy * t + ny * e);
+            if (!cv_ok(x, y)) continue;
+            Rgb c = e > half - 0.6 ? IAI_AZUL : e > half * 0.5 ? IAI_CLARO : IAI_BRANCO;
+            if (f < 0.25) c = e < 0.5 ? IAI_CLARO : IAI_AZUL;
+            cv_put(cv, x, y, c);
+        }
+    }
+}
+
 static void iai(Canvas *cv, const Char *ch, const Ctx *ctx) {
     const Seg *s = cv->seg;
     bool draw = !strcmp(ctx->anim, "DESEMBAINHAR");
@@ -3258,8 +3303,7 @@ static void iai(Canvas *cv, const Char *ch, const Ctx *ctx) {
     /* na bainha o cabo fica na frente da faixa escura: trama clara (ito) com os losangos escuros */
     Rgb tsuba = {200, 160, 72}, kashira = {150, 130, 90}, ito = {214, 206, 184};
     cv->pen = T_WEAPON;
-    bool sheathed = !draw || idx <= 1;
-    if (sheathed) {
+    if (!draw || idx <= 1) {
         if (mx < 0 || ns < 3) return;
         double ax = mx - sx / ns, ay = my - sy / ns, al = sqrt(ax * ax + ay * ay);
         if (al < 1e-6) return;
@@ -3270,65 +3314,99 @@ static void iai(Canvas *cv, const Char *ch, const Ctx *ctx) {
             int x = pyround(mx + ax * (0.5 + pull) - ay * k), y = pyround(my + ay * (0.5 + pull) + ax * k);
             if (cv_ok(x, y)) cv_put(cv, x, y, tsuba);
         }
+        /* no saque a mão de longe está no cabo: ela fica por cima */
         static Pts p;
         line_pts(&p, mx + ax * (1 + pull), my + ay * (1 + pull), mx + ax * (7 + pull), my + ay * (7 + pull));
         for (int i = 0; i < p.n; i++) {
-            cv_put(cv, p.x[i], p.y[i], i == p.n - 1 ? kashira : i % 2 ? wrap : ito);
+            if (!(draw && s->lab[p.y[i]][p.x[i]] == SKIN)) cv_put(cv, p.x[i], p.y[i], i == p.n - 1 ? kashira : i % 2 ? wrap : ito);
             /* a outra metade da grossura do cabo, com os losangos trocados */
             int ux = p.x[i], uy = p.y[i] - 1;
-            if (i < p.n - 1 && cv_ok(ux, uy)) cv_put(cv, ux, uy, i % 2 ? ito : wrap);
+            if (i < p.n - 1 && cv_ok(ux, uy) && !(draw && s->lab[uy][ux] == SKIN)) cv_put(cv, ux, uy, i % 2 ? ito : wrap);
         }
-        if (draw && idx == 1) {   /* o primeiro dedo de lâmina aparece na boca */
-            cv_put(cv, pyround(mx + ax * 0.5), pyround(my + ay * 0.5), (Rgb){255, 255, 255});
-            fx_put_clean(cv, pyround(mx + ax * 0.5 + 1), pyround(my + ay * 0.5 - 2), core);
+        if (draw && idx == 1) {   /* o primeiro dedo de lâmina aparece na boca, com um brilho */
+            int bx = pyround(mx + ax * 0.5), by = pyround(my + ay * 0.5);
+            cv_put(cv, bx, by, IAI_BRANCO);
+            cv->pen = T_FX;
+            fx_put_clean(cv, bx + 1, by - 2, IAI_BRANCO);
+            fx_put_clean(cv, bx + 2, by - 3, IAI_CLARO);
         }
         return;
     }
-    /* sacando: 2 subindo na frente (-32 graus), 3 quase reta (-6), 4 descendo (+14);
-       a guarda do IDLE fica em torno de +27 */
-    double ang = (idx == 2 ? -32 : idx == 3 ? -6 : 14) * 3.14159265 / 180;
     Blade b = *g;
+    double n[2];
+    if (idx == 2 || idx == 3) {
+        /* a mão de longe, esticada na frente: a espada sai dela */
+        double fx, fy;
+        if (!iai_far_hand(cv, &fx, &fy)) return;
+        b.hilt[0] = fx - 1;
+        b.hilt[1] = fy;
+        if (idx == 2) {
+            /* o smear: a lâmina ainda apontando para trás, para a boca da bainha (a ponta
+               acabou de sair), borrada numa faixa da boca até a mão; um estalo de luz na boca */
+            double tx = mx >= 0 ? mx : hx, ty = mx >= 0 ? my : hy;
+            double ang = -4 * 3.14159265 / 180;
+            iai_smear(cv, tx + 1, ty - 1, fx + 1 + cos(ang) * L * 0.9, fy + 1 + sin(ang) * L * 0.9, 3.0);
+            cv->pen = T_FX;
+            fx_put_clean(cv, pyround(tx) + 1, pyround(ty) - 2, IAI_BRANCO);
+            fx_put_clean(cv, pyround(tx) - 1, pyround(ty) - 1, IAI_CLARO);
+            cv->pen = T_WEAPON;
+            /* a tsuba na frente do punho, atravessada */
+            for (int k = -1; k <= 1; k += 2) {
+                int x = pyround(fx + 1), y = pyround(fy + k);
+                if (cv_ok(x, y)) cv_put(cv, x, y, tsuba);
+            }
+            return;
+        }
+        /* 3: reta para a frente, um pouco para cima */
+        double ang = -4 * 3.14159265 / 180;
+        b.u[0] = cos(ang);
+        b.u[1] = sin(ang);
+        stroke(cv, &b, -3, 0, wrap, NULL, 0, 0, 2, true);
+        stroke(cv, &b, 2, L + 1, core, &edge, 0, 0, 1, false);
+        perp(b.u, n);
+        for (int k = -1; k <= 1; k += 2) {
+            int x = pyround(b.hilt[0] + b.u[0] * 1.2 + n[0] * k), y = pyround(b.hilt[1] + b.u[1] * 1.2 + n[1] * k);
+            if (cv_ok(x, y)) cv_put(cv, x, y, tsuba);
+        }
+        /* o brilho na ponta: uma estrela de quatro pontas, os braços de lado mais longos */
+        cv->pen = T_FX;
+        int tx = pyround(b.hilt[0] + b.u[0] * (L + 2)), ty = pyround(b.hilt[1] + b.u[1] * (L + 2));
+        fx_put_clean(cv, tx, ty, IAI_BRANCO);
+        fx_put_clean(cv, tx + 1, ty, IAI_BRANCO);
+        fx_put_clean(cv, tx + 2, ty, IAI_CLARO);
+        fx_put_clean(cv, tx, ty - 1, IAI_BRANCO);
+        fx_put_clean(cv, tx, ty - 2, IAI_CLARO);
+        fx_put_clean(cv, tx, ty + 1, IAI_CLARO);
+        fx_put_clean(cv, tx - 1, ty - 1, IAI_AZUL);
+        fx_put_clean(cv, tx + 1, ty + 1, IAI_AZUL);
+        return;
+    }
+    /* 4: de volta na mão de perto, a lâmina desce além da guarda; o borrão do
+       movimento é uma meia-lua por cima dela, larga perto da lâmina e sumindo para
+       cima (de onde ela veio, reta para a frente) */
+    double ang = 40 * 3.14159265 / 180;
     b.u[0] = cos(ang);
     b.u[1] = sin(ang);
     b.hilt[0] = hx;
     b.hilt[1] = hy;
-    g_over_body = true;   /* a espada passa na frente do corpo */
+    cv->pen = T_FX;
+    for (double a = 2; a <= 36; a += 0.75) {
+        double f = (a - 2) / 34, w = 0.5 + 3.5 * f, ra = a * 3.14159265 / 180;
+        for (double r = L - w; r <= L + 0.2; r += 0.5) {
+            int x = pyround(hx + cos(ra) * r), y = pyround(hy + sin(ra) * r);
+            Rgb c = r > L - 0.8 ? (f > 0.4 ? IAI_BRANCO : IAI_CLARO) : r > L - w * 0.6 ? IAI_CLARO : IAI_AZUL;
+            fx_put_clean(cv, x, y, c);
+        }
+    }
+    cv->pen = T_WEAPON;
+    g_over_body = true;
     stroke(cv, &b, -5, -1, wrap, NULL, 0, 0, 2, false);
     stroke(cv, &b, 1, L, core, &edge, 0, 0, 1, false);
     g_over_body = false;
-    double n[2];
     perp(b.u, n);
     for (int k = -1; k <= 1; k += 2) {
         int x = pyround(hx + b.u[0] * 0.3 + n[0] * k), y = pyround(hy + b.u[1] * 0.3 + n[1] * k);
         if (cv_ok(x, y)) cv_put(cv, x, y, tsuba);
-    }
-    /* o clarão do saque: arco da bainha (embaixo, atrás) até a lâmina */
-    cv->pen = T_FX;
-    if (idx == 4) {   /* já na descida: só um brilho na ponta */
-        int x = pyround(hx + b.u[0] * (L + 1)), y = pyround(hy + b.u[1] * (L + 1));
-        fx_put_clean(cv, x, y - 1, (Rgb){255, 255, 255});
-        fx_put_clean(cv, x + 1, y, (Rgb){199, 207, 221});
-        return;
-    }
-    if (idx == 3) {   /* o rastro do saque ficou para cima: um risco fino por cima da lâmina */
-        double nx = b.u[1], ny = -b.u[0];
-        if (ny > 0) { nx = -nx; ny = -ny; }
-        for (double t = L * 0.4; t <= L * 0.95; t += 0.5)
-            fx_put_clean(cv, pyround(hx + b.u[0] * t + nx * 2), pyround(hy + b.u[1] * t + ny * 2), (Rgb){146, 161, 185});
-        return;
-    }
-    /* 2: o arco do saque, de baixo (da bainha) até a ponta */
-    double a0 = 62, a1 = ang * 180 / 3.14159265, R = L + 1;
-    int nn = (int)(fabs(a1 - a0) * L * 0.03) + 6;
-    for (int i = 0; i <= nn; i++) {
-        double t = (double)i / nn, a = (a0 + (a1 - a0) * t) * 3.14159265 / 180;
-        int wd = idx == 2 && t > 0.45 ? 2 : 1;
-        for (int e = 0; e < wd; e++) {
-            Rgb c = idx == 3 ? (t > 0.5 ? (Rgb){199, 207, 221} : (Rgb){146, 161, 185})
-                             : e == 0 ? (t > 0.55 ? (Rgb){255, 255, 255} : t > 0.2 ? (Rgb){199, 207, 221} : (Rgb){146, 161, 185})
-                                      : (Rgb){146, 161, 185};
-            fx_put_clean(cv, pyround(hx + cos(a) * (R - e)), pyround(hy + sin(a) * (R - e)), c);
-        }
     }
 }
 
@@ -6497,15 +6575,23 @@ int main(int argc, char **argv) {
             r->name = "DESEMBAINHAR";
             r->n = 6;
             r->frames = calloc(6, sizeof(Frame));
+            /* os corpos do saque (ver iai): a mão vai ao cabo (THROW 1), o corpo desce
+               (THROW 2), o braço estica no saque (THROW 3 e 4) e volta passando da guarda
+               (THROW 6); sem o THROW, o corpo do IDLE 0 */
+            const Strip *thr = source_strip(sc, "THROW");
+            static const int corpo[5] = {1, 2, 3, 4, 6};
             for (int j = 0; j < 5; j++) {
+                const Strip *bs = thr && thr->nframes > corpo[j] ? thr : idl;
+                int bk = bs == thr ? corpo[j] : 0;
                 Ctx cx = make_ctx("DESEMBAINHAR", j, 6, info, -1);
-                render(&idl->frames[0], &idl->segs[0], ch, &cx, &cv);
+                render(&bs->frames[bk], &bs->segs[bk], ch, &cx, &cv);
                 memcpy(r->frames[j].p, cv.a, sizeof cv.a);
             }
             memcpy(r->frames[5].p, rend[si][iq].frames[0].p, sizeof r->frames[5].p);
             path_join(p, d, "DESEMBAINHAR.png");
             save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
-            if (mf) fprintf(mf, "anim DESEMBAINHAR   stop 5  ms 70\n");
+            /* o preparo devagar, o saque num quadro curto, a pausa no brilho e a volta */
+            if (mf) fprintf(mf, "anim DESEMBAINHAR   stop 5  tempos 120 150 40 110 70 100\n");
             nr++;
         }
 

@@ -6,6 +6,7 @@
 #include "audio.h"
 
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -74,6 +75,15 @@ static Sound make_sound_room(float dur, SynthFn fn, float gain, float room) {
         data[i] = data[i] / peak * gain * fade;
     }
     Wave w = {(unsigned int)n, RATE, 32, 1, data};
+    /* APARA_SFX=pasta grava cada efeito em pasta/sfx_NN.wav, na ordem do SoundId */
+    static int dumped;
+    const char *dump = getenv("APARA_SFX");
+    if (dump) {
+        char path[512];
+        snprintf(path, sizeof path, "%s/sfx_%02d.wav", dump, dumped);
+        ExportWave(w, path);
+    }
+    dumped++;
     Sound s = LoadSoundFromWave(w);
     free(data);
     return s;
@@ -162,6 +172,41 @@ static float s_gesture(float t, float d, float *st) {
     float x = t / d;
     float env = sinf(x * 3.14159f) * expf(-x * 2);
     return (nrand() - lp(&st[0], nrand(), 0.1f)) * env * 0.6f;
+}
+/* O clique da tsuba (koiguchi): o polegar solta a espada da bainha. Um estalo seco de
+   metal, um segundo toque mais fraco logo depois (a habaki passando pela boca) e três
+   parciais agudos que morrem em poucos centésimos. */
+static float s_koiguchi(float t, float d, float *st) {
+    (void)d;
+    float n = nrand();
+    float hp = n - lp(&st[0], n, 0.5f);
+    float t2 = t - 0.018f;
+    float tick = hp * (expf(-t * 900) * 1.4f + (t2 > 0 ? expf(-t2 * 1100) * 0.55f : 0));
+    float ring = (sinf(TAU * 3150 * t) + 0.6f * sinf(TAU * 4870 * t + 0.7f) + 0.3f * sinf(TAU * 7300 * t)) *
+                 expf(-t * 75) * fminf(1, t * 3000);
+    return tick + ring * 0.45f;
+}
+/* O shing do saque: a lâmina raspando para fora da bainha (ruído num filtro
+   ressonante que sobe de tom enquanto ela desliza) e, quando a ponta sai, o anel
+   agudo do aço, com um vibrato leve, que fica no ar. */
+static float s_saque(float t, float d, float *st) {
+    (void)d;
+    const float slide = 0.11f;
+    float fc = 2200 + 4200 * fminf(1, t / slide), f = 2 * sinf(3.14159f * fc / RATE);
+    st[0] += f * st[1];
+    float hi = nrand() - st[0] - 0.12f * st[1];
+    st[1] += f * hi;
+    float scrape = st[1] * (t < slide ? fminf(1, t * 60) * (0.5f + 0.5f * t / slide) : expf(-(t - slide) * 40));
+    float r = t - slide * 0.85f, ring = 0;
+    if (r > 0) {
+        float vib = 1 + 0.003f * sinf(TAU * 6 * r);
+        st[2] += TAU * 3520 * vib / RATE;
+        /* dois tons quase iguais batendo (o brilho pulsa) e os agudos morrendo antes */
+        ring = (sinf(st[2]) + 0.5f * sinf(TAU * 3548 * r)) * expf(-r * 5.5f) +
+               0.45f * sinf(TAU * 5290 * r + 1.1f) * expf(-r * 9) + 0.3f * sinf(TAU * 8110 * r + 0.4f) * expf(-r * 14);
+        ring *= fminf(1, r * 400);
+    }
+    return scrape * 0.16f + ring * 0.5f;
 }
 static float s_ui(float t, float d, float *st) {
     (void)d; (void)st;
@@ -508,6 +553,8 @@ void audio_init(void) {
     sounds[SND_DEFEAT] = make_sound(2.0f, s_defeat, 0.6f);
     sounds[SND_THUD] = make_sound(0.3f, s_thud, 0.5f);
     sounds[SND_CLAP] = make_sound_room(0.4f, s_clap, 0.55f, 0.3f);
+    sounds[SND_KOIGUCHI] = make_sound_room(0.14f, s_koiguchi, 0.5f, 0.05f);
+    sounds[SND_SAQUE] = make_sound_room(0.9f, s_saque, 0.6f, 0.12f);
 #if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
     static const SoundId poly[] = {SND_PERFECT, SND_GOOD, SND_BAD, SND_SWING};
     /* sem placa de som o Sound vem vazio, e a raylib não confere isso no alias */

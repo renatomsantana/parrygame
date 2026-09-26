@@ -661,15 +661,32 @@ static void ren_sheathed(void) {
 }
 
 /* No começo de cada luta, Kojiro saca: a tira DESEMBAINHAR termina no quadro 0 do
- * IDLE, a guarda em que ele fica depois (autoIdle). Dura menos que a pausa antes do
- * primeiro golpe do mestre (firstWindupDelay). */
+ * IDLE, a guarda em que ele fica depois (autoIdle). Cada quadro tem o seu tempo
+ * (`tempos` no sprite.txt: o preparo devagar, o saque num quadro curto, a pausa no
+ * brilho); ao todo, menos que a pausa antes do primeiro golpe do mestre
+ * (firstWindupDelay). Os sons saem em ren_draw_sounds, no quadro certo. */
 static void ren_draw_sword(void) {
     Fighter *f = &G.renS;
     const SprAnim *a = fa(f, "DESEMBAINHAR");
     if (!a) return;
     f_clear(f, true);
-    f_add(f, a, 0, a->frames - 1, 0.42f);
-    audio_play(SND_SWING, 0.55f, 1.25f);
+    f_add(f, a, 0, a->frames - 1, 0);
+}
+
+/* Os sons do saque, no quadro em que acontecem: o clique da tsuba quando o polegar a
+ * empurra (quadro 1) e o shing quando a lâmina sai da bainha (quadro 2). */
+static void ren_draw_sounds(void) {
+    static int last = -1;
+    const SprAnim *a = fa(&G.renS, "DESEMBAINHAR");
+    if (!a || G.renS.pl.anim != a) {
+        last = -1;
+        return;
+    }
+    int k = G.renS.pl.frame;
+    if (k == last) return;
+    if (k == 1) audio_play(SND_KOIGUCHI, 0.7f, 1);
+    if (k == 2) audio_play(SND_SAQUE, 0.75f, 1);
+    last = k;
 }
 
 /* Efeitos das folhas do pack (assets/sprites/_fx): tocam uma vez. Os de energia
@@ -1554,6 +1571,7 @@ static void update_ghosts(float dt) {
 /* Pranchas e o passo do mestre até o alcance do golpe (e de volta ao lugar). */
 static void fighters_update(float dt) {
     f_update(&G.renS, dt);
+    ren_draw_sounds();
     f_update(&G.bossS, dt);
     if (!G.bossS.set) return;
     bool landed = G.hopT >= G.hopLen;

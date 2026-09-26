@@ -24,6 +24,8 @@ typedef struct {
     int reachX, reachY;          /* ponta da arma no contato, a partir dos pés */
     bool hasReach, loop;
     float frameTime;             /* segundos por quadro */
+    float times[16];             /* `tempos`: a duração de cada quadro (s), quando varia */
+    int ntimes;
 } SprAnim;
 
 typedef struct {
