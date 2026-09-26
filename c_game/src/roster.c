@@ -495,7 +495,7 @@ static const Beat SIM[] = {
     {"hanzo", "Finalmente, alguém pra quem passar a tocha.", CUE_NONE},
     {"hanzo", "Você vai ser melhor do que ele. Oboro nunca foi o que eu queria, nem quando me venceu.", CUE_NONE},
     {"hanzo", "Os outros? Falhas, todos eles. Treze aprendizes, e nenhum deu o último passo.", CUE_NONE},
-    {"hanzo", "Você deu.", CUE_NONE},
+    {"hanzo", "Você deu.", CUE_HANZO_MASK},
     {"kojiro", "Por que o senhor parou de lutar, naquele duelo?", CUE_NONE},
     {"hanzo", "Vamos pra casa, kojiro.", CUE_NONE},
 };
@@ -505,6 +505,7 @@ static const Beat NAO[] = {
     {"hanzo", "Você é mais uma falha, não é?", CUE_HANZO_IN},
     {"hanzo", "Todos os anos que eu te treinei, todo o meu esforço, todo o meu suor, e você é só mais uma falha.", CUE_NONE},
     {"hanzo", "Que nem essa praga aqui.", CUE_NONE},
+    {NULL, NULL, CUE_HANZO_MASK},
     {NULL, NULL, CUE_HANZO_KILL},
     {"hanzo", "Você? Não vale o trabalho.", CUE_NONE},
     {NULL, NULL, CUE_CHASE},

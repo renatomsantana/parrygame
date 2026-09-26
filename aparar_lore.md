@@ -53,7 +53,7 @@ Quem conta essa versão é o próprio Hanzo, na abertura e nas visitas entre as 
 
 ### Hattori Hanzo (o verdadeiro vilão)
 
-- **Visual:** velho de cabelo e barba brancos. Não luta durante o jogo.
+- **Visual:** velho aposentado, de cabelo e barba brancos, todo em branco e cinza. Não luta durante o jogo. Nos finais, pega do chão a máscara de oni que Oboro tirou e põe no rosto: é o homem que matou o pai de Kojiro.
 - Aparece entre as lutas, na cabana dele na serra: gentil, sábio, paciente. É o único que trata Kojiro bem.
 - Despreza todos os aprendizes (para ele, são falhas). Nunca conta por que parou de lutar no duelo com Oboro.
 
@@ -123,9 +123,9 @@ A música corta e fica só o vento. No meio da tela: **DESEJA MATAR O OBORO?** S
 
 Oboro morre nos dois. A escolha não decide o destino dele: decide quem Kojiro vira.
 
-**SIM.** Kojiro ergue a espada. Oboro, sem raiva, quase com pena: "Então ele conseguiu." Kojiro o mata. Hanzo chega batendo palmas: "Era exatamente isso que eu queria que você fizesse. Finalmente, alguém pra quem passar a tocha." Diz que Kojiro vai ser melhor do que Oboro, que Oboro nunca foi o que ele queria, nem quando o venceu, e que os outros são todos falhas. Kojiro pergunta por que ele parou de lutar naquele duelo; Hanzo só responde "Vamos pra casa, Kojiro." **Fim.**
+**SIM.** Kojiro ergue a espada. Oboro, sem raiva, quase com pena: "Então ele conseguiu." Kojiro o mata. Hanzo chega batendo palmas: "Era exatamente isso que eu queria que você fizesse. Finalmente, alguém pra quem passar a tocha." Diz que Kojiro vai ser melhor do que Oboro, que Oboro nunca foi o que ele queria, nem quando o venceu, e que os outros são todos falhas. Pega a máscara do chão e põe: "Você deu." Kojiro pergunta por que ele parou de lutar naquele duelo; Hanzo só responde "Vamos pra casa, Kojiro." **Fim.**
 
-**NÃO.** Kojiro abaixa a espada e vai embora. Oboro, baixinho: "Obrigado." Hanzo sai do escuro: "Você é mais uma falha, não é? Todos os anos que eu te treinei, todo o meu esforço, todo o meu suor, e você é só mais uma falha. Que nem essa praga aqui." Some e aparece do lado de Oboro com a katana que era dele, e o mata num corte só. Não mata Kojiro, nem acha que vale a pena. Kojiro corre atrás dele, e Hanzo some. **Continua.**
+**NÃO.** Kojiro abaixa a espada e vai embora. Oboro, baixinho: "Obrigado." Hanzo sai do escuro: "Você é mais uma falha, não é? Todos os anos que eu te treinei, todo o meu esforço, todo o meu suor, e você é só mais uma falha. Que nem essa praga aqui." Pega a máscara do chão e põe no rosto. Some e aparece do lado de Oboro com a katana que era dele, e o mata num corte só. Não mata Kojiro, nem acha que vale a pena. Kojiro corre atrás dele, e Hanzo some. **Continua.**
 
 Os dois levam à parte 2 com um Kojiro diferente: no SIM, o assassino que Hanzo criou; no NÃO, alguém que vai atrás de Hanzo por Oboro, que ele entendeu tarde demais.
 

@@ -54,7 +54,7 @@ mesmos pixels.
 | 11 | **Yoru** (noite) | uma adaga em cada mão, **empunhadas ao contrário** (lâmina para trás), brilho roxo | **corpo do samurai de duas espadas**, ninja preto e roxo | preto azulado e roxo | corte duplo, fumaça roxa |
 | 12 | **Jinshi** (lua) | **katana bem branca, forjada com a lua**, com halo de luar | **corpo do Samurai #4** (o da Shizuku), cabelo roxo do pack solto e comprido, até a cintura (o rabo de cavalo sai) | roxo e verde | rastro branco, halo pálido e poeira de prata subindo |
 | — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon**, de rosto descoberto (`oboro`) e de máscara oni (`oboro_mascara`), com as versões de fúria | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
-| — | **Hanzo** | **nenhuma**: um velho que não luta mais | **pack do Hanzo**: cabelo e barba brancos (sem o pack, coque branco e sem barba) | azul escuro | sem rastro nem aura |
+| — | **Hanzo** | **nenhuma**: um velho aposentado que não luta mais | **pack do Hanzo**: cabelo e barba brancos (sem o pack, coque branco e sem barba); `hanzo_mascara`, com a máscara de oni | branco e cinza | sem rastro nem aura |
 
 As armas do pedido caíram assim: garras → Garfiel, espada maior → Raizo
 (odachi), florete → Shizuku, adagas roxas → Yoru, espada e lâmina curta →
@@ -70,7 +70,10 @@ paradas; o programa avisa e elas podem ser apagadas. No jogo o protagonista
 também é o Kojiro.
 
 **Hanzo:** agora sai do pack dele (`_packs/hanzo/`), o velho de cabelo e barba
-brancos, como vem, só sem a espada embainhada. Ele **não luta mais**: não tem
+brancos, sem a espada embainhada e todo em branco e cinza (o manto azul do pack
+vira cinza pela `troca`). O `hanzo_mascara` é o mesmo com uma máscara de oni
+pequena pintada no rosto (o programa acha a faixa escura dos olhos e a frente do
+rosto em cada quadro): é o Hanzo dos finais, depois que pega a máscara do chão. Ele **não luta mais**: não tem
 espada, rastro nem aura, e só ganha as pranchas que não são de luta (IDLE, RUN,
 HURT; o ATTACK_1 fica de fora). Sem a pasta `_packs/hanzo/`, ele volta a sair do
 corpo do Samurai #3, de coque branco e sem barba (e para voltar a esse Hanzo com

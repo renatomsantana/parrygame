@@ -164,9 +164,10 @@ typedef enum {
     CUE_MASK_OFF,     /* de joelhos, desarmado, ele tira a máscara */
     CUE_RAISE,        /* kojiro chega perto e ergue a espada */
     CUE_KILL,         /* kojiro mata oboro */
-    CUE_HANZO_CLAP,   /* hanzo chega aplaudindo, e kojiro vira para ele */
+    CUE_HANZO_CLAP,   /* hanzo chega do dojo aplaudindo */
     CUE_LOWER,        /* kojiro abaixa a espada e vai embora */
     CUE_HANZO_IN,     /* hanzo aparece do escuro, e kojiro vira */
+    CUE_HANZO_MASK,   /* hanzo pega a máscara do chão e põe no rosto */
     CUE_HANZO_KILL,   /* hanzo pega a katana dele do chão e mata oboro */
     CUE_CHASE,        /* kojiro corre atrás dele, e hanzo some */
 } Cue;

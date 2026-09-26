@@ -1743,6 +1743,7 @@ static float cue_len(Cue c) {
         case CUE_RAISE: return 1.2f;
         case CUE_KILL: return 2.8f;
         case CUE_HANZO_CLAP: return 2.6f;
+        case CUE_HANZO_MASK: return 2.0f;
         case CUE_LOWER: return 2.5f;
         case CUE_HANZO_IN: return 1.6f;
         case CUE_HANZO_KILL: return 2.6f;
@@ -1870,19 +1871,31 @@ static void scene_cue(void) {
             break;
         }
         case CUE_HANZO_CLAP: {
-            /* hanzo vem da esquerda, devagar, batendo palmas */
+            /* hanzo vem do dojo, devagar, batendo palmas */
             if (crossed(0)) {
-                hanzo_enter(-24, false);
-                hanzo_walk(r->x + r->offsetX - 48, 2.2f);
+                hanzo_enter(LOW_W + 24, true);
+                hanzo_walk(bx + 44, 2.2f);
             }
             int n = (int)floorf((t - 0.3f) / 0.45f), np = (int)floorf((G.beatPrev - 0.3f) / 0.45f);
             if (t > 0.3f && t < 4.2f && n != np) audio_play(SND_CLAP, 0.55f, frand(0.95f, 1.05f));
-            if (crossed(1.5f)) {
-                r->faceLeft = true;
-                fighter_idle(&G.renS);
-            }
+            if (crossed(1.2f)) fighter_idle(&G.renS);
             break;
         }
+        case CUE_HANZO_MASK:
+            /* ele vai até a máscara, pega do chão e põe no rosto: um raio, e é o homem que matou o pai de kojiro */
+            if (crossed(0)) hanzo_walk(bx + 18, 0.8f);
+            if (crossed(1.0f)) {
+                G.maskOnGround = false;
+                const SprSet *m = spr_get("hanzo_mascara");
+                if (m) G.hz.f.set = m;
+                fighter_idle(&G.hz.f);
+                G.ctx.lightning = 1;
+                G.ctx.bolt = frand(0, 1);
+                audio_play(SND_THUNDER, 0.8f, 0.8f);
+                audio_play(SND_SEAL, 0.5f, 0.5f);
+                fx_flash(&G.fx, (Color){190, 24, 34, 255}, 0.6f);
+            }
+            break;
         case CUE_LOWER:
             /* a espada desce; ele vira as costas e vai embora */
             if (crossed(0)) fighter_idle(&G.renS);
@@ -1908,7 +1921,7 @@ static void scene_cue(void) {
             /* ele some e aparece do lado de oboro com a katana que era dele: um corte só */
             if (crossed(0.2f)) G.hz.alpha = 0;
             if (crossed(0.45f)) {
-                G.hz.x = bx + 14;
+                G.hz.x = bx + 16;
                 G.hz.alpha = 1;
                 G.sword.active = false;
                 oboro_dies();
@@ -2118,10 +2131,10 @@ static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Col
     }
 }
 
-/* A máscara de oni que oboro tirou, caindo na frente dos joelhos dele. */
+/* A máscara de oni que oboro tirou, caída do lado dele. */
 static void draw_oni_mask(Color light) {
     static const char *M[] = {".a...a.", "aakkkaa", "akpkpka", "akkkkka", "arkkkra", ".akkka."};
-    float x = G.boss.x + G.boss.offsetX - 16, y = GROUND_LOW - 6 - (1 - G.maskDrop * G.maskDrop) * 22;
+    float x = G.boss.x + G.boss.offsetX + 12, y = GROUND_LOW - 6 - (1 - G.maskDrop * G.maskDrop) * 22;
     for (int j = 0; j < 6; j++)
         for (int i = 0; M[j][i]; i++) {
             char k = M[j][i];

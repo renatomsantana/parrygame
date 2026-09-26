@@ -739,6 +739,7 @@ typedef struct {
     Rgb bainha[2];                          /* pack do Hanzo: cores da espada embainhada, que sai */
     Rgb rastro_pack[3];                     /* pack cujo rastro usa as cores da camisa: longe do corpo, vira rastro */
     bool sem_mascara;                       /* Oboro nas duas primeiras formas: rosto no lugar da máscara de oni */
+    bool mascara_oni;                       /* Hanzo no fim: a máscara de oni no rosto */
 } Char;
 
 static bool pack_no_shirt(void) {
@@ -782,6 +783,20 @@ static const Char ORIG = {
     .especial = SP_INVESTIDA, .efeito = FX_SOMBRA,                                                        \
     .pack = "demon", .ecos = true, .pack_sem_camisa = true,                                               \
     .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}}
+
+/* O corpo do Hanzo, com e sem a máscara: o pack dele, todo em branco e cinza. */
+#define HANZO                                                                                             \
+    .arma = {.kind = W_KATANA}, .cabeca = "mestre", .sem_arma = true, .sem_saya = true,                   \
+    .pack = "hanzo", .bainha = {HEX(0x571c27), HEX(0x391f21)},                                            \
+    .camisa = {HEX(0xf4f4f0), HEX(0xd4d4d0), HEX(0xa8a8a4), HEX(0x7a787e)},                               \
+    .hakama = {HEX(0x7a787e), HEX(0x56545a), HEX(0x3a383e), HEX(0x2e2c30), HEX(0x262428)},                \
+    .pele = {HEX(0xe0a67e), HEX(0xb87c5a), HEX(0x82543e)},                                                \
+    .cabelo = {HEX(0xa8a8a4), HEX(0xd8d8d4), HEX(0xf4f4f0)},                                              \
+    .destaque = {HEX(0xc42a2a), HEX(0x7a1414)}, .obi = HEX(0xc42a2a),                                     \
+    .saya = HEX(0xa01c1c), .cabo = HEX(0x20283e), .altura = -1,                                           \
+    .troca = {{HEX(0x0e071b), HEX(0x262428)}, {HEX(0x1a1932), HEX(0x3a383e)}, {HEX(0x2a2f4e), HEX(0x56545a)}, \
+              {HEX(0x424c6e), HEX(0x7a787e)}, {HEX(0x391f21), HEX(0x3e3a38)}, {HEX(0x5d2c28), HEX(0x5e5a56)}, \
+              {HEX(0xc7cfdd), HEX(0xd8d8d4)}, {HEX(0x92a1b9), HEX(0xa8a8a4)}}
 
 static Char CHARS[] = {
     /* O protagonista: sem chapéu e sem máscara, coque solto no alto da cabeça, katana. */
@@ -997,15 +1012,10 @@ static Char CHARS[] = {
        formas luta de rosto descoberto; a máscara de oni só vem na terceira. */
     {.id = "oboro", .titulo = "Oboro", OBORO, .sem_mascara = true},
     {.id = "oboro_mascara", .titulo = "Oboro (máscara)", OBORO},
-    /* Hanzo: um velho que não luta mais. Sem espada; cabelo branco, sem barba, azul escuro. */
-    {.id = "hanzo", .titulo = "Hanzo", .arma = {.kind = W_KATANA}, .cabeca = "mestre", .sem_arma = true, .sem_saya = true,
-     .pack = "hanzo", .bainha = {HEX(0x571c27), HEX(0x391f21)},
-     .camisa = {HEX(0x8ca0c8), HEX(0x5a70a0), HEX(0x3c4e7c), HEX(0x283658)},
-     .hakama = {HEX(0x2a3450), HEX(0x20283e), HEX(0x181e30), HEX(0x121624), HEX(0x0c0f18)},
-     .pele = {HEX(0xe0a67e), HEX(0xb87c5a), HEX(0x82543e)},
-     .cabelo = {HEX(0xa8a8a8), HEX(0xd4d4d0), HEX(0xf4f4f0)},
-     .destaque = {HEX(0xc42a2a), HEX(0x7a1414)}, .obi = HEX(0xc42a2a),
-     .saya = HEX(0xa01c1c), .cabo = HEX(0x20283e), .altura = -1},
+    /* Hanzo: um velho aposentado que não luta mais. Sem espada; cabelo e barba brancos,
+       o manto cinza. No fim, de máscara de oni. */
+    {.id = "hanzo", .titulo = "Hanzo", HANZO},
+    {.id = "hanzo_mascara", .titulo = "Hanzo (máscara)", HANZO, .mascara_oni = true},
 };
 #define NCHARS ((int)(sizeof CHARS / sizeof CHARS[0]))
 
@@ -3052,6 +3062,54 @@ static void drop_sheath(Canvas *cv, const Char *ch) {
         }
 }
 
+/* Troca exata de cor no que sobrou do pack (a cor original decide). */
+static void swap_colors(Canvas *cv, const Char *ch) {
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            Color o = cv->orig->p[y][x];
+            if (!cv->a[y][x].a || !o.a) continue;
+            for (int i = 0; i < 24 && rgb_set(ch->troca[i].de); i++)
+                if (ch->troca[i].de.r == o.r && ch->troca[i].de.g == o.g && ch->troca[i].de.b == o.b) {
+                    set_rgb(cv, x, y, ch->troca[i].para);
+                    break;
+                }
+        }
+}
+
+/* Hanzo de máscara: acha os olhos (a faixa escura no alto da cabeça) e a frente do
+ * rosto, e pinta ali uma máscara de oni pequena, com chifres e presas. */
+static void oni_face(Canvas *cv) {
+    static const char *M[] = {"..a...a", ".akkkka", "akkakkk", "akpkkpk", "akkkkka", ".rkkkr.", "..aka.."};
+    int top = -1;
+    for (int y = 0; y < CH && top < 0; y++)
+        for (int x = 0; x < CW; x++)
+            if (cv->orig->p[y][x].a) { top = y; break; }
+    if (top < 0) return;
+    int ey = -1, fx = -1;
+    for (int y = top; y < top + 10 && y < CH && ey < 0; y++)
+        for (int x = 0; x < CW; x++) {
+            Color o = cv->orig->p[y][x];
+            if (o.a && ((o.r == 0x13 && o.g == 0x13 && o.b == 0x13) || (o.r == 0xbf && o.g == 0x6f && o.b == 0x4a))) { ey = y; break; }
+        }
+    if (ey < 0) return;   /* o clarão do golpe: sem rosto */
+    for (int y = ey - 2; y <= ey + 2; y++)
+        for (int x = 0; x < CW; x++) {
+            if (!cv_ok(x, y)) continue;
+            Color o = cv->orig->p[y][x];
+            bool face = o.a && ((o.r == 0xe6 && o.g == 0x9c && o.b == 0x69) || (o.r == 0xf6 && o.g == 0xca && o.b == 0x9f) ||
+                                (o.r == 0xbf && o.g == 0x6f && o.b == 0x4a) || (o.r == 0x13 && o.g == 0x13 && o.b == 0x13));
+            if (face && x > fx) fx = x;
+        }
+    if (fx < 0) return;
+    for (int r = 0; r < 7; r++)
+        for (int c = 0; M[r][c]; c++) {
+            char k = M[r][c];
+            if (k == '.') continue;
+            uint32_t v = k == 'a' ? 0x891e2b : k == 'k' ? 0xc42430 : k == 'p' ? 0xffc825 : 0xfffbe8;
+            cv_put(cv, fx - 6 + c, ey - 3 + r, (Rgb){(unsigned char)(v >> 16), (unsigned char)(v >> 8), (unsigned char)v});
+        }
+}
+
 /* Tempo de cada quadro dos golpes: leves rápidos, pesados lentos. */
 static int frame_ms(const Char *ch) {
     switch (ch->arma.kind) {
@@ -3076,6 +3134,8 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
     cv->pen = T_BODY;
     if (ch->pack && rgb_set(ch->bainha[0])) {
         drop_sheath(cv, ch);
+        swap_colors(cv, ch);
+        if (ch->mascara_oni) oni_face(cv);
         return;
     }
     recolor(cv, ch, anim);
