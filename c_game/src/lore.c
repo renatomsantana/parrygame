@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stddef.h>
 
+#include "arenas.h"
 #include "raylib.h"
 #include "sprites.h"
 
@@ -107,7 +108,16 @@ void lore_draw_cabin(float t) {
     DrawCircle(265, 33, 1, C(214, 208, 190));
     mountain(70, 60, 180, C(44, 36, 66));
     mountain(250, 72, 180, C(34, 28, 54));
-    for (int i = 0; i < 7; i++) pine(214 + i * 17 + (i % 2) * 5, 140, 30 + (i * 7 % 11), C(22, 26, 34));
+    /* o pinheiral atrás: uma fileira longe só na silhueta, e os de perto em camadas de
+       agulha, com o luar na beira de cima de cada camada */
+    for (int i = 0; i < 9; i++) pine(196 + i * 15 + (i % 2) * 4, 136, 22 + (i * 5 % 9), C(30, 30, 48));
+    for (int i = 0; i < 3; i++) pine(108 + i * 14, 136, 20 + i * 3, C(30, 30, 48));
+    static const Color pineTone[4] = {{12, 14, 22, 255}, {22, 28, 38, 255}, {40, 52, 64, 255}, {86, 98, 122, 255}};
+    arena_pine(226, 140, 44, pineTone, 1);
+    arena_pine(252, 140, 34, pineTone, 2);
+    arena_pine(290, 140, 50, pineTone, 3);
+    arena_pine(314, 140, 38, pineTone, 4);
+    arena_pine(120, 140, 30, pineTone, 5);
     rect(0, 138, 320, 42, C(40, 32, 38));
     rect(0, 138, 320, 2, C(62, 50, 54));
     /* a cabana: tábuas, teto de palha, a porta acesa e uma janela */
@@ -127,17 +137,33 @@ void lore_draw_cabin(float t) {
         float k = fract(t * 0.12f + i / 6.0f);
         DrawCircle((int)(80 + sinf(k * 6 + i) * 3 + k * 10), (int)(84 - k * 50), 2 + k * 3, CA(120, 110, 130, (unsigned char)(90 * (1 - k))));
     }
-    /* a fogueira entre os dois */
+    /* a fogueira entre os dois: a luz no chão, a roda de pedras, a lenha cruzada com a
+       brasa, três línguas de fogo tremendo, a fumaça subindo e as faíscas */
     float fx = 173, fy = 140;
-    glow(fx, fy - 6, 34 * fl, C(255, 130, 50));
-    rect(fx - 7, fy - 1, 14, 2, C(70, 44, 30));
-    rect(fx - 5, fy - 2, 10, 1, C(92, 58, 38));
-    float h = 9 + 2 * sinf(t * 9);
-    DrawTriangle((Vector2){fx - 5, fy - 2}, (Vector2){fx + 5, fy - 2}, (Vector2){fx + sinf(t * 5), fy - 2 - h}, C(255, 140, 50));
-    DrawTriangle((Vector2){fx - 3, fy - 2}, (Vector2){fx + 3, fy - 2}, (Vector2){fx - sinf(t * 6), fy - 2 - h * 0.6f}, C(255, 220, 120));
-    for (int i = 0; i < 6; i++) {
+    glow(fx, fy - 6, 40 * fl, C(255, 130, 50));
+    DrawEllipse((int)fx, (int)fy + 1, 26 * fl, 3, CA(255, 150, 70, 60));
+    for (int k = 0; k < 9; k++) {
+        float a = k / 9.0f * 6.2832f, px = fx + cosf(a) * 9, py = fy + sinf(a) * 1.6f;
+        DrawEllipse((int)px, (int)py, 2, 1.3f, k % 2 ? C(96, 88, 92) : C(70, 64, 70));
+        rect(floorf(px) - 1, floorf(py) - 1, 2, 1, sinf(a) > 0 ? C(150, 110, 90) : C(120, 118, 124));
+    }
+    for (int k = -1; k <= 1; k += 2) {   /* a lenha cruzada */
+        for (int j = 0; j < 12; j++) {
+            float u = j / 11.0f, lx = fx - 6 * k + 12 * k * u, ly = fy - 1 - 3 * u;
+            rect(floorf(lx), floorf(ly), 2, 2, j < 2 || j > 9 ? C(92, 60, 40) : C(64, 40, 28));
+            if (j > 3 && j < 9 && (j + k) % 3 == 0) rect(floorf(lx), floorf(ly) + 1, 1, 1, C(255, 120, 40));   /* a brasa */
+        }
+    }
+    arena_flame(fx - 4, fy - 2, 5, 9, t, 1);
+    arena_flame(fx + 4, fy - 2, 5, 8, t, 2);
+    arena_flame(fx, fy - 2, 9, 17, t, 3);
+    for (int i = 0; i < 5; i++) {   /* a fumaça, torta pelo vento da serra */
+        float k = fract(t * 0.15f + i / 5.0f);
+        DrawCircle((int)(fx + sinf(k * 5 + i) * 3 + k * 16), (int)(fy - 18 - k * 44), 1.5f + k * 4, CA(90, 84, 100, (unsigned char)(80 * (1 - k))));
+    }
+    for (int i = 0; i < 10; i++) {
         float k = fract(t * 0.6f + hash1(i));
-        DrawPixel((int)(fx + sinf(i * 3 + t * 2) * 4), (int)(fy - 6 - k * 26), CA(255, 200, 120, (unsigned char)(255 * (1 - k))));
+        DrawPixel((int)(fx + sinf(i * 3 + t * 2) * (3 + k * 6)), (int)(fy - 8 - k * 30), CA(255, 200, 120, (unsigned char)(255 * (1 - k))));
     }
     /* Hanzo sentado em seiza, as mãos nas coxas, olhando o fogo */
     if (!sprite_person_pose("hanzo", "SENTADO", 142, 142, false, t, WHITE, CA(0, 0, 0, 0)))

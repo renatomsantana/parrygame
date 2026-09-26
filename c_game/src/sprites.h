@@ -81,6 +81,8 @@ typedef struct {
 
 const SprFx *spr_fx(const char *name);
 void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint);
+/* O mesmo, em outra escala (a poeira menor que a folha do pack). */
+void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale);
 
 /* Teclas e mouse de pixel (assets/sprites/_ui/): "A".."Z", "0".."9", "ESC",
  * "ENTER", "TAB", "SHIFT", "DEL", "CAPS", "SPACE"; mouse 0..3. `unit` é quantas

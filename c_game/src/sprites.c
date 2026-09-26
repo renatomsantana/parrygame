@@ -191,12 +191,16 @@ const SprFx *spr_fx(const char *name) {
 }
 
 void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint) {
+    spr_fx_draw_scaled(f, row, frame, center, flip, tint, 1);
+}
+
+void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale) {
     if (!f || frame < 0 || frame >= f->frames) return;
     if (row < 0) row = 0;
     if (row >= f->rows) row = f->rows - 1;
-    float c = (float)f->cell;
+    float c = (float)f->cell, d = floorf(c * scale + 0.5f);
     Rectangle src = {frame * c, row * c, flip ? -c : c, c};
-    Rectangle dst = {floorf(center.x + 0.5f) - c / 2, floorf(center.y + 0.5f) - c / 2, c, c};
+    Rectangle dst = {floorf(center.x + 0.5f) - floorf(d / 2), floorf(center.y + 0.5f) - floorf(d / 2), d, d};
     DrawTexturePro(f->tex, src, dst, (Vector2){0, 0}, 0, tint);
 }
 

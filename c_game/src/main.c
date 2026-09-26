@@ -218,7 +218,7 @@ static struct {
     int afterHead;
     float afterTimer, lastStep;
     bool gritoPending;
-    struct { const SprFx *fx; int row; Vector2 pos; float t, fps; bool flip, back, glow; } vfx[VFX_MAX];
+    struct { const SprFx *fx; int row; Vector2 pos; float t, fps, scale; bool flip, back, glow; Color tint; } vfx[VFX_MAX];
     Fx fx;
     FlySword sword;
 
@@ -693,6 +693,25 @@ static void vfx(const char *name, int row, Vector2 pos, bool flip, int flags, fl
     G.vfx[slot].flip = flip;
     G.vfx[slot].back = flags & VFX_BACK;
     G.vfx[slot].glow = flags & VFX_GLOW;
+    G.vfx[slot].scale = 1;
+    G.vfx[slot].tint = WHITE;
+}
+
+/* Poeira dos pés (o bote, a queda, o passo): a folha de fumaça do pack, que é branca e
+ * grande, sai com pouco mais da metade do tamanho, na cor do chão do cenário e um
+ * pouco transparente, com a base no chão. */
+static void dust(float x, bool flip, float fps) {
+    const SprFx *f = spr_fx("70");
+    if (!f) return;
+    float scale = 0.55f;
+    vfx("70", 4, (Vector2){x, GROUND_LOW - 8 + f->cell * (1 - scale) * 0.22f}, flip, VFX_FRONT, fps);
+    for (int i = 0; i < VFX_MAX; i++)
+        if (G.vfx[i].fx == f && G.vfx[i].t == 0) {
+            Color c = G.m ? arena_dust(G.m->arena) : WHITE;
+            c.a = 200;
+            G.vfx[i].scale = scale;
+            G.vfx[i].tint = c;
+        }
 }
 
 static void vfx_update(float dt) {
@@ -707,7 +726,8 @@ static void vfx_draw(bool back) {
     for (int i = 0; i < VFX_MAX; i++) {
         if (!G.vfx[i].fx || G.vfx[i].back != back) continue;
         if (G.vfx[i].glow) BeginBlendMode(BLEND_ADDITIVE);
-        spr_fx_draw(G.vfx[i].fx, G.vfx[i].row, (int)(G.vfx[i].t * G.vfx[i].fps), G.vfx[i].pos, G.vfx[i].flip, WHITE);
+        spr_fx_draw_scaled(G.vfx[i].fx, G.vfx[i].row, (int)(G.vfx[i].t * G.vfx[i].fps), G.vfx[i].pos, G.vfx[i].flip,
+                           G.vfx[i].tint, G.vfx[i].scale);
         if (G.vfx[i].glow) EndBlendMode();
     }
 }
@@ -858,7 +878,7 @@ static void update_sword(float dt) {
         s->angle = s->target;
         Vector2 tip = {s->pos.x + cosf(s->target * DEG2RAD) * s->len / 2, GROUND_LOW};
         fx_burst(&G.fx, P_DUST, tip, 10, 50, 0.9f, -1.57f, (Color){210, 190, 160, 170}, (Color){140, 120, 100, 120});
-        vfx("70", 4, (Vector2){tip.x, GROUND_LOW - 8}, false, VFX_FRONT, 20);
+        dust(tip.x, false, 20);
         fx_burst(&G.fx, P_SPARK, tip, 6, 70, 0.8f, -1.57f, (Color){255, 240, 200, 255}, (Color){255, 190, 90, 255});
         fx_kick(&G.fx, 1.5f, 0.15f);
         audio_play(SND_THUD, 0.7f, 1);
@@ -1174,7 +1194,7 @@ static void sprite_impact(const DuelEvent *e) {
         }
         b->strike = NULL;
         if (G.leap == LEAP_JUMP) {   /* a poeira da queda, e os joelhos dobram */
-            vfx("70", 4, (Vector2){G.boss.x + G.boss.offsetX, GROUND_LOW - 8}, true, VFX_FRONT, 24);
+            dust(G.boss.x + G.boss.offsetX, true, 24);
             G.landT = 0.2f;
         }
         /* entre os golpes de uma sequência ele fica onde está; no fim, volta */
@@ -1328,8 +1348,8 @@ static void tell_fx(void) {
     audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
     /* E o efeito do pack de cada um: onde nasce (no chão ou no corpo) e a cor. Oboro
      * usa o do aprendiz da postura em que está, em vermelho. */
-    static const struct { const char *fx; int row; float y; int flags; } TELL[ROSTER_SIZE] = {
-        {"70", 4, -8, VFX_FRONT},               /* daichi: poeira de terra */
+    static const struct { const char *fx; int row; float y; int flags; float scale; } TELL[ROSTER_SIZE] = {
+        {"70", 4, -8, VFX_FRONT, 0.6f},         /* daichi: poeira de terra (na cor do chão) */
         {"26", 3, -30, VFX_BACK | VFX_GLOW},    /* genbu: o casco, anel verde */
         {"14", 7, -30, VFX_BACK | VFX_GLOW},    /* raizo: rajada vermelha */
         {"06", 2, -30, VFX_BACK},               /* shizuku: respingo */
@@ -1340,21 +1360,30 @@ static void tell_fx(void) {
         {"04", 2, -24, VFX_BACK},               /* suiren: onda */
         {"195", 2, -30, VFX_BACK | VFX_GLOW},   /* arashi: raios */
         {"197", 1, -30, VFX_BACK | VFX_GLOW},   /* yoru: estrela da noite */
-        {"665", 5, -21, VFX_BACK},              /* jinshi: o brilho branco da lua */
+        {"665", 5, -21, VFX_BACK | VFX_GLOW, 0.5f}, /* jinshi: o brilho da lua (pequeno, lilás, luz somada) */
         {"197", 7, -30, VFX_BACK | VFX_GLOW},   /* oboro */
     };
     int ti = (G.m->id - 1) % ROSTER_SIZE, row = TELL[ti].row;
     int echo = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
     if (echo >= 0) { ti = echo; row = 7; }
     else if (G.m->isBigBoss && G.masked) { ti = 7; row = TELL[7].row; }   /* o oni: a lâmina acende */
-    vfx(TELL[ti].fx, row, (Vector2){b->x + b->offsetX, GROUND_LOW + TELL[ti].y}, true, TELL[ti].flags, 22);
+    float sc = TELL[ti].scale > 0 ? TELL[ti].scale : 1;
+    vfx(TELL[ti].fx, row, (Vector2){b->x + b->offsetX, GROUND_LOW + TELL[ti].y * sc}, true, TELL[ti].flags, 22);
+    if (sc < 1)
+        for (int i = 0; i < VFX_MAX; i++)
+            if (G.vfx[i].fx == spr_fx(TELL[ti].fx) && G.vfx[i].t == 0) {
+                /* a fumaça branca do pack, menor e na paleta do cenário: a poeira na cor do
+                   chão, o brilho da lua no lilás do céu da serra */
+                G.vfx[i].scale = sc;
+                G.vfx[i].tint = TELL[ti].flags & VFX_GLOW ? (Color){150, 120, 170, 255} : arena_dust(G.m->arena);
+            }
 }
 
 /* A vida de kojiro acaba: ele cai e o painel de derrota aparece. */
 static void ren_falls(void) {
     rig_pose(&G.ren, POSE_FALLEN, 0.7f, EASE_OUT);
     sprite_fall();
-    vfx("70", 4, (Vector2){G.ren.x + G.ren.offsetX, GROUND_LOW - 8}, false, VFX_FRONT, 20);
+    dust(G.ren.x + G.ren.offsetX, false, 20);
     G.ren.breath = 0;
     G.slowmo = 0.4f;
     G.slowmoTime = 0.9f;
@@ -1547,7 +1576,7 @@ static void fighters_update(float dt) {
         G.leapT += dt;
         if (G.leapStage == 0 && G.leapT >= G.leapAt) {
             G.leapStage = 1;
-            vfx("70", 4, (Vector2){G.boss.x + G.boss.offsetX, GROUND_LOW - 8}, true, VFX_FRONT, 22);
+            dust(G.boss.x + G.boss.offsetX, true, 22);
             if (G.leap == LEAP_DASH) {
                 G.bossStepTo = G.bossStrikeStep + 10;
                 G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.windupLen - G.leapAt);
@@ -1963,7 +1992,7 @@ static void scene_cue(void) {
             if (crossed(0.4f) && G.hz.on) {
                 Vector2 at = {G.hz.x, GROUND_LOW - 16};
                 fx_burst(&G.fx, P_DUST, at, 26, 40, 3.14f, -1.57f, (Color){170, 164, 170, 200}, (Color){90, 86, 96, 150});
-                vfx("70", 4, (Vector2){G.hz.x, GROUND_LOW - 8}, false, VFX_FRONT, 20);
+                dust(G.hz.x, false, 20);
                 audio_play(SND_GESTURE, 0.8f, 0.6f);
                 G.hz.on = false;
             }

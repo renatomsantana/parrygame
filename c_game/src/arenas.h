@@ -28,7 +28,12 @@ void arena_draw_back(ArenaId id, const ArenaCtx *c);
 void arena_draw_front(ArenaId id, const ArenaCtx *c);
 Color arena_light(ArenaId id, const ArenaCtx *c);      /* luz ambiente sobre os lutadores */
 float arena_reflection(ArenaId id);
+Color arena_dust(ArenaId id);                         /* a poeira do chão (os pés, o bote, a queda) */
 Color arena_rim(ArenaId id);                          /* luz de contorno (neon) do cenário */                    /* 0 = chão fosco */
 const char *arena_name(ArenaId id);
+/* O pinheiro em camadas de agulha (quatro tons, tone[0] a sombra) e a labareda dos
+ * cenários, para as ilustrações. */
+void arena_pine(float x, float base, float h, const Color tone[4], int seed);
+void arena_flame(float x, float base, float w, float h, float t, int seed);
 
 #endif

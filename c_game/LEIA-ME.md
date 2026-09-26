@@ -140,17 +140,32 @@ repertório mais variado e o ritmo irregular.
 - Tudo em pixel art de 320 × 180, ampliado por número inteiro e sem filtro:
   cenários, trilha, lore, final, lutadores (com contorno escuro e filete de luz na
   cor do cenário) e a interface.
-- Todos os cenários são do Japão antigo: casa de fazenda, jardim de pedras com o
-  laguinho de carpas e a ilha da tartaruga, pátio do dojo, cachoeira entre
-  árvores, o portão de dois andares do tigre branco (bandeiras listradas,
-  lanternas de pedra, bordos), telhados da vila do castelo na chuva (uma fileira
-  de casas iguais de janelas quadradas, a lua crescente e os corvos na cumeeira),
-  ponte de corda sobre o desfiladeiro no vento (serras de picos na névoa), a forja
-  dentro da cratera (lago e cascata de lava, o barracão com a corda sagrada, a
-  fornalha de barro e as katanas esfriando), o porto do farol, o salão do castelo
-  numa noite de tempestade (biombos de ouro, as portas abertas para a chuva e os
-  raios que clareiam a luta, com trovão), bambuzal, a encosta da serra com a lua
-  cheia grande e o dojo de Hanzo.
+- Todos os cenários são do Japão antigo: casa de fazenda (árvores de outono
+  entre a casa e a cerca), jardim de pedras com o laguinho de carpas e a ilha da
+  tartaruga (pinheiros velhos dos dois lados do pátio), pátio do dojo (a última
+  porta de correr aberta para o jardim no fim da tarde), a cachoeira da Shizuku
+  no inverno (rocha azulada com neve nos degraus, pinheiros nevados, colunas e
+  pingentes de gelo, o poço de água escura e a neve caindo na frente), o portão
+  de dois andares do tigre branco (bandeiras listradas, lanternas de pedra,
+  bordos com a copa em massas), telhados da vila do castelo na chuva (uma
+  fileira de casas iguais de janelas quadradas, pinheiros molhados nos quintais,
+  a lua crescente e os corvos na cumeeira), ponte de corda sobre o desfiladeiro
+  no vento (pinheiros tortos no alto dos paredões e o capim alto deitando com as
+  rajadas, também na frente), a forja dentro da cratera (lago e cascata de lava
+  com línguas de fogo, braseiros de ferro nas pontas, brasas subindo, o barracão
+  com a corda sagrada, a fornalha de barro e as katanas esfriando), o porto do
+  farol (com o lago de lótus da Suiren), o salão do castelo numa noite de
+  tempestade (biombos de ouro, as portas abertas para a chuva e os raios que
+  clareiam a luta, com trovão), bambuzal (o luar na borda dos colmos), a encosta
+  da serra com a lua cheia grande e o dojo de Hanzo (pinheiros em camadas).
+- As árvores têm volume: tronco com o lado da luz, copa em massas de três e
+  quatro tons com a borda recortada (pinheiros em camadas de agulha, árvores de
+  folha em tufos), e as de trás menores e apagadas na névoa. Os helpers são
+  `canopy`, `broadleaf`, `tier_pine`, `snow_pine` e `flame` em `src/arenas.c`.
+- A poeira dos pés (o bote, a queda, o passo, a espada caindo) sai menor e na cor
+  do chão de cada cenário (`arena_dust`: a palha, o cascalho, a neve, a cinza...).
+  O aviso do Jinshi (o brilho da lua antes do golpe) ficou pequeno e lilás, na
+  paleta do céu da serra, em vez da nuvem branca grande.
 - Os fundos (cenários, título, lore e trilha) passam por uma paleta curta de 32
   cores, tirada da própria cena (`src/pixelize.c`): cada pixel vai para a cor mais
   perto, e só na faixa entre dois tons vizinhos um xadrez de Bayer 4 × 4 mistura
@@ -190,14 +205,33 @@ repertório mais variado e o ritmo irregular.
   layout é pensado em 1280 × 720, mas tudo cai na grade de 320 × 180.
 - As falas do duelo ficam numa caixa no alto, para os lutadores aparecerem
   inteiros; na cabana de hanzo e nos finais, hanzo e kojiro também são os sprites.
+  Na cabana, Hanzo fica sentado (`SENTADO`) junto da fogueira: pedras em volta,
+  lenha cruzada, brasas, três labaredas, fumaça e fagulhas subindo, e pinheiros
+  em camadas atrás.
+- **Kojiro saca a espada no começo de cada luta.** Fora da luta (a conversa antes
+  do duelo), ele fica com a katana embainhada (`EMBAINHADO`); quando o duelo
+  começa, toca o `DESEMBAINHAR` (0,42 s, com o som do corte), que termina
+  exatamente na guarda (o quadro 0 do IDLE), antes do primeiro golpe do mestre.
+  No código: `ren_sheathed()` é chamada em `setup_actors()`, logo depois de
+  carregar o Kojiro, e `ren_draw_sword()` em `start_duel()`, depois de
+  `setup_actors()` (as duas em `src/main.c`). Na cabana, Kojiro também fica
+  com a katana na bainha (`sprite_person_pose` em `src/lore.c` prefere o
+  `EMBAINHADO`).
 - Oboro luta de rosto descoberto nas duas primeiras formas: o gerador acha o
   elmo de oni do pack em cada quadro (de frente, de costas e caído), tira o elmo
-  inteiro e pinta no lugar a cabeça dele: o rosto do Kojiro mais velho, a barba
-  preta grande e o cabelo preso (`oboro/`); a prancha com a máscara sai em
-  `oboro_mascara/`. O Hanzo mascarado usa o mesmo elmo, maior que a cabeça dele.
+  inteiro e pinta no lugar a cabeça dele, a mesma em todos os quadros: o rosto do
+  Hanzo jovem, cabelo curto e barba curta (`oboro/`); a prancha com a máscara sai
+  em `oboro_mascara/`, com o elmo visível em todos os quadros. O Hanzo mascarado
+  usa o mesmo elmo, assentado na cabeça dele em cada quadro.
 - Entre os aprendizes só o Yoru usa pano no rosto; Garfiel, Karasu, Hayate e
-  Arashi lutam de rosto descoberto. A Shizuku é a postura do gelo (florete com
-  geada, cabelo prateado); a Suiren, de lança, ficou com o visual que era dela.
+  Arashi lutam de rosto descoberto, cada um com o seu cabelo. A Shizuku é a
+  postura do gelo (florete com geada, cabelo prateado); a Suiren, de lança,
+  ficou com o visual que era dela.
+- Cada arma tem o seu golpe: a lança e o florete estocam, as garras do Garfiel
+  deixam três riscos, as foicinhas do Hayate dois arcos curtos, a katana e a
+  wakizashi do Karasu dois arcos cruzados em X, as adagas invertidas do Yoru
+  cortes curtos e secos, e as espadas do Arashi raios em zigue-zague. Ver
+  `../docs/PERSONAGENS.md` (inclusive o alcance novo de cada um).
 - A escolha do fim corta a música e deixa só o vento; nos finais, Hanzo entra
   batendo palmas (sim) ou sai do escuro (não).
 - Teclas de pixel na pausa e, no primeiro duelo, a dica de como aparar.
