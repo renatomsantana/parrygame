@@ -5738,10 +5738,11 @@ static void sheet_reach(const char *title, const Rendered *r, int nr, const int 
 /* ------------------------------------------------------------------------ */
 /* Quem não luta (Hanzo) não ganha as pranchas de golpe nem de guarda. */
 /* Um quadro do Hanzo em seiza a partir do quadro em pé já pronto (ver SENTADO): o
-   tronco vai até as mãos (que pendem ao lado do corpo e, sentado, ficam pousadas nas
-   coxas) e desce até elas ficarem sobre as coxas; as coxas saem dos quadris para a
-   frente até o joelho redondo, a luz por cima, a sombra embaixo e atrás, uma prega
-   do colo ao joelho, e as solas escuras dos pés dobrados por baixo, atrás. */
+   tronco do IDLE (o rosto, a barba, os braços) até a altura das mãos desce sobre as
+   pernas dobradas, com as costas levemente curvadas (o alto do tronco um pixel à
+   frente); as pernas são desenhadas: a coxa reta para a frente, com a luz por cima,
+   até o joelho redondo, a canela deitada no chão por baixo dela e o calcanhar atrás,
+   sob o quadril; as mãos saem dos lados e ficam pousadas no colo, sobre as coxas. */
 static void seated_frame(const Frame *in, Frame *out, const Char *ch) {
     memset(out, 0, sizeof *out);
     int top = -1, bot = -1;
@@ -5763,46 +5764,70 @@ static void seated_frame(const Frame *in, Frame *out, const Char *ch) {
                         (c.r == 0xbf && c.g == 0x6f && c.b == 0x4a)) && y > hip)
                 hip = y;
         }
-    int legs = 7, shift = bot - legs - hip;
-    if (shift < 0) shift = 0;
-    for (int y = top; y <= hip; y++)
-        for (int x = 0; x < CW; x++)
-            if (y + shift < CH) out->p[y + shift][x] = in->p[y][x];
-    int xb = CW, front = -1;
-    for (int x = 0; x < CW; x++)
-        if (in->p[hip - 2][x].a) {
-            if (x < xb) xb = x;
-            if (x > front) front = x;
-        }
-    if (front < 0) return;
-    /* as pernas dobradas, desenhadas: as costas arredondadas sobre os calcanhares, a coxa
-       descendo devagar até o joelho redondo na frente, a luz por cima e a sombra
-       embaixo e atrás, as solas por baixo. Coluna 0 = uma antes das costas, a última
-       linha é o chão. */
+    /* as pernas dobradas: coluna 0 = as costas, a última linha é o chão */
     static const char *const PERNAS[] = {
-        "..kkkkkk..........",
-        ".akkkkcccwww......",
-        "aakkkkccccwwwww...",
-        "aakkkkkcccccwwwc..",
-        "gaakkkkkcccccccwc.",
-        "gaaakkkkkkkcccccka",
-        "ggaaaaaakkkkkkkkaa",
-        "gggaaaaaaaaaaaaaa.",
+        ".kkkkkkk.........",
+        "akkkkkkkcccwww...",
+        "akkkkkkcccccwwc..",
+        "aakkkkkkccccccwc.",
+        "gaakkkkkkkkcccck.",
+        "gaaaakkkkkkkkkka.",
+        "ggaaaaaaaaaaaaa..",
     };
     int rows = (int)(sizeof PERNAS / sizeof PERNAS[0]);
+    int lap = bot - (rows - 1);              /* o alto das coxas */
+    int shift = lap + 1 - hip;               /* o tronco desce até as mãos ficarem no colo */
+    int mid = top + (hip - top) / 2;
+    bool skin[CH][CW];
+    memset(skin, 0, sizeof skin);
+    for (int y = top; y <= hip; y++)
+        for (int x = 0; x < CW; x++) {
+            Color c = in->p[y][x];
+            bool sk = false;
+            for (int k = 0; k < 3; k++) sk |= c.a && c.r == ch->pele[k].r && c.g == ch->pele[k].g && c.b == ch->pele[k].b;
+            sk |= c.a && ((c.r == 0xe6 && c.g == 0x9c && c.b == 0x69) || (c.r == 0xf6 && c.g == 0xca && c.b == 0x9f) ||
+                          (c.r == 0xbf && c.g == 0x6f && c.b == 0x4a));
+            skin[y][x] = sk && y > mid + 4;       /* as mãos (o rosto fica) */
+        }
+    int xb = CW, front = -1;
+    for (int y = top; y <= hip; y++)
+        for (int x = 0; x < CW; x++) {
+            if (!in->p[y][x].a) continue;
+            /* as costas curvadas: o alto do tronco um pixel à frente */
+            int dx = y < mid ? 1 : 0, ny = y + shift;
+            if (ny < 0 || ny >= CH || x + dx >= CW) continue;
+            Color c = in->p[y][x];
+            if (skin[y][x]) c = (Color){ch->camisa[1].r, ch->camisa[1].g, ch->camisa[1].b, 255};   /* a manga no lugar da mão */
+            out->p[ny][x + dx] = c;
+            if (y >= hip - 3) {
+                if (x < xb) xb = x;
+                if (x > front) front = x;
+            }
+        }
+    if (front < 0) return;
     int span = (int)strlen(PERNAS[0]), x0 = xb - 1;
-    if (front + 7 - x0 > span) x0 = front + 7 - span;   /* o joelho uns 6 px na frente da barriga */
+    if (x0 + span < front + 8) x0 = front + 8 - span;   /* o joelho uns 6 px na frente da barriga */
     for (int r = 0; r < rows; r++)
         for (int c = 0; PERNAS[r][c]; c++) {
             char k = PERNAS[r][c];
-            int x = x0 + c, y = bot - (rows - 1) + r;
+            int x = x0 + c, y = lap + r;
             if (k == '.' || x < 0 || x >= CW || y < 0 || y >= CH) continue;
             Rgb v = k == 'w' ? ch->camisa[0] : k == 'c' ? ch->camisa[1] : k == 'k' ? ch->camisa[2] : k == 'a' ? ch->camisa[3]
                                                                                                             : (Rgb){74, 70, 68};
             out->p[y][x] = (Color){v.r, v.g, v.b, 255};
         }
+    /* as mãos no colo, uma sobre a outra, na frente da barriga */
+    static const char *const MAOS[] = {".uxx", "uxxW"};
+    for (int r = 0; r < 2; r++)
+        for (int c = 0; MAOS[r][c]; c++) {
+            char k = MAOS[r][c];
+            int x = front - 1 + c, y = lap - 1 + r;
+            if (k == '.' || x < 0 || x >= CW || y < 0 || y >= CH) continue;
+            Rgb v = k == 'W' ? ch->pele[0] : k == 'x' ? ch->pele[1] : ch->pele[2];
+            out->p[y][x] = (Color){v.r, v.g, v.b, 255};
+        }
     /* entre o tronco e as pernas não pode sobrar buraco */
-    for (int y = hip + shift + 1; y < bot - (rows - 1); y++)
+    for (int y = hip + shift + 1; y < lap; y++)
         for (int x = xb; x <= front; x++)
             if (!out->p[y][x].a) out->p[y][x] = (Color){ch->camisa[2].r, ch->camisa[2].g, ch->camisa[2].b, 255};
 }
@@ -6744,7 +6769,7 @@ int main(int argc, char **argv) {
             for (int j = 0; j < src->n; j++) seated_frame(&src->frames[j], &r->frames[j], ch);
             path_join(p, d, "SENTADO.png");
             save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
-            if (mf) fprintf(mf, "anim SENTADO        loop\n");
+            if (mf) fprintf(mf, "anim SENTADO        loop  ms 190\n");   /* a respiração lenta */
             nr++;
         }
 
