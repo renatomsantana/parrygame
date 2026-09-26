@@ -761,7 +761,7 @@ typedef struct {
     const char *parado;                     /* o parado sai desta prancha do pack (quadro 0), respirando */
     GolpeProprio golpe;                     /* arma e rastro dos golpes desenhados aqui */
     const Row *cab_frente, *cab_costas; /* Samurai #5: cabelo novo (de frente e de costas), em volta do olho */
-    int cab_balanco;                        /* 1: a juba balança com o vento; 2: o rabo de cavalo esvoaça */
+    int cab_balanco;                        /* quanto o cabelo acompanha o movimento: 1 curto e duro, 2 médio, 3 comprido */
     bool sem_rastro_pack;                   /* tira o corte de katana do pack (cores de rastro_pack longe do corpo) */
     bool rastro_pack_solto;                 /* o rastro do pack tem cor própria: sai inteiro (menos as lâminas) e o
                                                buraco que ele deixa no corpo é tapado com a cor em volta */
@@ -839,64 +839,65 @@ static const Char ORIG = {
                               {"ATTACK_3", 6}, {"IDLE", 0}}}},                                                       \
     .sem_rastro_pack = true, .rastro_pack_solto = true, .rastro_pack = {HEX(0xf8f8f8), HEX(0x92a1b9), HEX(0xc7cfdd)}
 
-/* Moldes de cabelo do Samurai #5 (ver s5_hair). */
+/* Moldes de cabelo do Samurai #5 (ver s5_hair), em massas: 3 a 6 mechas grandes em dois ou três
+   tons e a luz, sem fio solto, do tamanho da cabeça mais o tronco no máximo. Linha e coluna em
+   volta do olho; H, h, i: os tons do cabelo (escuro, meio, luz); A, a: o destaque; L: o traço escuro. */
+/* Karasu: curto, a massa escura com a faixa de luz no alto, três pontas de pena para trás e a franja em pena. */
 static const Row CAB_KARASU_FRENTE[] = {
-    {-9, -9, "H"}, {-8, -8, "HhHH"}, {-7, -7, "HhHHhhh"}, {-6, -6, "hhhiiHHH"}, {-5, -11, "HHHHHHhhHHHHH"},
-    {-4, -9, "hhhhHHHHHHHH"}, {-3, -7, "HHHHHHHHHHH"}, {-2, -9, "HHHHHHHHHHHHHH"}, {-1, -11, "HHhhhhHHHHH...HH"},
-    {0, -6, "HHHHH"}, {1, -8, "HhhhhHHH"}, {2, -9, "HHH..HHHH"}, {0, 0, NULL},
+    {-7, -4, "HH"}, {-6, -6, "HHhhH"}, {-5, -8, "HHhiihhH"}, {-4, -10, "HHhhiiihhhH"}, {-3, -11, "HhhhhhhhhhhhH"},
+    {-2, -9, "HhhhhhhhhHhH"}, {-1, -11, "HHhhhhhhhhH.HH"}, {0, -9, "HHhhhhhH...H"}, {1, -10, "HHhhhhhH"},
+    {2, -7, "HhhhH"}, {3, -5, "HH"}, {0, 0, NULL},
 };
 static const Row CAB_KARASU_COSTAS[] = {
-    {-9, -9, "H"}, {-8, -8, "HhHH"}, {-7, -7, "HhHHhhh"}, {-6, -6, "hhhiiHHH"}, {-5, -11, "HHHHHHhhHHHHH"},
-    {-4, -9, "hhhhHHHHHHHH"}, {-3, -7, "HHHHHHHHHH"}, {-2, -9, "HHHHHHHHHHHH"}, {-1, -11, "HHhhhhHHHHHHHH"},
-    {0, -6, "HHHHHHHH"}, {1, -8, "HhhhhHHHHH"}, {2, -9, "HHH..HHHH"}, {0, 0, NULL},
+    {-7, -4, "HH"}, {-6, -6, "HHhhH"}, {-5, -8, "HHhiihhH"}, {-4, -10, "HHhhiiihhhH"}, {-3, -11, "HhhhhhhhhhhhH"},
+    {-2, -9, "HhhhhhhhhhhH"}, {-1, -11, "HHhhhhhhhhhhH"}, {0, -9, "HHhhhhhhhH"}, {1, -10, "HHhhhhhhhH"},
+    {2, -7, "HhhhhH"}, {3, -5, "HH"}, {0, 0, NULL},
 };
+/* Arashi: comprido e jogado pelo vento, em três mechas grossas (luz em cima, sombra embaixo de cada uma). */
 static const Row CAB_ARASHI_FRENTE[] = {
-    {-12, -9, "h"}, {-11, -8, "hihh"}, {-10, -7, "iiihh"}, {-9, -15, "hhhhhhhhhhihhh"}, {-8, -12, "iiihhhhhhiii"},
-    {-7, -10, "hihhhhhiihh"}, {-6, -16, "hhhhhhhhhhhhiihhhh"}, {-5, -19, "hhhhiihhhhhhhhhhhhhhhh"},
-    {-4, -16, "hhhiiiiHHHHHihhhhhh"}, {-3, -13, "HHHHHHHHHhhhhhhhh"}, {-2, -18, "HHHHHHHHHHHHHHhhhhhhhhh"},
-    {-1, -21, "HHHHhhhhhhhhhhHHHhhhh....h"}, {0, -15, "HHHHHHHHHHHhhh.....H"}, {1, -12, "HHHHHHHHhhhh"},
-    {2, -14, "HHHHHHHhHHHhhh"}, {3, -17, "HHhhhhhhhHHHHH"}, {4, -19, "HHHhH.HH.HHHHHhhH"}, {5, -12, "HHHhhHhHH"},
-    {6, -14, "HHhHh.H"}, {7, -15, "HH"}, {0, 0, NULL},
+    {-9, -8, "iiiiii"}, {-8, -14, "iiiiiihhhhhhi"}, {-7, -17, "iiihhhhhhhhhhhhhi"}, {-6, -13, "HHHHHHhhhhhhhh"},
+    {-5, -16, "iiiiiihhhhhhhhhhhi"}, {-4, -19, "iiihhhhhhhhhhhhhhhhhH"}, {-3, -15, "HHHHHHHHhhhhhhhhH"},
+    {-2, -12, "iiiihhhhhhhHhH"}, {-1, -14, "iihhhhhhhhhhH.hH"}, {0, -11, "HHHHHhhhH"}, {1, -6, "HHH"}, {0, 0, NULL},
 };
 static const Row CAB_ARASHI_COSTAS[] = {
-    {-12, -9, "h"}, {-11, -8, "hihh"}, {-10, -7, "iiihh"}, {-9, -15, "hhhhhhhhhhihhh"}, {-8, -12, "iiihhhhhhiii"},
-    {-7, -10, "hihhhhhiihh"}, {-6, -16, "hhhhhhhhhhhhiihhhh"}, {-5, -19, "hhhhiihhhhhhhhhhhhhhhh"},
-    {-4, -16, "hhhiiiiHHHHHihhhhhh"}, {-3, -13, "HHHHHHHHHhhhhhhh"}, {-2, -18, "HHHHHHHHHHHHHHhhhhhhh"},
-    {-1, -21, "HHHHhhhhhhhhhhHHHhhhhhhh"}, {0, -15, "HHHHHHHHHHHhhhhhhh"}, {1, -12, "HHHHHHHHhhhhhh"},
-    {2, -14, "HHHHHHHhHHHhhhh"}, {3, -17, "HHhhhhhhhHHHHH"}, {4, -19, "HHHhH.HH.HHHHHhhH"}, {5, -12, "HHHhhHhHH"},
-    {6, -14, "HHhHh.H"}, {7, -15, "HH"}, {0, 0, NULL},
+    {-9, -8, "iiiiii"}, {-8, -14, "iiiiiihhhhhhi"}, {-7, -17, "iiihhhhhhhhhhhhhi"}, {-6, -13, "HHHHHHhhhhhhhh"},
+    {-5, -16, "iiiiiihhhhhhhhhhhi"}, {-4, -19, "iiihhhhhhhhhhhhhhhhhH"}, {-3, -15, "HHHHHHHHhhhhhhhhH"},
+    {-2, -12, "iiiihhhhhhhhhH"}, {-1, -14, "iihhhhhhhhhhhhH"}, {0, -11, "HHHHHhhhhhH"}, {1, -6, "HHHH"}, {0, 0, NULL},
 };
+/* Hayate: debaixo do kasa, a nuca e o rabo de cavalo preso com a fita limão. */
 static const Row CAB_HAYATE_FRENTE[] = {
-    {-4, -4, "HHH"}, {-3, -6, "HHHHHHH"}, {-2, -8, "HAAHHHHHHHHH"}, {-1, -22, "HHHHH.......HHHAHHHHHH...H"},
-    {0, -20, "hhhHHHH.HHhhhhhHHHH"}, {1, -18, "HhhHHHhhHHH.HHHHHH"}, {2, -16, "HHh.........HHH"}, {0, 0, NULL},
+    {-4, -7, "HhhhH"}, {-3, -8, "HhhhhhH"}, {-2, -9, "HhhhhhhH"}, {-1, -10, "iihAhhhhH"}, {0, -13, "iiihhhaAhhH"},
+    {1, -14, "HhhhhHHH.HH"}, {2, -13, "HHH"}, {0, 0, NULL},
 };
 static const Row CAB_HAYATE_COSTAS[] = {
-    {-4, -4, "HHH"}, {-3, -6, "HHHHHHH"}, {-2, -8, "HAAHHHHHHH"}, {-1, -22, "HHHHH.......HHHAHHHHHHHH"},
-    {0, -20, "hhhHHHH.HHhhhhhHHHHHHH"}, {1, -18, "HhhHHHhhHHH.HHHHHHH"}, {2, -16, "HHh.........HHH"}, {0, 0, NULL},
+    {-4, -7, "HhhhhhH"}, {-3, -8, "HhhhhhhhH"}, {-2, -9, "HhhhhhhhhH"}, {-1, -10, "iihAhhhhhhH"},
+    {0, -13, "iiihhhaAhhhhH"}, {1, -14, "HhhhhHHH.HHH"}, {2, -13, "HHH"}, {0, 0, NULL},
 };
+/* Garfiel: o topete subindo para a frente e três pontas grossas para trás, como espinhos, com a listra escura. */
 static const Row CAB_GARFIEL_FRENTE[] = {
-    {-17, 3, "H"}, {-16, 2, "HH"}, {-15, -2, "H...H.....H"}, {-14, -2, "H..Hi....H"}, {-13, -3, "iH..iH...H"},
-    {-12, -3, "iH.iih..iH"}, {-11, -3, "iHhHHhHiHh"}, {-10, -6, "H.HiHiHH.iHH.....H"},
-    {-9, -6, "H.iHHiHHHHHH..iHH"}, {-8, -6, "iHiHhHHhiHH.HHH"}, {-7, -6, "iHHHiHiiHHHiHH"},
-    {-6, -6, "iHHiHHHHHiHHH"}, {-5, -6, "iHHiHHHHHHHH"}, {-4, -6, "iHHHHHHHHH"}, {-3, -7, "hhhHHHHHHHH"},
-    {-2, -7, "hhhHHHH"}, {-1, -6, "hhHHHH"}, {0, -6, "hhHHH"}, {1, -5, "hHHHH"}, {0, 0, NULL},
+    {-11, 3, "i"}, {-10, 1, "iiH"}, {-9, -14, "i............iiHHh"}, {-8, -13, "iiH.......iiHHHhh"},
+    {-7, -12, "iHhHh..iiHHHHHh"}, {-6, -11, "hHhHHHHHHHHHHh"}, {-5, -12, "iiHHHHHHHHHHHHh"},
+    {-4, -14, "iiHHHhHHHHHHHHHH"}, {-3, -12, "hhhHhHHHHHHHh"}, {-2, -9, "hHHHHHHHHh"}, {-1, -10, "iHHHHHHHhh"},
+    {0, -11, "hhhHHHHhh"}, {1, -9, "hhhhh"}, {0, 0, NULL},
 };
 static const Row CAB_GARFIEL_COSTAS[] = {
-    {-17, 3, "H"}, {-16, 2, "HH"}, {-15, -2, "H...H.....H"}, {-14, -2, "H..Hi....H"}, {-13, -3, "iH..iH...H"},
-    {-12, -3, "iH.iih..iH"}, {-11, -3, "iHhHHhHiHh"}, {-10, -6, "H.HiHiHH.iHH.....H"},
-    {-9, -6, "H.iHHiHHHHHH..iHH"}, {-8, -6, "iHiHhHHhiHH.HHH"}, {-7, -6, "iHHHiHiiHHHiHH"},
-    {-6, -6, "iHHiHHHHHiHHH"}, {-5, -6, "iHHiHHHHHHHH"}, {-4, -6, "iHHHHHHHHH"}, {-3, -7, "hhhHHHHHHHH"},
-    {-2, -7, "hhhHHHHHHH"}, {-1, -6, "hhHHHHHH"}, {0, -6, "hhHHHHHH"}, {1, -5, "hHHHHH"}, {0, 0, NULL},
+    {-11, 3, "i"}, {-10, 1, "iiH"}, {-9, -14, "i............iiHHh"}, {-8, -13, "iiH.......iiHHHhh"},
+    {-7, -12, "iHhHh..iiHHHHHh"}, {-6, -11, "hHhHHHHHHHHHHh"}, {-5, -12, "iiHHHHHHHHHHHHh"},
+    {-4, -14, "iiHHHhHHHHHHHHHH"}, {-3, -12, "hhhHhHHHHHHHh"}, {-2, -9, "hHHHHHHHHh"}, {-1, -10, "iHHHHHHHhh"},
+    {0, -11, "hhhHHHHhh"}, {1, -9, "hhhhh"}, {0, 0, NULL},
 };
+/* Yoru: liso até o ombro, a franja por cima do olho e duas faixas roxas limpas. */
 static const Row CAB_YORU_FRENTE[] = {
-    {-7, -4, "HHHh"}, {-6, -5, "hAAHhH"}, {-5, -6, "HhHaHhHH"}, {-4, -7, "HHhHaHhHHH"}, {-3, -7, "HHhHaHhHHHH"},
-    {-2, -8, "HHHhHaHhHHaHH"}, {-1, -8, "HHHhHaHHHHHAH"}, {0, -8, "HHHhHaHHHH.HH"}, {1, -8, "HAHhHaHH"},
-    {2, -8, "HAHhHaHH"}, {3, -8, "HAHhHaH"}, {4, -8, "HAHhHHH"}, {5, -8, "HAHhH"}, {6, -7, "HHH"}, {0, 0, NULL},
+    {-7, -6, "HHHHH"}, {-6, -8, "HHhhhhhHH"}, {-5, -9, "HhhiiihhhhH"}, {-4, -10, "HhhiihhhhhhhH"},
+    {-3, -10, "HhAhhhhhhhhhhH"}, {-2, -11, "HhhAhhhhhHhhhhhH"}, {-1, -11, "HhhAhhhhH..hhhhH"},
+    {0, -11, "HhhhAhhhH...hhH"}, {1, -11, "HhhhAhhH.....H"}, {2, -11, "HhhhAhhH"}, {3, -11, "HhhhhAhH"},
+    {4, -11, "HhhhhAhH"}, {5, -10, "HhhhhH"}, {0, 0, NULL},
 };
 static const Row CAB_YORU_COSTAS[] = {
-    {-7, -4, "HHHh"}, {-6, -5, "hAAHhH"}, {-5, -6, "HhHaHhHH"}, {-4, -7, "HHhHaHhHHH"}, {-3, -7, "HHhHaHhHHH"},
-    {-2, -8, "HHHhHaHhHHH"}, {-1, -8, "HHHhHaHHHHH"}, {0, -8, "HHHhHaHHHH"}, {1, -8, "HAHhHaHHH"},
-    {2, -8, "HAHhHaHH"}, {3, -8, "HAHhHaH"}, {4, -8, "HAHhHHH"}, {5, -8, "HAHhH"}, {6, -7, "HHH"}, {0, 0, NULL},
+    {-7, -6, "HHHHH"}, {-6, -8, "HHhhhhhHH"}, {-5, -9, "HhhiiihhhhH"}, {-4, -10, "HhhiihhhhhhhH"},
+    {-3, -10, "HhAhhhhhhAhhH"}, {-2, -11, "HhhAhhhhhhAhhH"}, {-1, -11, "HhhAhhhhhhhAhH"}, {0, -11, "HhhhAhhhhhhAhH"},
+    {1, -11, "HhhhAhhhhhhAH"}, {2, -11, "HhhhAhhhhhhAH"}, {3, -11, "HhhhhAhhhhAhH"}, {4, -11, "HhhhhAhhhhAhH"},
+    {5, -10, "HhhhhhhhhhH"}, {0, 0, NULL},
 };
 
 
@@ -990,7 +991,7 @@ static Char CHARS[] = {
      .sem_pano = true, .parado = "DEFEND", .pack = "samurai5",
      /* golpes de garra: sem o corte de espada do pack, três riscos de arranhão */
      .golpe = GP_GARRAS, S5_REMONTA,
-     .cab_frente = CAB_GARFIEL_FRENTE, .cab_costas = CAB_GARFIEL_COSTAS, .pack_par = true, .pack_sem_camisa = true,
+     .cab_frente = CAB_GARFIEL_FRENTE, .cab_costas = CAB_GARFIEL_COSTAS, .cab_balanco = 1, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x3a3642)}, {HEX(0x134c4c), HEX(0x28252e)}, {HEX(0x0c2e44), HEX(0x1a181e)},
                {HEX(0x391f21), HEX(0xa01820)}, {HEX(0x5d2c28), HEX(0xd02828)},
@@ -1014,7 +1015,7 @@ static Char CHARS[] = {
      /* corpo do samurai de duas espadas: a espada na direita e a lâmina mais curta na esquerda */
      /* golpes: sem o corte de espada do pack, dois arcos cruzados de tamanhos diferentes */
      .golpe = GP_DUAS, S5_REMONTA,
-     .sem_pano = true, .pack = "samurai5", .cab_frente = CAB_KARASU_FRENTE, .cab_costas = CAB_KARASU_COSTAS, .pack_par = true, .pack_sem_camisa = true,
+     .sem_pano = true, .pack = "samurai5", .cab_frente = CAB_KARASU_FRENTE, .cab_costas = CAB_KARASU_COSTAS, .cab_balanco = 1, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x5a5058)}, {HEX(0x134c4c), HEX(0x3e363e)}, {HEX(0x0c2e44), HEX(0x1c181c)},
                {HEX(0x391f21), HEX(0x8c1018)}, {HEX(0x5d2c28), HEX(0xc0182a)},
@@ -1036,7 +1037,7 @@ static Char CHARS[] = {
      .sem_pano = true, .kasa = true, .pack = "samurai5",
      /* golpes de foice: sem o corte de espada do pack, dois arcos curtos e finos */
      .golpe = GP_KAMA, S5_REMONTA,
-     .cab_frente = CAB_HAYATE_FRENTE, .cab_costas = CAB_HAYATE_COSTAS, .cab_balanco = 2, .pack_par = true, .pack_sem_camisa = true,
+     .cab_frente = CAB_HAYATE_FRENTE, .cab_costas = CAB_HAYATE_COSTAS, .cab_balanco = 3, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x8ccc78)}, {HEX(0x134c4c), HEX(0x5c9c54)}, {HEX(0x0c2e44), HEX(0x2c4a30)},
                {HEX(0x391f21), HEX(0x7cc81c)}, {HEX(0x5d2c28), HEX(0xc8ff3c)},
@@ -1097,7 +1098,7 @@ static Char CHARS[] = {
         elétrico, cabelo prateado e olhos de raio */
      /* golpes: sem a meia-lua do pack, um raio em zigue-zague no caminho de cada espada */
      .golpe = GP_RAIO, S5_REMONTA,
-     .sem_pano = true, .pack = "samurai5", .cab_frente = CAB_ARASHI_FRENTE, .cab_costas = CAB_ARASHI_COSTAS, .cab_balanco = 1, .pack_par = true, .pack_sem_camisa = true,
+     .sem_pano = true, .pack = "samurai5", .cab_frente = CAB_ARASHI_FRENTE, .cab_costas = CAB_ARASHI_COSTAS, .cab_balanco = 3, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x3a4056)}, {HEX(0x134c4c), HEX(0x252a3a)}, {HEX(0x0c2e44), HEX(0x14161f)},
                {HEX(0x391f21), HEX(0x1a4cc0)}, {HEX(0x5d2c28), HEX(0x3ca8ff)},
@@ -1119,7 +1120,7 @@ static Char CHARS[] = {
      /* corpo do samurai de duas espadas (uma adaga em cada mão): ninja preto e roxo */
      /* golpes de adaga: sem o corte de espada do pack, cortes pequenos e secos */
      .golpe = GP_ADAGAS, S5_REMONTA,
-     .pack = "samurai5", .cab_frente = CAB_YORU_FRENTE, .cab_costas = CAB_YORU_COSTAS, .pack_par = true, .pack_sem_camisa = true,
+     .pack = "samurai5", .cab_frente = CAB_YORU_FRENTE, .cab_costas = CAB_YORU_COSTAS, .cab_balanco = 2, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x4a3e6a)}, {HEX(0x134c4c), HEX(0x2e2844)}, {HEX(0x0c2e44), HEX(0x1a1628)},
                {HEX(0x391f21), HEX(0x4a1c7a)}, {HEX(0x5d2c28), HEX(0x8a3ce0)},
@@ -1917,6 +1918,53 @@ static bool s5_hair_px(const Canvas *cv, int x, int y) {
     return orig_rgb(cv, x, y, 0x272727) || orig_rgb(cv, x, y, 0x3d3d3d) || orig_rgb(cv, x, y, 0x391f21);
 }
 
+/* O movimento secundário do cabelo: a posição da cabeça em cada quadro da tira (medida
+ * antes de desenhar, em hair_track) e, em cada quadro, quanto as pontas ficam para trás
+ * do que a cabeça andou nos dois quadros anteriores (um a dois quadros de atraso), mais
+ * um balanço leve (a respiração, o vento). */
+static int g_trk_n, g_trk[64][2];
+static bool g_trk_loop;
+
+static void head_ref(const Frame *f, const Seg *sg, int *hx, int *hy) {
+    static Canvas t;
+    t.orig = f;
+    t.seg = sg;
+    if (s5_eye_open(&t, hx, hy, true)) return;
+    *hx = *hy = 0;
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++)
+            if (f->p[y][x].a && sg->lab[y][x] != SMEAR && sg->lab[y][x] != BLADE) {
+                *hx = x;
+                *hy = y + 6;
+                return;
+            }
+}
+
+static void hair_drag(const Char *ch, int idx, double *dx, double *dy) {
+    double k = ch->cab_balanco > 0 ? ch->cab_balanco : 1;
+    *dx = *dy = 0;
+    if (g_trk_n > 1 && idx < g_trk_n) {
+        int i1 = idx - 1, i2 = idx - 2;
+        if (g_trk_loop) {
+            i1 = (i1 + g_trk_n) % g_trk_n;
+            i2 = (i2 + g_trk_n) % g_trk_n;
+        }
+        double v1x = 0, v1y = 0, v2x = 0, v2y = 0;
+        if (i1 >= 0) { v1x = g_trk[idx][0] - g_trk[i1][0]; v1y = g_trk[idx][1] - g_trk[i1][1]; }
+        if (i1 >= 0 && i2 >= 0) { v2x = g_trk[i1][0] - g_trk[i2][0]; v2y = g_trk[i1][1] - g_trk[i2][1]; }
+        *dx = -(0.6 * v1x + 0.3 * v2x) * k * 0.45;
+        *dy = -(0.5 * v1y + 0.25 * v2y) * k * 0.45;
+    }
+    double ph = g_trk_loop && g_trk_n > 1 ? 6.2832 * idx / g_trk_n : idx * 1.1;
+    *dy += sin(ph) * 0.45 * k;
+    *dx += cos(ph) * 0.3 * k;
+    double mx = 1.5 * k + 1, my = k + 1;
+    if (*dx > mx) *dx = mx;
+    if (*dx < -mx) *dx = -mx;
+    if (*dy > my) *dy = my;
+    if (*dy < -my) *dy = -my;
+}
+
 static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
     static bool clus[CH][CW];
     static short st[CW * CH][2];
@@ -1981,15 +2029,36 @@ static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
                     touch = cv_ok(x + dx, y + dy) && cv->orig->p[y + dy][x + dx].a && !s5_hair_px(cv, x + dx, y + dy);
             if (!touch) { cv_clear(cv, x, y); cv->empty[y][x] = true; }
         }
+    if (getenv("DBG_HAIR")) fprintf(stderr, "hair %s %s:%d eye %d %d open %d back %d lying %d\n", ch->id, anim, idx, ex, ey, open, back, lying);
+    if (getenv("DBG_NOHAIR")) return;
     const Row *t = back ? ch->cab_costas : ch->cab_frente;
+    /* o molde numa grade em volta do olho */
+    static char M[48][72];
+    memset(M, 0, sizeof M);
+    int mc0 = 99, mc1 = -99, mr0 = 99, mr1 = -99;
     for (int r = 0; t[r].t; r++)
         for (int i = 0; t[r].t[i]; i++) {
-            char k = t[r].t[i];
-            if (k == '.') continue;
             int c = t[r].x + i, rr = t[r].y;
-            /* a juba e o rabo balançam, mais na ponta */
-            if (ch->cab_balanco == 1 && c < -6) c += pyround(sin(idx * 0.9 + rr * 0.5) * (c < -12 ? 1.2 : 0.6));
-            if (ch->cab_balanco == 2 && c < -8) rr += pyround(sin(idx * 1.3 - c * 0.45) * (c < -14 ? 1.4 : 0.7));
+            if (t[r].t[i] == '.' || rr < -24 || rr >= 24 || c < -48 || c >= 24) continue;
+            M[rr + 24][c + 48] = t[r].t[i];
+            if (c < mc0) mc0 = c;
+            if (c > mc1) mc1 = c;
+            if (rr < mr0) mr0 = rr;
+            if (rr > mr1) mr1 = rr;
+        }
+    /* as pontas ficam para trás do movimento (mais longe do crânio, mais atraso): cada
+       pixel busca no molde de onde veio, então o cabelo estica sem abrir buraco */
+    double DX = 0, DY = 0;
+    if (!lying) hair_drag(ch, idx, &DX, &DY);
+    for (int rr = mr0 - 4; rr <= mr1 + 4; rr++)
+        for (int c = mc0 - 6; c <= mc1 + 6; c++) {
+            double d = sqrt((c + 3.0) * (c + 3.0) + (rr + 2.0) * (rr + 2.0)), f = (d - 5) / 8;
+            if (f < 0) f = 0;
+            if (f > 1) f = 1;
+            int sc = c - pyround(f * DX), sr = rr - pyround(f * DY);
+            if (sr < -24 || sr >= 24 || sc < -48 || sc >= 24) continue;
+            char k = M[sr + 24][sc + 48];
+            if (!k) continue;
             int x = ex + c, y = ey + rr;
             /* caído de costas: o alto da cabeça para a direita; o cabelo de trás da nuca
                não sobe no ar, fica espalhado no chão, passando da cabeça */
@@ -6405,6 +6474,18 @@ int main(int argc, char **argv) {
             if (ch->parado && !strcmp(st->name, "IDLE"))
                 for (int t = 0; t < sc->ns; t++)
                     if (!strcmp(sc->strips[t].name, ch->parado)) pose = &sc->strips[t];
+            /* a cabeça em cada quadro da tira, para o atraso do cabelo (hair_drag) */
+            g_trk_n = 0;
+            if (ch->cab_frente && st->nframes <= 64) {
+                for (int j = 0; j < st->nframes; j++) {
+                    const Frame *sf = pose ? &pose->frames[0] : NULL;
+                    const Seg *sg = pose ? &pose->segs[0] : NULL;
+                    if (!pose) source_frame(sc, ch, st, j, &sf, &sg);
+                    head_ref(sf, sg, &g_trk[j][0], &g_trk[j][1]);
+                }
+                g_trk_n = st->nframes;
+                g_trk_loop = strstr(st->name, "IDLE") || strstr(st->name, "RUN");
+            }
             for (int j = 0; j < st->nframes; j++) {
                 Ctx cx = make_ctx(st->name, j, st->nframes, info, k);
                 if (pose) render(&pose->frames[0], &pose->segs[0], ch, &cx, &cv);
@@ -6426,6 +6507,7 @@ int main(int argc, char **argv) {
                 }
                 if (j == k) has_reach[nr] = reach(&cv, ax, ay, &reachv[nr][0], &reachv[nr][1]);
             }
+            g_trk_n = 0;
             /* o quadro de flash do pack (a silhueta toda branca do golpe recebido) vira a
                silhueta branca do quadro vizinho já pronto, com o cabelo e a arma novos */
             for (int j = 0; ch->pack && !pose && j < st->nframes && st->nframes > 1; j++) {
