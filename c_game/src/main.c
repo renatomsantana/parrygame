@@ -3134,7 +3134,8 @@ int main(int argc, char **argv) {
         rlEnableColorBlend();
         /* Interface: já desenhada em 320 x 180 (alfa pré-multiplicado), ampliada como o mundo. */
         BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
-        DrawTexturePro(G.uiLow.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, dst, (Vector2){0, 0}, 0, WHITE);
+        if (!getenv("APARA_SEM_UI"))   /* capturas das provas: só a cena, sem a interface */
+            DrawTexturePro(G.uiLow.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, dst, (Vector2){0, 0}, 0, WHITE);
         EndBlendMode();
 
         if (G.recDir && wall >= G.recStart) {

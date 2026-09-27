@@ -901,6 +901,47 @@ static const Row CAB_YORU_COSTAS[] = {
 };
 
 
+/* Rodada 6 (prova CAB_PROVA): cabelos naturais, sem balanço próprio (só acompanham a cabeça).
+   F f k: a pele (luz, meio, sombra) que o cabelo curto deixa aparecer (a têmpora, a orelha).
+   Garfiel: curto e rente dos lados (a têmpora e a orelha aparecem), um tufinho espetado no
+   alto, como um tufo de grama. Aqui H é o loiro de base, h a sombra e i a luz. */
+static const Row CAB6_GARFIEL_FRENTE[] = {
+    {-9, -2, "i"}, {-8, -4, "i.i.i"}, {-7, -4, "HiHiH"}, {-6, -5, "hHHiiHh"}, {-5, -6, "hHHHHHHHh"}, {-4, -6, "hHHHHHHHh"},
+    {-3, -6, "hhHHHFFFF"}, {-2, -6, "hhhFFFFFF"}, {-1, -5, "hkfFFkk"}, {0, -5, "hkfff"}, {1, -4, "kfff"},
+    {2, -3, "kf"}, {0, 0, NULL},
+};
+static const Row CAB6_GARFIEL_COSTAS[] = {
+    {-9, -2, "i"}, {-8, -4, "i.i.i"}, {-7, -4, "HiHiH"}, {-6, -5, "hHHiiHh"}, {-5, -6, "hHHHHHHHh"}, {-4, -6, "hHHHHHHHh"},
+    {-3, -6, "hhHHHHHhh"}, {-2, -6, "khhHHHhhk"}, {-1, -5, "fhhhhhf"}, {0, -4, "fffff"}, {1, -3, "fff"},
+    {0, 0, NULL},
+};
+/* Arashi e Karasu: comprido e solto, cai reto pelas costas até o meio delas (gravidade), a
+   franja curta na testa, cobrindo a orelha; a luz no alto da cabeça e uns fios claros na
+   queda. Aqui H é o traço escuro, h o meio e i a luz. */
+static const Row CAB6_LONGO_FRENTE[] = {
+    {-7, -5, "HHHH"}, {-6, -6, "HhiihHH"}, {-5, -7, "HhiihhhhH"}, {-4, -8, "HhhhhhhhhhH"},
+    {-3, -8, "HhhhhhhhHhH"}, {-2, -8, "HhhhhhhHFFF"}, {-1, -8, "HhhhhhHfkk"}, {0, -8, "HhhhhhHf"},
+    {1, -9, "HhhhhhHff"}, {2, -9, "HhhhhH"}, {3, -9, "HhihhH"}, {4, -9, "HhhhH"}, {5, -9, "HhihH"},
+    {6, -9, "HhhH"}, {7, -9, "HhH"}, {8, -8, "HH"}, {0, 0, NULL},
+};
+static const Row CAB6_LONGO_COSTAS[] = {
+    {-7, -5, "HHHH"}, {-6, -6, "HhiihHH"}, {-5, -7, "HhiihhhhH"}, {-4, -8, "HhhhhhhhhhH"},
+    {-3, -8, "HhhhhhhhhhH"}, {-2, -8, "HhhhhhhhhhH"}, {-1, -8, "HhhhhhhhhH"}, {0, -8, "HhhhhhhhH"},
+    {1, -8, "HhhhhhhH"}, {2, -8, "HhhhhhhH"}, {3, -8, "HhhihhH"}, {4, -8, "HhhhhhH"}, {5, -7, "HhihhH"},
+    {6, -7, "HhhhH"}, {7, -6, "HhhH"}, {8, -6, "HH"}, {0, 0, NULL},
+};
+
+/* Hayate: debaixo do kasa, a nuca e o rabo de cavalo preso com a fita limão, caindo reto
+   atrás do pescoço (não mais na horizontal, ao vento). */
+static const Row CAB6_HAYATE_FRENTE[] = {
+    {-4, -7, "HhhhH"}, {-3, -8, "HhhhhhH"}, {-2, -9, "HhhhhhhH"}, {-1, -10, "HaAhhhhhH"}, {0, -10, "HhhhhhH"},
+    {1, -10, "Hhi"}, {2, -10, "Hhh"}, {3, -10, "Hhi"}, {4, -10, "Hh"}, {5, -10, "Hh"}, {6, -9, "H"}, {0, 0, NULL},
+};
+static const Row CAB6_HAYATE_COSTAS[] = {
+    {-4, -7, "HhhhhhH"}, {-3, -8, "HhhhhhhhH"}, {-2, -9, "HhhhhhhhhH"}, {-1, -9, "HhhaAhhhH"}, {0, -8, "HhhhhhH"},
+    {1, -7, "Hhi"}, {2, -7, "Hhh"}, {3, -7, "Hhi"}, {4, -7, "Hh"}, {5, -7, "Hh"}, {6, -6, "H"}, {0, 0, NULL},
+};
+
 static Char CHARS[] = {
     /* O protagonista: sem chapéu e sem máscara, coque solto no alto da cabeça, katana. */
     {.id = "kojiro", .titulo = "Kojiro", .arma = {.kind = W_KATANA}, .cabeca = "coque", .saque = true},
@@ -2032,6 +2073,10 @@ static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
     if (getenv("DBG_HAIR")) fprintf(stderr, "hair %s %s:%d eye %d %d open %d back %d lying %d\n", ch->id, anim, idx, ex, ey, open, back, lying);
     if (getenv("DBG_NOHAIR")) return;
     const Row *t = back ? ch->cab_costas : ch->cab_frente;
+    bool prova6 = getenv("CAB_PROVA") != NULL;
+    if (prova6 && !strcmp(ch->id, "garfiel")) t = back ? CAB6_GARFIEL_COSTAS : CAB6_GARFIEL_FRENTE;
+    if (prova6 && (!strcmp(ch->id, "arashi") || !strcmp(ch->id, "karasu"))) t = back ? CAB6_LONGO_COSTAS : CAB6_LONGO_FRENTE;
+    if (prova6 && !strcmp(ch->id, "hayate")) t = back ? CAB6_HAYATE_COSTAS : CAB6_HAYATE_FRENTE;
     /* o molde numa grade em volta do olho */
     static char M[48][72];
     memset(M, 0, sizeof M);
@@ -2049,7 +2094,7 @@ static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
     /* as pontas ficam para trás do movimento (mais longe do crânio, mais atraso): cada
        pixel busca no molde de onde veio, então o cabelo estica sem abrir buraco */
     double DX = 0, DY = 0;
-    if (!lying) hair_drag(ch, idx, &DX, &DY);
+    if (!lying && !prova6) hair_drag(ch, idx, &DX, &DY);   /* na prova: sem balanço, o cabelo só segue a cabeça */
     for (int rr = mr0 - 4; rr <= mr1 + 4; rr++)
         for (int c = mc0 - 6; c <= mc1 + 6; c++) {
             double d = sqrt((c + 3.0) * (c + 3.0) + (rr + 2.0) * (rr + 2.0)), f = (d - 5) / 8;
@@ -2074,8 +2119,11 @@ static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
             if (!cv_ok(x, y)) continue;
             /* a arma e o rastro passam na frente; abaixo do queixo o cabelo fica atrás do corpo */
             if (cv->tag[y][x] == T_WEAPON || lab_at(cv, x, y) == BLADE || lab_at(cv, x, y) == SMEAR) continue;
-            if (cv->a[y][x].a && !clus[y][x] && (rr > 2 || orig_rgb(cv, x, y, 0xe69c69))) continue;
-            Rgb col = k == 'H' ? ch->cabelo[0] : k == 'h' ? ch->cabelo[1] : k == 'i' ? ch->cabelo[2]
+            bool pele = k == 'F' || k == 'f' || k == 'k';
+            if (pele && cv->a[y][x].a && !clus[y][x]) continue;   /* a pele só preenche o vazio */
+            if (cv->a[y][x].a && !clus[y][x] && (rr > 2 || orig_rgb(cv, x, y, 0xe69c69)) && !(prova6 && back && rr > 2)) continue;
+            Rgb col = k == 'F' ? ch->pele[0] : k == 'f' ? ch->pele[1] : k == 'k' ? ch->pele[2]
+                    : k == 'H' ? ch->cabelo[0] : k == 'h' ? ch->cabelo[1] : k == 'i' ? ch->cabelo[2]
                     : k == 'A' ? ch->destaque[0] : k == 'a' ? ch->destaque[1] : (Rgb){19, 19, 19};
             cv_put(cv, x, y, col);
             cv->tag[y][x] = T_BODY;
@@ -3613,6 +3661,12 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
     memset(cv->wpx, 0, sizeof cv->wpx);
     g_nkama = g_ndag = 0;
     cv->pen = T_WEAPON;
+    if (!strcmp(anim, "PROVA_BASE")) {   /* só o corpo, sem a espada e o cabo (base das provas desenhadas) */
+        for (int y = 0; y < CH; y++)
+            for (int x = 0; x < CW; x++)
+                if (cv->seg->lab[y][x] == BLADE || cv->seg->lab[y][x] == HANDLE || cv->seg->lab[y][x] == SMEAR) erase_px(cv, x, y);
+        return;
+    }
     if (!strcmp(anim, "PROVA_SAQUE")) {
         /* modos: 0 na bainha (a mão livre), 1 a mão no cabo, 2 o clique, 3 saindo, 4 o smear,
            5 fora com o brilho, 6 fora no ângulo, 7 nas duas mãos no ângulo */
@@ -4840,20 +4894,45 @@ static const char *const OBORO_CABECA[] = {
     "......DBBBBBD.....",
 };
 #define OBORO_LINHAS ((int)(sizeof OBORO_CABECA / sizeof OBORO_CABECA[0]))
-/* Prova (OBORO_PROVA): a cabeça dentro da área do rosto da máscara oni (colunas 5 a 14,
-   linhas -3 a +6 em volta dos olhos da máscara): cabelo curto rente ao crânio, olho de
-   1 px, barba curta na mandíbula e o pescoço embaixo. A primeira linha é a -3. */
+/* Prova (OBORO_PROVA): a cabeça na proporção do Kojiro (do alto da cabeça ao queixo,
+   24% da altura), oval em pé: 9 px de largura por 10 de altura, mais o coque pequeno no
+   alto de trás com o cordão (como o do Hanzo). O rosto do Hanzo moço: a testa, a
+   sobrancelha em sombra por cima do olho de 1 px, o nariz saindo 1 px, a orelha no meio
+   da cabeça, a barba curta preta da costeleta ao queixo marcando a mandíbula, e o
+   pescoço aparecendo entre as ombreiras (a pele pinta por cima da gola; a gola só no vão).
+   A primeira linha é a -6 (a dos olhos da máscara é a 0). */
+#define OBORO_PROVA_TOPO 6
 static const char *const OBORO_PROVA_CABECA[] = {
-    ".......LLLLL......",
-    "......LSYYSSL.....",
-    ".....LSYSSSSLW....",
-    ".....LSSSuXXSSW...",
-    ".....LSSVXXXLXW...",
-    "......LSSXXXXXW...",
-    ".......LSSXXSSu...",
-    "........VLSSSSL...",
-    "........VuLLLL....",
+    "........AL........",
+    ".......LYLLLL.....",
+    "......LYYSSSSL....",
+    "......LYSSSSSSXW..",
+    "......LSSSSSLVVX..",
+    "......LSSuVXXLXW..",
+    "......LSSVuXXXXXW.",
+    ".......LSSuXXXXu..",
+    ".......LSSSSXLSS..",
+    "........LSSSSSSL..",
+    ".........LSSSL....",
+    ".........VuuV.....",
+    "........DVuuVD....",
+};
+#define OBORO_PROVA_LINHAS ((int)(sizeof OBORO_PROVA_CABECA / sizeof OBORO_PROVA_CABECA[0]))
+/* De costas, na prova: a mesma oval, o coque no alto, as duas orelhas, a nuca e o pescoço. */
+static const char *const OBORO_PROVA_NUCA[] = {
+    "........AL........",
+    ".......LYYLL......",
+    "......LYYSSSL.....",
+    "......LYSSSSSL....",
+    "......LSSSSSSL....",
+    ".....uLSSSSSSLu...",
+    ".....VLSSSSSSLV...",
+    "......LSSSSSSL....",
+    ".......LSSSSL.....",
+    "........LVVL......",
     "........VuuV......",
+    "........VuuV......",
+    ".......DVuuVD.....",
 };
 
 /* A mesma cabeça vista de trás (o corpo de costas, no giro dos golpes): só o cabelo
@@ -4930,6 +5009,9 @@ static double oboro_lean(const Canvas *cv, int ex, int ey) {
 
 static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *molde, double k);
 static bool g_oboro_prova;
+static bool oboro_tooth(Color o) {
+    return o.a && ((o.r == 255 && o.g == 255 && o.b == 255) || (o.r == 0xc7 && o.g == 0xcf && o.b == 0xdd));
+}
 static void oboro_head(Canvas *cv, int ex, int ey, int r1) {
     /* inclinado para a frente (a estocada, a corrida, a queda): a cabeça tomba junto
        com o tronco, cada linha um pouco mais à frente que a de baixo (o pescoço fica) */
@@ -4984,13 +5066,27 @@ static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *
     armor_fill(cv, gone, ex, ey, 3, r1, -16, 26);
     if (getenv("DBG_NOHEAD")) return;
     int drop = (int)floor(k * 2.5 + 0.5);   /* tombando, a cabeça também desce */
-    int nl = g_oboro_prova ? 10 : OBORO_LINHAS, topo = g_oboro_prova ? 3 : OBORO_TOPO;
+    int nl = g_oboro_prova ? OBORO_PROVA_LINHAS : OBORO_LINHAS, topo = g_oboro_prova ? OBORO_PROVA_TOPO : OBORO_TOPO;
+    if (g_oboro_prova)   /* os dentes brancos da máscara em volta do pescoço (manchas de até 4 px; a lâmina é comprida) */
+        for (int r = 2; r <= 7; r++)
+            for (int c = 5; c <= 15; c++) {
+                int x = ex + c, y = ey + r, n = 0;
+                if (!cv_ok(x, y) || !cv->a[y][x].a || !oboro_tooth(cv->orig->p[y][x])) continue;
+                for (int dy = -3; dy <= 3; dy++)
+                    for (int dx = -3; dx <= 3; dx++)
+                        if (cv_ok(x + dx, y + dy) && oboro_tooth(cv->orig->p[y + dy][x + dx])) n++;
+                if (n <= 4) {
+                    paint_px(cv, x, y, 'C');
+                    cv->tag[y][x] = T_BODY;
+                }
+            }
     for (int r = 0; r < nl; r++)
         for (int c = 0; molde[r][c]; c++) {
             int x = ex + c + (int)floor((nl - 3 - r) * k + 0.5), y = ey + r - topo + drop;
             if (molde[r][c] == '.' || !cv_ok(x, y)) continue;
             if (hand_blade_px(cv, x, y) || lab_at(cv, x, y) == SMEAR) continue;   /* a espada passa na frente */
             if (!g_oboro_prova && r >= OBORO_LINHAS - 2 && cv->a[y][x].a) continue;   /* a gola: só no vão */
+            if (g_oboro_prova && r >= nl - 2 && (molde[r][c] == 'D' || molde[r][c] == 'B') && cv->a[y][x].a) continue;
             paint_px(cv, x, y, molde[r][c]);
             cv->tag[y][x] = T_BODY;
         }
@@ -5032,11 +5128,15 @@ static void oboro_head_lying(Canvas *cv, int bx, int by) {
         for (int x = 0; x < CW; x++)
             if (gone[y][x] && cv->a[y][x].a && oboro_dark(cv->orig->p[y][x])) cv_clear(cv, x, y);
     int X0 = bx + 7, Y0 = by - 4;   /* o pescoço encostado nos ombros */
-    for (int r = 0; r < OBORO_LINHAS - 2; r++)
-        for (int c = 0; OBORO_CABECA[r][c]; c++) {
-            char k = OBORO_CABECA[r][c];
+    bool pv = getenv("OBORO_PROVA") != NULL;
+    const char *const *molde = pv ? OBORO_PROVA_CABECA : OBORO_CABECA;
+    int nl = pv ? OBORO_PROVA_LINHAS : OBORO_LINHAS, topo = pv ? OBORO_PROVA_TOPO : OBORO_TOPO;
+    for (int r = 0; r < nl - 2; r++)
+        for (int c = 0; molde[r][c]; c++) {
+            char k = molde[r][c];
             if (k == '.') continue;
-            int x = X0 - (r - OBORO_TOPO), y = Y0 + c;
+            if (pv && r == 5 && k == 'L' && c == 13) k = 'V';   /* olho fechado */
+            int x = X0 - (r - topo), y = Y0 + c;
             if (!cv_ok(x, y)) continue;
             paint_px(cv, x, y, k);
             cv->tag[y][x] = T_BODY;
@@ -5086,7 +5186,9 @@ static void unmask(Canvas *cv) {
     if (chifres_find(cv, &bx, &by)) {
         if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: costas %s:%d\n", g_dbg_anim, g_dbg_idx);
         clear_helm(cv, bx, by, -3, 20, 0, 11);
-        oboro_head_t(cv, bx + 1, by + ONI_TOP, 18, OBORO_NUCA, 0);
+        g_oboro_prova = getenv("OBORO_PROVA") != NULL;
+        oboro_head_t(cv, bx + 1, by + ONI_TOP, 18, g_oboro_prova ? OBORO_PROVA_NUCA : OBORO_NUCA, 0);
+        g_oboro_prova = false;
         return;
     }
     if (oni_find(cv, DEITADO, (int)(sizeof DEITADO / sizeof DEITADO[0]), 15, &bx, &by)) {
@@ -6913,6 +7015,27 @@ int main(int argc, char **argv) {
             save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
             /* o preparo devagar, o saque num quadro curto, a pausa no brilho e a volta */
             if (mf) fprintf(mf, "anim DESEMBAINHAR   stop 5  tempos 120 150 40 110 70 100\n");
+            nr++;
+        }
+        /* a base das provas desenhadas: cada tira do pack sem a espada (KOJ_BASE) */
+        for (int t = 0; getenv("KOJ_BASE") && ch->saque && t < sc->ns && nr < MAX_REND; t++) {
+            const Strip *bs = &sc->strips[t];
+            Rendered *r = &rend[si][nr];
+            static char nome[MAX_REND][48];
+            snprintf(nome[nr], sizeof nome[nr], "BASE_%s", bs->name);
+            r->name = nome[nr];
+            r->n = bs->nframes;
+            r->frames = calloc((size_t)r->n, sizeof(Frame));
+            const AnimInfo *info = find_anim(&sc->man, bs->name);
+            for (int j = 0; j < bs->nframes; j++) {
+                Ctx cx = make_ctx("PROVA_BASE", j, bs->nframes, info, -1);
+                render(&bs->frames[j], &bs->segs[j], ch, &cx, &cv);
+                memcpy(r->frames[j].p, cv.a, sizeof cv.a);
+            }
+            snprintf(fn, sizeof fn, "%s.png", r->name);
+            path_join(p, d, fn);
+            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            if (mf) fprintf(mf, "anim %s\n", r->name);
             nr++;
         }
         /* provas (KOJ_PROVA): a guarda média com as duas mãos, respirando, e o parry na diagonal */
