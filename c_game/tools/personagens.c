@@ -3292,6 +3292,8 @@ static void bolt_arcs(Canvas *cv, const Char *ch, const Ctx *ctx) {
      3 (THROW 4)  a lâmina toda fora, reta para a frente, com o brilho na ponta;
      4 (THROW 6)  a lâmina desce passando da guarda (o arco curto do movimento);
    o último quadro da tira é o IDLE 0, a guarda (volta um pouco para cima). */
+static double g_koj_ang = -22;
+static int g_koj_pega, g_koj_spark, g_koj_spark_x, g_koj_spark_y, g_koj_modo;
 static const Rgb IAI_BRANCO = {255, 255, 255}, IAI_CLARO = {199, 207, 221}, IAI_AZUL = {146, 161, 185};
 
 /* A mão esticada no saque: o pixel de pele mais à frente abaixo do rosto. */
@@ -3403,12 +3405,42 @@ static void iai(Canvas *cv, const Char *ch, const Ctx *ctx) {
     }
     Blade b = *g;
     double n[2];
-    if (idx == 2 || idx == 3) {
+    if (idx == 2 || idx == 3 || idx == 6 || idx == 7) {
         /* a mão de longe, esticada na frente: a espada sai dela */
         double fx, fy;
         if (!iai_far_hand(cv, &fx, &fy)) return;
         b.hilt[0] = fx - 1;
         b.hilt[1] = fy;
+        if (idx == 6) {   /* saindo: a lâmina ainda aponta para a boca da bainha, a ponta quase fora */
+            double tx = mx >= 0 ? mx : hx, ty = mx >= 0 ? my : hy, dx = tx - fx, dy = ty - fy, dl = sqrt(dx * dx + dy * dy);
+            if (dl < 1) return;
+            b.u[0] = dx / dl;
+            b.u[1] = dy / dl;
+            g_over_body = true;
+            stroke(cv, &b, 2, fmin(L, dl - 1), core, &edge, 0, 0, 1, false);
+            g_over_body = false;
+            perp(b.u, n);
+            for (int k = -1; k <= 1; k += 2) {
+                int x = pyround(fx + 1), y = pyround(fy + k);
+                if (cv_ok(x, y)) cv_put(cv, x, y, tsuba);
+            }
+            return;
+        }
+        if (idx == 7) {   /* fora, no ângulo pedido, sem o brilho */
+            double a7 = g_koj_ang * 3.14159265 / 180;
+            b.u[0] = cos(a7);
+            b.u[1] = sin(a7);
+            stroke(cv, &b, -3, 0, wrap, NULL, 0, 0, 2, true);
+            g_over_body = true;
+            stroke(cv, &b, 2, L + 1, core, &edge, 0, 0, 1, false);
+            g_over_body = false;
+            perp(b.u, n);
+            for (int k = -1; k <= 1; k += 2) {
+                int x = pyround(b.hilt[0] + b.u[0] * 1.2 + n[0] * k), y = pyround(b.hilt[1] + b.u[1] * 1.2 + n[1] * k);
+                if (cv_ok(x, y)) cv_put(cv, x, y, tsuba);
+            }
+            return;
+        }
         if (idx == 2) {
             /* o smear: a lâmina ainda apontando para trás, para a boca da bainha (a ponta
                acabou de sair), borrada numa faixa da boca até a mão; um estalo de luz na boca */
@@ -3479,6 +3511,80 @@ static void iai(Canvas *cv, const Char *ch, const Ctx *ctx) {
     }
 }
 
+/* Kojiro com a espada nas duas mãos (a guarda média, chūdan, e o parry): o corpo vem de
+   um quadro com as duas mãos juntas no cabo (o DEFEND do pack); sai a espada do pack e
+   entra a katana com o cabo passando pelas duas mãos (a direita perto da tsuba, a
+   esquerda na ponta, a kashira atrás dela) e a lâmina saindo da mão da frente no ângulo
+   pedido (graus, negativo = para cima). `pega`: a pegada desliza um pixel (os ajustes do
+   idle). Devolve a ponta da lâmina. */
+static void koj_two_hands(Canvas *cv, const Char *ch, double ang, int pega, int *tx, int *ty) {
+    const Seg *s = cv->seg;
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++)
+            if (s->lab[y][x] == BLADE || s->lab[y][x] == HANDLE || s->lab[y][x] == SMEAR) erase_px(cv, x, y);
+    /* as mãos: a pele abaixo do rosto; a de trás é a mais à esquerda, a da frente a mais à direita */
+    int fb = -1;
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++)
+            if (s->lab[y][x] == FACE && y > fb) fb = y;
+    int bx = CW, by = 0, fx = -1, fy = 0;
+    for (int y = fb + 4; y < CH && y <= fb + 13; y++)   /* na altura do tronco (os pés também são pele) */
+        for (int x = 0; x < CW; x++)
+            if (s->lab[y][x] == SKIN && cv->a[y][x].a) {
+                if (x < bx) { bx = x; by = y; }
+                if (x > fx) { fx = x; fy = y; }
+            }
+    if (fx < 0) return;
+    /* a mão que o pack punha apoiada na lâmina, no peito: sai (as duas ficam no cabo, embaixo);
+       o que sobra da manga vira o cotovelo dobrado */
+    int fxm = -1;
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++)
+            if (s->lab[y][x] == FACE && x > fxm) fxm = x;
+    int hand_top = CH;
+    for (int y = fb + 4; y < CH && y <= fb + 13; y++)
+        for (int x = 0; x < CW; x++)
+            if (s->lab[y][x] == SKIN && cv->a[y][x].a && x >= fx - 9 && y < hand_top && y >= fy - 3) hand_top = y;
+    for (int y = fb - 6; y < fy - 3 && y < CH; y++)
+        for (int x = fxm + 1; x < CW; x++)
+            if (y >= 0 && s->lab[y][x] == SKIN && cv->a[y][x].a) erase_px(cv, x, y);
+    (void)hand_top;
+    fx += pega;
+    Rgb core = rgb_set(ch->lamina[0]) ? ch->lamina[0] : (Rgb){240, 244, 250};
+    Rgb edge = rgb_set(ch->lamina[1]) ? ch->lamina[1] : (Rgb){160, 170, 190};
+    Rgb wrap = {40, 36, 44}, ito = {214, 206, 184}, tsuba = {200, 160, 72}, kashira = {150, 130, 90};
+    double a = ang * 3.14159265 / 180, ux = cos(a), uy = sin(a);
+    cv->pen = T_WEAPON;
+    /* o cabo: da kashira (um pixel atrás da mão de trás) até a mão da frente, por baixo das mãos */
+    static Pts p;
+    double tl = fmin(fx - bx + 2, 6);   /* o cabo reto, no eixo da lâmina, passando pelas duas mãos */
+    line_pts(&p, fx - ux * tl, fy - uy * tl, fx, fy);
+    for (int i = 0; i < p.n; i++) {
+        int x = p.x[i], y = p.y[i];
+        if (!cv_ok(x, y) || s->lab[y][x] == SKIN) continue;
+        (void)by;
+        cv_put(cv, x, y, i == 0 ? kashira : i % 2 ? ito : wrap);
+        mark(cv, x, y);
+    }
+    /* a tsuba na frente da mão, atravessada, e a lâmina */
+    double n[2] = {-uy, ux};
+    for (int k = -1; k <= 1; k += 2) {
+        int x = pyround(fx + 1 + ux + n[0] * k), y = pyround(fy + uy + n[1] * k);
+        if (cv_ok(x, y)) { cv_put(cv, x, y, tsuba); mark(cv, x, y); }
+    }
+    Blade b = {0};
+    b.hilt[0] = fx + 1;
+    b.hilt[1] = fy;
+    b.u[0] = ux;
+    b.u[1] = uy;
+    double L = KATANA;
+    g_over_body = true;
+    stroke(cv, &b, 1, L, core, &edge, 0, 0, 1, false);
+    g_over_body = false;
+    *tx = pyround(b.hilt[0] + ux * L);
+    *ty = pyround(b.hilt[1] + uy * L);
+}
+
 static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
     const char *anim = ctx->anim;
     int idx = ctx->idx;
@@ -3507,6 +3613,38 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
     memset(cv->wpx, 0, sizeof cv->wpx);
     g_nkama = g_ndag = 0;
     cv->pen = T_WEAPON;
+    if (!strcmp(anim, "PROVA_SAQUE")) {
+        /* modos: 0 na bainha (a mão livre), 1 a mão no cabo, 2 o clique, 3 saindo, 4 o smear,
+           5 fora com o brilho, 6 fora no ângulo, 7 nas duas mãos no ângulo */
+        static const int IDX[8] = {0, 0, 1, 6, 2, 3, 7, 0};
+        if (g_koj_modo == 7) {
+            int tx, ty;
+            koj_two_hands(cv, ch, g_koj_ang, 0, &tx, &ty);
+            return;
+        }
+        Ctx c2 = *ctx;
+        c2.anim = g_koj_modo == 0 ? "EMBAINHADO" : "DESEMBAINHAR";
+        c2.idx = IDX[g_koj_modo];
+        iai(cv, ch, &c2);
+        return;
+    }
+    if (!strncmp(anim, "PROVA_", 6)) {
+        int tx, ty;
+        for (int y = 0; y < CH; y++)   /* as faíscas do pack eram da lâmina em pé */
+            for (int x = 0; x < CW; x++)
+                if (orig_rgb(cv, x, y, 0xffc825)) cv_clear(cv, x, y);
+        koj_two_hands(cv, ch, g_koj_ang, g_koj_pega, &tx, &ty);
+        if (g_koj_spark) {   /* o choque: a faísca na lâmina, a 70% do comprimento, onde a outra encosta */
+            cv->pen = T_FX;
+            double a = g_koj_ang * 3.14159265 / 180;
+            int cx = pyround(tx - cos(a) * KATANA * 0.3), cy = pyround(ty - sin(a) * KATANA * 0.3);
+            if (getenv("DBG_GUARDA")) fprintf(stderr, "contato do parry: %d %d\n", cx, cy);
+            static const int sp[][2] = {{0, 0}, {1, -1}, {2, -2}, {-1, -1}, {1, 1}, {2, 0}, {3, -1}, {0, -2}, {-1, 1}};
+            for (size_t i = 0; i < sizeof sp / sizeof sp[0]; i++)
+                fx_put_clean(cv, cx + sp[i][0], cy + sp[i][1], i < 3 ? (Rgb){255, 255, 255} : (Rgb){255, 214, 90});
+        }
+        return;
+    }
     if (!strcmp(anim, "EMBAINHADO") || !strcmp(anim, "DESEMBAINHAR")) {
         iai(cv, ch, ctx);
         return;
@@ -4702,6 +4840,22 @@ static const char *const OBORO_CABECA[] = {
     "......DBBBBBD.....",
 };
 #define OBORO_LINHAS ((int)(sizeof OBORO_CABECA / sizeof OBORO_CABECA[0]))
+/* Prova (OBORO_PROVA): a cabeça dentro da área do rosto da máscara oni (colunas 5 a 14,
+   linhas -3 a +6 em volta dos olhos da máscara): cabelo curto rente ao crânio, olho de
+   1 px, barba curta na mandíbula e o pescoço embaixo. A primeira linha é a -3. */
+static const char *const OBORO_PROVA_CABECA[] = {
+    ".......LLLLL......",
+    "......LSYYSSL.....",
+    ".....LSYSSSSLW....",
+    ".....LSSSuXXSSW...",
+    ".....LSSVXXXLXW...",
+    "......LSSXXXXXW...",
+    ".......LSSXXSSu...",
+    "........VLSSSSL...",
+    "........VuLLLL....",
+    "........VuuV......",
+};
+
 /* A mesma cabeça vista de trás (o corpo de costas, no giro dos golpes): só o cabelo
    em massas, o coque baixo no meio da nuca com o cordão, as orelhas dos dois lados,
    o pescoço e a gola. Nada de rosto. Mesmas linhas e colunas do molde de frente. */
@@ -4775,11 +4929,18 @@ static double oboro_lean(const Canvas *cv, int ex, int ey) {
 }
 
 static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *molde, double k);
+static bool g_oboro_prova;
 static void oboro_head(Canvas *cv, int ex, int ey, int r1) {
     /* inclinado para a frente (a estocada, a corrida, a queda): a cabeça tomba junto
        com o tronco, cada linha um pouco mais à frente que a de baixo (o pescoço fica) */
     double lean = oboro_lean(cv, ex, ey), k = lean > 0.52 ? (lean - 0.52) * 1.15 : 0;
     if (k > 0.8) k = 0.8;
+    if (getenv("OBORO_PROVA")) {
+        g_oboro_prova = true;
+        oboro_head_t(cv, ex, ey, r1, OBORO_PROVA_CABECA, k);
+        g_oboro_prova = false;
+        return;
+    }
     oboro_head_t(cv, ex, ey, r1, OBORO_CABECA, k);
 }
 
@@ -4823,12 +4984,13 @@ static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *
     armor_fill(cv, gone, ex, ey, 3, r1, -16, 26);
     if (getenv("DBG_NOHEAD")) return;
     int drop = (int)floor(k * 2.5 + 0.5);   /* tombando, a cabeça também desce */
-    for (int r = 0; r < OBORO_LINHAS; r++)
+    int nl = g_oboro_prova ? 10 : OBORO_LINHAS, topo = g_oboro_prova ? 3 : OBORO_TOPO;
+    for (int r = 0; r < nl; r++)
         for (int c = 0; molde[r][c]; c++) {
-            int x = ex + c + (int)floor((OBORO_LINHAS - 3 - r) * k + 0.5), y = ey + r - OBORO_TOPO + drop;
+            int x = ex + c + (int)floor((nl - 3 - r) * k + 0.5), y = ey + r - topo + drop;
             if (molde[r][c] == '.' || !cv_ok(x, y)) continue;
             if (hand_blade_px(cv, x, y) || lab_at(cv, x, y) == SMEAR) continue;   /* a espada passa na frente */
-            if (r >= OBORO_LINHAS - 2 && cv->a[y][x].a) continue;                /* a gola: só no vão */
+            if (!g_oboro_prova && r >= OBORO_LINHAS - 2 && cv->a[y][x].a) continue;   /* a gola: só no vão */
             paint_px(cv, x, y, molde[r][c]);
             cv->tag[y][x] = T_BODY;
         }
@@ -6752,6 +6914,84 @@ int main(int argc, char **argv) {
             /* o preparo devagar, o saque num quadro curto, a pausa no brilho e a volta */
             if (mf) fprintf(mf, "anim DESEMBAINHAR   stop 5  tempos 120 150 40 110 70 100\n");
             nr++;
+        }
+        /* provas (KOJ_PROVA): a guarda média com as duas mãos, respirando, e o parry na diagonal */
+        const Strip *dfs = ch->saque && getenv("KOJ_PROVA") ? source_strip(sc, "DEFEND") : NULL;
+        if (dfs && nr + 3 <= MAX_REND) {
+            const AnimInfo *info = find_anim(&sc->man, "DEFEND");
+            Rendered *r = &rend[si][nr];
+            r->name = "PROVA_GUARDA";
+            r->n = 8;
+            r->frames = calloc(8, sizeof(Frame));
+            for (int j = 0; j < 8; j++) {
+                g_koj_ang = j == 6 ? -19 : -22;   /* um ajuste de pegada: a ponta desce um pixel */
+                g_koj_pega = j == 7 ? -1 : 0;
+                g_koj_spark = 0;
+                Ctx cx = make_ctx("PROVA_GUARDA", j, 8, info, -1);
+                render(&dfs->frames[0], &dfs->segs[0], ch, &cx, &cv);
+                memcpy(r->frames[j].p, cv.a, sizeof cv.a);
+                if (j >= 2 && j <= 5) {   /* a respiração: o tronco desce um pixel, devagar */
+                    int top = CH, bot = 0;
+                    for (int y = 0; y < CH; y++)
+                        for (int x = 0; x < CW; x++)
+                            if (r->frames[j].p[y][x].a) { if (y < top) top = y; if (y > bot) bot = y; }
+                    int waist = bot - (bot - top) * 42 / 100;
+                    for (int y = waist - 1; y >= top; y--) memcpy(r->frames[j].p[y + 1], r->frames[j].p[y], sizeof r->frames[j].p[y]);
+                    memset(r->frames[j].p[top], 0, sizeof r->frames[j].p[top]);
+                }
+            }
+            path_join(p, d, "PROVA_GUARDA.png");
+            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            if (mf) fprintf(mf, "anim PROVA_GUARDA    loop  ms 170\n");
+            nr++;
+            r = &rend[si][nr];
+            r->name = "PROVA_PARRY";
+            r->n = dfs->nframes;
+            r->frames = calloc((size_t)r->n, sizeof(Frame));
+            /* KOJ_PARRY_B: a lâmina inclinada para trás (a ponta para cima e para trás), que passa
+               pelo ponto de contato atual da guarda; sem ela, inclinada para a frente */
+            static const double angA[8] = {-42, -66, -82, -60, -38, -22, -22, -22};
+            static const double angB[8] = {-60, -100, -114, -80, -44, -22, -22, -22};
+            const double *ang = getenv("KOJ_PARRY_B") ? angB : angA;
+            for (int j = 0; j < dfs->nframes && j < 8; j++) {
+                g_koj_ang = ang[j];
+                g_koj_pega = 0;
+                g_koj_spark = j == 1 || j == 2;
+                g_koj_spark_x = 63;
+                g_koj_spark_y = 48;
+                Ctx cx = make_ctx("PROVA_PARRY", j, dfs->nframes, info, -1);
+                render(&dfs->frames[j], &dfs->segs[j], ch, &cx, &cv);
+                memcpy(r->frames[j].p, cv.a, sizeof cv.a);
+            }
+            g_koj_spark = 0;
+            path_join(p, d, "PROVA_PARRY.png");
+            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            if (mf) fprintf(mf, "anim PROVA_PARRY     contact 1\n");
+            nr++;
+            /* o storyboard do saque: 10 quadros, do embainhado até a guarda nova */
+            const Strip *thr = source_strip(sc, "THROW");
+            if (thr && thr->nframes >= 7) {
+                static const struct { int thr, modo; double ang; } Q[10] = {
+                    {-1, 0, 0}, {1, 1, 0}, {2, 2, 0}, {3, 3, 0}, {4, 4, 0}, {4, 5, 0}, {5, 6, -8}, {6, 7, -34}, {-2, 7, -15}, {-2, 7, -22},
+                };
+                r = &rend[si][nr];
+                r->name = "PROVA_SAQUE";
+                r->n = 10;
+                r->frames = calloc(10, sizeof(Frame));
+                for (int j = 0; j < 10; j++) {
+                    const Strip *bs = Q[j].thr >= 0 ? thr : Q[j].thr == -1 ? idl : dfs;
+                    int bk = Q[j].thr >= 0 ? Q[j].thr : 0;
+                    g_koj_modo = Q[j].modo;
+                    g_koj_ang = Q[j].ang;
+                    Ctx cx = make_ctx("PROVA_SAQUE", j, 10, info, -1);
+                    render(&bs->frames[bk], &bs->segs[bk], ch, &cx, &cv);
+                    memcpy(r->frames[j].p, cv.a, sizeof cv.a);
+                }
+                path_join(p, d, "PROVA_SAQUE.png");
+                save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                if (mf) fprintf(mf, "anim PROVA_SAQUE     stop 9  tempos 140 120 150 60 35 90 70 70 80 120\n");
+                nr++;
+            }
         }
 
         /* Hanzo sentado em seiza, junto da fogueira: o tronco do IDLE (o rosto, a barba,

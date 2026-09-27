@@ -173,40 +173,46 @@ static float s_gesture(float t, float d, float *st) {
     float env = sinf(x * 3.14159f) * expf(-x * 2);
     return (nrand() - lp(&st[0], nrand(), 0.1f)) * env * 0.6f;
 }
-/* O clique da tsuba (koiguchi): o polegar solta a espada da bainha. Um estalo seco de
-   metal, um segundo toque mais fraco logo depois (a habaki passando pela boca) e três
-   parciais agudos que morrem em poucos centésimos. */
+/* O saque em três camadas (sincronizadas com a tira DESEMBAINHAR em ren_draw_sounds).
+   1. O clique da tsuba (koiguchi): o polegar solta a espada da bainha. Um estalo curto e
+      seco de metal, em uns 20 ms: ruído agudo que some em poucos milissegundos e dois
+      parciais altos que morrem logo. */
 static float s_koiguchi(float t, float d, float *st) {
     (void)d;
     float n = nrand();
-    float hp = n - lp(&st[0], n, 0.5f);
-    float t2 = t - 0.018f;
-    float tick = hp * (expf(-t * 900) * 1.4f + (t2 > 0 ? expf(-t2 * 1100) * 0.55f : 0));
-    float ring = (sinf(TAU * 3150 * t) + 0.6f * sinf(TAU * 4870 * t + 0.7f) + 0.3f * sinf(TAU * 7300 * t)) *
-                 expf(-t * 75) * fminf(1, t * 3000);
-    return tick + ring * 0.45f;
+    float hp = n - lp(&st[0], n, 0.55f);
+    float tick = hp * expf(-t * 1400);
+    float ring = (sinf(TAU * 4200 * t) + 0.6f * sinf(TAU * 6900 * t + 0.5f)) * expf(-t * 260) * fminf(1, t * 4000);
+    return tick * 1.2f + ring * 0.5f;
 }
-/* O shing do saque: a lâmina raspando para fora da bainha (ruído num filtro
-   ressonante que sobe de tom enquanto ela desliza) e, quando a ponta sai, o anel
-   agudo do aço, com um vibrato leve, que fica no ar. */
+/* 2 e 3. O raspado e o shiing. O raspado é o aço deslizando na boca da bainha: ruído num
+   filtro ressonante cujo tom sobe de 1,8 para 6 kHz em 180 ms, com o atrito tremendo a
+   amplitude. Quando a ponta sai, o shiing: as parciais inarmônicas de uma lâmina
+   (1 : 1,58 : 2,27 : 2,81 : 3,54 sobre 2,6 kHz), cada uma com uma gêmea quase igual para
+   o brilho pulsar, os agudos morrendo antes e a cauda chegando perto de um segundo. */
 static float s_saque(float t, float d, float *st) {
     (void)d;
-    const float slide = 0.11f;
-    float fc = 2200 + 4200 * fminf(1, t / slide), f = 2 * sinf(3.14159f * fc / RATE);
+    const float slide = 0.18f;
+    float f0 = 1800 + 4200 * powf(fminf(1, t / slide), 1.3f), f = 2 * sinf(3.14159f * f0 / RATE);
     st[0] += f * st[1];
-    float hi = nrand() - st[0] - 0.12f * st[1];
+    float hi = nrand() - st[0] - 0.08f * st[1];
     st[1] += f * hi;
-    float scrape = st[1] * (t < slide ? fminf(1, t * 60) * (0.5f + 0.5f * t / slide) : expf(-(t - slide) * 40));
-    float r = t - slide * 0.85f, ring = 0;
+    st[4] += (nrand() - st[4]) * 0.004f;   /* o atrito: a amplitude varia devagar e sem padrão */
+    float grit = fmaxf(0.35f, fminf(1.3f, 0.8f + st[4] * 6));
+    float env = t < slide ? fminf(1, t * 80) * (0.55f + 0.45f * t / slide) : expf(-(t - slide) * 60);
+    float scrape = st[1] * env * grit;
+    float r = t - slide, ring = 0;
     if (r > 0) {
-        float vib = 1 + 0.003f * sinf(TAU * 6 * r);
-        st[2] += TAU * 3520 * vib / RATE;
-        /* dois tons quase iguais batendo (o brilho pulsa) e os agudos morrendo antes */
-        ring = (sinf(st[2]) + 0.5f * sinf(TAU * 3548 * r)) * expf(-r * 5.5f) +
-               0.45f * sinf(TAU * 5290 * r + 1.1f) * expf(-r * 9) + 0.3f * sinf(TAU * 8110 * r + 0.4f) * expf(-r * 14);
-        ring *= fminf(1, r * 400);
+        static const float ratio[5] = {1.0f, 1.58f, 2.27f, 2.81f, 3.54f};
+        static const float amp[5] = {1.0f, 0.7f, 0.5f, 0.35f, 0.25f};
+        static const float dec[5] = {3.2f, 4.5f, 6.5f, 9.0f, 12.0f};
+        for (int i = 0; i < 5; i++) {
+            float fr = 2600 * ratio[i];
+            ring += amp[i] * expf(-r * dec[i]) * (sinf(TAU * fr * r) + 0.7f * sinf(TAU * fr * 1.004f * r + 0.9f));
+        }
+        ring *= fminf(1, r * 600);
     }
-    return scrape * 0.16f + ring * 0.5f;
+    return scrape * 0.1f + ring * 0.3f;
 }
 static float s_ui(float t, float d, float *st) {
     (void)d; (void)st;
@@ -553,8 +559,8 @@ void audio_init(void) {
     sounds[SND_DEFEAT] = make_sound(2.0f, s_defeat, 0.6f);
     sounds[SND_THUD] = make_sound(0.3f, s_thud, 0.5f);
     sounds[SND_CLAP] = make_sound_room(0.4f, s_clap, 0.55f, 0.3f);
-    sounds[SND_KOIGUCHI] = make_sound_room(0.14f, s_koiguchi, 0.5f, 0.05f);
-    sounds[SND_SAQUE] = make_sound_room(0.9f, s_saque, 0.6f, 0.12f);
+    sounds[SND_KOIGUCHI] = make_sound_room(0.04f, s_koiguchi, 0.5f, 0.03f);
+    sounds[SND_SAQUE] = make_sound_room(1.3f, s_saque, 0.6f, 0.1f);
 #if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
     static const SoundId poly[] = {SND_PERFECT, SND_GOOD, SND_BAD, SND_SWING};
     /* sem placa de som o Sound vem vazio, e a raylib não confere isso no alias */
