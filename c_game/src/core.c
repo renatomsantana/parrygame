@@ -1,6 +1,6 @@
 /*
- * core.c - relógio, tentativa, fintas, julgamento, postura, selos e trilha.
- * Sem vida: Ren e o mestre só têm postura. Quem chega a zero cai.
+ * core.c - relógio, tentativa, julgamento, vida, postura, selos e trilha.
+ * Kojiro tem vida; o mestre, postura. Quem chega a zero cai.
  */
 #include "core.h"
 
@@ -53,14 +53,11 @@ void duel_reset(Duel *d) {
     d->phase = PH_READY;
     d->phaseEnd = d->s.firstWindupDelay;
     d->strikeAt = 0;
-    d->fakeCount = 0;
     d->windupDuration = 1;
-    d->isFeint = false;
     d->blackout = false;
     d->special = false;
     d->lastPress = -100;
-    d->attempted = d->attackLaunched = d->feintLaunched = false;
-    d->cuePlayed = d->fakeCuePlayed = false;
+    d->attempted = d->attackLaunched = d->cuePlayed = false;
     d->renPosture = d->s.renPosture;
     d->bossPosture = d->m->posture;
     d->seal = 0;
@@ -68,7 +65,7 @@ void duel_reset(Duel *d) {
     d->comboRemaining = d->comboStrike = 0;
     d->move = 0;
     d->sequences = 0;
-    d->attacks = d->feints = d->perfects = d->goods = d->bads = 0;
+    d->attacks = d->perfects = d->goods = d->bads = 0;
     d->scheduleCount = d->scheduleIndex = 0;
     d->eventCount = 0;
     d->lastStrikeAt = -1;
@@ -93,7 +90,7 @@ static int seal_total(const Duel *d) { return d->m->sealCount > 0 ? d->m->sealCo
 
 bool duel_under_pressure(const Duel *d) { return d->bossPosture <= d->m->posture / 2; }
 float duel_ren_damage(const Duel *d) {
-    float base = d->m->hitsToFall > 0 ? d->s.renPosture / d->m->hitsToFall : d->s.badPostureDamage;
+    float base = d->s.renPosture / (d->m->hitsToFall > 1 ? d->m->hitsToFall : 1);
     if (d->m->damage > 0) base *= d->m->damage;
     return d->special ? base * 2 : base;
 }
@@ -114,17 +111,6 @@ bool duel_in_combo(const Duel *d) { return d->comboRemaining > 0 || d->comboStri
 double duel_time_to_impact(const Duel *d) {
     if (d->phase != PH_WINDUP) return -1;
     double t = d->strikeAt - d->clock;
-    return t > 0 ? t : 0;
-}
-
-double duel_time_to_next_instant(const Duel *d) {
-    if (d->phase != PH_WINDUP) return -1;
-    double next = d->strikeAt;
-    for (int i = 0; i < d->fakeCount; i++) {
-        double t = d->fakeStrikeAts[i];
-        if (t >= d->clock && t < next) next = t;
-    }
-    double t = next - d->clock;
     return t > 0 ? t : 0;
 }
 
@@ -154,10 +140,6 @@ static void push_schedule(Duel *d, double time, ScheduleKind kind) {
 static void build_schedule(Duel *d) {
     d->scheduleCount = 0;
     d->scheduleIndex = 0;
-    for (int i = 0; i < d->fakeCount; i++) {
-        push_schedule(d, d->fakeStrikeAts[i] - d->s.attackLead, SCH_FAKE_LAUNCH);
-        push_schedule(d, d->fakeStrikeAts[i] - d->s.cueLead, SCH_FAKE_CUE);
-    }
     push_schedule(d, d->strikeAt - duel_strike_lead(d), SCH_LAUNCH);
     push_schedule(d, d->strikeAt - d->s.cueLead, SCH_CUE);
     /* Ordenação estável por tempo (inserção: a lista é curta). */
@@ -199,8 +181,7 @@ static void begin_attack(Duel *d) {
     const Settings *s = &d->s;
     const MasterProfile *m = d->m;
     d->phase = PH_WINDUP;
-    d->attempted = d->attackLaunched = d->feintLaunched = false;
-    d->cuePlayed = d->fakeCuePlayed = false;
+    d->attempted = d->attackLaunched = d->cuePlayed = false;
     /* Cada golpe novo zera a espera entre gestos: um gesto feito no intervalo
      * não pode roubar a defesa do golpe que está chegando. */
     d->lastPress = -100;
@@ -248,20 +229,8 @@ static void begin_attack(Duel *d) {
     if (duration < duel_strike_lead(d) + 0.1) duration = duel_strike_lead(d) + 0.1;
     d->windupDuration = (float)duration;
 
-    double delay = 0;
-    int cues = 0;
-    d->isFeint = false;
     if (!continuing) {
         d->blackout = false;
-        double roll = rng_next(&d->rng);
-        d->isFeint = st->feintChance > 0 && st->falseCues > 0 && roll < st->feintChance;
-        if (d->isFeint) {
-            double lo = st->feintDelayMax > 0 ? st->feintDelayMin : s->feintDelayMin;
-            double hi = st->feintDelayMax > 0 ? st->feintDelayMax : s->feintDelayMax;
-            delay = lo + rng_next(&d->rng) * (hi - lo);
-            cues = st->falseCues > MAX_FALSE_CUES ? MAX_FALSE_CUES : st->falseCues;
-            d->feints++;
-        }
         if (m->blackoutChance > 0) d->blackout = rng_next(&d->rng) < m->blackoutChance;
         /* O especial vale para a sequência inteira. */
         d->special = m->specialChance > 0 && rng_next(&d->rng) < m->specialChance;
@@ -269,19 +238,14 @@ static void begin_attack(Duel *d) {
         d->sequences++;
     }
 
-    double first = d->clock + d->windupDuration;
-    d->strikeAt = first + delay;
-    d->fakeCount = cues;
-    for (int i = 0; i < cues; i++) d->fakeStrikeAts[i] = first + delay * i / cues;
+    d->strikeAt = d->clock + d->windupDuration;
     d->attacks++;
     build_schedule(d);
-    emit(d, EV_WINDUP, J_NONE, d->windupDuration, 0, d->isFeint);
+    emit(d, EV_WINDUP, J_NONE, d->windupDuration, 0, false);
 }
 
 static void fire(Duel *d, ScheduleKind kind) {
     switch (kind) {
-        case SCH_FAKE_LAUNCH: d->feintLaunched = true; emit(d, EV_FEINT_LAUNCH, J_NONE, 0, 0, false); break;
-        case SCH_FAKE_CUE: d->fakeCuePlayed = true; emit(d, EV_CUE, J_NONE, 0, 0, true); break;
         case SCH_LAUNCH: d->attackLaunched = true; emit(d, EV_LAUNCH, J_NONE, 0, 0, false); break;
         case SCH_CUE: d->cuePlayed = true; emit(d, EV_CUE, J_NONE, 0, 0, false); break;
     }

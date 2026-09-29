@@ -5,7 +5,6 @@
 
 void settings_default(Settings *s) {
     s->renPosture = AJ_VIDA_INICIAL;
-    s->badPostureDamage = AJ_ERRO_DANO;
     s->badBossRecover = AJ_ERRO_MESTRE_RECUPERA;
     s->goodBossDamage = AJ_BOM_POSTURA;
     s->goodRenCost = AJ_BOM_CUSTO;
@@ -19,8 +18,6 @@ void settings_default(Settings *s) {
     s->sealRenRecover = AJ_SELO_CURA;
     s->firstWindupDelay = AJ_PAUSA_INICIO;
     s->pressureSpeed = AJ_PRESSA;
-    s->feintDelayMin = AJ_FINTA_ATRASO_MIN;
-    s->feintDelayMax = AJ_FINTA_ATRASO_MAX;
     s->comboGap = AJ_PAUSA_NA_CADEIA;
     s->minChainGap = AJ_CADEIA_MIN;
     s->goodHitstop = AJ_HITSTOP_BOM;

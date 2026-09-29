@@ -21,7 +21,7 @@ static int checks = 0, failures = 0;
 typedef struct {
     int impacts[4];
     int blades;                   /* lâminas que acertaram kojiro (o duplo errado conta duas) */
-    int seals, stances, combos, windups, finished, victory, feintLaunches, fakeCues, realCues;
+    int seals, stances, combos, windups, finished, victory, cues;
     Judgement last;
 } Tally;
 
@@ -41,8 +41,7 @@ static void count(Duel *d, Tally *t) {
             case EV_COMBO: t->combos++; break;
             case EV_WINDUP: t->windups++; break;
             case EV_FINISHED: t->finished++; t->victory = ev[i].flag; break;
-            case EV_FEINT_LAUNCH: t->feintLaunches++; break;
-            case EV_CUE: if (ev[i].flag) t->fakeCues++; else t->realCues++; break;
+            case EV_CUE: t->cues++; break;
             default: break;
         }
     }
@@ -69,7 +68,12 @@ static void test_settings(void) {
     settings_default(&s);
     CHECK(s.renPosture == 250, "kojiro começa com 250 de vida");
     CHECK(s.perfectBossDamage > s.goodBossDamage, "perfeito vale mais que bom");
-    CHECK(s.goodRenCost < s.badPostureDamage, "bom custa menos que ruim");
+    for (int i = 0; i < roster_size(); i++) {
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 1);
+        CHECK(roster_get(i)->hitsToFall >= 1, "%s diz quantos erros kojiro aguenta", roster_get(i)->name);
+        CHECK(s.goodRenCost < duel_ren_damage(&d), "bom custa menos que um erro (%s)", roster_get(i)->name);
+    }
 }
 
 /* Cada campo das Settings vem da constante certa de ajuste.h (nada trocado de lugar). */
@@ -81,12 +85,12 @@ static void test_ajuste(void) {
           s.perfectRenRecover == AJ_PERFEITO_CURA, "perfeito vem do ajuste.h");
     CHECK(s.goodBossDamage == AJ_BOM_POSTURA && s.goodGrowth == AJ_BOM_POSTURA_NIVEL && s.goodRenCost == AJ_BOM_CUSTO,
           "bom vem do ajuste.h");
-    CHECK(s.badPostureDamage == AJ_ERRO_DANO && s.badBossRecover == AJ_ERRO_MESTRE_RECUPERA && s.sealRenRecover == AJ_SELO_CURA,
+    CHECK(s.badBossRecover == AJ_ERRO_MESTRE_RECUPERA && s.sealRenRecover == AJ_SELO_CURA,
           "erro e selo vêm do ajuste.h");
     CHECK(s.attackLead == AJ_LAMINA_PARTE && s.cueLead == AJ_AVISO_SOM && s.inputCooldown == AJ_ENTRE_GESTOS &&
           s.recovery == AJ_PAUSA_SEQUENCIA && s.sealRecovery == AJ_PAUSA_SELO && s.firstWindupDelay == AJ_PAUSA_INICIO &&
-          s.pressureSpeed == AJ_PRESSA && s.comboGap == AJ_PAUSA_NA_CADEIA && s.minChainGap == AJ_CADEIA_MIN &&
-          s.feintDelayMin == AJ_FINTA_ATRASO_MIN && s.feintDelayMax == AJ_FINTA_ATRASO_MAX, "tempos vêm do ajuste.h");
+          s.pressureSpeed == AJ_PRESSA && s.comboGap == AJ_PAUSA_NA_CADEIA && s.minChainGap == AJ_CADEIA_MIN,
+          "tempos vêm do ajuste.h");
     CHECK(s.perfectHitstop == AJ_HITSTOP_PERFEITO && s.goodHitstop == AJ_HITSTOP_BOM && s.badHitstop == AJ_HITSTOP_ERRO &&
           s.breakHitstop == AJ_HITSTOP_QUEBRA, "hitstop vem do ajuste.h");
     CHECK(AJ_HITSTOP_PERFEITO > AJ_HITSTOP_BOM && AJ_HITSTOP_QUEBRA > AJ_HITSTOP_PERFEITO, "o perfeito segura mais que o bom; a quebra, mais ainda");
@@ -112,12 +116,6 @@ static void test_roster(const Settings *s) {
             const Stance *st = &m->stances[k];
             CHECK(st->windupCount > 0, "preparações (%s)", m->name);
             CHECK(st->perfectWindow > 0 && st->perfectWindow < st->goodWindow, "perfeito dentro do bom (%s)", m->name);
-            if (st->feintChance > 0) {
-                double lo = st->feintDelayMax > 0 ? st->feintDelayMin : s->feintDelayMin;
-                CHECK(lo > st->goodWindow, "atraso mínimo da finta maior que a janela boa (%s)", m->name);
-                CHECK(lo / st->falseCues >= s->cueLead - 1e-6, "instantes falsos afastados um sinal inteiro (%s)", m->name);
-                CHECK(st->falseCues >= 1 && st->falseCues <= MAX_FALSE_CUES, "instantes falsos (%s)", m->name);
-            }
         }
         if (!m->isBigBoss) {
             CHECK(m->stances[0].perfectWindow <= lastPerfect + 1e-6, "janela perfeita não cresce (%s)", m->name);
@@ -340,81 +338,6 @@ static void test_one_attempt_and_cooldown(void) {
     CHECK(duel_press(&f), "o golpe novo aceita defesa mesmo logo depois de um gesto");
 }
 
-static MasterProfile with_feints(int index, float chance, int cues, float lo, float hi) {
-    MasterProfile m = *roster_get(index);
-    for (int i = 0; i < m.stanceCount; i++) {
-        m.stances[i].feintChance = chance;
-        m.stances[i].falseCues = cues;
-        m.stances[i].feintDelayMin = lo;
-        m.stances[i].feintDelayMax = hi;
-    }
-    return m;
-}
-
-static void test_no_feints_in_trail(void) {
-    for (int i = 0; i < roster_size(); i++)
-        for (int k = 0; k < roster_get(i)->stanceCount; k++) {
-            CHECK(roster_get(i)->stances[k].feintChance == 0, "%s não finta", roster_get(i)->name);
-            CHECK(!roster_get(i)->stances[k].mimicParry, "%s não imita o parry", roster_get(i)->name);
-        }
-}
-
-static void test_feint_punishes(void) {
-    MasterProfile vanceFeint = with_feints(3, 0.4f, 2, 0.40f, 0.55f);
-    const MasterProfile *vance = &vanceFeint;
-    Settings s;
-    settings_default(&s);
-    int tested = 0;
-    for (uint32_t seed = 1; seed < 200 && tested < 5; seed++) {
-        Duel d;
-        duel_init(&d, &s, vance, seed);
-        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
-        if (!d.isFeint) continue;
-        tested++;
-        CHECK(d.fakeCount == 2, "Vance usa dois instantes falsos");
-        for (int i = 0; i + 1 < d.fakeCount; i++)
-            CHECK(d.fakeStrikeAts[i + 1] - d.fakeStrikeAts[i] >= s.cueLead - 1e-6, "instantes falsos afastados");
-        CHECK(d.strikeAt - d.fakeStrikeAts[d.fakeCount - 1] >= s.cueLead - 1e-6, "contato real afastado do último falso");
-        double fake = d.fakeStrikeAts[0];
-        while (d.clock < fake - 0.01) duel_tick(&d, DT);
-        CHECK(duel_time_to_next_instant(&d) < duel_time_to_impact(&d), "a tela conta até o instante falso");
-        duel_press(&d);
-        Tally t;
-        memset(&t, 0, sizeof t);
-        while (t.impacts[J_RUIM] + t.impacts[J_BOM] + t.impacts[J_PERFEITO] == 0) { duel_tick(&d, DT); count(&d, &t); }
-        CHECK(t.impacts[J_RUIM] == 1, "caiu na finta");
-    }
-    CHECK(tested == 5, "fintas sorteadas para o Vance");
-}
-
-static void test_big_step_order(void) {
-    MasterProfile eleonorFeint = with_feints(6, 0.55f, 3, 0.54f, 0.72f);
-    const MasterProfile *eleonor = &eleonorFeint;
-    Settings s;
-    settings_default(&s);
-    for (uint32_t seed = 1; seed < 100; seed++) {
-        Duel d;
-        duel_init(&d, &s, eleonor, seed);
-        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
-        if (!d.isFeint) continue;
-        duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
-        duel_tick(&d, 5.0);
-        DuelEvent ev[MAX_EVENTS];
-        int n = duel_drain(&d, ev, MAX_EVENTS);
-        int fakeCues = 0, lastKindWasImpact = n > 0 && ev[n - 1].kind == EV_IMPACT;
-        bool realAfterFakes = true;
-        for (int i = 0; i < n; i++) {
-            if (ev[i].kind == EV_CUE && ev[i].flag) fakeCues++;
-            if (ev[i].kind == EV_CUE && !ev[i].flag && fakeCues != 3) realAfterFakes = false;
-        }
-        CHECK(fakeCues == 3, "Eleonor: três sinais falsos num passo grande");
-        CHECK(realAfterFakes, "o sinal real vem depois dos falsos");
-        CHECK(lastKindWasImpact, "o impacto fecha o golpe");
-        return;
-    }
-    CHECK(false, "nenhuma finta da Eleonor sorteada");
-}
-
 static void test_accelerando(void) {
     const MasterProfile *taiko = roster_get(8); /* suiren: as ondas aceleram */
     Settings s;
@@ -534,7 +457,7 @@ static void test_mimic(void) {
     CHECK(seen[0] && seen[1] && seen[2], "oboro passa pelas três posturas");
     CHECK(matching, "cada sequência sai na postura do selo");
     Tally t = play(oboro, 5, 0.02, 900);
-    CHECK(t.victory && t.feintLaunches == 0, "perfeitos vencem oboro, sem fintas");
+    CHECK(t.victory, "perfeitos vencem oboro");
 }
 
 static void test_determinism(void) {
@@ -794,7 +717,7 @@ static void test_movesets(void) {
     for (int k = 0; k < 60 && !checked; k++) {
         while (d.phase != PH_WINDUP) duel_tick(&d, DT);
         const Move *mv = duel_move(&d);
-        if (mv && mv->strikes >= 2 && d.comboStrike == 0 && !d.isFeint) {
+        if (mv && mv->strikes >= 2 && d.comboStrike == 0) {
             double first = d.strikeAt;
             while (d.phase == PH_WINDUP) { if (!d.attempted && d.strikeAt - d.clock <= 0.01) duel_press(&d); duel_tick(&d, DT); }
             while (d.phase != PH_WINDUP) duel_tick(&d, DT);
@@ -965,9 +888,6 @@ int main(void) {
     test_good_only();
     test_bad_recovers_boss();
     test_one_attempt_and_cooldown();
-    test_no_feints_in_trail();
-    test_feint_punishes();
-    test_big_step_order();
     test_accelerando();
     test_combos();
     test_blackout_and_cues();

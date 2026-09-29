@@ -12,7 +12,6 @@
 /*                     lean crouch handX handY sword  stepF stepB bodyX */
 const Pose POSE_IDLE    = {6, 2, 7, 3, -38, 0, 0, 0};
 const Pose POSE_WINDUP  = {-6, 3, 0, -11, -150, 2, -2, -2};
-const Pose POSE_FEINT   = {8, 3, 6, -8, -80, 3, 0, 1};
 const Pose POSE_CONTACT = {16, 5, 10, -3, -20, 7, 2, 5};
 const Pose POSE_FOLLOW  = {20, 6, 10, 5, 30, 7, 2, 6};
 const Pose POSE_PARRY   = {4, 4, 8, -4, -75, 1, -1, 0};

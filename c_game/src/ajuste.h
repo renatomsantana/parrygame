@@ -20,7 +20,6 @@
 #define AJ_BOM_POSTURA               6.0f   /* bom: o mestre perde isto de postura */
 #define AJ_BOM_POSTURA_NIVEL         0.5f   /*   + isto por mestre já vencido */
 #define AJ_BOM_CUSTO                 4.0f   /* bom: o impacto ainda tira isto de vida */
-#define AJ_ERRO_DANO                25.0f   /* erro: dano de quem não define "erros até cair" */
 #define AJ_ERRO_MESTRE_RECUPERA     20.0f   /* erro: o mestre com cura recupera isto de postura */
 #define AJ_SELO_CURA                75.0f   /* oboro: cada selo quebrado devolve isto de vida */
 
@@ -33,8 +32,6 @@
 #define AJ_PAUSA_SELO              2.200f   /* pausa depois de quebrar um selo do oboro */
 #define AJ_PAUSA_INICIO            0.650f   /* pausa antes do primeiro golpe */
 #define AJ_PRESSA                   0.90f   /* com metade da postura, a preparação x isto */
-#define AJ_FINTA_ATRASO_MIN        0.200f   /* fintas: atraso do golpe real, mínimo */
-#define AJ_FINTA_ATRASO_MAX        0.400f   /*   e máximo */
 #define AJ_PAUSA_NA_CADEIA         0.080f   /* pausa entre dois golpes da mesma sequência */
 #define AJ_CADEIA_MIN              0.400f   /* menor intervalo entre dois contatos de uma sequência */
 #define AJ_BRASAS_TEMPO              3.0f   /* enjin: segundos em brasas depois de um erro */

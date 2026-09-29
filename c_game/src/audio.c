@@ -98,11 +98,6 @@ static float s_cue(float t, float d, float *st) {
     float env = expf(-t * 18) * fminf(1, t * 400);
     return (sinf(TAU * 880 * t) + 0.35f * sinf(TAU * 1760 * t)) * env;
 }
-static float s_cue_feint(float t, float d, float *st) {
-    (void)d; (void)st;
-    float env = expf(-t * 22) * fminf(1, t * 400);
-    return (sinf(TAU * 1320 * t) + 0.4f * sinf(TAU * 2640 * t)) * env;
-}
 /* Choque de duas lâminas. Todas as camadas começam no mesmo instante (o som
    não tem ataque lento: o pico está no primeiro milissegundo):
      estalo   ruído agudo de poucos milissegundos, o "tchk" do contato;
@@ -542,7 +537,6 @@ static void music_callback(void *buffer, unsigned int frames) {
 void audio_init(void) {
     InitAudioDevice();
     sounds[SND_CUE] = make_sound(0.35f, s_cue, 0.55f);
-    sounds[SND_CUE_FEINT] = make_sound(0.3f, s_cue_feint, 0.55f);
     sounds[SND_PERFECT] = make_sound_room(1.6f, s_perfect, 0.95f, 0.22f);
     sounds[SND_GOOD] = make_sound_room(0.5f, s_good, 0.75f, 0.06f);
     sounds[SND_BAD] = make_sound(0.6f, s_bad, 0.95f);

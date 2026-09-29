@@ -7,7 +7,7 @@
 #include <stddef.h>
 
 #define W(...) .windups = {__VA_ARGS__}, .windupCount = sizeof((float[]){__VA_ARGS__}) / sizeof(float)
-#define STANCE(name, perfect, good, ...) {name, perfect, good, W(__VA_ARGS__), 0, 0, 0, 0, false}
+#define STANCE(name, perfect, good, ...) {name, perfect, good, W(__VA_ARGS__)}
 
 static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {

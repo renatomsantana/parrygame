@@ -13,7 +13,6 @@
 #define MAX_WINDUPS 6
 #define MAX_STANCES 4
 #define MAX_SEALS 3
-#define MAX_FALSE_CUES 3
 #define MAX_LINES 8
 #define MAX_EVENTS 32
 #define MASTER_COUNT 12   /* aprendizes antes de oboro */
@@ -24,7 +23,6 @@
 /* ------------------------------------------------------------------ */
 typedef struct {
     float renPosture;          /* vida inicial de kojiro (o nome do campo ficou) */
-    float badPostureDamage;    /* ruim: Ren perde */
     float badBossRecover;      /* ruim: o mestre recupera, se tiver essa técnica */
     float goodBossDamage;      /* bom: o mestre perde */
     float goodRenCost;         /* bom: Ren perde um pouco (o impacto ainda pesa) */
@@ -38,7 +36,6 @@ typedef struct {
     float sealRenRecover;      /* selo quebrado: Ren recupera o fôlego */
     float firstWindupDelay;    /* pausa antes do primeiro golpe */
     float pressureSpeed;       /* multiplicador de preparação com metade da postura */
-    float feintDelayMin, feintDelayMax;
     float comboGap;               /* pausa depois de cada golpe de uma sequência */
     float minChainGap;            /* menor intervalo entre contatos de uma sequência */
     float goodHitstop, perfectHitstop, badHitstop, breakHitstop;
@@ -58,10 +55,6 @@ typedef struct {
     float perfectWindow, goodWindow;
     float windups[MAX_WINDUPS];
     int windupCount;
-    float feintChance;
-    int falseCues;
-    float feintDelayMin, feintDelayMax; /* 0 = usa o padrão das Settings */
-    bool mimicParry;              /* a partida falsa mostra o gesto de parry */
 } Stance;
 
 /* Um selo é uma barra de postura inteira. Mestres comuns têm um; o BIG BOSS, três. */
@@ -120,7 +113,7 @@ typedef struct {
     const char *style;            /* postura de combate, mostrada no lugar de dicas */
     ArenaId arena;
     float posture;                /* postura de cada selo */
-    int hitsToFall;               /* erros que Ren aguenta contra este mestre (0 = padrão das Settings) */
+    int hitsToFall;               /* erros que kojiro aguenta contra este mestre (o dano de um erro é a vida / isto) */
     float specialChance;          /* golpe especial: dano dobrado (só o BIG BOSS) */
     float damage;                 /* multiplica o dano em kojiro (0 = 1) */
     float burn;                   /* enjin: um erro deixa kojiro em brasas; em AJ_BRASAS_TEMPO s ele
@@ -203,10 +196,9 @@ typedef enum { PH_READY, PH_WINDUP, PH_RECOVERY, PH_FINISHED } DuelPhase;
 typedef enum { J_NONE, J_RUIM, J_BOM, J_PERFEITO } Judgement;
 
 typedef enum {
-    EV_WINDUP,        /* a: duração, flag: finta */
-    EV_FEINT_LAUNCH,  /* partida falsa */
-    EV_LAUNCH,        /* partida real */
-    EV_CUE,           /* flag: falso */
+    EV_WINDUP,        /* a: duração */
+    EV_LAUNCH,        /* a lâmina parte */
+    EV_CUE,           /* o aviso */
     EV_PRESS,         /* gesto aceito */
     EV_IMPACT,        /* judgement, a: antecedência (-1 = sem defesa), flag: quebrou postura */
     EV_STANCE,        /* i: nova postura */
@@ -225,7 +217,7 @@ typedef struct {
     bool flag;
 } DuelEvent;
 
-typedef enum { SCH_FAKE_LAUNCH, SCH_FAKE_CUE, SCH_LAUNCH, SCH_CUE } ScheduleKind;
+typedef enum { SCH_LAUNCH, SCH_CUE } ScheduleKind;
 typedef struct { double time; ScheduleKind kind; } ScheduleItem;
 
 typedef struct {
@@ -238,12 +230,10 @@ typedef struct {
     DuelPhase phase;
     double phaseEnd;
     double strikeAt;
-    double fakeStrikeAts[MAX_FALSE_CUES];
-    int fakeCount;
     float windupDuration;
-    bool isFeint, blackout, special;
+    bool blackout, special;
     double lastPress;
-    bool attempted, attackLaunched, feintLaunched, cuePlayed, fakeCuePlayed;
+    bool attempted, attackLaunched, cuePlayed;
 
     float renPosture;             /* vida de kojiro */
     float burnLeft, burnRate;     /* brasas: segundos que faltam e vida perdida por segundo */
@@ -252,14 +242,14 @@ typedef struct {
     int stanceIndex;
     int comboRemaining, comboStrike;
     int move, sequences;          /* sequência atual e quantas já saíram */
-    int attacks, feints, perfects, goods, bads;
+    int attacks, perfects, goods, bads;
     /* o último golpe julgado e o último gesto, para o overlay de debug e o "cedo/tarde" */
     double lastStrikeAt;          /* instante do contato (-1 = nenhum ainda) */
     Judgement lastJudgement;
     double lastLead;              /* segundos entre o aperto e o contato (-1 = sem aperto) */
     double lastGestureAt;         /* último aperto fora da preparação (-100 = nenhum) */
 
-    ScheduleItem schedule[2 * MAX_FALSE_CUES + 2];
+    ScheduleItem schedule[2];
     int scheduleCount, scheduleIndex;
 
     DuelEvent events[MAX_EVENTS];
@@ -273,7 +263,6 @@ bool duel_press(Duel *d);
 /* Um quadro do jogo: o aperto chegou em algum ponto do quadro e entra no meio dele. */
 void duel_step(Duel *d, double dt, bool press);
 double duel_time_to_impact(const Duel *d);        /* -1 fora da preparação */
-double duel_time_to_next_instant(const Duel *d);  /* falso ou real: o que a tela mostra */
 const Stance *duel_stance(const Duel *d);
 const SealRule *duel_seal_rule(const Duel *d);
 bool duel_under_pressure(const Duel *d);          /* mestre com metade da postura ou menos */

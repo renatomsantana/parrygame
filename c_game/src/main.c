@@ -246,7 +246,6 @@ static struct {
     /* Coreografia. */
     bool bossWinding;
     float windupLen, windupTime;
-    bool strikeFeint;
     float renParryTime;       /* tempo desde o gesto; -1 = nenhum pendente */
     float renKnock, bossKnock;
     float bossHome;
@@ -1452,7 +1451,6 @@ static void handle_events(void) {
         const DuelEvent *e = &ev[i];
         switch (e->kind) {
             case EV_WINDUP:
-                G.strikeFeint = e->flag;
                 G.windupLen = fmaxf(0.1f, e->a - duel_strike_lead(&G.duel));
                 G.windupTime = 0;
                 G.bossWinding = true;
@@ -1469,19 +1467,6 @@ static void handle_events(void) {
                 G.blackoutTarget = G.duel.blackout ? 1 : 0;
                 if (m->arena == ARENA_PORTO) { audio_play(SND_DRUM, 0.9f, 1); G.ctx.beat = 1; }
                 break;
-            case EV_FEINT_LAUNCH:
-                G.bossWinding = false;
-                if (duel_stance(&G.duel)->mimicParry) {
-                    rig_pose(b, POSE_PARRY, 0.08f, EASE_OUT);
-                    rig_then(b, POSE_WINDUP, 0.25f, EASE_INOUT);
-                } else {
-                    /* Parte como um golpe de verdade e trava no instante falso. */
-                    rig_pose(b, POSE_FEINT, G.settings.attackLead, EASE_IN);
-                    rig_then(b, windup_pose(strike_look()), 0.2f, EASE_OUT);
-                }
-                audio_play(SND_SWING, 0.5f, 1.2f);
-                if (m->rhythmJitter > 0) boss_hop(0.3f, 9); /* hayate ameaça pular */
-                break;
             case EV_LAUNCH:
                 G.bossWinding = false;
                 /* O corte chega em POSE_CONTACT exatamente no instante do contato. */
@@ -1491,7 +1476,7 @@ static void handle_events(void) {
                 audio_play(SND_SWING, 0.9f, 1);
                 break;
             case EV_CUE:
-                audio_play(e->flag ? SND_CUE_FEINT : SND_CUE, m->cueAudio, 1);
+                audio_play(SND_CUE, m->cueAudio, 1);
                 break;
             case EV_PRESS:
                 rig_pose(r, G.duel.phase == PH_WINDUP ? parry_pose(strike_look()) : POSE_PARRY, 0.06f, EASE_OUT);
