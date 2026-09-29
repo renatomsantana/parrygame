@@ -874,8 +874,8 @@ static void start_disarm(void) {
     G.duo = 0.3f;
     G.slash = 0.35f;
     G.silence = 1.0f;
-    G.slowmo = 0.3f;
-    G.slowmoTime = 1.0f;
+    G.slowmo = AJ_LENTA_VITORIA;
+    G.slowmoTime = AJ_LENTA_VITORIA_TEMPO;
     set_state(ST_FINISHER);
 }
 
@@ -897,7 +897,7 @@ static void update_sword(float dt) {
         fx_burst(&G.fx, P_DUST, tip, 10, 50, 0.9f, -1.57f, (Color){210, 190, 160, 170}, (Color){140, 120, 100, 120});
         dust(tip.x, false, 20);
         fx_burst(&G.fx, P_SPARK, tip, 6, 70, 0.8f, -1.57f, (Color){255, 240, 200, 255}, (Color){255, 190, 90, 255});
-        fx_kick(&G.fx, 1.5f, 0.15f);
+        fx_kick(&G.fx, AJ_TREMOR_ESPADA_CRAVA, AJ_TREMOR_ESPADA_TEMPO);
         audio_play(SND_THUD, 0.7f, 1);
     }
 }
@@ -1268,15 +1268,15 @@ static void on_impact(const DuelEvent *e) {
             fx_star(&G.fx, at, 16, 0.12f);
             vfx("652", 5, at, false, VFX_BACK | VFX_GLOW, 32);   /* raios de luz atrás do choque */
             fx_flash(&G.fx, (Color){255, 250, 235, 90}, 1);
-            fx_kick(&G.fx, 1.5f, 0.1f);
+            fx_kick(&G.fx, AJ_TREMOR_PERFEITO, AJ_TREMOR_PERFEITO_TEMPO);
             rig_pose(r, POSE_DEFLECT, 0.05f, EASE_OUT);
             rig_then(r, POSE_IDLE, 0.4f, EASE_INOUT);
             rig_pose(b, POSE_HURT, 0.07f, EASE_OUT);
             rig_then(b, POSE_IDLE, 0.5f, EASE_INOUT);
             b->flash = 1;
             b->flashColor = WHITE;
-            G.bossKnock = 7;
-            G.renKnock = 1;
+            G.bossKnock = AJ_RECUO_PERFEITO_MESTRE;
+            G.renKnock = AJ_RECUO_PERFEITO_KOJIRO;
             break;
         case J_BOM:
             G.hitstop = G.settings.goodHitstop;
@@ -1288,8 +1288,8 @@ static void on_impact(const DuelEvent *e) {
             rig_then(r, POSE_IDLE, 0.4f, EASE_INOUT);
             rig_pose(b, POSE_FOLLOW, 0.08f, EASE_OUT);
             rig_then(b, POSE_IDLE, 0.45f, EASE_INOUT);
-            G.renKnock = 4;
-            G.bossKnock = 3;
+            G.renKnock = AJ_RECUO_BOM_KOJIRO;
+            G.bossKnock = AJ_RECUO_BOM_MESTRE;
             break;
         default: {
             G.hitstop = G.settings.badHitstop;
@@ -1300,14 +1300,14 @@ static void on_impact(const DuelEvent *e) {
             fx_burst(&G.fx, P_DUST, (Vector2){r->x, GROUND_LOW - 1}, 6, 40, 0.6f, 3.14f, (Color){200, 180, 160, 140}, (Color){120, 100, 90, 110});
             fx_flash(&G.fx, (Color){255, 40, 30, 80}, 1);
             vfx("71", 7, hit, false, VFX_FRONT, 28);              /* estouro vermelho em kojiro */
-            fx_kick(&G.fx, 3, 0.2f);
+            fx_kick(&G.fx, AJ_TREMOR_ERRO, AJ_TREMOR_ERRO_TEMPO);
             rig_pose(r, POSE_HURT, 0.06f, EASE_OUT);
             rig_then(r, POSE_IDLE, 0.45f, EASE_INOUT);
             r->flash = 1;
             r->flashColor = (Color){255, 80, 60, 255};
             rig_pose(b, POSE_FOLLOW, 0.1f, EASE_OUT);
             rig_then(b, POSE_IDLE, 0.5f, EASE_INOUT);
-            G.renKnock = 9;
+            G.renKnock = AJ_RECUO_ERRO_KOJIRO;
             G.renParryTime = -1;
             break;
         }
@@ -1330,12 +1330,12 @@ static void on_impact(const DuelEvent *e) {
         fx_ring(&G.fx, c, 320, 0.5f, 3, WHITE);
         vfx("184", 5, c, false, VFX_BACK | VFX_GLOW, 24);        /* onda de choque */
         fx_flash(&G.fx, WHITE, 1);
-        fx_kick(&G.fx, 4, 0.35f);
+        fx_kick(&G.fx, AJ_TREMOR_QUEBRA, AJ_TREMOR_QUEBRA_TEMPO);
         rig_pose(b, POSE_STAGGER, 0.15f, EASE_OUT);
         G.staggerTime = 0.01f;
-        G.bossKnock = 10;
-        G.slowmo = 0.3f;
-        G.slowmoTime = 0.8f;
+        G.bossKnock = AJ_RECUO_QUEBRA_MESTRE;
+        G.slowmo = AJ_LENTA_QUEBRA;
+        G.slowmoTime = AJ_LENTA_QUEBRA_TEMPO;
     }
 }
 
@@ -1402,8 +1402,8 @@ static void ren_falls(void) {
     sprite_fall();
     dust(G.ren.x + G.ren.offsetX, false, 20);
     G.ren.breath = 0;
-    G.slowmo = 0.4f;
-    G.slowmoTime = 0.9f;
+    G.slowmo = AJ_LENTA_QUEDA;
+    G.slowmoTime = AJ_LENTA_QUEDA_TEMPO;
     G.bannerTime = 0;
     fx_popup(&G.fx, "kojiro caiu", (Vector2){160, 56}, 1.2f, VERMILION);
     audio_play(SND_DEFEAT, 0.9f, 1);
@@ -1431,10 +1431,10 @@ static void second_blade(void) {
     fx_burst(&G.fx, P_SPARK, hit, 12, 130, 1.1f, 3.14f, (Color){255, 80, 60, 255}, (Color){255, 160, 90, 255});
     fx_flash(&G.fx, (Color){255, 40, 30, 70}, 1);
     vfx("71", 7, hit, false, VFX_FRONT, 28);
-    fx_kick(&G.fx, 2.5f, 0.18f);
+    fx_kick(&G.fx, AJ_TREMOR_SEGUNDA_LAMINA, AJ_TREMOR_SEGUNDA_TEMPO);
     r->flash = 1;
     r->flashColor = (Color){255, 80, 60, 255};
-    G.renKnock = fmaxf(G.renKnock, 8);
+    G.renKnock = fmaxf(G.renKnock, AJ_RECUO_SEGUNDA_LAMINA);
     G.hitstop = fmaxf(G.hitstop, G.settings.badHitstop);
 }
 
@@ -1756,7 +1756,7 @@ static void update_duel(float dtReal) {
     if (G.slowmoTime > 0) { G.slowmoTime -= dtReal; if (G.slowmoTime <= 0) G.slowmo = 1; }
     bool press = pressed();
     /* o robô aperta no meio do quadro (ver abaixo), logo antes do contato */
-    if (G.demo && G.duel.phase == PH_WINDUP && !G.duel.attempted && G.duel.strikeAt - G.duel.clock <= dt * 0.5 + 0.04) press = true;
+    if (G.demo && G.duel.phase == PH_WINDUP && !G.duel.attempted && G.duel.strikeAt - G.duel.clock <= dt * 0.5 + AJ_ROBO_ANTECEDENCIA) press = true;
 
     /* Hitstop congela o duelo e as poses. */
     if (G.hitstop > 0) {

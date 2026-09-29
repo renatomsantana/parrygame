@@ -7,42 +7,6 @@
 #include <math.h>
 #include <string.h>
 
-void settings_default(Settings *s) {
-    s->renPosture = 250;
-    s->badPostureDamage = 25;
-    s->badBossRecover = 20;
-    s->goodBossDamage = 6;
-    s->goodRenCost = 4;
-    s->perfectBossDamage = 20;
-    s->perfectRenRecover = 20;
-    s->inputCooldown = 0.300f;
-    s->attackLead = 0.220f;
-    s->cueLead = 0.180f;
-    s->recovery = 0.800f;
-    s->sealRecovery = 2.200f;
-    s->sealRenRecover = 75;
-    s->firstWindupDelay = 0.650f;
-    s->pressureSpeed = 0.90f;
-    s->feintDelayMin = 0.200f;
-    s->feintDelayMax = 0.400f;
-    s->comboGap = 0.080f;
-    s->minChainGap = 0.400f;
-    s->goodHitstop = 0.045f;
-    s->perfectHitstop = 0.090f;
-    s->badHitstop = 0.045f;
-    s->breakHitstop = 0.160f;
-    s->postureGrowth = 25;
-    s->perfectGrowth = 2;
-    s->goodGrowth = 0.5f;
-}
-
-void settings_for_level(Settings *s, int defeated) {
-    if (defeated < 0) defeated = 0;
-    s->renPosture += s->postureGrowth * defeated;
-    s->perfectBossDamage += s->perfectGrowth * defeated;
-    s->goodBossDamage += s->goodGrowth * defeated;
-}
-
 /* ------------------------------------------------------------------ */
 
 void rng_seed(Rng *r, uint32_t seed) { r->state = seed ? seed : 1; }
@@ -137,7 +101,7 @@ bool duel_strike_dual(const Duel *d) {
 
 float duel_strike_lead(const Duel *d) {
     const Move *mv = duel_move(d);
-    if (mv && mv->look == LOOK_FAR && d->comboStrike == 0) return d->s.attackLead * FAR_LEAD;
+    if (mv && mv->look == LOOK_FAR && d->comboStrike == 0) return d->s.attackLead * AJ_LANCA_PARTE_X;
     return d->s.attackLead;
 }
 
@@ -340,8 +304,8 @@ static void resolve(Duel *d) {
         second = dual;
         if (d->m->burn > 0) {
             /* a lâmina de fogo deixa kojiro em brasas (um erro novo reacende) */
-            d->burnLeft = BURN_TIME;
-            d->burnRate = duel_ren_damage(d) * d->m->burn / BURN_TIME;
+            d->burnLeft = AJ_BRASAS_TEMPO;
+            d->burnRate = duel_ren_damage(d) * d->m->burn / AJ_BRASAS_TEMPO;
             emit(d, EV_BURN, J_NONE, 0, 0, true);
         }
         if (d->m->healsOnHit) d->bossPosture = clampf(d->bossPosture + s->badBossRecover, 0, d->m->posture);

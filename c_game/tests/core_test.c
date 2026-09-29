@@ -71,6 +71,27 @@ static void test_settings(void) {
     CHECK(s.goodRenCost < s.badPostureDamage, "bom custa menos que ruim");
 }
 
+/* Cada campo das Settings vem da constante certa de ajuste.h (nada trocado de lugar). */
+static void test_ajuste(void) {
+    Settings s;
+    settings_default(&s);
+    CHECK(s.renPosture == AJ_VIDA_INICIAL && s.postureGrowth == AJ_VIDA_POR_MESTRE, "vida de kojiro vem do ajuste.h");
+    CHECK(s.perfectBossDamage == AJ_PERFEITO_POSTURA && s.perfectGrowth == AJ_PERFEITO_POSTURA_NIVEL &&
+          s.perfectRenRecover == AJ_PERFEITO_CURA, "perfeito vem do ajuste.h");
+    CHECK(s.goodBossDamage == AJ_BOM_POSTURA && s.goodGrowth == AJ_BOM_POSTURA_NIVEL && s.goodRenCost == AJ_BOM_CUSTO,
+          "bom vem do ajuste.h");
+    CHECK(s.badPostureDamage == AJ_ERRO_DANO && s.badBossRecover == AJ_ERRO_MESTRE_RECUPERA && s.sealRenRecover == AJ_SELO_CURA,
+          "erro e selo vêm do ajuste.h");
+    CHECK(s.attackLead == AJ_LAMINA_PARTE && s.cueLead == AJ_AVISO_SOM && s.inputCooldown == AJ_ENTRE_GESTOS &&
+          s.recovery == AJ_PAUSA_SEQUENCIA && s.sealRecovery == AJ_PAUSA_SELO && s.firstWindupDelay == AJ_PAUSA_INICIO &&
+          s.pressureSpeed == AJ_PRESSA && s.comboGap == AJ_PAUSA_NA_CADEIA && s.minChainGap == AJ_CADEIA_MIN &&
+          s.feintDelayMin == AJ_FINTA_ATRASO_MIN && s.feintDelayMax == AJ_FINTA_ATRASO_MAX, "tempos vêm do ajuste.h");
+    CHECK(s.perfectHitstop == AJ_HITSTOP_PERFEITO && s.goodHitstop == AJ_HITSTOP_BOM && s.badHitstop == AJ_HITSTOP_ERRO &&
+          s.breakHitstop == AJ_HITSTOP_QUEBRA, "hitstop vem do ajuste.h");
+    CHECK(AJ_HITSTOP_PERFEITO > AJ_HITSTOP_BOM && AJ_HITSTOP_QUEBRA > AJ_HITSTOP_PERFEITO, "o perfeito segura mais que o bom; a quebra, mais ainda");
+    CHECK(AJ_TREMOR_PERFEITO < AJ_TREMOR_ERRO && AJ_TREMOR_ERRO < AJ_TREMOR_QUEBRA, "tremor: perfeito leve, erro forte, quebra mais forte");
+}
+
 static void test_roster(const Settings *s) {
     CHECK(roster_size() == 13, "doze aprendizes e oboro");
     CHECK(roster_get(-1) == NULL && roster_get(13) == NULL, "índices fora da trilha");
@@ -726,7 +747,7 @@ static void test_dual(void) {
     }
 }
 
-/* Estocada de longe: a lâmina parte FAR_LEAD vezes mais cedo que nos outros golpes. */
+/* Estocada de longe: a lâmina parte AJ_LANCA_PARTE_X vezes mais cedo que nos outros golpes. */
 static void test_far_lead(void) {
     Settings s;
     settings_default(&s);
@@ -746,7 +767,7 @@ static void test_far_lead(void) {
         }
         if (!far || launchAt < 0) continue;
         double lead = d.strikeAt - launchAt;
-        CHECK(fabs(lead - s.attackLead * FAR_LEAD) < 0.02, "a estocada de longe parte %.2f s antes (%.3f)", s.attackLead * FAR_LEAD, lead);
+        CHECK(fabs(lead - s.attackLead * AJ_LANCA_PARTE_X) < 0.02, "a estocada de longe parte %.2f s antes (%.3f)", s.attackLead * AJ_LANCA_PARTE_X, lead);
         seen = true;
     }
     CHECK(seen, "uma estocada de longe de suiren foi observada");
@@ -764,14 +785,14 @@ static void test_burn(void) {
     duel_init(&d, &s, enjin, 3);
     while (d.phase != PH_WINDUP) duel_tick(&d, DT);
     while (d.phase == PH_WINDUP) duel_tick(&d, DT);            /* sem gesto: erro */
-    CHECK(d.burnLeft > BURN_TIME - 0.1f, "o erro acende as brasas (%.2f s)", d.burnLeft);
+    CHECK(d.burnLeft > AJ_BRASAS_TEMPO - 0.1f, "o erro acende as brasas (%.2f s)", d.burnLeft);
     float before = d.renPosture;
     double t0 = d.clock;
     while (d.phase == PH_RECOVERY && d.clock - t0 < 0.5) duel_tick(&d, DT);
     CHECK(d.renPosture < before - 1e-3f, "em brasas, a vida cai sem golpe (%.2f -> %.2f)", before, d.renPosture);
     CHECK(fabsf((before - d.renPosture) - d.burnRate * (float)(d.clock - t0)) < 0.05f, "a queimadura é contínua");
     float total = duel_ren_damage(&d) * enjin->burn;
-    CHECK(fabsf(d.burnRate * BURN_TIME - total) < 0.01f, "a queimadura inteira vale %.0f%% de um golpe", enjin->burn * 100);
+    CHECK(fabsf(d.burnRate * AJ_BRASAS_TEMPO - total) < 0.01f, "a queimadura inteira vale %.0f%% de um golpe", enjin->burn * 100);
     /* perfeito apaga */
     bool out = false;
     for (int n = 0; n < 40 && !out && d.phase != PH_FINISHED; n++) {
@@ -790,6 +811,7 @@ int main(void) {
     Settings s;
     settings_default(&s);
     test_settings();
+    test_ajuste();
     test_roster(&s);
     test_visits();
     test_story();

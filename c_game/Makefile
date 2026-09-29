@@ -17,7 +17,7 @@ ifeq ($(shell uname),Darwin)
   RAYLIB_LIBS += -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL
 endif
 
-CORE := src/core.c src/roster.c
+CORE := src/ajuste.c src/core.c src/roster.c
 GAME := src/main.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
 all: apara
@@ -36,7 +36,7 @@ packs:
 apara: $(CORE) $(GAME) src/*.h
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(CORE) $(GAME) -o $@ $(RAYLIB_LIBS) -lm
 
-core_test: $(CORE) tests/core_test.c src/core.h
+core_test: $(CORE) tests/core_test.c src/core.h src/ajuste.h
 	$(CC) $(CFLAGS) $(CORE) tests/core_test.c -o $@ -lm
 
 test: core_test
