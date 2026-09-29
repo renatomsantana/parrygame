@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "arenas.h"
 #include "raylib.h"
@@ -97,6 +98,112 @@ static void pine(float x, float base, float h, Color c) {
         float top = base - h + k * h * 0.18f, w = 3 + k * h * 0.09f;
         DrawTriangle((Vector2){x - w, top + h * 0.3f}, (Vector2){x + w, top + h * 0.3f}, (Vector2){x, top}, c);
     }
+}
+
+/* Prova da rodada 7 (CABANA_PROVA=7): a mesma cabana pobre, acabada, simplificada no estilo
+ * Katana Zero: poucas formas grandes e legíveis, a silhueta escura contra a noite, o luar frio só
+ * nas bordas de cima e a luz quente de dentro escapando pelas frestas, pela porta e pelas falhas
+ * da palha. Sem base de pedra. Ficam a palha gasta com falhas, as tábuas desiguais, o shoji
+ * rasgado, a lenha, o barril e o makiwara, cada um numa forma só. */
+static void cabin_poor7(float t) {
+    float fl = 0.85f + 0.15f * sinf(t * 7) * sinf(t * 3.1f);
+    Color wall = C(40, 29, 36), wall2 = C(48, 35, 42), joint = C(24, 17, 24), moon = C(96, 98, 132);
+    Color warm = CA(255, 150, 70, (unsigned char)(210 * fl)), warmHi = CA(255, 204, 130, (unsigned char)(230 * fl));
+    /* as paredes: tábuas largas de dois tons, as juntas escuras, o topo um pouco desencontrado */
+    static const int pw[] = {7, 5, 8, 4, 7, 6, 9, 5, 7, 8}, pt[] = {0, 2, 1, 0, 3, 1, 0, 2, 1, 0};
+    int x = 26;
+    for (int i = 0; i < 10 && x < 94; i++) {
+        int w = pw[i] > 94 - x ? 94 - x : pw[i], top = 102 + pt[i];
+        rect(x, top, w, 138 - top, i % 2 ? wall : wall2);
+        rect(x, top, 1, 138 - top, joint);
+        if (i == 6) rect(x + 2, 128, 3, 10, C(30, 21, 28));                     /* um pedaço de tábua que falta embaixo */
+        x += w;
+    }
+    /* três frestas: a luz de dentro em riscos compridos, uma delas mais aberta */
+    static const float cr[3][3] = {{33, 108, 22}, {64, 106, 26}, {86, 110, 18}};
+    for (int k = 0; k < 3; k++) {
+        rect(cr[k][0], cr[k][1], 1, cr[k][2], warm);
+        rect(cr[k][0], cr[k][1] + cr[k][2] * 0.35f, 1, cr[k][2] * 0.3f, warmHi);
+    }
+    rect(65, 112, 1, 9, warm);
+    /* a porta de shoji acesa: o papel quente, a grade grossa, um painel rasgado (buraco escuro
+       com a ponta de papel caída) e um remendo de papel mais claro */
+    int dx = 42, dy = 111, dw = 16, dh = 27;
+    rect(dx - 2, dy - 2, dw + 4, dh + 2, C(22, 15, 20));
+    rect(dx, dy, dw, dh, CA(240, 168, 92, (unsigned char)(215 + 40 * fl)));
+    rect(dx, dy, dw, 3, CA(255, 206, 140, (unsigned char)(220 * fl)));
+    rect(dx + 9, dy + 12, 6, 6, C(214, 190, 150));                            /* o remendo */
+    rect(dx + 2, dy + 5, 5, 6, C(26, 16, 20));                                /* o rasgo */
+    rect(dx + 3, dy + 11, 2, 2, CA(240, 168, 92, 230));                       /* a ponta pendurada */
+    rect(dx + 7, dy, 2, dh, C(34, 22, 24));                                   /* a grade */
+    rect(dx, dy + 9, dw, 2, C(34, 22, 24));
+    rect(dx, dy + 18, dw, 2, C(34, 22, 24));
+    /* a janela de ripas: três fendas de luz */
+    rect(72, 113, 9, 8, C(20, 14, 20));
+    for (int k = 0; k < 3; k++) rect(73 + k * 3, 114, 1, 6, warm);
+    /* o teto de palha: um trapézio grande e escuro, a cumeeira cedendo no meio, a palha em
+       fios que descem a água do telhado (riscos verticais de três tons próximos), o luar só na
+       borda de cima, o corte grosso do beiral com a sombra embaixo e a franja rala em tufos */
+    for (int xx = 14; xx < 106; xx++) {
+        float u = (xx - 14) / 92.0f;
+        float ridge = 84 + 1.8f * sinf(u * 3.1416f);
+        float top = xx < 36 ? ridge + (36 - xx) * 0.82f : xx > 84 ? ridge + (xx - 84) * 0.9f : ridge;
+        float hr = hash1(xx * 0.91f);
+        top += hr > 0.86f ? -1 : hr < 0.12f ? 1 : 0;                           /* a palha rala: a borda de cima irregular */
+        float eave = 103 + (xx > 72 && xx < 82 ? 1.5f : 0) + (hash1(xx * 0.37f) > 0.7f ? 1 : 0) + (xx > 94 ? (xx - 94) * 0.25f : 0);
+        for (int yy = (int)top; yy < (int)eave; yy++) {
+            float h = hash1(xx * 3.7f + (yy / 5) * 1.3f);
+            Color c = h > 0.72f ? C(74, 58, 50) : h > 0.3f ? C(64, 49, 45) : C(55, 41, 41);
+            DrawPixel(xx, yy, c);
+        }
+        DrawPixel(xx, (int)top, moon);                                          /* o luar na borda */
+        rect(xx, (int)eave, 1, 2, C(80, 62, 50));                               /* o corte do beiral */
+        DrawPixel(xx, (int)eave + 2, C(30, 22, 26));                            /* a sombra embaixo */
+        if (hash1(xx * 1.9f) > 0.6f) DrawPixel(xx, (int)eave + 3, C(66, 50, 44));   /* a franja rala */
+    }
+    /* duas falhas na palha: buracos tortos, a luz de dentro só na beira de baixo */
+    static const int hole[2][6] = {{27, 93, 6, 3, 2, 1}, {73, 89, 5, 2, 1, 2}};
+    for (int k = 0; k < 2; k++) {
+        const int *h = hole[k];
+        rect(h[0], h[1], h[2], h[3], C(20, 12, 16));
+        rect(h[0] + h[4], h[1] - 1, h[2] - 3, 1, C(20, 12, 16));
+        rect(h[0] + h[5], h[1] + h[3], h[2] - 2, 1, C(20, 12, 16));
+        rect(h[0] + h[5], h[1] + h[3], h[2] - 2, 1, fade(C(255, 150, 70), 0.6f * fl));
+    }
+    static const int patch[6][2] = {{1, 6}, {0, 9}, {0, 10}, {1, 9}, {0, 8}, {2, 5}};   /* o remendo de palha nova, torto */
+    for (int k = 0; k < 6; k++) rect(56 + patch[k][0], 88 + k, patch[k][1], 1, k == 0 ? C(120, 104, 78) : k % 2 ? C(92, 76, 56) : C(84, 68, 52));
+    rect(58, 91, 1, 4, C(60, 46, 40));                                          /* a amarra */
+    for (int k = 0; k < 4; k++) rect(97 + k * 2, 104 + (k % 2), 1, 3 + k % 2, C(58, 44, 42));   /* palha pendurada no beiral caído */
+    /* a fumaça do respiro */
+    for (int i = 0; i < 5; i++) {
+        float k = fract(t * 0.12f + i / 5.0f);
+        DrawCircle((int)(92 + sinf(k * 6 + i) * 3 + k * 10), (int)(84 - k * 46), 2 + k * 3, CA(110, 102, 126, (unsigned char)(70 * (1 - k))));
+    }
+    /* a luz da porta no chão */
+    glow(50, 134, 12 * fl, C(255, 140, 60));
+    DrawTriangle((Vector2){42, 138}, (Vector2){30, 144}, (Vector2){70, 144}, CA(255, 150, 70, (unsigned char)(50 * fl)));
+    DrawTriangle((Vector2){42, 138}, (Vector2){70, 144}, (Vector2){58, 138}, CA(255, 150, 70, (unsigned char)(50 * fl)));
+    /* a lenha: uma pilha em degraus, a ponta das toras em círculos, o luar em cima */
+    for (int r = 0; r < 3; r++)
+        for (int k = 0; k < 4 - r; k++) {
+            float lx = 7 + k * 5 + r * 2.5f, ly = 135 - r * 4;
+            DrawCircle((int)lx, (int)ly, 2, C(34, 24, 26));
+            DrawPixel((int)lx, (int)ly, C(92, 70, 56));
+            DrawPixel((int)lx - 1, (int)ly - 2, moon);
+        }
+    /* o barril: um bloco escuro, dois aros e o luar na tampa */
+    rect(98, 126, 11, 12, C(36, 26, 30));
+    rect(97, 128, 13, 8, C(36, 26, 30));                                        /* o bojo */
+    rect(97, 129, 13, 1, C(58, 50, 56));
+    rect(97, 134, 13, 1, C(58, 50, 56));
+    rect(98, 126, 11, 1, moon);
+    rect(97, 128, 1, 8, C(26, 19, 24));
+    /* o makiwara: o poste escuro meio torto e a palha amarrada no alto, com a borda do luar */
+    for (int k = 0; k < 28; k++) rect(121 + (k > 16 ? 0 : (16 - k) / 10), 138 - k, 3, 1, C(40, 30, 32));
+    rect(119, 110, 6, 9, C(70, 58, 48));
+    rect(119, 110, 6, 1, moon);
+    rect(119, 113, 6, 1, C(40, 30, 32));
+    rect(119, 116, 6, 1, C(40, 30, 32));
 }
 
 /* Prova da rodada 6 (CABANA_PROVA): a cabana pobre de Hanzo, na serra, meio acabada.
@@ -272,7 +379,8 @@ void lore_draw_cabin(float t) {
     rect(0, 138, 320, 2, C(62, 50, 54));
     /* a cabana: tábuas, teto de palha, a porta acesa e uma janela */
     float fl = 0.9f + 0.1f * sinf(t * 7) * sinf(t * 3.1f);
-    if (getenv("CABANA_PROVA")) cabin_poor(t);
+    if (getenv("CABANA_PROVA") && !strcmp(getenv("CABANA_PROVA"), "7")) cabin_poor7(t);
+    else if (getenv("CABANA_PROVA")) cabin_poor(t);
     else {
     rect(26, 104, 68, 36, C(74, 50, 38));
     for (int k = 0; k < 6; k++) rect(26, 104 + k * 6, 68, 1, C(58, 38, 30));

@@ -906,24 +906,54 @@ static const Row CAB_YORU_COSTAS[] = {
    Garfiel: curto e rente dos lados (a têmpora e a orelha aparecem), um tufinho espetado no
    alto, como um tufo de grama. Aqui H é o loiro de base, h a sombra e i a luz. */
 static const Row CAB6_GARFIEL_FRENTE[] = {
-    {-9, -2, "i"}, {-8, -4, "i.i.i"}, {-7, -4, "HiHiH"}, {-6, -5, "hHHiiHh"}, {-5, -6, "hHHHHHHHh"}, {-4, -6, "hHHHHHHHh"},
-    {-3, -6, "hhHHHFFFF"}, {-2, -6, "hhhFFFFFF"}, {-1, -5, "hkfFFkk"}, {0, -5, "hkfff"}, {1, -4, "kfff"},
-    {2, -3, "kf"}, {0, 0, NULL},
+    /* rodada 7 (ref. Garfiel, Re:Zero): loiro curto e bem espetado, pontas irregulares para cima e
+       para trás, mechas caindo na testa, laterais rentes (a têmpora e a orelha aparecem) */
+    {-10, -6, "i...i"}, {-9, -7, "hi.hi.i"}, {-8, -8, "hHiHhHiHi"}, {-7, -9, "ihHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
+    {-5, -7, "hHHHHHHHHHi"}, {-4, -7, "hhHHHHHHiHi"}, {-3, -6, "hhhHHFHi"}, {-2, -5, "hkFFFHF"},
+    {-1, -5, "hkfFFkk"}, {0, -5, "hkfff"}, {1, -4, "kfff"}, {2, -3, "kf"}, {0, 0, NULL},
 };
 static const Row CAB6_GARFIEL_COSTAS[] = {
-    {-9, -2, "i"}, {-8, -4, "i.i.i"}, {-7, -4, "HiHiH"}, {-6, -5, "hHHiiHh"}, {-5, -6, "hHHHHHHHh"}, {-4, -6, "hHHHHHHHh"},
-    {-3, -6, "hhHHHHHhh"}, {-2, -6, "khhHHHhhk"}, {-1, -5, "fhhhhhf"}, {0, -4, "fffff"}, {1, -3, "fff"},
-    {0, 0, NULL},
+    {-10, -6, "i...i"}, {-9, -7, "hi.hi.i"}, {-8, -8, "hHiHhHiHi"}, {-7, -9, "ihHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
+    {-5, -7, "hHHHHHHHHHi"}, {-4, -7, "hhHHHHHHHh"}, {-3, -6, "hhHHHHhh"}, {-2, -6, "khhhhhk"},
+    {-1, -5, "fhhhhf"}, {0, -4, "ffff"}, {1, -3, "fff"}, {0, 0, NULL},
 };
+/* Karasu (ref. Tabito Karasu, Blue Lock): preto azulado, médio-curto, bagunçado, camadas espetadas
+   para os lados e para trás, a franja comprida caindo entre e por cima dos olhos. Sem barba. */
+static const Row CAB7_KARASU_FRENTE[] = {
+    {-10, -6, "H...H"}, {-9, -7, "Hh.HhH.H"}, {-8, -9, "H.HhhHhhHh"}, {-7, -9, "HhhhihhhhH"},
+    {-6, -11, "HHhhhhihhihhH"}, {-5, -12, "H.HhhhhhhhhhhhH"}, {-4, -11, "HHhhhhhhhhhhiH"},
+    {-3, -12, "HhhhhhhhhhhhiHiH"}, {-2, -10, "HhhhhhhhHFiF"}, {-1, -9, "HhhhhhhHFiHk"},
+    {0, -10, "HHhhhhhHkfi"}, {1, -9, "HhhhHkff"}, {2, -8, "H..kf"}, {0, 0, NULL},
+};
+static const Row CAB7_KARASU_COSTAS[] = {
+    {-8, -5, "H.HH"}, {-7, -7, "HHhHHhH"}, {-6, -8, "HhhihhihH"}, {-5, -10, "HHhhhhhhhhhH"},
+    {-4, -9, "HHhhhhhhhhhhH"}, {-3, -10, "HHhhhhhhhhhhH"}, {-2, -9, "HhhhhhhhhhH"}, {-1, -8, "HhhhhhhhH"},
+    {0, -8, "HhhhhhhH"}, {1, -9, "HHhhhhH"}, {2, -8, "HH"}, {0, 0, NULL},
+};
+/* Yoru (ref. Yoru, Valorant): preto, curto e espetado, mais comprido em cima e jogado para cima e para
+   trás, com uma mecha roxa (o destaque). A máscara continua. Sem barba. */
+static const Row CAB7_YORU_FRENTE[] = {
+    {-10, -6, "H..H"}, {-9, -7, "HhHhH"}, {-8, -8, "HhhAhhH"}, {-7, -8, "HhhhAhhhH"}, {-6, -8, "HhhhhAhhhH"},
+    {-5, -7, "HhhhhAhhiH"}, {-4, -6, "HhhhhhhiH"}, {-3, -6, "HhhhhhHF"}, {-2, -5, "HkFFFFF"},
+    {-1, -5, "HkfFFkk"}, {0, -5, "hkfff"}, {1, -4, "kfff"}, {2, -3, "kf"}, {0, 0, NULL},
+};
+static const Row CAB7_YORU_COSTAS[] = {
+    {-10, -6, "H..H"}, {-9, -7, "HhHhH"}, {-8, -8, "HhhAhhH"}, {-7, -8, "HhhhAhhhH"}, {-6, -8, "HhhhhAhhhH"},
+    {-5, -7, "HhhhhAhhhH"}, {-4, -6, "HhhhhhhhH"}, {-3, -6, "HhhhhhhH"}, {-2, -5, "khhhhk"},
+    {-1, -4, "ffff"}, {0, -4, "ffff"}, {0, 0, NULL},
+};
+/* Arashi: o comprido solto prateado caindo nas costas, agora com a barba cinza da cor do cabelo
+   (B e b pintam por cima do rosto: o queixo e a mandíbula). */
+static const Row CAB7_ARASHI_FRENTE[] = {
+    {-7, -5, "HHHH"}, {-6, -6, "HhiihHH"}, {-5, -7, "HhiihhhhH"}, {-4, -8, "HhhhhhhhhhH"},
+    {-3, -8, "HhhhhhhhHhH"}, {-2, -8, "HhhhhhhHFFF"}, {-1, -8, "HhhhhhHfkk"}, {0, -8, "HhhhhhHf"},
+    {1, -9, "HhhhhhHfB"}, {2, -9, "HhhhhHbBBbB"}, {3, -9, "HhihhH.BBBB"}, {4, -9, "HhhhH..bBBb"},
+    {5, -9, "HhihH...BB"}, {6, -9, "HhhH"}, {7, -9, "HhH"}, {8, -8, "HH"}, {0, 0, NULL},
+};
+
 /* Arashi e Karasu: comprido e solto, cai reto pelas costas até o meio delas (gravidade), a
    franja curta na testa, cobrindo a orelha; a luz no alto da cabeça e uns fios claros na
    queda. Aqui H é o traço escuro, h o meio e i a luz. */
-static const Row CAB6_LONGO_FRENTE[] = {
-    {-7, -5, "HHHH"}, {-6, -6, "HhiihHH"}, {-5, -7, "HhiihhhhH"}, {-4, -8, "HhhhhhhhhhH"},
-    {-3, -8, "HhhhhhhhHhH"}, {-2, -8, "HhhhhhhHFFF"}, {-1, -8, "HhhhhhHfkk"}, {0, -8, "HhhhhhHf"},
-    {1, -9, "HhhhhhHff"}, {2, -9, "HhhhhH"}, {3, -9, "HhihhH"}, {4, -9, "HhhhH"}, {5, -9, "HhihH"},
-    {6, -9, "HhhH"}, {7, -9, "HhH"}, {8, -8, "HH"}, {0, 0, NULL},
-};
 static const Row CAB6_LONGO_COSTAS[] = {
     {-7, -5, "HHHH"}, {-6, -6, "HhiihHH"}, {-5, -7, "HhiihhhhH"}, {-4, -8, "HhhhhhhhhhH"},
     {-3, -8, "HhhhhhhhhhH"}, {-2, -8, "HhhhhhhhhhH"}, {-1, -8, "HhhhhhhhhH"}, {0, -8, "HhhhhhhhH"},
@@ -1274,6 +1304,12 @@ static const Head HEADS[] = {
     {"chamas", {{0, 8, "H"}, {1, 6, "H.Hh"}, {2, 5, "HhHhi"}, {3, 3, "H.HhhiH"}, {4, 2, "HHHhhiiH"},
                 {5, 3, "HHHHhhiHh"}, {6, 3, "HHHHHhkfFF"}, {7, 4, "HHHHkfkkF"}, {8, 4, "XHHHkfeFF"},
                 {9, 5, "XXkkffFf"}, {10, 7, "XkkfF"}}},
+    /* Rodada 7 (prova CAB_PROVA; ref. Enjin, Gachiakuta): curto e bagunçado, jogado para cima e para
+       trás em tufos com textura, laterais curtas (a orelha aparece), loiro com as sombras vermelhas.
+       Sem barba. O rosto é o mesmo das chamas (sobrancelha descendo, queixo quadrado). */
+    {"desgrenhado", {{0, 1, "H"}, {0, 5, "H"}, {0, 8, "H"}, {1, 0, "HiH"}, {1, 4, "HihHhH"}, {2, 0, "HhAHhiihiH"},
+                     {3, 1, "HAhAhhiiihH"}, {4, 2, "HAAhAhhihhH"}, {5, 3, "HAAAhhAhhH"}, {6, 3, "HAkfkhkfFF"},
+                     {7, 4, "HkfkkfkkF"}, {8, 4, "XkkfkfeFF"}, {9, 5, "XXkkffFf"}, {10, 7, "XkkfF"}}},
     /* Suiren: cabelo curto e faixa turquesa com pontas soltas. */
     {"faixa", {{4, 5, "HHhH"}, {5, 4, "HHHhiiH"}, {6, 4, "AAAAAAAA"}, {7, 4, "HHHHHHHF"}, {8, 4, "HHHfFFeF"}},
      {{{6, 2, "aA"}, {7, 0, "aA"}, {8, -1, "a"}},
@@ -1728,10 +1764,17 @@ static void ribbon(Canvas *cv, int x0, int y0, int length, Rgb c0, Rgb c1, int i
 }
 
 static void draw_head(Canvas *cv, const Char *ch, int idx) {
-    const Head *hd = find_head(ch->cabeca);
+    bool enjin7 = getenv("CAB_PROVA") && !strcmp(ch->id, "enjin");
+    const Head *hd = find_head(enjin7 ? "desgrenhado" : ch->cabeca);
     if (!hd) return;
     Pal pal;
     head_palette(ch, &pal);
+    if (enjin7) {   /* loiro mesclado com vermelho: a sombra vermelha, o meio e a luz loiros */
+        pal.c['H'] = (Rgb){0x6a, 0x1c, 0x12};
+        pal.c['h'] = (Rgb){0xe0, 0xa0, 0x40};
+        pal.c['i'] = (Rgb){0xf8, 0xdc, 0x80};
+        pal.c['A'] = (Rgb){0xd0, 0x4a, 0x24};   /* a raiz vermelha de cada tufo */
+    }
     for (int i = 0; i < 3 && hd->fitas[i].n; i++)
         ribbon(cv, cv->seg->ox + hd->fitas[i].x, cv->seg->oy + hd->fitas[i].y, hd->fitas[i].n, ch->destaque[1],
                ch->destaque[1], idx + hd->fitas[i].y, 0.2, 1.1, 1, 1.3);
@@ -2075,7 +2118,9 @@ static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
     const Row *t = back ? ch->cab_costas : ch->cab_frente;
     bool prova6 = getenv("CAB_PROVA") != NULL;
     if (prova6 && !strcmp(ch->id, "garfiel")) t = back ? CAB6_GARFIEL_COSTAS : CAB6_GARFIEL_FRENTE;
-    if (prova6 && (!strcmp(ch->id, "arashi") || !strcmp(ch->id, "karasu"))) t = back ? CAB6_LONGO_COSTAS : CAB6_LONGO_FRENTE;
+    if (prova6 && !strcmp(ch->id, "arashi")) t = back ? CAB6_LONGO_COSTAS : CAB7_ARASHI_FRENTE;
+    if (prova6 && !strcmp(ch->id, "karasu")) t = back ? CAB7_KARASU_COSTAS : CAB7_KARASU_FRENTE;
+    if (prova6 && !strcmp(ch->id, "yoru")) t = back ? CAB7_YORU_COSTAS : CAB7_YORU_FRENTE;
     if (prova6 && !strcmp(ch->id, "hayate")) t = back ? CAB6_HAYATE_COSTAS : CAB6_HAYATE_FRENTE;
     /* o molde numa grade em volta do olho */
     static char M[48][72];
@@ -2119,10 +2164,11 @@ static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
             if (!cv_ok(x, y)) continue;
             /* a arma e o rastro passam na frente; abaixo do queixo o cabelo fica atrás do corpo */
             if (cv->tag[y][x] == T_WEAPON || lab_at(cv, x, y) == BLADE || lab_at(cv, x, y) == SMEAR) continue;
-            bool pele = k == 'F' || k == 'f' || k == 'k';
+            bool pele = k == 'F' || k == 'f' || k == 'k', barba = k == 'B' || k == 'b';
             if (pele && cv->a[y][x].a && !clus[y][x]) continue;   /* a pele só preenche o vazio */
-            if (cv->a[y][x].a && !clus[y][x] && (rr > 2 || orig_rgb(cv, x, y, 0xe69c69)) && !(prova6 && back && rr > 2)) continue;
-            Rgb col = k == 'F' ? ch->pele[0] : k == 'f' ? ch->pele[1] : k == 'k' ? ch->pele[2]
+            if (!barba && cv->a[y][x].a && !clus[y][x] && (rr > 2 || orig_rgb(cv, x, y, 0xe69c69)) && !(prova6 && back && rr > 2)) continue;
+            Rgb col = k == 'B' ? ch->cabelo[2] : k == 'b' ? ch->cabelo[1]
+                    : k == 'F' ? ch->pele[0] : k == 'f' ? ch->pele[1] : k == 'k' ? ch->pele[2]
                     : k == 'H' ? ch->cabelo[0] : k == 'h' ? ch->cabelo[1] : k == 'i' ? ch->cabelo[2]
                     : k == 'A' ? ch->destaque[0] : k == 'a' ? ch->destaque[1] : (Rgb){19, 19, 19};
             cv_put(cv, x, y, col);
@@ -2144,6 +2190,8 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                         char k = SHELL[ry][rx];
                         if (k == '.') continue;
                         Rgb c = k == 'a' ? ch->destaque[1] : k == 'A' ? ch->destaque[0] : ch->destaque2;
+                        if (getenv("CAB_PROVA"))   /* rodada 7: casco verde escuro */
+                            c = k == 'a' ? (Rgb){0x16, 0x2e, 0x16} : k == 'A' ? (Rgb){0x2a, 0x52, 0x26} : (Rgb){0x44, 0x70, 0x36};
                         cv_behind(cv, s->ox - 6 + rx, s->oy + 10 + ry, c);
                     }
                 break;
@@ -2454,10 +2502,12 @@ static void claws(Canvas *cv, const Blade *b, double size, Rgb core, Rgb edge, b
     /* três lâminas saindo direto dos nós dos dedos, abertas em leque (sem barra) */
     static const double da[3] = {-0.32, 0.0, 0.32};
     static Pts p;
+    /* rodada 7 (GARRA_PROVA): as três paralelas, com 1 px de vão entre elas (Wolverine) */
+    bool aco = getenv("GARRA_PROVA") != NULL;
     for (int j = 0; j < 3; j++) {
-        double a = ang + da[j], u2x = cos(a), u2y = sin(a);
-        double p0x = b->hilt[0] + b->u[0] * 0.6 + n[0] * (j - 1) * 0.9;
-        double p0y = b->hilt[1] + b->u[1] * 0.6 + n[1] * (j - 1) * 0.9;
+        double a = ang + (aco ? 0 : da[j]), u2x = cos(a), u2y = sin(a), gap = aco ? 2.0 : 0.9;
+        double p0x = b->hilt[0] + b->u[0] * 0.6 + n[0] * (j - 1) * gap;
+        double p0y = b->hilt[1] + b->u[1] * 0.6 + n[1] * (j - 1) * gap;
         double ln = size - (j != 1 ? 1 : 0);
         line_pts(&p, p0x, p0y, p0x + u2x * ln, p0y + u2y * ln);
         for (int i = 0; i < p.n; i++) {
@@ -2466,7 +2516,13 @@ static void claws(Canvas *cv, const Blade *b, double size, Rgb core, Rgb edge, b
                              : cv_ok(x, y) && (lab_at(cv, x, y) == NONE || lab_at(cv, x, y) == BLADE);
             if (ok) {
                 /* a raiz fica na cor da borda (sai de dentro da mão); a ponta, clara */
-                cv_put(cv, x, y, i == 0 ? edge : core);
+                Rgb c = i == 0 ? edge : core;
+                if (getenv("GARRA_PROVA")) {   /* rodada 7: aço, sem branco; o brilho corre pela lâmina */
+                    static const Rgb raiz = HEX(0x3a3e48), aco = HEX(0x9aa4b2), aco2 = HEX(0xc0c8d4), luz = HEX(0xeef2f8);
+                    c = i == 0 ? raiz : i == p.n - 1 ? luz : (i + j) % 2 ? aco2 : aco;
+                    if (behind && i > 0) c = (Rgb){(unsigned char)(c.r * 0.8), (unsigned char)(c.g * 0.8), (unsigned char)(c.b * 0.8)};
+                }
+                cv_put(cv, x, y, c);
                 mark(cv, x, y);
             }
         }
@@ -2542,7 +2598,8 @@ static void kama(Canvas *cv, const Blade *b0, double len, const Weapon *w, Rgb c
 
 static void blade_fx(Canvas *cv, const Char *ch, const char *anim, int idx) {
     Element el = ch->elemento;
-    if (rgb_set(ch->arma.brilho))
+    if (getenv("COR_PROVA")) return;   /* a aura na arma (weapon_aura) já leva a cor do personagem */
+    if (rgb_set(ch->arma.brilho) && !(getenv("GARRA_PROVA") && ch->arma.kind == W_GARRAS))
         for (int x = 0; x < CW; x++)
             for (int y = 0; y < CH; y++) {
                 if (!cv->wpx[y][x]) continue;
@@ -3658,6 +3715,12 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
                 if (any) fprintf(stderr, "%3d %s\n", y, line);
             }
     }
+    if (getenv("SEM_ARMA")) {   /* provas das posturas: o corpo sem a arma (a arma nova é desenhada por cima) */
+        for (int y = 0; y < CH; y++)
+            for (int x = 0; x < CW; x++)
+                if (s->lab[y][x] == BLADE || s->lab[y][x] == HANDLE || s->lab[y][x] == SMEAR) erase_px(cv, x, y);
+        return;
+    }
     memset(cv->wpx, 0, sizeof cv->wpx);
     g_nkama = g_ndag = 0;
     cv->pen = T_WEAPON;
@@ -4034,7 +4097,9 @@ static void glow(Canvas *cv, const Ctx *ctx, double p, int ymid, Rgb top, Rgb bo
 }
 
 /* Aura do elemento de cada um. Mais forte na preparação e no contato. */
+static void weapon_aura(Canvas *cv, const Char *ch, const Ctx *ctx);
 static void aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
+    if (getenv("SEM_AURA")) return;   /* provas de cabeça: sem a aura do corpo por cima */
     Element el = ch->elemento;
     int bx0 = CW, bx1 = -1, by0 = CH, by1 = -1;
     for (int y = 0; y < CH; y++)
@@ -4063,6 +4128,7 @@ static void aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
             }
         }
     }
+    if (getenv("COR_PROVA")) { weapon_aura(cv, ch, ctx); return; }
     switch (el) {
         case EL_FOGO: {
             /* labaredas saindo do alto da silhueta */
@@ -4894,42 +4960,44 @@ static const char *const OBORO_CABECA[] = {
     "......DBBBBBD.....",
 };
 #define OBORO_LINHAS ((int)(sizeof OBORO_CABECA / sizeof OBORO_CABECA[0]))
-/* Prova (OBORO_PROVA): a cabeça na proporção do Kojiro (do alto da cabeça ao queixo,
-   24% da altura), oval em pé: 9 px de largura por 10 de altura, mais o coque pequeno no
-   alto de trás com o cordão (como o do Hanzo). O rosto do Hanzo moço: a testa, a
-   sobrancelha em sombra por cima do olho de 1 px, o nariz saindo 1 px, a orelha no meio
-   da cabeça, a barba curta preta da costeleta ao queixo marcando a mandíbula, e o
-   pescoço aparecendo entre as ombreiras (a pele pinta por cima da gola; a gola só no vão).
-   A primeira linha é a -6 (a dos olhos da máscara é a 0). */
+/* Prova (OBORO_PROVA, rodada 7): o rosto sem máscara da cena final, na proporção do
+   Kojiro (do alto da cabeça ao queixo, 24% da altura). Cabelo militar, raspado rente: o
+   crânio em cinza escuro com a luz no alto e a linha do cabelo reta na testa. O rosto do
+   Hanzo moço: a sobrancelha em sombra por cima do olho, o nariz saindo 1 px, a orelha no
+   meio da cabeça. Barba média, cheia e preta, com textura, da costeleta até dois pixels
+   abaixo do queixo. O pescoço aparece entre as ombreiras (a pele pinta por cima da gola;
+   a gola só no vão). A primeira linha é a -6 (a dos olhos da máscara é a 0). */
 #define OBORO_PROVA_TOPO 6
 static const char *const OBORO_PROVA_CABECA[] = {
-    "........AL........",
-    ".......LYLLLL.....",
-    "......LYYSSSSL....",
-    "......LYSSSSSSXW..",
-    "......LSSSSSLVVX..",
-    "......LSSuVXXLXW..",
+    "..................",
+    ".......LLLL.......",
+    "......LYgYYL......",
+    "......LYYYYYXW....",
+    "......LYYYSVVX....",
+    "......LYSuVXLXW...",
     "......LSSVuXXXXXW.",
-    ".......LSSuXXXXu..",
-    ".......LSSSSXLSS..",
-    "........LSSSSSSL..",
-    ".........LSSSL....",
+    ".......LSSSXXXXu..",
+    ".......LSYSSSLSS..",
+    "........LSSYSSSSL.",
+    "........LSSSSYSL..",
+    ".........LSSSSL...",
     ".........VuuV.....",
     "........DVuuVD....",
 };
 #define OBORO_PROVA_LINHAS ((int)(sizeof OBORO_PROVA_CABECA / sizeof OBORO_PROVA_CABECA[0]))
-/* De costas, na prova: a mesma oval, o coque no alto, as duas orelhas, a nuca e o pescoço. */
+/* De costas, na prova: a mesma oval raspada, as duas orelhas, a nuca e o pescoço. */
 static const char *const OBORO_PROVA_NUCA[] = {
-    "........AL........",
-    ".......LYYLL......",
-    "......LYYSSSL.....",
-    "......LYSSSSSL....",
-    "......LSSSSSSL....",
-    ".....uLSSSSSSLu...",
-    ".....VLSSSSSSLV...",
-    "......LSSSSSSL....",
-    ".......LSSSSL.....",
+    "..................",
+    ".......LLLL.......",
+    "......LYgYYL......",
+    "......LYYYYYL.....",
+    "......LYYYYYL.....",
+    ".....uLYYYYYLu....",
+    ".....VLYYYYYLV....",
+    "......LYYYYYL.....",
+    ".......LYYYL......",
     "........LVVL......",
+    "........VuuV......",
     "........VuuV......",
     "........VuuV......",
     ".......DVuuVD.....",
@@ -5135,7 +5203,7 @@ static void oboro_head_lying(Canvas *cv, int bx, int by) {
         for (int c = 0; molde[r][c]; c++) {
             char k = molde[r][c];
             if (k == '.') continue;
-            if (pv && r == 5 && k == 'L' && c == 13) k = 'V';   /* olho fechado */
+            if (pv && r == 5 && k == 'L' && c == 12) k = 'V';   /* olho fechado */
             int x = X0 - (r - topo), y = Y0 + c;
             if (!cv_ok(x, y)) continue;
             paint_px(cv, x, y, k);
@@ -6622,8 +6690,64 @@ static void usage(void) {
            "  --lista    mostra os personagens e sai\n");
 }
 
+/* Rodada 7 (prova COR_PROVA): a cor de cada um no rastro do golpe e na aura, que sai do corpo e
+   fica só na arma. Claro (miolo), meio, escuro (borda). */
+static const struct { const char *id; Rgb c[3]; } COR7[] = {
+    {"daichi", {HEX(0xfaf0d8), HEX(0xdcc49a), HEX(0xa88c64)}},
+    {"genbu", {HEX(0x6aa85a), HEX(0x2e6a2a), HEX(0x163e18)}},
+    {"raizo", {HEX(0xfffac8), HEX(0xffe030), HEX(0xc8a010)}},
+    {"shizuku", {HEX(0xffffff), HEX(0xc8ecff), HEX(0x80c4f0)}},
+    {"garfiel", {HEX(0xffe4c0), HEX(0xff8c20), HEX(0xc05010)}},
+    {"suiren", {HEX(0xc8dcff), HEX(0x2c5cd0), HEX(0x142c80)}},
+    {"karasu", {HEX(0x8a8a96), HEX(0x26262e), HEX(0x0a0a0e)}},
+    {"hayate", {HEX(0xf0ffe8), HEX(0xa8f0a0), HEX(0x58c060)}},
+    {"enjin", {HEX(0xffd0c0), HEX(0xff3020), HEX(0xa00c10)}},
+    {"arashi", {HEX(0xf4faff), HEX(0x7cc8ff), HEX(0x2a6cf0)}},
+    {"yoru", {HEX(0xf6e6ff), HEX(0xb070ff), HEX(0x6a2cc8)}},
+    {"jinshi", {HEX(0xffffff), HEX(0xeef2ff), HEX(0xc4ccdc)}},
+    {"oboro_mascara", {HEX(0xffffff), HEX(0xeef2ff), HEX(0xc4ccdc)}},   /* fase 1: branco, como o do Kojiro */
+};
+
+static void cor_prova(void) {
+    if (!getenv("COR_PROVA")) return;
+    for (size_t i = 0; i < sizeof COR7 / sizeof COR7[0]; i++)
+        for (int c = 0; c < NCHARS; c++)
+            if (!strcmp(CHARS[c].id, COR7[i].id)) memcpy(CHARS[c].rastro, COR7[i].c, sizeof CHARS[c].rastro);
+}
+
+/* A aura na arma: um halo de 1 px na cor do meio colado na lâmina, pontos soltos na cor da borda
+   um pixel mais longe e, conforme o elemento, a labareda subindo (fogo) ou o raio saltando (raio). */
+static void weapon_aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
+    static unsigned char w[CH][CW];
+    double pw = ctx->phase == PH_CONTACT ? 1.4 : ctx->phase == PH_STRIKE ? 1.2 : 1.0;
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) w[y][x] = cv->wpx[y][x] && cv->a[y][x].a;
+    static const int d4[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            if (!w[y][x]) continue;
+            for (int k = 0; k < 4; k++) {
+                int nx = x + d4[k][0], ny = y + d4[k][1];
+                if (hsh6("aura7", ctx->anim, ctx->idx, x, y, k, 0) < 0.55 * pw) fx_put_clean(cv, nx, ny, ch->rastro[1]);
+                int fx = x + 2 * d4[k][0], fy = y + 2 * d4[k][1];
+                if (hsh6("aura7b", ctx->anim, ctx->idx, x, y, k, 0) < 0.12 * pw) fx_put_clean(cv, fx, fy, ch->rastro[2]);
+            }
+            double r = hsh4("aura7c", ctx->anim, ctx->idx, x, y);
+            if (ch->elemento == EL_FOGO && r < 0.35 * pw)
+                for (int j = 1; j <= 1 + (int)(r * 9); j++) fx_put_clean(cv, x + (j == 3 ? -1 : 0), y - j, j == 1 ? ch->rastro[1] : ch->rastro[2]);
+            if (ch->elemento == EL_RAIO && r < 0.08 * pw) {
+                int sx = r < 0.04 ? 1 : -1, xx = x, yy = y;
+                for (int j = 0; j < 5; j++) {
+                    xx += sx; yy += (j % 2) ? 1 : -1;
+                    fx_put_clean(cv, xx, yy, j % 2 ? ch->rastro[0] : ch->rastro[1]);
+                }
+            }
+        }
+}
+
 int main(int argc, char **argv) {
     SetTraceLogLevel(LOG_WARNING);
+    cor_prova();
     const char *entrada = NULL, *saida = "assets/sprites";
     const char *only[64];
     int nonly = 0;
