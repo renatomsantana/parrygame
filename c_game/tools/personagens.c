@@ -5479,6 +5479,26 @@ static int frame_ms(const Char *ch) {
     }
 }
 
+/* Nada encosta na borda de cima do quadro: o rastro que o pack já traz cortado lá em cima
+   (o risco vertical do golpe forte, a meia-lua do Oboro, a da fúria nas cores da roupa) perde
+   as 3 linhas do alto e os cantos da linha seguinte, e termina arredondado dentro do quadro.
+   Nenhum corpo chega a essas linhas (a cabeça mais alta fica bem abaixo). */
+static void round_top(Canvas *cv) {
+    enum { R = 3 };
+    bool touch = false;
+    for (int x = 0; x < CW && !touch; x++) touch = cv->a[0][x].a;
+    if (!touch) return;
+    for (int y = 0; y < R; y++)
+        for (int x = 0; x < CW; x++)
+            if (cv->a[y][x].a) cv_clear(cv, x, y);
+    static bool on[CW];
+    for (int x = 0; x < CW; x++) on[x] = cv->a[R][x].a;
+    for (int x = 0; x < CW; x++) {
+        bool left = x > 0 && on[x - 1], right = x < CW - 1 && on[x + 1];
+        if (on[x] && left != right) cv_clear(cv, x, R);   /* as pontas da linha: o canto arredonda */
+    }
+}
+
 static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ctx, Canvas *cv) {
     const char *anim = ctx->anim;
     int idx = ctx->idx;
@@ -5533,7 +5553,8 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         cv->pen = T_FX;
         paint_smear(cv, ch, anim, idx);
         smear_style(cv, ch);
-        if (!strcmp(ch->id, "karasu") && cor7(ch)) trail_rim(cv, ch);
+        /* o rastro preto do Karasu (e o do eco dele no Oboro, que herda o rastro) ganha o fio cinza */
+        if (ch->rastro[0].r == 0x34 && ch->rastro[0].g == 0x34 && ch->rastro[0].b == 0x3e) trail_rim(cv, ch);
         /* a aura na arma vem depois dos cortes de vento e de lua: o halo tem a cor do rastro e
            mudaria o desenho (e o alcance) do corte */
         if (!cor7(ch)) aura(cv, ch, ctx);
@@ -5564,6 +5585,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         resize_body(cv, seg->ox + 8, seg->oy + 19, ch->largura, ch->altura, seg->has_hat && !ch->chapeu ? seg->oy + 10 : -1);
         translate(cv, lunge(ch, ctx));
     }
+    round_top(cv);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -6752,7 +6774,7 @@ static void usage(void) {
 
 /* A cor de cada aprendiz no rastro do golpe e na aura, que sai do corpo e fica só na arma
    (rodada 7). Claro (miolo), meio, escuro (borda). O Oboro não entra: nos ecos ele herda o
-   rastro do aprendiz imitado. O Karasu (preto com o fio cinza) só com KARASU_PROVA, até aprovar. */
+   rastro do aprendiz imitado. O Karasu é preto, com o fio cinza na borda de fora (trail_rim). */
 static const struct { const char *id; Rgb c[3]; } COR7[] = {
     {"daichi", {HEX(0xfaf0d8), HEX(0xdcc49a), HEX(0xa88c64)}},
     {"genbu", {HEX(0x6aa85a), HEX(0x2e6a2a), HEX(0x163e18)}},
@@ -6768,20 +6790,16 @@ static const struct { const char *id; Rgb c[3]; } COR7[] = {
     {"jinshi", {HEX(0xffffff), HEX(0xe6ecff), HEX(0xb8c4ec)}},   /* o branco que ele já tinha: o alcance mede o rastro por estas cores */
 };
 
-static bool cor7_on(const char *id) {
-    return strcmp(id, "karasu") || getenv("KARASU_PROVA");
-}
-
 static bool cor7(const Char *ch) {
     for (size_t i = 0; i < sizeof COR7 / sizeof COR7[0]; i++)
-        if (!strcmp(ch->id, COR7[i].id)) return cor7_on(ch->id);
+        if (!strcmp(ch->id, COR7[i].id)) return true;
     return false;
 }
 
 static void cor_prova(void) {
     for (size_t i = 0; i < sizeof COR7 / sizeof COR7[0]; i++)
         for (int c = 0; c < NCHARS; c++)
-            if (!strcmp(CHARS[c].id, COR7[i].id) && cor7_on(COR7[i].id)) memcpy(CHARS[c].rastro, COR7[i].c, sizeof CHARS[c].rastro);
+            if (!strcmp(CHARS[c].id, COR7[i].id)) memcpy(CHARS[c].rastro, COR7[i].c, sizeof CHARS[c].rastro);
 }
 
 /* A aura na arma: um halo de 1 px na cor do meio colado na lâmina, pontos soltos na cor da borda
