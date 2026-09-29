@@ -106,6 +106,19 @@ float duel_strike_lead(const Duel *d) {
     return d->s.attackLead;
 }
 
+/* O aviso do primeiro golpe vem sempre o mesmo tempo antes do contato (o da postura);
+ * na lança, o tempo a mais da ponta viajando também, para o aviso vir antes da partida.
+ * Na sequência, o aviso é o contato anterior: o brilho sai quando a preparação começa. */
+float duel_aviso(const Duel *d) {
+    if (d->comboStrike > 0) return d->windupDuration;
+    return duel_stance(d)->aviso + (duel_strike_lead(d) - d->s.attackLead);
+}
+
+double duel_cue_time(const Duel *d) {
+    double t = d->strikeAt - duel_aviso(d), start = d->strikeAt - d->windupDuration;
+    return t < start ? start : t;
+}
+
 bool duel_in_combo(const Duel *d) { return d->comboRemaining > 0 || d->comboStrike > 0; }
 
 double duel_time_to_impact(const Duel *d) {
@@ -124,8 +137,7 @@ DuelTimeline duel_timeline(const Duel *d) {
     t.strike = d->strikeAt;
     t.start = d->strikeAt - d->windupDuration;
     t.launch = d->strikeAt - duel_strike_lead(d);
-    t.cue = d->strikeAt - d->s.cueLead;
-    if (t.cue < t.start) t.cue = t.start;
+    t.cue = duel_cue_time(d);
     t.perfectFrom = d->strikeAt - st->perfectWindow;
     t.goodFrom = d->strikeAt - st->goodWindow;
     return t;
@@ -141,7 +153,7 @@ static void build_schedule(Duel *d) {
     d->scheduleCount = 0;
     d->scheduleIndex = 0;
     push_schedule(d, d->strikeAt - duel_strike_lead(d), SCH_LAUNCH);
-    push_schedule(d, d->strikeAt - d->s.cueLead, SCH_CUE);
+    push_schedule(d, duel_cue_time(d), SCH_CUE);
     /* Ordenação estável por tempo (inserção: a lista é curta). */
     for (int i = 1; i < d->scheduleCount; i++) {
         ScheduleItem x = d->schedule[i];
@@ -227,6 +239,11 @@ static void begin_attack(Duel *d) {
         duration += duel_strike_lead(d) - s->attackLead;
     }
     if (duration < duel_strike_lead(d) + 0.1) duration = duel_strike_lead(d) + 0.1;
+    /* o primeiro golpe: a preparação começa antes do aviso */
+    if (!continuing) {
+        double minimo = st->aviso + (duel_strike_lead(d) - s->attackLead) + AJ_PREPARO_ANTES_DO_AVISO;
+        if (duration < minimo) duration = minimo;
+    }
     d->windupDuration = (float)duration;
 
     if (!continuing) {
@@ -247,7 +264,7 @@ static void begin_attack(Duel *d) {
 static void fire(Duel *d, ScheduleKind kind) {
     switch (kind) {
         case SCH_LAUNCH: d->attackLaunched = true; emit(d, EV_LAUNCH, J_NONE, 0, 0, false); break;
-        case SCH_CUE: d->cuePlayed = true; emit(d, EV_CUE, J_NONE, 0, 0, false); break;
+        case SCH_CUE: d->cuePlayed = true; emit(d, EV_CUE, J_NONE, 0, d->comboStrike, false); break;
     }
 }
 

@@ -36,14 +36,16 @@ static double planejar(RoboMente *m, const Duel *d) {
     const Robo *r = &m->r;
     double contato = d->strikeAt;
     double inicio = contato - d->windupDuration;          /* começo da preparação */
-    double aviso = contato - d->s.cueLead;                /* o aviso nunca vem antes da preparação */
-    if (aviso < inicio) aviso = inicio;
-    bool avisoPercebido = d->m->cueAudio > 0;
+    double aviso = duel_cue_time(d);
+    bool avisoPercebido = d->m->cueAudio > 0 || d->m->cueVisual > 0;   /* o som ou o brilho */
     switch (r->tipo) {
         case ROBO_REACAO: {
             double partida = contato - duel_strike_lead(d);
             double sinal = partida, reacao = r->reacao;
-            if (avisoPercebido && aviso > partida) { sinal = aviso; reacao -= ROBO_REACAO_SOM; }
+            if (avisoPercebido && aviso > partida) {
+                sinal = aviso;
+                if (d->m->cueAudio > 0) reacao -= ROBO_REACAO_SOM;
+            }
             return sinal + reacao + normal(&m->rng) * r->mao;
         }
         case ROBO_HUMANO: {

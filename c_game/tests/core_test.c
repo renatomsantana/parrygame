@@ -87,7 +87,7 @@ static void test_ajuste(void) {
           "bom vem do ajuste.h");
     CHECK(s.badBossRecover == AJ_ERRO_MESTRE_RECUPERA && s.sealRenRecover == AJ_SELO_CURA,
           "erro e selo vêm do ajuste.h");
-    CHECK(s.attackLead == AJ_LAMINA_PARTE && s.cueLead == AJ_AVISO_SOM && s.inputCooldown == AJ_ENTRE_GESTOS &&
+    CHECK(s.attackLead == AJ_LAMINA_PARTE && s.inputCooldown == AJ_ENTRE_GESTOS &&
           s.recovery == AJ_PAUSA_SEQUENCIA && s.sealRecovery == AJ_PAUSA_SELO && s.firstWindupDelay == AJ_PAUSA_INICIO &&
           s.pressureSpeed == AJ_PRESSA && s.comboGap == AJ_PAUSA_NA_CADEIA && s.minChainGap == AJ_CADEIA_MIN,
           "tempos vêm do ajuste.h");
@@ -533,6 +533,8 @@ static void test_janelas_viaveis(void) {
                     else if (probe(&d, d.strikeAt - pw * 0.5) != J_PERFEITO) { ok = false; CHECK(false, "%s/%s golpe %d: o meio da janela perfeita não dá perfeito", m->name, mv, d.comboStrike + 1); }
                     else if (probe(&d, d.strikeAt - (pw + gw) * 0.5) != J_BOM) { ok = false; CHECK(false, "%s/%s golpe %d: o meio da janela boa não dá bom", m->name, mv, d.comboStrike + 1); }
                     else if (probe(&d, -1) != J_RUIM) { ok = false; CHECK(false, "%s/%s: sem apertar não dá erro", m->name, mv); }
+                    else if (d.comboStrike == 0 && d.strikeAt - duel_cue_time(&d) < (m->cueAudio > 0 ? AJ_AVISO_MENOR : AJ_AVISO_SO_BRILHO) - 1e-6) {
+                        ok = false; CHECK(false, "%s/%s: aviso só %.0f ms antes do contato", m->name, mv, (d.strikeAt - duel_cue_time(&d)) * 1000); }
                     else if (d.strikeAt - gw - 0.02 >= inicio && probe(&d, d.strikeAt - gw - 0.02) != J_RUIM) { ok = false; CHECK(false, "%s/%s: cedo demais não dá erro", m->name, mv); }
                 }
                 bool p = robo_quer_apertar(&r, &d, ROBO_QUADRO);
@@ -545,6 +547,69 @@ static void test_janelas_viaveis(void) {
     }
     CHECK(golpes > 5000, "golpes conferidos: %d", golpes);
     printf("janelas viáveis: %d golpes conferidos\n", golpes);
+}
+
+/* O aviso: som e brilho sempre o mesmo tempo antes do contato, 450 ms no daichi
+ * descendo até 320 ms; o jinshi, sem som, avisa só com o brilho e nunca com menos de
+ * 350 ms. Na sequência, o aviso de cada golpe é o contato anterior (400 ms ou mais). */
+static void test_aviso(void) {
+    float anterior = 1;
+    for (int i = 0; i < MASTER_COUNT; i++) {
+        const MasterProfile *m = roster_get(i);
+        float a = m->stances[0].aviso;
+        CHECK(a >= AJ_AVISO_MENOR - 1e-6 && a <= AJ_AVISO_PRIMEIRO + 1e-6, "%s avisa entre 320 e 450 ms (%.0f)", m->name, a * 1000);
+        CHECK(a > m->stances[0].goodWindow + 0.1f, "%s: o aviso vem bem antes da janela boa", m->name);
+        if (m->cueAudio > 0) {
+            CHECK(a < anterior, "o aviso de %s é menor que o do anterior (%.0f)", m->name, a * 1000);
+            anterior = a;
+        } else {
+            CHECK(m->cueVisual > 0 && a >= AJ_AVISO_SO_BRILHO - 1e-6, "%s avisa só com o brilho, %.0f ms antes", m->name, a * 1000);
+        }
+    }
+    CHECK(fabsf(roster_get(0)->stances[0].aviso - AJ_AVISO_PRIMEIRO) < 1e-6, "daichi avisa 450 ms antes");
+    CHECK(fabsf(roster_get(10)->stances[0].aviso - AJ_AVISO_MENOR) < 1e-6, "yoru, o último com som, avisa 320 ms antes");
+    CHECK(roster_get(11)->cueAudio == 0, "jinshi não tem som de aviso");
+    for (int k = 0; k < roster_get(12)->stanceCount; k++)
+        CHECK(roster_get(12)->stances[k].aviso >= AJ_AVISO_MENOR - 1e-6, "oboro nunca avisa com menos de 320 ms (fase %d)", k + 1);
+    /* no duelo: o aviso sai no instante certo, antes da lâmina partir */
+    Settings s;
+    settings_default(&s);
+    for (int i = 0; i < roster_size(); i++) {
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 5);
+        int primeiros = 0, cadeias = 0;
+        bool ok = true;
+        double contatoAnterior = -1;
+        for (int n = 0; n < 60 && d.phase != PH_FINISHED; n++) {
+            while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
+            if (d.phase == PH_FINISHED) break;
+            double inicio = d.clock, contato = d.strikeAt, aviso = -1, partida = -1;
+            double esperado = d.m->stances[d.stanceIndex].aviso + (duel_strike_lead(&d) - s.attackLead);
+            while (d.phase == PH_WINDUP) {
+                if (!d.attempted && d.strikeAt - d.clock <= 0.02) duel_press(&d);
+                duel_tick(&d, 1.0 / 1000);
+                DuelEvent ev[MAX_EVENTS];
+                int k = duel_drain(&d, ev, MAX_EVENTS);
+                for (int e = 0; e < k; e++) {
+                    if (ev[e].kind == EV_CUE && aviso < 0) aviso = d.clock;
+                    if (ev[e].kind == EV_LAUNCH && partida < 0) partida = d.clock;
+                }
+            }
+            (void)inicio;
+            if (d.lastStrikeAt != contato) break;   /* o golpe terminou de outro jeito */
+            bool primeiro = d.comboStrike == 0;
+            if (primeiro) {
+                if (fabs((contato - aviso) - esperado) > 0.0015 || aviso > partida) ok = false;
+                primeiros++;
+            } else {
+                if (contatoAnterior < 0 || contato - contatoAnterior < s.minChainGap - 1e-3 || aviso > partida) ok = false;
+                cadeias++;
+            }
+            contatoAnterior = contato;
+        }
+        CHECK(ok && primeiros > 0, "%s: o aviso sai no tempo fixo, antes da lâmina partir (%d primeiros, %d na sequência)",
+              roster_get(i)->name, primeiros, cadeias);
+    }
 }
 
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
@@ -898,6 +963,7 @@ int main(void) {
     test_every_master_beatable();
     test_robos();
     test_janelas_viaveis();
+    test_aviso();
     test_timeline();
     test_movesets();
     test_traits();

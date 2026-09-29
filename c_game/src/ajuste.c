@@ -12,7 +12,6 @@ void settings_default(Settings *s) {
     s->perfectRenRecover = AJ_PERFEITO_CURA;
     s->inputCooldown = AJ_ENTRE_GESTOS;
     s->attackLead = AJ_LAMINA_PARTE;
-    s->cueLead = AJ_AVISO_SOM;
     s->recovery = AJ_PAUSA_SEQUENCIA;
     s->sealRecovery = AJ_PAUSA_SELO;
     s->sealRenRecover = AJ_SELO_CURA;

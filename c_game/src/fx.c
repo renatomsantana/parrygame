@@ -104,12 +104,16 @@ void fx_ring(Fx *fx, Vector2 at, float speed, float life, float width, Color c) 
 }
 
 /* Faísca do parry perfeito: estrela de quatro pontas, branca no centro e dourada nas pontas. */
-void fx_star(Fx *fx, Vector2 at, float size, float life) {
+void fx_star_tint(Fx *fx, Vector2 at, float size, float life, Color outer, Color inner) {
     for (int i = 0; i < 4; i++) {
         if (fx->stars[i].life > 0) continue;
-        fx->stars[i] = (Star){at, size, life, life};
+        fx->stars[i] = (Star){at, size, life, life, outer, inner};
         return;
     }
+}
+
+void fx_star(Fx *fx, Vector2 at, float size, float life) {
+    fx_star_tint(fx, at, size, life, (Color){255, 196, 90, 255}, (Color){255, 230, 160, 255});
 }
 
 static void star_shape(Vector2 c, float len, float wid, float rot, Color col) {
@@ -172,8 +176,11 @@ void fx_draw_world(const Fx *fx) {
         const Star *st = &fx->stars[i];
         if (st->life <= 0) continue;
         float t = st->life / st->maxLife, grow = 0.6f + 0.4f * (1 - t);
-        star_shape(st->pos, st->size * grow, st->size * 0.18f, 0.2f, (Color){255, 196, 90, (unsigned char)(220 * t)});
-        star_shape(st->pos, st->size * 0.55f * grow, st->size * 0.1f, 0.2f + 0.785f, (Color){255, 230, 160, (unsigned char)(200 * t)});
+        Color o = st->outer, n = st->inner;
+        o.a = (unsigned char)(220 * t);
+        n.a = (unsigned char)(200 * t);
+        star_shape(st->pos, st->size * grow, st->size * 0.18f, 0.2f, o);
+        star_shape(st->pos, st->size * 0.55f * grow, st->size * 0.1f, 0.2f + 0.785f, n);
         DrawCircleV(st->pos, st->size * 0.2f * t + 0.5f, (Color){255, 255, 255, (unsigned char)(255 * t)});
     }
     for (int i = 0; i < MAX_RINGS; i++) {

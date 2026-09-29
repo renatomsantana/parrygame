@@ -26,7 +26,6 @@
 /* ---- Tempos do duelo ------------------------------------------------- */
 #define AJ_LAMINA_PARTE            0.220f   /* a lâmina parte este tempo antes do contato */
 #define AJ_LANCA_PARTE_X            1.75f   /* a estocada de longe parte 1,75 x mais cedo */
-#define AJ_AVISO_SOM               0.180f   /* o som de aviso toca este tempo antes do contato */
 #define AJ_ENTRE_GESTOS            0.300f   /* intervalo mínimo entre dois apertos */
 #define AJ_PAUSA_SEQUENCIA         0.800f   /* pausa depois de cada sequência */
 #define AJ_PAUSA_SELO              2.200f   /* pausa depois de quebrar um selo do oboro */
@@ -35,6 +34,15 @@
 #define AJ_PAUSA_NA_CADEIA         0.080f   /* pausa entre dois golpes da mesma sequência */
 #define AJ_CADEIA_MIN              0.400f   /* menor intervalo entre dois contatos de uma sequência */
 #define AJ_BRASAS_TEMPO              3.0f   /* enjin: segundos em brasas depois de um erro */
+
+/* ---- O aviso: som e brilho na lâmina, sempre o mesmo tempo antes do contato ---- */
+/* Cada mestre tem o seu (Stance.aviso, no roster.c), dentro destes limites. Na
+ * sequência, o aviso de cada golpe depois do primeiro é o contato anterior (o
+ * ritmo), com um brilho menor quando a preparação seguinte começa. */
+#define AJ_AVISO_PRIMEIRO          0.450f   /* o aviso do daichi, o primeiro da trilha */
+#define AJ_AVISO_MENOR             0.320f   /* nenhum aviso vem mais tarde que isto antes do contato */
+#define AJ_AVISO_SO_BRILHO         0.350f   /* quem avisa só com o brilho (jinshi, sem som) avisa ao menos isto antes */
+#define AJ_PREPARO_ANTES_DO_AVISO  0.100f   /* a preparação começa pelo menos isto antes do aviso */
 
 /* ---- Sensação: hitstop (o duelo congela), tremor, câmera lenta, recuo -- */
 #define AJ_HITSTOP_PERFEITO        0.090f

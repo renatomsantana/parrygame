@@ -30,7 +30,6 @@ typedef struct {
     float perfectRenRecover;   /* perfeito: Ren recupera */
     float inputCooldown;       /* intervalo mínimo entre gestos dentro do mesmo golpe */
     float attackLead;          /* a lâmina parte este tempo antes do contato */
-    float cueLead;             /* o sinal toca este tempo antes do contato */
     float recovery;            /* pausa depois de cada golpe */
     float sealRecovery;        /* pausa depois de quebrar um selo do BIG BOSS */
     float sealRenRecover;      /* selo quebrado: Ren recupera o fôlego */
@@ -53,6 +52,7 @@ void settings_for_level(Settings *s, int defeated);
 typedef struct {
     const char *name;             /* "" para mestres de uma postura só */
     float perfectWindow, goodWindow;
+    float aviso;                  /* o aviso (som e brilho) vem este tempo antes do contato */
     float windups[MAX_WINDUPS];
     int windupCount;
 } Stance;
@@ -198,7 +198,7 @@ typedef enum { J_NONE, J_RUIM, J_BOM, J_PERFEITO } Judgement;
 typedef enum {
     EV_WINDUP,        /* a: duração */
     EV_LAUNCH,        /* a lâmina parte */
-    EV_CUE,           /* o aviso */
+    EV_CUE,           /* o aviso; i: qual golpe da sequência (0 = o primeiro) */
     EV_PRESS,         /* gesto aceito */
     EV_IMPACT,        /* judgement, a: antecedência (-1 = sem defesa), flag: quebrou postura */
     EV_STANCE,        /* i: nova postura */
@@ -271,6 +271,8 @@ const Move *duel_move(const Duel *d);             /* sequência em curso (NULL =
 float duel_ren_damage(const Duel *d);     /* dano de um erro contra este mestre */
 bool duel_strike_dual(const Duel *d);     /* o golpe que vem é de duas lâminas */
 float duel_strike_lead(const Duel *d);    /* segundos entre a lâmina partir e o contato */
+float duel_aviso(const Duel *d);          /* segundos entre o aviso e o contato */
+double duel_cue_time(const Duel *d);      /* instante do aviso do golpe em preparação */
 /* Linha do tempo do golpe em preparação (tempos do relógio do duelo), para o overlay
  * de debug: perfeito se o aperto cai em [perfectFrom, strike], bom em [goodFrom, strike]. */
 typedef struct {

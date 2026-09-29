@@ -7,14 +7,14 @@
 #include <stddef.h>
 
 #define W(...) .windups = {__VA_ARGS__}, .windupCount = sizeof((float[]){__VA_ARGS__}) / sizeof(float)
-#define STANCE(name, perfect, good, ...) {name, perfect, good, W(__VA_ARGS__)}
+#define STANCE(name, perfect, good, aviso, ...) {name, perfect, good, aviso, W(__VA_ARGS__)}
 
 static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 1, .name = "daichi", .style = "postura da terra", .title = "O que Segue a Tradição", .venue = "Celeiro ao entardecer",
         .special = "Katana, devagar: cada golpe avisa muito antes de chegar.",
         .arena = ARENA_CELEIRO, .posture = 300, .hitsToFall = 50, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFD8A8FF,
-        .stances = {STANCE("", 0.090f, 0.220f, 1.55f, 1.35f, 1.75f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.090f, 0.220f, 0.450f, 1.55f, 1.35f, 1.75f)}, .stanceCount = 1,
         .moves = {
             {"rocha", 1, {0}, 2.0f, -1, 0, LOOK_HIGH},
             {"raiz", 1, {0}, 2.0f, -1, 0, LOOK_LOW},
@@ -43,7 +43,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 2, .name = "genbu", .style = "postura da tartaruga", .title = "O que Tem Pena", .venue = "Jardim de pedras do mosteiro",
         .special = "Katana simples, já mais rápida: demora a sair do casco, e sai de jeitos diferentes.",
         .arena = ARENA_JARDIM, .posture = 300, .hitsToFall = 45, .cueVisual = 1, .cueAudio = 1, .tint = 0xD8E0C8FF,
-        .stances = {STANCE("", 0.087f, 0.215f, 1.15f, 1.00f, 1.25f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.087f, 0.215f, 0.437f, 1.15f, 1.00f, 1.25f)}, .stanceCount = 1,
         .moves = {
             {"casco", 1, {0}, 2.0f, -1, 0, LOOK_THRUST},
             {"mordida", 2, {0.42f}, 2.0f, -1, 0, LOOK_THRUST},
@@ -72,7 +72,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 3, .name = "raizo", .style = "postura do touro", .title = "O Honrado", .venue = "Pátio do dojo",
         .special = "Odachi pesada: golpes lentos, diretos, que avisam antes de chegar.",
         .arena = ARENA_DOJO, .posture = 330, .hitsToFall = 40, .cueVisual = 1, .cueAudio = 1, .tint = 0xE8D8C8FF,
-        .stances = {STANCE("", 0.084f, 0.208f, 1.20f, 1.05f, 1.15f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.084f, 0.208f, 0.424f, 1.20f, 1.05f, 1.15f)}, .stanceCount = 1,
         .moves = {
             {"corte do touro", 1, {0}, 3.0f, -1, 0, LOOK_HIGH},
             {"investida dupla", 2, {0.85f}, 1.5f, -1, 0, LOOK_LOW},
@@ -101,7 +101,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 4, .name = "shizuku", .style = "postura do gelo", .title = "A que Observa", .venue = "Cachoeira do Trovão",
         .special = "Florete com geada: estocadas curtas e rápidas, até quatro de uma vez, sem curva.",
         .arena = ARENA_CACHOEIRA, .posture = 330, .hitsToFall = 35, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8E8FFFF,
-        .stances = {STANCE("", 0.080f, 0.200f, 0.85f, 0.75f, 0.90f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.080f, 0.200f, 0.411f, 0.85f, 0.75f, 0.90f)}, .stanceCount = 1,
         .moves = {
             {"floco", 1, {0}, 2.5f, -1, 0, LOOK_THRUST},
             {"geada", 2, {0.45f}, 2.0f, -1, 0, LOOK_THRUST},
@@ -131,7 +131,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 5, .name = "garfiel", .style = "postura do tigre", .title = "O que Guarda o Portão", .venue = "Portão do tigre branco",
         .special = "Garras nas duas mãos: combos longos, de seis a oito golpes seguidos.",
         .arena = ARENA_TEMPLO, .posture = 360, .hitsToFall = 30, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFF0D8FF,
-        .stances = {STANCE("", 0.076f, 0.192f, 0.80f, 0.90f, 0.75f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.076f, 0.192f, 0.398f, 0.80f, 0.90f, 0.75f)}, .stanceCount = 1,
         .moves = {
             {"patada", 1, {0}, 1.5f, -1, 0, LOOK_HIGH},
             {"garras cruzadas", 2, {0.40f}, 1.5f, -1, 0, LOOK_LOW},
@@ -161,7 +161,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 6, .name = "karasu", .style = "postura do corvo", .title = "O que Aposta", .venue = "Telhados da vila do castelo, na chuva",
         .special = "Katana e wakizashi: quase sempre a espada longa numa mão só; de repente, as duas lâminas de uma vez.",
         .arena = ARENA_TELHADOS, .posture = 360, .hitsToFall = 25, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8C8D8FF,
-        .stances = {STANCE("", 0.072f, 0.185f, 0.83f, 1.13f, 0.87f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.072f, 0.185f, 0.385f, 0.83f, 1.13f, 0.87f)}, .stanceCount = 1,
         .moves = {
             {"bicada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST},
             {"garra", 2, {0.55f}, 2.0f, -1, 0, LOOK_HIGH},
@@ -193,7 +193,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .special = "Duas foices e o vento: rápido, o ritmo muda sem avisar, e às vezes as duas foices cortam juntas.",
         .arena = ARENA_PONTE, .posture = 390, .hitsToFall = 22, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xD0FFE8FF,
         .rhythmJitter = 0.12f,
-        .stances = {STANCE("", 0.069f, 0.178f, 0.75f, 0.65f, 0.85f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.069f, 0.178f, 0.372f, 0.75f, 0.65f, 0.85f)}, .stanceCount = 1,
         .moves = {
             {"rajada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST},
             {"redemoinho", 2, {0.45f}, 2.0f, -1, 0, LOOK_HIGH},
@@ -224,7 +224,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 8, .name = "enjin", .style = "postura da chama", .title = "O que Odeia", .venue = "Forja dentro da cratera",
         .special = "Katana de fogo: quem leva um golpe fica em brasas e continua perdendo vida; o parry perfeito apaga.",
         .arena = ARENA_FORJA, .posture = 390, .hitsToFall = 20, .burn = 0.6f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFB890FF,
-        .stances = {STANCE("", 0.066f, 0.172f, 0.70f, 0.80f, 0.65f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.066f, 0.172f, 0.359f, 0.70f, 0.80f, 0.65f)}, .stanceCount = 1,
         .moves = {
             {"brasa", 2, {0.50f}, 2.0f, -1, 0, LOOK_HIGH},
             {"labareda", 3, {0.45f, 0.45f}, 2.0f, -1, 0, LOOK_HIGH},
@@ -256,7 +256,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .special = "Lança: ataca de longe, e a ponta demora mais para chegar do que parece; as ondas aceleram e recuam.",
         .arena = ARENA_PORTO, .posture = 420, .hitsToFall = 18, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8D8FFFF,
         .accelSteps = 5, .accelFactor = 0.82f,
-        .stances = {STANCE("", 0.063f, 0.166f, 1.20f, 1.05f, 1.15f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.063f, 0.166f, 0.346f, 1.20f, 1.05f, 1.15f)}, .stanceCount = 1,
         .moves = {
             {"onda", 1, {0}, 2.0f, -1, 0, LOOK_THRUST},
             {"arpão", 1, {0}, 2.0f, -1, 0, LOOK_FAR},
@@ -287,7 +287,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 10, .name = "arashi", .style = "postura da tempestade", .title = "O Orgulhoso", .venue = "Salão do castelo, noite de tempestade",
         .special = "Duas katanas, golpes pesados: as duas lâminas de uma vez, e só o parry perfeito segura as duas.",
         .arena = ARENA_SALAO, .posture = 420, .hitsToFall = 15, .damage = 1.5f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE0D0F0FF,
-        .stances = {STANCE("", 0.060f, 0.160f, 0.80f, 0.90f, 0.75f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.060f, 0.160f, 0.333f, 0.80f, 0.90f, 0.75f)}, .stanceCount = 1,
         .moves = {
             {"faísca", 1, {0}, 1.0f, -1, 0, LOOK_THRUST},
             {"duas tempestades", 1, {0}, 1.5f, -1, 0, LOOK_HIGH, 0x1},
@@ -319,7 +319,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .special = "Uma adaga em cada mão: quase sempre as lanternas se apagam e só o som avisa.",
         .arena = ARENA_BAMBUZAL, .posture = 450, .hitsToFall = 12, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xB8B0E0FF,
         .blackoutChance = 0.7f,
-        .stances = {STANCE("", 0.058f, 0.155f, 0.90f, 0.80f, 1.00f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.058f, 0.155f, 0.320f, 0.90f, 0.80f, 1.00f)}, .stanceCount = 1,
         .moves = {
             {"sombra", 1, {0}, 2.0f, -1, 0, LOOK_LOW},
             {"presas", 2, {0.45f}, 2.0f, -1, 0, LOOK_HIGH},
@@ -350,7 +350,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 12, .name = "jinshi", .style = "postura da lua", .title = "O que Espera", .venue = "Encosta da serra",
         .special = "Postura da lua, katana branca forjada com ela: o repertório mais variado, ritmo irregular, e na montanha o som não chega.",
         .arena = ARENA_SERRA, .posture = 450, .hitsToFall = 10, .healsOnHit = true, .cueVisual = 1, .cueAudio = 0, .tint = 0xE0D8C8FF,
-        .stances = {STANCE("", 0.055f, 0.150f, 0.95f, 0.70f, 1.20f, 0.80f, 1.05f)}, .rhythmJitter = 0.08f, .stanceCount = 1,
+        .stances = {STANCE("", 0.055f, 0.150f, 0.350f, 0.95f, 0.70f, 1.20f, 0.80f, 1.05f)}, .rhythmJitter = 0.08f, .stanceCount = 1,
         .moves = {
             {"crescente", 1, {0}, 1.5f, -1, 0, LOOK_HIGH},
             {"minguante", 3, {0.60f, 0.60f}, 1.5f, -1, 0, LOOK_LOW},
@@ -386,9 +386,9 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         /* Três posturas, uma por selo: a de hanzo, que ele aprendeu primeiro; a de quem
            devorou as doze; e a do oni, de máscara e com a lâmina em chamas, em que ele se perde. */
         .stances = {
-            STANCE("postura de hanzo", 0.070f, 0.180f, 1.05f, 0.95f, 1.15f),
-            STANCE("devorador de posturas", 0.058f, 0.155f, 1.05f, 0.80f, 0.95f, 0.72f, 1.15f),
-            STANCE("postura do oni", 0.048f, 0.135f, 0.72f, 0.85f, 0.62f, 0.78f),
+            STANCE("postura de hanzo", 0.070f, 0.180f, 0.380f, 1.05f, 0.95f, 1.15f),
+            STANCE("devorador de posturas", 0.058f, 0.155f, 0.350f, 1.05f, 0.80f, 0.95f, 0.72f, 1.15f),
+            STANCE("postura do oni", 0.048f, 0.135f, 0.320f, 0.72f, 0.85f, 0.62f, 0.78f),
         },
         .stanceCount = 3,
         .seals = {

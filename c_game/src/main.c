@@ -1442,6 +1442,22 @@ static void second_blade(void) {
     G.hitstop = fmaxf(G.hitstop, G.settings.badHitstop);
 }
 
+/* O brilho do aviso na lâmina do mestre. O jinshi, que avisa sem som, ganha o brilho
+ * da lua: maior, frio e com um anel. */
+static void aviso_brilho(bool primeiro) {
+    Vector2 h, t;
+    boss_blade(&h, &t);
+    Vector2 at = {h.x + (t.x - h.x) * 0.75f, h.y + (t.y - h.y) * 0.75f};
+    bool lua = G.m->cueAudio <= 0;
+    if (!primeiro) {
+        fx_star(&G.fx, at, 8, 0.09f);
+        return;
+    }
+    if (lua) fx_star_tint(&G.fx, at, 22, 0.2f, (Color){150, 190, 255, 255}, (Color){225, 238, 255, 255});
+    else fx_star(&G.fx, at, 15, 0.14f);
+    fx_ring(&G.fx, at, lua ? 70 : 45, 0.2f, 1, lua ? (Color){200, 225, 255, 220} : (Color){255, 245, 210, 180});
+}
+
 static void handle_events(void) {
     DuelEvent ev[MAX_EVENTS];
     int n = duel_drain(&G.duel, ev, MAX_EVENTS);
@@ -1476,7 +1492,9 @@ static void handle_events(void) {
                 audio_play(SND_SWING, 0.9f, 1);
                 break;
             case EV_CUE:
-                audio_play(SND_CUE, m->cueAudio, 1);
+                /* o aviso: sempre o mesmo tempo antes do contato; na sequência, mais discreto */
+                audio_play(SND_CUE, m->cueAudio * (e->i == 0 ? 1 : 0.55f), 1);
+                aviso_brilho(e->i == 0);
                 break;
             case EV_PRESS:
                 rig_pose(r, G.duel.phase == PH_WINDUP ? parry_pose(strike_look()) : POSE_PARRY, 0.06f, EASE_OUT);
@@ -2748,7 +2766,7 @@ static void ui_debug(Rectangle dst) {
     DBG_LINHA(branco, "golpe: %s  %d de %d   preparação %.0f ms%s%s", mv ? mv->name : "-", d->comboStrike + 1,
               mv ? mv->strikes : 1, d->windupDuration * 1000, d->special ? "  ESPECIAL" : "", duel_strike_dual(d) ? "  DUPLO" : "");
     DBG_LINHA(branco, "janela: perfeita %.0f ms, boa %.0f ms   lâmina parte %.0f ms antes, aviso %.0f ms antes",
-              st->perfectWindow * 1000, st->goodWindow * 1000, duel_strike_lead(d) * 1000, d->s.cueLead * 1000);
+              st->perfectWindow * 1000, st->goodWindow * 1000, duel_strike_lead(d) * 1000, duel_aviso(d) * 1000);
     DBG_LINHA(branco, "mestre: postura %.0f / %.0f   selo %d de %d%s", d->bossPosture, d->m->posture, d->seal + 1,
               d->m->sealCount > 0 ? d->m->sealCount : 1, duel_under_pressure(d) && d->m->sealCount <= 1 ? "   com pressa" : "");
     DBG_LINHA(branco, "kojiro: vida %.0f / %.0f%s   dano de um erro %.1f", d->renPosture, d->s.renPosture,
