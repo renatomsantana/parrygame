@@ -1251,6 +1251,59 @@ static void test_taxa_de_quadros(void) {
     CHECK(igual == total, "o humano casual, decidindo em ms, luta igual a 60 e a 144 Hz (%d de %d lutas idênticas)", igual, total);
 }
 
+/* O traço aleatório do hayate (±120 ms) e do jinshi (±80 ms) só mexe na espera antes do
+ * aviso: ela nunca fica abaixo do piso de 100 ms (AJ_PREPARO_ANTES_DO_AVISO), o aviso fica
+ * sempre no mesmo lugar (o tempo fixo antes do contato) e nunca sai antes de a preparação
+ * começar. Também com um traço absurdo, que empurra a espera para baixo o tempo todo. */
+static void test_traco_aleatorio(void) {
+    Settings s;
+    settings_default(&s);
+    for (int volta = 0; volta < 3; volta++) {
+        /* 0: hayate, 1: jinshi, 2: hayate com traço de ±5 s (só para provar o piso) */
+        int id = volta == 1 ? 11 : 6;
+        MasterProfile m = *roster_get(id);
+        if (volta == 2) m.rhythmJitter = 5.0f;
+        CHECK(volta == 2 || (volta == 0 && fabsf(m.rhythmJitter - 0.12f) < 1e-6f) || (volta == 1 && fabsf(m.rhythmJitter - 0.08f) < 1e-6f),
+              "%s: traço de ±%.0f ms", m.name, m.rhythmJitter * 1000);
+        double minEspera = 9, maxEspera = 0;
+        long sequencias = 0, noPiso = 0;
+        bool piso = true, avisoFixo = true, avisoDepois = true;
+        for (uint32_t seed = 1; seed <= 400; seed++) {
+            Duel d;
+            duel_init(&d, &s, &m, seed);
+            int ultimo = -1;
+            for (int passos = 0; passos < 40 && d.phase != PH_FINISHED;) {
+                d.bossPosture = 1e6f;
+                d.renPosture = s.renPosture;
+                if (d.phase == PH_WINDUP && d.attacks != ultimo) {
+                    ultimo = d.attacks;
+                    passos++;
+                    if (d.comboStrike == 0) {
+                        const Stance *st = duel_stance(&d);
+                        double espera = d.windupDuration - duel_aviso(&d), aviso = d.strikeAt - duel_cue_time(&d);
+                        sequencias++;
+                        if (espera < minEspera) minEspera = espera;
+                        if (espera > maxEspera) maxEspera = espera;
+                        if (espera < AJ_PREPARO_ANTES_DO_AVISO - 1e-6) piso = false;
+                        if (fabs(espera - AJ_PREPARO_ANTES_DO_AVISO) < 1e-6) noPiso++;
+                        if (fabs(aviso - st->aviso) > 1e-6) avisoFixo = false;
+                        if (duel_cue_time(&d) < d.strikeAt - d.windupDuration - 1e-9) avisoDepois = false;
+                    }
+                }
+                bool p = d.phase == PH_WINDUP && !d.attempted && d.strikeAt - d.clock <= 0.03;
+                duel_step(&d, 1.0 / 60, p);
+                duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+            }
+        }
+        CHECK(sequencias > 4000, "%s: %ld sequências sorteadas", m.name, sequencias);
+        CHECK(piso && minEspera >= AJ_PREPARO_ANTES_DO_AVISO - 1e-6, "%s: a espera antes do aviso nunca fica abaixo de %.0f ms (mínimo %.0f ms, máximo %.0f ms)",
+              m.name, AJ_PREPARO_ANTES_DO_AVISO * 1000, minEspera * 1000, maxEspera * 1000);
+        CHECK(avisoFixo, "%s: o aviso fica sempre %.0f ms antes do contato", m.name, duel_stance(&(Duel){.m = &m})->aviso * 1000);
+        CHECK(avisoDepois, "%s: o aviso nunca sai antes de a preparação começar", m.name);
+        if (volta != 1) CHECK(noPiso > 0, "%s: o piso é exercitado (%ld sequências)", m.name, noPiso);
+    }
+}
+
 /* Ritmo: a espera antes do aviso (o mestre segurando a preparação) e a pausa entre
  * sequências são tempo morto, e encurtam. Nada que se julga muda: golpe a golpe, o
  * mesmo movimento, o mesmo aviso e o mesmo intervalo dentro da sequência. Com a espera
@@ -1927,6 +1980,7 @@ int main(void) {
     test_vantagem();
     test_lamina_variavel();
     test_taxa_de_quadros();
+    test_traco_aleatorio();
     test_ritmo();
     test_teste_a_mao();
     test_timeline();
