@@ -80,7 +80,7 @@ static void test_settings(void) {
 static void test_ajuste(void) {
     Settings s;
     settings_default(&s);
-    CHECK(s.renPosture == AJ_VIDA_INICIAL && s.postureGrowth == AJ_VIDA_POR_MESTRE, "vida de kojiro vem do ajuste.h");
+    CHECK(s.renPosture == AJ_VIDA_INICIAL, "vida de kojiro vem do ajuste.h");
     CHECK(s.perfectBossDamage == AJ_PERFEITO_POSTURA && s.perfectGrowth == AJ_PERFEITO_POSTURA_NIVEL &&
           s.perfectHeal == AJ_PERFEITO_CURA, "perfeito vem do ajuste.h");
     CHECK(s.goodBossDamage == AJ_BOM_POSTURA && s.goodGrowth == AJ_BOM_POSTURA_NIVEL && s.goodRenCost == AJ_BOM_CUSTO,
@@ -1051,7 +1051,7 @@ static void test_levels(void) {
     settings_default(&a);
     settings_default(&b);
     settings_for_level(&b, 5);
-    CHECK(b.renPosture > a.renPosture, "Ren ganha postura a cada mestre vencido");
+    CHECK(b.renPosture == a.renPosture, "a vida de kojiro não cresce com os mestres vencidos");
     CHECK(b.perfectBossDamage > a.perfectBossDamage, "Ren bate mais forte a cada mestre vencido");
     CHECK(b.goodBossDamage > a.goodBossDamage, "o bom também cresce");
     /* Com Ren mais forte, o número de erros continua o do mestre. */

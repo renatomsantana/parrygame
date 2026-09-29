@@ -26,14 +26,14 @@ void settings_default(Settings *s) {
     s->perfectHitstop = AJ_HITSTOP_PERFEITO;
     s->badHitstop = AJ_HITSTOP_ERRO;
     s->breakHitstop = AJ_HITSTOP_QUEBRA;
-    s->postureGrowth = AJ_VIDA_POR_MESTRE;
     s->perfectGrowth = AJ_PERFEITO_POSTURA_NIVEL;
     s->goodGrowth = AJ_BOM_POSTURA_NIVEL;
 }
 
 void settings_for_level(Settings *s, int defeated) {
     if (defeated < 0) defeated = 0;
-    s->renPosture += s->postureGrowth * defeated;
+    /* a vida não cresce: o dano de um erro é a vida dividida pelos erros que o mestre
+     * deixa aguentar, então vida a mais não aguentaria nenhum erro a mais */
     s->perfectBossDamage += s->perfectGrowth * defeated;
     s->goodBossDamage += s->goodGrowth * defeated;
 }

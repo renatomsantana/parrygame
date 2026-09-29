@@ -40,12 +40,12 @@ typedef struct {
     float comboGap;               /* pausa depois de cada golpe de uma sequência */
     float minChainGap;            /* menor intervalo entre contatos de uma sequência */
     float goodHitstop, perfectHitstop, badHitstop, breakHitstop;
-    /* Crescimento de Ren a cada mestre vencido. */
-    float postureGrowth, perfectGrowth, goodGrowth;
+    /* O parry de Ren fica mais forte a cada mestre vencido (a vida não cresce). */
+    float perfectGrowth, goodGrowth;
 } Settings;
 
 void settings_default(Settings *s);
-/* Ren mais forte: postura e dano crescem com os mestres já vencidos. */
+/* Ren mais forte: o dano do perfeito e do bom cresce com os mestres já vencidos. */
 void settings_for_level(Settings *s, int defeated);
 
 /* ------------------------------------------------------------------ */

@@ -10,8 +10,8 @@
 #define APARA_AJUSTE_H
 
 /* ---- Vida de kojiro -------------------------------------------------- */
-#define AJ_VIDA_INICIAL            250.0f   /* vida contra o primeiro aprendiz */
-#define AJ_VIDA_POR_MESTRE          25.0f   /* + isto a cada mestre vencido */
+#define AJ_VIDA_INICIAL            250.0f   /* vida de kojiro, a mesma contra todos: quantos erros ele
+                                               aguenta é de cada mestre (hitsToFall, no roster.c) */
 
 /* ---- O que cada resultado do parry faz ------------------------------- */
 #define AJ_PERFEITO_POSTURA         20.0f   /* perfeito: o mestre perde isto de postura */
