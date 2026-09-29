@@ -128,7 +128,7 @@ static void test_roster(const Settings *s) {
     Duel da;
     duel_init(&da, s, roster_get(9), 1);
     CHECK(roster_get(9)->damage > 1 && duel_ren_damage(&da) > s->renPosture / roster_get(9)->hitsToFall, "arashi bate mais pesado");
-    static const int HITS[13] = {8, 8, 7, 7, 4, 7, 4, 4, 4, 10, 4, 5, 5};
+    static const int HITS[13] = {8, 8, 7, 7, 6, 7, 6, 6, 6, 10, 5, 5, 5};
     for (int i = 0; i < roster_size(); i++) {
         CHECK(roster_get(i)->hitsToFall == HITS[i], "Ren aguenta %d erros contra %s", HITS[i], roster_get(i)->name);
         CHECK(roster_get(i)->senseiCount >= 1, "hanzo tem conselho para %s", roster_get(i)->name);

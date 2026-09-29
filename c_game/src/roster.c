@@ -131,7 +131,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 5, .name = "garfiel", .style = "postura do tigre", .title = "O que Guarda o Portão", .venue = "Portão do tigre branco",
         .special = "Garras nas duas mãos: combos longos, de seis a oito golpes seguidos.",
-        .arena = ARENA_TEMPLO, .posture = 530, .hitsToFall = 4, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFF0D8FF,
+        .arena = ARENA_TEMPLO, .posture = 530, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFF0D8FF,
         .stances = {STANCE("", 0.063f, 0.158f, 0.398f)}, .stanceCount = 1,
         .moves = {
             {"patada", 1, {0}, 1.5f, -1, 0, LOOK_HIGH, 0.80f},
@@ -192,9 +192,9 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 7, .name = "hayate", .style = "postura do vento", .title = "O Impaciente", .venue = "Ponte de corda sobre o desfiladeiro",
         .special = "Duas foices e o vento: rápido, o ritmo muda sem avisar, e às vezes as duas foices cortam juntas.",
-        .arena = ARENA_PONTE, .posture = 450, .hitsToFall = 4, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xD0FFE8FF,
+        .arena = ARENA_PONTE, .posture = 620, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xD0FFE8FF,
         .rhythmJitter = 0.12f,
-        .stances = {STANCE("", 0.054f, 0.138f, 0.372f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.049f, 0.138f, 0.372f)}, .stanceCount = 1,
         .moves = {
             {"rajada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST, 0.75f},
             {"redemoinho", 2, {0.45f}, 2.0f, -1, 0, LOOK_HIGH, 0.65f},
@@ -224,8 +224,8 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 8, .name = "enjin", .style = "postura da chama", .title = "O que Odeia", .venue = "Forja dentro da cratera",
         .special = "Katana de fogo: quem leva um golpe fica em brasas e continua perdendo vida; o parry perfeito apaga.",
-        .arena = ARENA_FORJA, .posture = 460, .hitsToFall = 4, .burn = 0.6f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFB890FF,
-        .stances = {STANCE("", 0.050f, 0.131f, 0.359f)}, .stanceCount = 1,
+        .arena = ARENA_FORJA, .posture = 690, .hitsToFall = 6, .burn = 0.6f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFB890FF,
+        .stances = {STANCE("", 0.046f, 0.131f, 0.359f)}, .stanceCount = 1,
         .moves = {
             {"brasa", 2, {0.50f}, 2.0f, -1, 0, LOOK_HIGH, 0.70f},
             {"labareda", 3, {0.45f, 0.45f}, 2.0f, -1, 0, LOOK_HIGH, 0.80f},
@@ -255,9 +255,9 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 9, .name = "suiren", .style = "postura do mar", .title = "A Amiga de Oboro", .venue = "Porto do farol",
         .special = "Lança: ataca de longe, e a ponta demora mais para chegar do que parece; as ondas aceleram e recuam.",
-        .arena = ARENA_PORTO, .posture = 490, .hitsToFall = 4, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8D8FFFF,
+        .arena = ARENA_PORTO, .posture = 840, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8D8FFFF,
         .accelSteps = 5, .accelFactor = 0.82f,
-        .stances = {STANCE("", 0.047f, 0.125f, 0.346f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.046f, 0.125f, 0.346f)}, .stanceCount = 1,
         .moves = {
             {"onda", 1, {0}, 2.0f, -1, 0, LOOK_THRUST, 1.20f},
             {"arpão", 1, {0}, 2.0f, -1, 0, LOOK_FAR, 1.05f},
@@ -318,7 +318,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 11, .name = "yoru", .style = "postura da noite", .title = "O que Viu", .venue = "Bambuzal à meia-noite",
         .special = "Uma adaga em cada mão: quase sempre as lanternas se apagam e só o som avisa.",
-        .arena = ARENA_BAMBUZAL, .posture = 740, .hitsToFall = 4, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xB8B0E0FF,
+        .arena = ARENA_BAMBUZAL, .posture = 970, .hitsToFall = 5, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xB8B0E0FF,
         .blackoutChance = 0.7f,
         .stances = {STANCE("", 0.044f, 0.119f, 0.320f)}, .stanceCount = 1,
         .moves = {

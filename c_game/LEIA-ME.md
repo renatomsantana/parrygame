@@ -119,19 +119,20 @@ duas derrotas seguidas, dá para **conversar com hanzo** (no Oboro, ele só diz
 | 2 | genbu | tartaruga | katana simples | Jardim de pedras do mosteiro | 330 | 82 / 203 ms | 437 ms | 8 |
 | 3 | raizo | touro | espadão | Pátio do dojo | 350 | 75 / 185 ms | 424 ms | 7 |
 | 4 | shizuku | gelo | florete de esgrima com geada | Cachoeira | 380 | 68 / 171 ms | 411 ms | 7 |
-| 5 | garfiel | tigre | garras nas duas mãos | Portão do tigre branco | 530 | 63 / 158 ms | 398 ms | 4 |
+| 5 | garfiel | tigre | garras nas duas mãos | Portão do tigre branco | 530 | 63 / 158 ms | 398 ms | 6 |
 | 6 | karasu | corvo | katana e wakizashi | Telhados da vila na chuva | 490 | 58 / 148 ms | 385 ms | 7 |
-| 7 | hayate | vento (ritmo quebrado) | duas foices pequenas | Ponte de corda no desfiladeiro | 450 | 54 / 138 ms | 372 ms | 4 |
-| 8 | enjin | chama | katana de fogo | Forja | 460 | 50 / 131 ms | 359 ms | 4 |
-| 9 | suiren | mar (acelerando) | lança | Porto | 490 | 47 / 125 ms | 346 ms | 4 |
+| 7 | hayate | vento (ritmo quebrado) | duas foices pequenas | Ponte de corda no desfiladeiro | 620 | 49 / 138 ms | 372 ms | 6 |
+| 8 | enjin | chama | katana de fogo | Forja | 690 | 46 / 131 ms | 359 ms | 6 |
+| 9 | suiren | mar (acelerando) | lança | Porto | 840 | 46 / 125 ms | 346 ms | 6 |
 | 10 | arashi | tempestade (dano 1,2×) | duas katanas | Salão do castelo na tempestade | 550 | 46 / 121 ms | 333 ms | 10 |
-| 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 740 | 44 / 119 ms | 320 ms | 4 |
+| 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 970 | 44 / 119 ms | 320 ms | 5 |
 | 12 | jinshi | lua (sem som) | katana bem branca, forjada com a lua | Encosta da serra | 610 | 44 / 119 ms | 350 ms (brilho) | 5 |
 | 13 | **oboro** | hanzo → devorador de posturas → oni (uma por selo) | katana de hanzo | Dojo de hanzo | 360 · 1800 · 450 | 62 → 51 → 42 ms | 380 → 350 → 320 ms | 5 · 10 · 4 |
 
-A curva foi afinada com os robôs (`make robos`): o humano casual que decora o
-ritmo vence os quatro primeiros sempre, e a vitória cai sem degraus até uns 65%
-no jinshi e uns 40% no oboro; apertar sem olhar, em qualquer ritmo, perde de
+A curva foi afinada com os robôs (`make robos`, o núcleo exato, que não depende da
+taxa de quadros): o humano casual que decora o ritmo vence os cinco primeiros
+(garfiel com 6 erros já vai a uns 100%), e a vitória cai sem degraus até uns 60% no
+jinshi e uns 43% no oboro (100, 100, 100, 100, 100, 91, 84, 81, 73, 63, 62, 60, 43); apertar sem olhar, em qualquer ritmo, perde de
 todos (`test_curva`). As janelas apertam pela trilha; os erros até cair corrigem
 o que é de cada um (o ritmo fácil do garfiel, os golpes duplos do arashi).
 
