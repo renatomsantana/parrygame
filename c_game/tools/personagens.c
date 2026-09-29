@@ -1114,7 +1114,7 @@ static Char CHARS[] = {
                {HEX(0x391f21), HEX(0x7cc81c)}, {HEX(0x5d2c28), HEX(0xc8ff3c)},
                {HEX(0x272727), HEX(0x16261a)}, {HEX(0x3d3d3d), HEX(0x2c4a30)}, {HEX(0x5ac54f), HEX(0xc8ff3c)}}},
     /* 8. Chama. Espada de fogo. Vermelho e amarelo. */
-    {.id = "enjin", .titulo = "Enjin", .arma = {.kind = W_KATANA}, .cabeca = "chamas",
+    {.id = "enjin", .titulo = "Enjin", .arma = {.kind = W_KATANA}, .cabeca = "desgrenhado",
      .camisa = {HEX(0xf0584a), HEX(0xc02a2e), HEX(0x861a24), HEX(0x58101c)},
      .hakama = {HEX(0x4a1a16), HEX(0x361210), HEX(0x280d0c), HEX(0x1c0909), HEX(0x130606)},
      .pele = {HEX(0xe6a078), HEX(0xc07650), HEX(0x864a34)},
@@ -1349,6 +1349,7 @@ static const Head *find_head(const char *name) {
 /* ------------------------------------------------------------------------ */
 /* Camada de cada pixel: o que é corpo (a aura contorna), o que é arma ou rastro
    (o alcance mede) e o que é efeito solto. */
+static bool cor7(const Char *ch);
 enum { T_NONE, T_BODY, T_WEAPON, T_FX };
 
 typedef struct {
@@ -1764,12 +1765,11 @@ static void ribbon(Canvas *cv, int x0, int y0, int length, Rgb c0, Rgb c1, int i
 }
 
 static void draw_head(Canvas *cv, const Char *ch, int idx) {
-    bool enjin7 = getenv("CAB_PROVA") && !strcmp(ch->id, "enjin");
-    const Head *hd = find_head(enjin7 ? "desgrenhado" : ch->cabeca);
+    const Head *hd = find_head(ch->cabeca);
     if (!hd) return;
     Pal pal;
     head_palette(ch, &pal);
-    if (enjin7) {   /* loiro mesclado com vermelho: a sombra vermelha, o meio e a luz loiros */
+    if (!strcmp(hd->name, "desgrenhado")) {   /* loiro mesclado com vermelho: a sombra vermelha, o meio e a luz loiros */
         pal.c['H'] = (Rgb){0x6a, 0x1c, 0x12};
         pal.c['h'] = (Rgb){0xe0, 0xa0, 0x40};
         pal.c['i'] = (Rgb){0xf8, 0xdc, 0x80};
@@ -2190,8 +2190,8 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                         char k = SHELL[ry][rx];
                         if (k == '.') continue;
                         Rgb c = k == 'a' ? ch->destaque[1] : k == 'A' ? ch->destaque[0] : ch->destaque2;
-                        if (getenv("CAB_PROVA"))   /* rodada 7: casco verde escuro */
-                            c = k == 'a' ? (Rgb){0x16, 0x2e, 0x16} : k == 'A' ? (Rgb){0x2a, 0x52, 0x26} : (Rgb){0x44, 0x70, 0x36};
+                        /* rodada 7: o casco verde escuro */
+                        c = k == 'a' ? (Rgb){0x16, 0x2e, 0x16} : k == 'A' ? (Rgb){0x2a, 0x52, 0x26} : (Rgb){0x44, 0x70, 0x36};
                         cv_behind(cv, s->ox - 6 + rx, s->oy + 10 + ry, c);
                     }
                 break;
@@ -2598,7 +2598,6 @@ static void kama(Canvas *cv, const Blade *b0, double len, const Weapon *w, Rgb c
 
 static void blade_fx(Canvas *cv, const Char *ch, const char *anim, int idx) {
     Element el = ch->elemento;
-    if (getenv("COR_PROVA")) return;   /* a aura na arma (weapon_aura) já leva a cor do personagem */
     if (rgb_set(ch->arma.brilho) && !(getenv("GARRA_PROVA") && ch->arma.kind == W_GARRAS))
         for (int x = 0; x < CW; x++)
             for (int y = 0; y < CH; y++) {
@@ -2611,6 +2610,9 @@ static void blade_fx(Canvas *cv, const Char *ch, const char *anim, int idx) {
                 }
                 if (hsh4("estrela", anim, idx, x, y) < 0.03 && cv_is_empty(cv, x + 1, y - 2)) cv_put(cv, x + 1, y - 2, (Rgb){255, 255, 255});
             }
+    /* o brilho (halo) da lâmina fica: ele conta no alcance do golpe. As partículas de cor fixa
+       saem; a aura na arma (weapon_aura) já leva a cor do personagem */
+    if (cor7(ch)) return;
     for (int x = 0; x < CW; x++)
         for (int y = 0; y < CH; y++) {
             if (!cv->wpx[y][x]) continue;
@@ -4098,8 +4100,44 @@ static void glow(Canvas *cv, const Ctx *ctx, double p, int ymid, Rgb top, Rgb bo
 
 /* Aura do elemento de cada um. Mais forte na preparação e no contato. */
 static void weapon_aura(Canvas *cv, const Char *ch, const Ctx *ctx);
+/* O rastro preto do Karasu some na noite: um fio cinza claro de 1 px só na borda de fora do
+   arco (o lado mais longe do corpo, por onde passou a ponta); o miolo fica preto. */
+static void trail_rim(Canvas *cv, const Char *ch) {
+    static unsigned char t[CH][CW];
+    double bx = 0, by = 0;
+    int nb = 0;
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            Color c = cv->a[y][x];
+            t[y][x] = 0;
+            if (c.a && cv->tag[y][x] == T_BODY) { bx += x; by += y; nb++; }
+            if (!c.a || cv->tag[y][x] == T_BODY) continue;
+            for (int i = 0; i < 3; i++)
+                if (c.r == ch->rastro[i].r && c.g == ch->rastro[i].g && c.b == ch->rastro[i].b) t[y][x] = 1;
+        }
+    if (!nb) return;
+    bx /= nb; by /= nb;
+    static const int d4[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++)
+            if (t[y][x])
+                for (int k = 0; k < 4; k++) {
+                    int nx = x + d4[k][0], ny = y + d4[k][1];
+                    double din = hypot(x - bx, y - by), dout = hypot(nx - bx, ny - by);
+                    if (dout > din && cv_ok(nx, ny) && cv->a[ny][nx].a == 0) cv_put(cv, nx, ny, (Rgb){0xc0, 0xc4, 0xd0});
+                }
+}
+static bool cor7(const Char *ch);
+static void body_aura(Canvas *cv, const Char *ch, const Ctx *ctx, bool only_dust);
 static void aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
     if (getenv("SEM_AURA")) return;   /* provas de cabeça: sem a aura do corpo por cima */
+    if (cor7(ch)) { body_aura(cv, ch, ctx, true); weapon_aura(cv, ch, ctx); return; }
+    body_aura(cv, ch, ctx, false);
+}
+
+/* A aura do corpo (e o pó no chão no contato das armas pesadas, que fica mesmo com a aura na
+   arma: `only_dust`). */
+static void body_aura(Canvas *cv, const Char *ch, const Ctx *ctx, bool only_dust) {
     Element el = ch->elemento;
     int bx0 = CW, bx1 = -1, by0 = CH, by1 = -1;
     for (int y = 0; y < CH; y++)
@@ -4128,7 +4166,7 @@ static void aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
             }
         }
     }
-    if (getenv("COR_PROVA")) { weapon_aura(cv, ch, ctx); return; }
+    if (only_dust) return;
     switch (el) {
         case EL_FOGO: {
             /* labaredas saindo do alto da silhueta */
@@ -5495,9 +5533,25 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         cv->pen = T_FX;
         paint_smear(cv, ch, anim, idx);
         smear_style(cv, ch);
-        aura(cv, ch, ctx);
+        if (!strcmp(ch->id, "karasu") && cor7(ch)) trail_rim(cv, ch);
+        /* a aura na arma vem depois dos cortes de vento e de lua: o halo tem a cor do rastro e
+           mudaria o desenho (e o alcance) do corte */
+        if (!cor7(ch)) aura(cv, ch, ctx);
         if (ch->elemento == EL_VENTO) wind_slash(cv, ch, ctx);
-        if (ch->elemento == EL_LUA) moon_slash(cv, ch, anim);
+        if (ch->elemento == EL_LUA) {
+            /* o corte em lua sempre contou o pó de prata da aura do corpo (branco, a cor do
+               rastro) para achar o arco; com a aura na arma, ela roda só para essa conta e sai
+               depois, e o arco e o alcance ficam os mesmos de antes */
+            static Color a0[CH][CW];
+            memcpy(a0, cv->a, sizeof a0);
+            if (cor7(ch)) body_aura(cv, ch, ctx, false);
+            moon_slash(cv, ch, anim);
+            if (cor7(ch))
+                for (int y = 0; y < CH; y++)
+                    for (int x = 0; x < CW; x++)
+                        if (cv->tag[y][x] == T_FX && !a0[y][x].a && cv->a[y][x].a) cv_clear(cv, x, y);
+        }
+        if (cor7(ch)) aura(cv, ch, ctx);
     }
     for (int i = 0; i < seg->nerase; i++)
         for (int y = seg->erase[i][1] < 0 ? 0 : seg->erase[i][1]; y <= seg->erase[i][3] && y < CH; y++)
@@ -5773,6 +5827,12 @@ static bool reach(const Canvas *cv, int ax, int ay, int *dx, int *dy) {
     int n = 0;
     for (int y = 0; y < CH; y++)
         if ((!any_tag || cv->tag[y][xm] == T_WEAPON) && cv->a[y][xm].a) { sy += y; n++; }
+    if (getenv("DBG_REACH")) {
+        fprintf(stderr, "reach xm=%d n=%d ax=%d ay=%d ys:", xm, n, ax, ay);
+        for (int y = 0; y < CH; y++)
+            if ((!any_tag || cv->tag[y][xm] == T_WEAPON) && cv->a[y][xm].a) fprintf(stderr, " %d", y);
+        fprintf(stderr, "\n");
+    }
     *dx = xm - ax;
     *dy = pyround(sy / n) - ay;
     return true;
@@ -6690,8 +6750,9 @@ static void usage(void) {
            "  --lista    mostra os personagens e sai\n");
 }
 
-/* Rodada 7 (prova COR_PROVA): a cor de cada um no rastro do golpe e na aura, que sai do corpo e
-   fica só na arma. Claro (miolo), meio, escuro (borda). */
+/* A cor de cada aprendiz no rastro do golpe e na aura, que sai do corpo e fica só na arma
+   (rodada 7). Claro (miolo), meio, escuro (borda). O Oboro não entra: nos ecos ele herda o
+   rastro do aprendiz imitado. O Karasu (preto com o fio cinza) só com KARASU_PROVA, até aprovar. */
 static const struct { const char *id; Rgb c[3]; } COR7[] = {
     {"daichi", {HEX(0xfaf0d8), HEX(0xdcc49a), HEX(0xa88c64)}},
     {"genbu", {HEX(0x6aa85a), HEX(0x2e6a2a), HEX(0x163e18)}},
@@ -6699,20 +6760,28 @@ static const struct { const char *id; Rgb c[3]; } COR7[] = {
     {"shizuku", {HEX(0xffffff), HEX(0xc8ecff), HEX(0x80c4f0)}},
     {"garfiel", {HEX(0xffe4c0), HEX(0xff8c20), HEX(0xc05010)}},
     {"suiren", {HEX(0xc8dcff), HEX(0x2c5cd0), HEX(0x142c80)}},
-    {"karasu", {HEX(0x8a8a96), HEX(0x26262e), HEX(0x0a0a0e)}},
+    {"karasu", {HEX(0x34343e), HEX(0x1c1c24), HEX(0x0c0c10)}},
     {"hayate", {HEX(0xf0ffe8), HEX(0xa8f0a0), HEX(0x58c060)}},
     {"enjin", {HEX(0xffd0c0), HEX(0xff3020), HEX(0xa00c10)}},
     {"arashi", {HEX(0xf4faff), HEX(0x7cc8ff), HEX(0x2a6cf0)}},
     {"yoru", {HEX(0xf6e6ff), HEX(0xb070ff), HEX(0x6a2cc8)}},
-    {"jinshi", {HEX(0xffffff), HEX(0xeef2ff), HEX(0xc4ccdc)}},
-    {"oboro_mascara", {HEX(0xffffff), HEX(0xeef2ff), HEX(0xc4ccdc)}},   /* fase 1: branco, como o do Kojiro */
+    {"jinshi", {HEX(0xffffff), HEX(0xe6ecff), HEX(0xb8c4ec)}},   /* o branco que ele já tinha: o alcance mede o rastro por estas cores */
 };
 
+static bool cor7_on(const char *id) {
+    return strcmp(id, "karasu") || getenv("KARASU_PROVA");
+}
+
+static bool cor7(const Char *ch) {
+    for (size_t i = 0; i < sizeof COR7 / sizeof COR7[0]; i++)
+        if (!strcmp(ch->id, COR7[i].id)) return cor7_on(ch->id);
+    return false;
+}
+
 static void cor_prova(void) {
-    if (!getenv("COR_PROVA")) return;
     for (size_t i = 0; i < sizeof COR7 / sizeof COR7[0]; i++)
         for (int c = 0; c < NCHARS; c++)
-            if (!strcmp(CHARS[c].id, COR7[i].id)) memcpy(CHARS[c].rastro, COR7[i].c, sizeof CHARS[c].rastro);
+            if (!strcmp(CHARS[c].id, COR7[i].id) && cor7_on(COR7[i].id)) memcpy(CHARS[c].rastro, COR7[i].c, sizeof CHARS[c].rastro);
 }
 
 /* A aura na arma: um halo de 1 px na cor do meio colado na lâmina, pontos soltos na cor da borda

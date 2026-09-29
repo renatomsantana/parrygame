@@ -100,7 +100,7 @@ static void pine(float x, float base, float h, Color c) {
     }
 }
 
-/* Prova da rodada 7 (CABANA_PROVA=7): a mesma cabana pobre, acabada, simplificada no estilo
+/* A cabana pobre de Hanzo (rodada 7), acabada, simplificada no estilo
  * Katana Zero: poucas formas grandes e legíveis, a silhueta escura contra a noite, o luar frio só
  * nas bordas de cima e a luz quente de dentro escapando pelas frestas, pela porta e pelas falhas
  * da palha. Sem base de pedra. Ficam a palha gasta com falhas, as tábuas desiguais, o shoji
@@ -206,155 +206,6 @@ static void cabin_poor7(float t) {
     rect(119, 116, 6, 1, C(40, 30, 32));
 }
 
-/* Prova da rodada 6 (CABANA_PROVA): a cabana pobre de Hanzo, na serra, meio acabada.
- * Teto de palha gasto, com falhas, remendos e meio torto; paredes de tábuas desiguais
- * com frestas por onde passa a luz fraca e quente de dentro; a porta de shoji rasgada e
- * remendada; o canto direito ainda só na armação, com tábuas soltas encostadas; base de
- * pedra, a lenha empilhada, o barril de água e o makiwara na frente. Tudo com ruído
- * fixo (hash), sem sorteio a cada quadro; só a luz tremula. */
-static void cabin_poor(float t) {
-    float fl = 0.8f + 0.2f * sinf(t * 7) * sinf(t * 3.1f);
-    Color warm = CA(255, 150, 70, (unsigned char)(150 * fl)), warm2 = CA(255, 190, 110, (unsigned char)(200 * fl));
-    /* o interior escuro atrás de tudo (aparece nas frestas e no canto sem tábua) */
-    rect(27, 100, 66, 32, C(30, 20, 22));
-    /* paredes: tábuas verticais de larguras e tons diferentes, topo desencontrado */
-    static const Color plank[4] = {{74, 50, 38, 255}, {62, 42, 32, 255}, {86, 60, 44, 255}, {56, 40, 34, 255}};
-    int x = 26;
-    for (int i = 0; x < 80; i++) {
-        int w = 3 + (int)(hash1(i * 1.7f) * 3), top = 102 + (int)(hash1(i * 2.3f + 1) * 3);
-        Color c = plank[(int)(hash1(i * 3.1f) * 4) % 4];
-        rect(x, top, w, 131 - top, c);
-        rect(x, top, 1, 131 - top, fade(C(24, 16, 16), 0.5f));                  /* a junta escura */
-        if (hash1(i + 9.3f) > 0.45f) rect(x + w - 1, top + 2, 1, 131 - top - 4, C(110, 84, 62));   /* luar na borda */
-        for (int k = 0; k < 2; k++) {                                              /* nós e rachas da madeira */
-            float ky = top + 4 + hash1(i * 5.0f + k) * (131 - top - 8);
-            rect(x + 1 + (int)(hash1(i + k * 7.0f) * (w - 1)), ky, 1, 2 + k, C(44, 30, 26));
-        }
-        /* fresta: entre algumas tábuas fica 1 px aberto, a luz de dentro passa */
-        if (hash1(i * 4.7f + 2) > 0.55f) {
-            float y0 = top + 3 + hash1(i * 6.1f) * 6, y1 = 131 - hash1(i * 7.3f) * 8;
-            rect(x + w, y0, 1, y1 - y0, warm);
-            rect(x + w, y0 + (y1 - y0) * 0.4f, 1, (y1 - y0) * 0.2f, warm2);
-            x += 1;
-        }
-        x += w;
-    }
-    /* o canto meio acabado: armação (esteios, a travessa e a mão-francesa), duas tábuas
-       pregadas até a metade e a luz de dentro no vão */
-    rect(80, 104, 13, 27, C(26, 18, 20));
-    glow(86, 118, 10 * fl, C(255, 140, 60));
-    rect(80, 102, 2, 29, C(112, 84, 60));
-    rect(91, 104, 2, 27, C(104, 78, 56));
-    rect(80, 116, 13, 1, C(104, 78, 56));
-    for (int k = 0; k < 11; k++) rect(81 + k, 129 - k * 1.2f, 1, 2, C(98, 72, 52));   /* a mão-francesa */
-    rect(83, 119, 3, 12, C(70, 48, 36));
-    rect(86, 122, 3, 9, C(80, 56, 40));
-    rect(83, 119, 1, 1, C(150, 150, 150));   /* os pregos */
-    rect(87, 123, 1, 1, C(150, 150, 150));
-    /* tábuas soltas encostadas do lado de fora, esperando */
-    for (int k = 0; k < 3; k++)
-        for (int j = 0; j < 22 - k * 4; j++) rect(95 + k * 2 + j * 0.25f, 131 - j, 2, 1, plank[(k + 2) % 4]);
-    /* viga de cima e soleira */
-    rect(25, 101, 69, 2, C(52, 36, 30));
-    rect(25, 130, 69, 2, C(46, 32, 28));
-    /* a porta de shoji: a grade de madeira, o papel aceso por dentro, um painel rasgado
-       e outro remendado com papel de outra cor */
-    int dx = 42, dy = 110, dw = 15, dh = 20;
-    rect(dx - 1, dy - 1, dw + 2, dh + 2, C(44, 30, 24));
-    rect(dx, dy, dw, dh, CA(236, 176, 104, (unsigned char)(200 + 40 * fl)));
-    rect(dx + 9, dy + 5, 5, 5, C(208, 186, 146));                                /* o remendo */
-    rect(dx + 9, dy + 5, 5, 1, C(186, 160, 120));
-    rect(dx + 2, dy + 11, 4, 4, C(40, 24, 22));                                  /* o rasgo */
-    rect(dx + 3, dy + 10, 2, 1, C(40, 24, 22));
-    rect(dx + 1, dy + 13, 1, 1, C(40, 24, 22));
-    rect(dx + 5, dy + 15, 1, 1, CA(236, 176, 104, 220));                         /* a ponta de papel pendurada */
-    for (int k = 1; k < 3; k++) rect(dx + k * 5, dy, 1, dh, C(58, 40, 30));      /* a grade */
-    for (int k = 1; k < 4; k++) rect(dx, dy + k * 5, dw, 1, C(58, 40, 30));
-    /* janelinha de ripas: a luz entre elas */
-    rect(66, 111, 9, 7, C(40, 26, 24));
-    for (int k = 0; k < 4; k++) rect(67 + k * 2, 112, 1, 5, warm);
-    rect(66, 118, 9, 1, C(78, 56, 40));
-    /* base de pedras desiguais, com o luar no alto de cada uma */
-    for (int i = 0; i < 18; i++) {
-        float sx = 22 + i * 4.3f + hash1(i * 1.3f) * 2, sw = 4 + hash1(i * 2.9f) * 3, sh = 3 + hash1(i * 3.7f) * 4;
-        Color c = hash1(i * 5.1f) > 0.5f ? C(78, 74, 82) : C(96, 92, 100);
-        rect(sx, 138 - sh, sw, sh, C(36, 32, 40));
-        rect(sx + 0.5f, 138 - sh + 0.5f, sw - 1, sh - 1, c);
-        rect(sx + 1, 138 - sh + 0.5f, sw - 2, 1, C(128, 124, 136));
-        if (hash1(i * 8.1f) > 0.6f) rect(sx + 1, 138 - sh, 2, 1, C(56, 72, 52));   /* musgo */
-    }
-    /* o teto de palha visto de lado: trapézio grosso, a cumeeira meio torta e afundada no
-       meio, os beirais desencontrados, a palha em fios de três tons, falhas escuras com o
-       caibro aparecendo, um remendo de palha nova e a franja solta nos beirais */
-    for (int xx = 12; xx < 108; xx++) {
-        float u = (xx - 12) / 96.0f;
-        float ridge = 86 - u * 4 + 1.6f * sinf(u * 3.1416f), eave = 106 - u * 4 + (xx > 70 && xx < 78 ? 2 : 0);   /* torto: o lado direito mais alto, a cumeeira cedendo no meio e um beiral caído */
-        float top = xx < 34 ? ridge + (34 - xx) * 0.75f : xx > 88 ? ridge + (xx - 88) * 0.8f : ridge;
-        for (int yy = (int)top; yy < (int)eave; yy++) {
-            float h = hash1(xx * 7.1f + (yy / 3) * 1.9f);
-            Color c = h > 0.66f ? C(128, 104, 62) : h > 0.3f ? C(104, 84, 52) : C(84, 66, 42);
-            if (yy - (int)top < 2) c = C(66, 52, 38);                                 /* a cumeeira */
-            DrawPixel(xx, yy, c);
-        }
-        int fr = (int)(hash1(xx * 3.3f) * 3);                                          /* a franja */
-        for (int k = 0; k < fr; k++) DrawPixel(xx, (int)eave + k, C(98, 78, 48));
-        if (hash1(xx * 1.1f) > 0.8f) DrawPixel(xx, (int)top + 3, C(150, 136, 110));    /* luar na palha */
-    }
-    for (int k = 0; k < 8; k++) rect(38 + k * 6, 84 + (k > 3 ? 0 : 1), 1, 3, C(120, 96, 60));   /* amarras da cumeeira */
-    /* falhas: buracos escuros, um com o caibro e o céu passando */
-    static const float holes[5][4] = {{21, 95, 7, 4}, {57, 89, 5, 3}, {86, 95, 4, 4}, {44, 99, 3, 2}, {33, 90, 2, 2}};
-    for (int k = 0; k < 5; k++) {
-        float hx = holes[k][0], hy = holes[k][1], hw = holes[k][2], hh = holes[k][3];
-        rect(hx, hy, hw, hh, C(24, 16, 18));
-        rect(hx + 1, hy - 1, hw - 2, 1, C(24, 16, 18));                       /* a borda rota */
-        rect(hx - 1, hy + 1, 1, hh - 2 > 0 ? hh - 2 : 1, C(24, 16, 18));
-        rect(hx + 1, hy + hh - 1, hw - 2, 1, fade(C(255, 150, 70), 0.55f * fl));   /* a luz de dentro */
-    }
-    DrawLine(20, 96, 28, 99, C(96, 70, 48));   /* o caibro aparecendo nas falhas */
-    DrawLine(86, 95, 90, 99, C(96, 70, 48));
-    /* o remendo: um feixe de palha nova, mais clara, amarrado torto por cima */
-    for (int k = 0; k < 11; k++) rect(64 + k, 89 + (k % 3 == 0) + k / 5, 1, 8 - (k % 2), k % 2 ? C(170, 150, 90) : C(150, 132, 78));
-    rect(64, 93, 11, 1, C(90, 70, 44));
-    rect(64, 94, 1, 1, C(90, 70, 44));
-    /* fumaça saindo do respiro na ponta da cumeeira */
-    for (int i = 0; i < 6; i++) {
-        float k = fract(t * 0.12f + i / 6.0f);
-        DrawCircle((int)(90 + sinf(k * 6 + i) * 3 + k * 10), (int)(84 - k * 50), 2 + k * 3, CA(120, 110, 130, (unsigned char)(80 * (1 - k))));
-    }
-    /* a luz fraca da porta no chão */
-    glow(49, 131, 8 * fl, C(255, 140, 60));
-    DrawTriangle((Vector2){42, 138}, (Vector2){34, 142}, (Vector2){64, 142}, CA(255, 150, 70, (unsigned char)(40 * fl)));
-    DrawTriangle((Vector2){42, 138}, (Vector2){64, 142}, (Vector2){57, 138}, CA(255, 150, 70, (unsigned char)(40 * fl)));
-    /* a lenha empilhada contra a parede da esquerda: toras com a casca e os anéis */
-    for (int r = 0; r < 3; r++)
-        for (int k = 0; k < 5 - r; k++) {
-            int lx = 6 + k * 4 + r * 2 + (int)(hash1(r * 3.0f + k) * 2), ly = 135 - r * 3;
-            Color bark = C(58, 40, 30), wood = hash1(r * 5.0f + k) > 0.5f ? C(168, 128, 84) : C(146, 108, 70);
-            rect(lx - 1, ly - 1, 3, 1, bark);                   /* a ponta da tora, redonda */
-            rect(lx - 2, ly, 5, 1, bark);
-            rect(lx - 1, ly, 3, 1, wood);
-            rect(lx - 1, ly + 1, 3, 1, bark);
-            if (hash1(k * 9.0f + r) > 0.4f) DrawPixel(lx, ly, C(120, 86, 56));   /* o anel */
-        }
-    rect(4, 137, 22, 1, C(30, 24, 26));
-    /* o barril de água com os aros de bambu e a concha */
-    rect(99, 126, 10, 12, C(86, 60, 42));
-    rect(98, 128, 12, 8, C(92, 64, 44));
-    for (int k = 0; k < 3; k++) rect(99 + k * 3, 126, 1, 12, C(70, 48, 34));
-    rect(98, 128, 12, 1, C(70, 86, 58));
-    rect(98, 134, 12, 1, C(70, 86, 58));
-    rect(99, 125, 10, 1, C(40, 30, 28));
-    DrawLine(106, 125, 111, 118, C(150, 120, 80));
-    rect(110, 117, 2, 2, C(150, 120, 80));
-    /* o makiwara na frente: o poste de madeira meio inclinado, a palha amarrada no alto */
-    for (int k = 0; k < 30; k++) rect(120 + (k > 18 ? 0 : (18 - k) / 12), 138 - k, 3, 1, k % 7 == 3 ? C(96, 70, 46) : C(118, 88, 58));
-    for (int k = 0; k < 9; k++) {
-        rect(119 + (k < 5), 110 + k, 5, 1, k % 2 ? C(176, 150, 96) : C(150, 124, 78));
-        if (k % 3 == 1) rect(119, 110 + k, 5, 1, C(96, 74, 48));   /* a corda */
-    }
-    rect(118, 137, 7, 2, C(70, 66, 74));
-}
-
 /* A cabana de Hanzo na serra, à noite: ele de um lado da fogueira, Kojiro do outro. */
 void lore_draw_cabin(float t) {
     sky(C(14, 12, 30), C(66, 48, 76));
@@ -377,27 +228,9 @@ void lore_draw_cabin(float t) {
     arena_pine(120, 140, 30, pineTone, 5);
     rect(0, 138, 320, 42, C(40, 32, 38));
     rect(0, 138, 320, 2, C(62, 50, 54));
-    /* a cabana: tábuas, teto de palha, a porta acesa e uma janela */
+    /* a cabana pobre do Hanzo, simplificada (rodada 7) */
     float fl = 0.9f + 0.1f * sinf(t * 7) * sinf(t * 3.1f);
-    if (getenv("CABANA_PROVA") && !strcmp(getenv("CABANA_PROVA"), "7")) cabin_poor7(t);
-    else if (getenv("CABANA_PROVA")) cabin_poor(t);
-    else {
-    rect(26, 104, 68, 36, C(74, 50, 38));
-    for (int k = 0; k < 6; k++) rect(26, 104 + k * 6, 68, 1, C(58, 38, 30));
-    DrawTriangle((Vector2){14, 106}, (Vector2){106, 106}, (Vector2){60, 80}, C(96, 76, 50));
-    rect(14, 104, 92, 3, C(70, 54, 36));
-    for (int k = 0; k < 9; k++) rect(20 + k * 10, 106, 1, 2, C(70, 54, 36));
-    glow(54, 128, 24 * fl, C(255, 150, 70));
-    rect(48, 118, 12, 22, C(255, 170, 90));
-    rect(74, 112, 8, 7, C(255, 190, 110));
-    rect(77, 112, 1, 7, C(74, 50, 38));
-    rect(74, 115, 8, 1, C(74, 50, 38));
-    /* fumaça subindo do teto */
-    for (int i = 0; i < 6; i++) {
-        float k = fract(t * 0.12f + i / 6.0f);
-        DrawCircle((int)(80 + sinf(k * 6 + i) * 3 + k * 10), (int)(84 - k * 50), 2 + k * 3, CA(120, 110, 130, (unsigned char)(90 * (1 - k))));
-    }
-    }
+    cabin_poor7(t);
     /* a fogueira entre os dois: a luz no chão, a roda de pedras, a lenha cruzada com a
        brasa, três línguas de fogo tremendo, a fumaça subindo e as faíscas */
     float fx = 173, fy = 140;
