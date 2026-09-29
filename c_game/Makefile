@@ -18,7 +18,7 @@ ifeq ($(shell uname),Darwin)
 endif
 
 CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
-GAME := src/main.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
+GAME := src/main.c src/fonte.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
 all: apara
 
@@ -49,14 +49,21 @@ QUADROS ?= 0
 robos: robos_relatorio
 	./robos_relatorio $(LUTAS) $(HZ) $(QUADROS)
 
-test: core_test
+# Todo caractere não ASCII das strings do jogo tem glifo na fonte da interface.
+fonte_test: src/fonte.c src/fonte.h tests/fonte_test.c
+	$(CC) $(CFLAGS) src/fonte.c tests/fonte_test.c -o $@
+
+test-fonte: fonte_test
+	./fonte_test assets/fonts/Tiny5-Regular.ttf src/*.c
+
+test: core_test test-fonte
 	./core_test
 
 run: apara
 	./apara
 
 clean:
-	rm -f apara core_test robos_relatorio personagens
+	rm -f apara core_test fonte_test robos_relatorio personagens
 
 # O jogo de verdade, sob xvfb: as teclas de teste só existem com --teste e nada grava o progresso.
 teste-jogo: apara

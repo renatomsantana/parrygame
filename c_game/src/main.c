@@ -36,6 +36,7 @@
 #include "audio.h"
 #include "core.h"
 #include "robo.h"
+#include "fonte.h"
 #include "fx.h"
 #include "katana3d.h"
 #include "lore.h"
@@ -3413,11 +3414,8 @@ static void step(float dtReal) {
 }
 
 static Font load_font(const char *path, int size) {
-    int cps[256 - 32 + 3], n = 0;
-    for (int c = 32; c < 256; c++) cps[n++] = c;
-    cps[n++] = 0x2014; /* travessão */
-    cps[n++] = 0x2026; /* reticências */
-    cps[n++] = 0x201C;
+    int cps[FONTE_PEDIDOS_MAX];
+    int n = fonte_pedidos(cps, FONTE_PEDIDOS_MAX);
     Font f = LoadFontEx(path, size, cps, n);
     if (f.texture.id == 0 || f.glyphCount == 0) return GetFontDefault();
     /* Fonte de pixel: cada pixel do atlas fica cheio ou vazio (o mesmo corte do
@@ -3466,7 +3464,7 @@ int main(int argc, char **argv) {
     katana3d_load("assets/katana");
     spr_init();
     pix_init(RW, RH);
-    G.ui = load_font("assets/fonts/Tiny5-Regular.ttf", 9);  /* 9 = "em" de 8 px, a grade da Tiny5 */
+    G.ui = load_font(FONTE_UI_ARQUIVO, FONTE_UI_TAMANHO);
     G.uiBold = G.ui;
     audio_init();
     fx_init(&G.fx);
