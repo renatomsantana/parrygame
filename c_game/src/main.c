@@ -14,6 +14,7 @@
  *   --state S      title | lore | trail | ending (com --master N: sensei;
  *                  com --master N --duel: pause | defeat | finisher | cleared)
  *   --demo         um robô apara no tempo perfeito e avança as telas
+ *   F3 (ou APARA_DEBUG=1): overlay de debug com janelas, último aperto e estado do duelo
  *   --shot F T     salva uma captura em F depois de T segundos e sai
  *   --rec D T0 T1  salva os quadros de T0 a T1 segundos em D (30 por segundo, tempo fixo)
  */
@@ -289,6 +290,7 @@ static struct {
     ArenaCtx ctx;
 
     bool demo;
+    bool debug;               /* overlay de debug: F3 ou APARA_DEBUG=1 */
     RoboMente robo;           /* --demo: o robô perfeito dos testes */
     const char *shotFile;
     float shotTime;
@@ -2737,6 +2739,79 @@ static void ui_slash(void) {
     DrawLineEx(p0, head, 3 * a, fadec(WHITE, a));
 }
 
+/* ------------------------------------------------------------------ */
+/* Overlay de debug (F3 ou APARA_DEBUG=1)                              */
+/* ------------------------------------------------------------------ */
+
+/* Desenhado por cima de tudo, em pixels da tela (texto nítido), dentro de `dst`. */
+static void ui_debug(Rectangle dst) {
+    if (!G.debug || !(G.state == ST_DUEL || G.state == ST_DEFEAT || G.state == ST_FINISHER)) return;
+    const Duel *d = &G.duel;
+    float u = dst.width / UI_W;
+    float x = dst.x + 16 * u, y = dst.y + 104 * u, w = 760 * u, lh = 22 * u;
+    int fs = (int)fmaxf(10, 18 * u);
+    DrawRectangleRec((Rectangle){x - 8 * u, y - 8 * u, w + 16 * u, 8 * lh + 104 * u}, (Color){0, 0, 0, 185});
+    char ln[200];
+#define DBG_LINHA(cor, ...) do { snprintf(ln, sizeof ln, __VA_ARGS__); DrawText(ln, (int)x, (int)y, fs, cor); y += lh; } while (0)
+    static const char *FASE[] = {"pronto", "preparação", "recuperação", "fim"};
+    static const char *JULG[] = {"-", "ERRO", "BOM", "PERFEITO"};
+    const Stance *st = duel_stance(d);
+    const Move *mv = duel_move(d);
+    Color branco = {235, 235, 235, 255}, cinza = {160, 160, 170, 255};
+    DBG_LINHA(YELLOW, "DEBUG (F3)  %s  %s", G.m->name, st->name && st->name[0] ? st->name : "");
+    DBG_LINHA(branco, "fase: %s   relógio %.2f s   quadro %.1f ms", FASE[d->phase], d->clock, GetFrameTime() * 1000);
+    DBG_LINHA(branco, "golpe: %s  %d de %d   preparação %.0f ms%s%s", mv ? mv->name : "-", d->comboStrike + 1,
+              mv ? mv->strikes : 1, d->windupDuration * 1000, d->special ? "  ESPECIAL" : "", duel_strike_dual(d) ? "  DUPLO" : "");
+    DBG_LINHA(branco, "janela: perfeita %.0f ms, boa %.0f ms   lâmina parte %.0f ms antes, aviso %.0f ms antes",
+              st->perfectWindow * 1000, st->goodWindow * 1000, duel_strike_lead(d) * 1000, d->s.cueLead * 1000);
+    DBG_LINHA(branco, "mestre: postura %.0f / %.0f   selo %d de %d%s", d->bossPosture, d->m->posture, d->seal + 1,
+              d->m->sealCount > 0 ? d->m->sealCount : 1, duel_under_pressure(d) && d->m->sealCount <= 1 ? "   com pressa" : "");
+    DBG_LINHA(branco, "kojiro: vida %.0f / %.0f%s   dano de um erro %.1f", d->renPosture, d->s.renPosture,
+              d->burnLeft > 0 ? "  em brasas" : "", duel_ren_damage(d));
+    DBG_LINHA(branco, "hitstop %.0f ms   câmera lenta %.2fx   perfeitos %d  bons %d  erros %d", fmaxf(0, G.hitstop) * 1000, G.slowmo,
+              d->perfects, d->goods, d->bads);
+    /* o último aperto e o erro dele */
+    if (d->lastJudgement != J_NONE) {
+        const Stance *s0 = st;
+        Color c = d->lastJudgement == J_PERFEITO ? GREEN : d->lastJudgement == J_BOM ? GOLD : RED;
+        if (d->lastLead >= 0) {
+            double lead = d->lastLead * 1000, pw = s0->perfectWindow * 1000, gw = s0->goodWindow * 1000;
+            if (lead <= pw) DBG_LINHA(c, "último: %s, apertou %.0f ms antes do contato (perfeita: 0 a %.0f)", JULG[d->lastJudgement], lead, pw);
+            else if (lead <= gw) DBG_LINHA(c, "último: %s, apertou %.0f ms antes: %.0f ms cedo para o perfeito", JULG[d->lastJudgement], lead, lead - pw);
+            else DBG_LINHA(c, "último: %s, apertou %.0f ms antes: %.0f ms cedo demais (boa: até %.0f)", JULG[d->lastJudgement], lead, lead - gw, gw);
+        } else if (d->lastGestureAt > d->lastStrikeAt && d->lastGestureAt - d->lastStrikeAt < 0.5) {
+            DBG_LINHA(c, "último: %s, apertou %.0f ms DEPOIS do contato (tarde)", JULG[d->lastJudgement], (d->lastGestureAt - d->lastStrikeAt) * 1000);
+        } else {
+            DBG_LINHA(c, "último: %s, sem aperto", JULG[d->lastJudgement]);
+        }
+    } else {
+        DBG_LINHA(cinza, "último: -");
+    }
+    /* linha do tempo do golpe: preparação, lâmina partindo, aviso, janelas e o agora */
+    DuelTimeline t = duel_timeline(d);
+    y += 6 * u;
+    Rectangle bar = {x, y, w, 26 * u};
+    DrawRectangleRec(bar, (Color){50, 50, 60, 255});
+    if (t.active) {
+        double t0 = t.start, t1 = t.strike + 0.15;
+        float px = (float)(bar.width / (t1 - t0));
+#define DBG_X(tt) (bar.x + (float)((tt) - t0) * px)
+        DrawRectangleRec((Rectangle){DBG_X(t.launch), bar.y, DBG_X(t.strike) - DBG_X(t.launch), bar.height}, (Color){120, 70, 40, 255});
+        DrawRectangleRec((Rectangle){DBG_X(t.goodFrom), bar.y + 4 * u, DBG_X(t.strike) - DBG_X(t.goodFrom), bar.height - 8 * u}, GOLD);
+        DrawRectangleRec((Rectangle){DBG_X(t.perfectFrom), bar.y + 4 * u, DBG_X(t.strike) - DBG_X(t.perfectFrom), bar.height - 8 * u}, GREEN);
+        DrawRectangleRec((Rectangle){DBG_X(t.cue) - 1 * u, bar.y - 4 * u, 3 * u, bar.height + 8 * u}, SKYBLUE);
+        DrawRectangleRec((Rectangle){DBG_X(t.strike) - 1 * u, bar.y - 6 * u, 3 * u, bar.height + 12 * u}, RED);
+        if (d->attempted && d->lastPress >= t0) DrawRectangleRec((Rectangle){DBG_X(d->lastPress) - 1 * u, bar.y, 3 * u, bar.height}, MAGENTA);
+        DrawRectangleRec((Rectangle){DBG_X(t.now) - 1 * u, bar.y - 6 * u, 3 * u, bar.height + 12 * u}, WHITE);
+        snprintf(ln, sizeof ln, "faltam %.0f ms", (t.strike - t.now) * 1000);
+        DrawText(ln, (int)(bar.x + bar.width - 130 * u), (int)(bar.y + bar.height + 6 * u), fs, branco);
+#undef DBG_X
+    }
+    DrawText("azul: aviso  marrom: lâmina partindo  verde/ouro: janelas  vermelho: contato  branco: agora  rosa: seu aperto",
+             (int)x, (int)(bar.y + bar.height + 30 * u), (int)fmaxf(9, 14 * u), cinza);
+#undef DBG_LINHA
+}
+
 static void draw_ui(void) {
     switch (G.state) {
         case ST_TITLE: ui_title(); break;
@@ -3004,6 +3079,7 @@ int main(int argc, char **argv) {
     bool direct = false;
     const char *startState = NULL;
     G.demoChoice = 1;
+    G.debug = getenv("APARA_DEBUG") && strcmp(getenv("APARA_DEBUG"), "0") != 0;
     parse_args(argc, argv, &startMaster, &direct, &startState);
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
@@ -3073,6 +3149,7 @@ int main(int argc, char **argv) {
         }
         if (!IsWindowFocused() && G.state == ST_DUEL && !G.shotFile && !G.recDir) G.paused = true;
         if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
+        if (IsKeyPressed(KEY_F3)) G.debug = !G.debug;
         if (IsKeyPressed(KEY_F)) G.fx.shakeEnabled = !G.fx.shakeEnabled;
         if (IsKeyPressed(KEY_ESCAPE) && in_arena_state()) G.paused = !G.paused;
         if (G.paused) {
@@ -3134,6 +3211,8 @@ int main(int argc, char **argv) {
         if (!getenv("APARA_SEM_UI"))   /* capturas das provas: só a cena, sem a interface */
             DrawTexturePro(G.uiLow.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, dst, (Vector2){0, 0}, 0, WHITE);
         EndBlendMode();
+        ui_debug(dst);
+        rlDrawRenderBatchActive();   /* as capturas leem a tela antes do EndDrawing */
 
         if (G.recDir && wall >= G.recStart) {
             char path[512];

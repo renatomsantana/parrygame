@@ -71,6 +71,10 @@ void duel_reset(Duel *d) {
     d->attacks = d->feints = d->perfects = d->goods = d->bads = 0;
     d->scheduleCount = d->scheduleIndex = 0;
     d->eventCount = 0;
+    d->lastStrikeAt = -1;
+    d->lastJudgement = J_NONE;
+    d->lastLead = -1;
+    d->lastGestureAt = -100;
 }
 
 const Stance *duel_stance(const Duel *d) {
@@ -122,6 +126,23 @@ double duel_time_to_next_instant(const Duel *d) {
     }
     double t = next - d->clock;
     return t > 0 ? t : 0;
+}
+
+DuelTimeline duel_timeline(const Duel *d) {
+    DuelTimeline t;
+    memset(&t, 0, sizeof t);
+    t.now = d->clock;
+    if (d->phase != PH_WINDUP) return t;
+    const Stance *st = duel_stance(d);
+    t.active = true;
+    t.strike = d->strikeAt;
+    t.start = d->strikeAt - d->windupDuration;
+    t.launch = d->strikeAt - duel_strike_lead(d);
+    t.cue = d->strikeAt - d->s.cueLead;
+    if (t.cue < t.start) t.cue = t.start;
+    t.perfectFrom = d->strikeAt - st->perfectWindow;
+    t.goodFrom = d->strikeAt - st->goodWindow;
+    return t;
 }
 
 static void push_schedule(Duel *d, double time, ScheduleKind kind) {
@@ -311,6 +332,10 @@ static void resolve(Duel *d) {
         if (d->m->healsOnHit) d->bossPosture = clampf(d->bossPosture + s->badBossRecover, 0, d->m->posture);
     }
 
+    d->lastStrikeAt = d->strikeAt;
+    d->lastJudgement = j;
+    d->lastLead = lead;
+
     bool broke = d->bossPosture <= 0;
     if (broke) {
         d->bossPosture = 0;
@@ -391,6 +416,7 @@ bool duel_press(Duel *d) {
     if (d->phase == PH_WINDUP && d->attempted) return false;
     d->lastPress = d->clock;
     if (d->phase == PH_WINDUP) d->attempted = true;
+    else d->lastGestureAt = d->clock;
     emit(d, EV_PRESS, J_NONE, 0, 0, false);
     return true;
 }

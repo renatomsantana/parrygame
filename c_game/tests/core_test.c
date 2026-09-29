@@ -624,6 +624,45 @@ static void test_janelas_viaveis(void) {
     printf("janelas viáveis: %d golpes conferidos\n", golpes);
 }
 
+/* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
+ * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
+static void test_timeline(void) {
+    Settings s;
+    settings_default(&s);
+    for (int i = 0; i < roster_size(); i++) {
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 7);
+        CHECK(!duel_timeline(&d).active, "%s: sem golpe, sem linha do tempo", roster_get(i)->name);
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        DuelTimeline t = duel_timeline(&d);
+        const Stance *st = duel_stance(&d);
+        CHECK(t.active && t.strike == d.strikeAt && fabs(t.start - (d.strikeAt - d.windupDuration)) < 1e-9 &&
+              fabs(t.launch - (d.strikeAt - duel_strike_lead(&d))) < 1e-9 && t.cue >= t.start && t.cue <= t.strike,
+              "%s: linha do tempo do golpe", roster_get(i)->name);
+        CHECK(fabs(t.perfectFrom - (t.strike - st->perfectWindow)) < 1e-9 && fabs(t.goodFrom - (t.strike - st->goodWindow)) < 1e-9,
+              "%s: janelas na linha do tempo", roster_get(i)->name);
+        CHECK(probe(&d, t.perfectFrom + 0.001) == J_PERFEITO && probe(&d, t.perfectFrom - 0.001) == J_BOM &&
+              probe(&d, t.goodFrom + 0.001) == J_BOM && probe(&d, t.goodFrom - 0.001) == J_RUIM,
+              "%s: as bordas da linha do tempo são as do julgamento", roster_get(i)->name);
+        /* aperta 30 ms antes: o último golpe fica com essa antecedência */
+        double at = d.strikeAt;
+        duel_tick(&d, at - 0.030 - d.clock);
+        duel_press(&d);
+        while (d.phase == PH_WINDUP) duel_tick(&d, DT);
+        CHECK(d.lastStrikeAt == at && fabs(d.lastLead - 0.030) < 1e-6 && d.lastJudgement == (0.030 <= st->perfectWindow ? J_PERFEITO : J_BOM),
+              "%s: último aperto 30 ms antes (%.1f ms)", roster_get(i)->name, d.lastLead * 1000);
+    }
+    /* sem aperto, e um gesto 40 ms depois do contato: tarde */
+    Duel d;
+    duel_init(&d, &s, roster_get(0), 7);
+    while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+    double at = d.strikeAt;
+    duel_tick(&d, at + 0.040 - d.clock);
+    duel_press(&d);
+    CHECK(d.lastJudgement == J_RUIM && d.lastLead < 0 && fabs((d.lastGestureAt - d.lastStrikeAt) - 0.040) < 1e-6,
+          "aperto 40 ms depois do contato fica registrado como tarde");
+}
+
 /* Os robôs, com o mesmo passo e os mesmos tempos do demo: o perfeito vence todos sem
  * errar, quem nunca defende perde de todos, e apertar sem parar também perde. */
 static void test_robos(void) {
@@ -939,6 +978,7 @@ int main(void) {
     test_every_master_beatable();
     test_robos();
     test_janelas_viaveis();
+    test_timeline();
     test_movesets();
     test_traits();
     test_dual();

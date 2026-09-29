@@ -253,6 +253,11 @@ typedef struct {
     int comboRemaining, comboStrike;
     int move, sequences;          /* sequência atual e quantas já saíram */
     int attacks, feints, perfects, goods, bads;
+    /* o último golpe julgado e o último gesto, para o overlay de debug e o "cedo/tarde" */
+    double lastStrikeAt;          /* instante do contato (-1 = nenhum ainda) */
+    Judgement lastJudgement;
+    double lastLead;              /* segundos entre o aperto e o contato (-1 = sem aperto) */
+    double lastGestureAt;         /* último aperto fora da preparação (-100 = nenhum) */
 
     ScheduleItem schedule[2 * MAX_FALSE_CUES + 2];
     int scheduleCount, scheduleIndex;
@@ -277,6 +282,14 @@ const Move *duel_move(const Duel *d);             /* sequência em curso (NULL =
 float duel_ren_damage(const Duel *d);     /* dano de um erro contra este mestre */
 bool duel_strike_dual(const Duel *d);     /* o golpe que vem é de duas lâminas */
 float duel_strike_lead(const Duel *d);    /* segundos entre a lâmina partir e o contato */
+/* Linha do tempo do golpe em preparação (tempos do relógio do duelo), para o overlay
+ * de debug: perfeito se o aperto cai em [perfectFrom, strike], bom em [goodFrom, strike]. */
+typedef struct {
+    bool active;                  /* há golpe em preparação */
+    double now, start, launch, cue, strike;
+    double perfectFrom, goodFrom;
+} DuelTimeline;
+DuelTimeline duel_timeline(const Duel *d);
 /* Copia e esvazia a fila de eventos. Devolve quantos. */
 int duel_drain(Duel *d, DuelEvent *out, int max);
 
