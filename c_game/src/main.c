@@ -14,7 +14,13 @@
  *   --state S      title | lore | trail | ending | calibra (com --master N: sensei;
  *                  com --master N --duel: pause | defeat | finisher | cleared)
  *   --demo         um robô apara no tempo perfeito e avança as telas
- *   F3 (ou APARA_DEBUG=1): overlay de debug com janelas, último aperto e estado do duelo
+ *   F3 (ou APARA_DEBUG=1): overlay de debug com janelas, os últimos apertos (resultado e
+ *                  erro em ms) e o estado do duelo. Com ele ligado, na luta: R recomeça,
+ *                  V enche a vida, P enche a postura do mestre, 1 a 3 escolhem a fase do
+ *                  oboro, N e B vão para o próximo mestre e o anterior. Usou uma dessas
+ *                  teclas, o progresso da trilha não é mais salvo nesta sessão.
+ *   --teste        liga o F3 e vai direto ao duelo (com --master N e --fase F)
+ *   --fase F       com --master 13: começa na fase F do oboro (1 a 3)
  *   --shot F T     salva uma captura em F depois de T segundos e sai
  *   --rec D T0 T1  salva os quadros de T0 a T1 segundos em D (30 por segundo, tempo fixo)
  */
@@ -192,6 +198,12 @@ typedef struct {
     KatanaStyle style;
 } FlySword;
 
+/* F3: um aperto anotado (resultado, quando, erro em ms). */
+typedef struct {
+    char res[12], quando[40], erro[80];
+    Color cor;
+} Anotacao;
+
 static struct {
     RenderTexture2D scene, actors, uiLow;
     Font ui, uiBold;
@@ -290,6 +302,10 @@ static struct {
 
     bool demo;
     bool debug;               /* overlay de debug: F3 ou APARA_DEBUG=1 */
+    bool teste;               /* usou as teclas de teste (ou --teste): o progresso não é salvo */
+    int startSeal;            /* a próxima luta começa neste selo (--fase, teclas 1 a 3) */
+    Anotacao aperto[6];       /* F3: os últimos apertos, do mais novo ao mais velho */
+    int apertos;
     float latVideo, latAudio; /* calibração (s): atraso de vídeo e de áudio do jogador */
     struct {
         int modo;             /* 0 vídeo, 1 áudio, 2 resultado */
@@ -542,7 +558,7 @@ static Vector2 mouse_ui(void) {
 #define SAVE_FILE "apara_save.txt"
 
 static void save_game(void) {
-    if (G.demo) return;
+    if (G.demo || G.teste) return;
     FILE *f = fopen(SAVE_FILE, "w");
     if (!f) return;
     fprintf(f, "APARA-C 2\n%d %u %d %d\n", G.camp.index, G.camp.clearedMask, G.camp.completed, G.camp.loreSeen);
@@ -838,6 +854,8 @@ static void start_lines(const Line *lines, int count, State s) {
     set_state(s);
 }
 
+static void teste_selo(int selo);
+
 static void start_duel(void) {
     settings_default(&G.settings);
     settings_for_level(&G.settings, campaign_defeated(&G.camp));
@@ -864,6 +882,9 @@ static void start_duel(void) {
     G.hz.on = false;
     audio_music_intensity(0);
     banner(G.m->isBigBoss ? duel_stance(&G.duel)->name : G.m->style, PAPER);
+    G.apertos = 0;
+    if (G.startSeal > 0 && G.m->sealCount > 1) teste_selo(G.startSeal);
+    G.startSeal = 0;
     set_state(ST_DUEL);
 }
 
@@ -1499,6 +1520,43 @@ static void aviso_brilho(bool primeiro) {
     fx_ring(&G.fx, at, lua ? 70 : 45, 0.2f, 1, lua ? (Color){200, 225, 255, 220} : (Color){255, 245, 210, 180});
 }
 
+/* F3: o resultado de cada aperto e o erro em ms (o mais novo em cima). O erro é quanto
+ * faltou para a janela perfeita; os números vêm do core (EV_PRESS e EV_IMPACT). */
+static void anota_aperto(const DuelEvent *e) {
+    if (e->kind == EV_PRESS && e->i != PRESS_CEDO && e->i != PRESS_TARDE) return;
+    int n = (int)(sizeof G.aperto / sizeof G.aperto[0]);
+    memmove(&G.aperto[1], &G.aperto[0], sizeof G.aperto[0] * (size_t)(n - 1));
+    if (G.apertos < n) G.apertos++;
+    Anotacao *l = &G.aperto[0];
+    float a = fabsf(e->a) * 1000, b = e->b * 1000;
+    snprintf(l->quando, sizeof l->quando, "%.0f ms %s do contato", a, e->a >= 0 ? "antes" : "depois");
+    if (e->kind == EV_PRESS && e->i == PRESS_CEDO) {
+        snprintf(l->res, sizeof l->res, "CEDO");
+        snprintf(l->erro, sizeof l->erro, "%.0f ms antes do aviso: este golpe não sai perfeito", b);
+        l->cor = (Color){150, 205, 255, 255};
+        return;
+    }
+    if (e->kind == EV_PRESS) {
+        snprintf(l->res, sizeof l->res, "TARDE");
+        snprintf(l->erro, sizeof l->erro, "o golpe já tinha entrado");
+        l->cor = (Color){255, 170, 90, 255};
+        return;
+    }
+    snprintf(l->res, sizeof l->res, "%s", e->judgement == J_PERFEITO ? "PERFEITO" : e->judgement == J_BOM ? "BOM" : "ERRO");
+    l->cor = e->judgement == J_PERFEITO ? GREEN : e->judgement == J_BOM ? GOLD : RED;
+    if (e->a == -1.0f) {
+        snprintf(l->quando, sizeof l->quando, "sem aperto");
+        l->erro[0] = 0;
+    } else if (b >= 0.5f) {
+        snprintf(l->erro, sizeof l->erro, "erro %.0f ms cedo", b);
+    } else if (b <= -0.5f) {
+        snprintf(l->erro, sizeof l->erro, "erro %.0f ms tarde", -b);
+    } else {
+        snprintf(l->erro, sizeof l->erro, e->judgement == J_BOM ? "erro 0, mas apertou antes do aviso" : "erro 0");
+    }
+    if (e->i & 2) strncat(l->erro, "  (a 2ª lâmina entrou)", sizeof l->erro - strlen(l->erro) - 1);
+}
+
 static void handle_events(void) {
     DuelEvent ev[MAX_EVENTS];
     int n = duel_drain(&G.duel, ev, MAX_EVENTS);
@@ -1541,12 +1599,14 @@ static void handle_events(void) {
             case EV_PRESS:
                 if (e->i == PRESS_CEDO) cedo_tarde("cedo");
                 if (e->i == PRESS_TARDE) cedo_tarde("tarde");
+                anota_aperto(e);
                 rig_pose(r, G.duel.phase == PH_WINDUP ? parry_pose(strike_look()) : POSE_PARRY, 0.06f, EASE_OUT);
                 sprite_press();
                 G.renParryTime = 0;
                 audio_play(SND_GESTURE, 0.8f, 1 + (rand() % 7) * 0.02f);
                 break;
             case EV_IMPACT:
+                anota_aperto(e);
                 /* defendeu cedo demais (depois do aviso vale uma tentativa só) */
                 if (e->judgement == J_RUIM && e->a > duel_stance(&G.duel)->goodWindow) cedo_tarde("cedo");
                 on_impact(e);
@@ -1890,6 +1950,47 @@ static void boss_wear(bool mask) {
     G.masked = mask;
     const SprSet *s = spr_get(mask ? "oboro_mascara" : "oboro");
     if (s && G.bossS.set) G.bossS.set = s;
+}
+
+/* Build de teste: a luta começa direto no selo `selo` do oboro, como se os anteriores
+ * tivessem acabado de quebrar (sem as falas; na terceira fase, de máscara e em fúria). */
+static void teste_selo(int selo) {
+    duel_start_seal(&G.duel, selo);
+    int f = G.duel.seal;
+    G.ctx.seal = f;
+    for (int i = 1; i <= f && i < MAX_SEALS; i++) G.sealTold[i] = true;
+    if (f >= 2) {
+        boss_wear(true);
+        G.bossS.furia = true;
+    }
+    audio_music_intensity(f / 2.0f);
+    G.shownBoss = G.ghostBoss = duel_posture_max(&G.duel);
+    banner(duel_stance(&G.duel)->name, G.masked ? VERMILION : AGED_GOLD);
+}
+
+/* Recomeça a luta contra o mestre `indice`, no selo `selo`, com kojiro chegando como na
+ * trilha (os anteriores vencidos). O progresso não é mais salvo nesta sessão. */
+static void teste_luta(int indice, int selo) {
+    G.teste = true;
+    if (indice != G.camp.index) {
+        campaign_reset(&G.camp);
+        for (int i = 0; i < indice; i++) campaign_mark_cleared(&G.camp, i);
+    }
+    start_master(indice);
+    G.startSeal = selo;
+    start_duel();
+}
+
+/* Teclas de teste, com o F3 ligado, na luta ou na derrota. */
+static void teclas_de_teste(void) {
+    if (!G.debug || G.demo || G.paused || !(G.state == ST_DUEL || G.state == ST_DEFEAT)) return;
+    int n = roster_size(), fase = IsKeyPressed(KEY_ONE) ? 0 : IsKeyPressed(KEY_TWO) ? 1 : IsKeyPressed(KEY_THREE) ? 2 : -1;
+    if (IsKeyPressed(KEY_R)) teste_luta(G.camp.index, G.duel.seal);
+    else if (IsKeyPressed(KEY_N) || IsKeyPressed(KEY_PAGE_DOWN)) teste_luta((G.camp.index + 1) % n, 0);
+    else if (IsKeyPressed(KEY_B) || IsKeyPressed(KEY_PAGE_UP)) teste_luta((G.camp.index + n - 1) % n, 0);
+    else if (fase >= 0 && G.m->sealCount > 1) teste_luta(G.camp.index, fase);
+    else if (G.state == ST_DUEL && IsKeyPressed(KEY_V)) { G.teste = true; duel_refill(&G.duel, true, false); }
+    else if (G.state == ST_DUEL && IsKeyPressed(KEY_P)) { G.teste = true; duel_refill(&G.duel, false, true); }
 }
 
 /* Kojiro anda (a corrida, devagar) ou corre por `dur` segundos. */
@@ -2858,13 +2959,13 @@ static void ui_debug(Rectangle dst) {
     if (!G.debug || !(G.state == ST_DUEL || G.state == ST_DEFEAT || G.state == ST_FINISHER)) return;
     const Duel *d = &G.duel;
     float u = dst.width / UI_W;
-    float x = dst.x + 16 * u, y = dst.y + 104 * u, w = 760 * u, lh = 22 * u;
-    int fs = (int)fmaxf(10, 18 * u);
-    DrawRectangleRec((Rectangle){x - 8 * u, y - 8 * u, w + 16 * u, 8 * lh + 104 * u}, (Color){0, 0, 0, 185});
+    float x = dst.x + 16 * u, y = dst.y + 104 * u, w = 860 * u, lh = 22 * u;
+    int fs = (int)fmaxf(10, 18 * u), fp = (int)fmaxf(9, 14 * u);
+    int nAnot = (int)(sizeof G.aperto / sizeof G.aperto[0]);
+    DrawRectangleRec((Rectangle){x - 8 * u, y - 8 * u, w + 16 * u, (8 + nAnot) * lh + 128 * u}, (Color){0, 0, 0, 185});
     char ln[200];
 #define DBG_LINHA(cor, ...) do { snprintf(ln, sizeof ln, __VA_ARGS__); DrawText(ln, (int)x, (int)y, fs, cor); y += lh; } while (0)
     static const char *FASE[] = {"pronto", "preparação", "recuperação", "fim"};
-    static const char *JULG[] = {"-", "ERRO", "BOM", "PERFEITO"};
     const Stance *st = duel_stance(d);
     const Move *mv = duel_move(d);
     Color branco = {235, 235, 235, 255}, cinza = {160, 160, 170, 255};
@@ -2883,25 +2984,16 @@ static void ui_debug(Rectangle dst) {
               d->burnLeft > 0 ? "  em brasas" : "", duel_ren_damage(d));
     DBG_LINHA(branco, "hitstop %.0f ms   câmera lenta %.2fx   perfeitos %d  bons %d  erros %d   atraso: vídeo %.0f, áudio %.0f ms",
               fmaxf(0, G.hitstop) * 1000, G.slowmo, d->perfects, d->goods, d->bads, G.latVideo * 1000, G.latAudio * 1000);
-    /* o último aperto e o erro dele */
-    if (d->lastJudgement != J_NONE) {
-        const Stance *s0 = st;
-        Color c = d->lastJudgement == J_PERFEITO ? GREEN : d->lastJudgement == J_BOM ? GOLD : RED;
-        if (d->lastAttempted && d->lastLead < 0) {
-            DBG_LINHA(c, "último: %s, apertou %.0f ms depois do contato (tolerância: %.0f)", JULG[d->lastJudgement], -d->lastLead * 1000,
-                      d->s.lateGrace * 1000);
-        } else if (d->lastAttempted) {
-            double lead = d->lastLead * 1000, pw = s0->perfectWindow * 1000, gw = s0->goodWindow * 1000;
-            if (lead <= pw) DBG_LINHA(c, "último: %s, apertou %.0f ms antes do contato (perfeita: 0 a %.0f)", JULG[d->lastJudgement], lead, pw);
-            else if (lead <= gw) DBG_LINHA(c, "último: %s, apertou %.0f ms antes: %.0f ms cedo para o perfeito", JULG[d->lastJudgement], lead, lead - pw);
-            else DBG_LINHA(c, "último: %s, apertou %.0f ms antes: %.0f ms cedo demais (boa: até %.0f)", JULG[d->lastJudgement], lead, lead - gw, gw);
-        } else if (d->lastGestureAt > d->lastStrikeAt && d->lastGestureAt - d->lastStrikeAt < 0.5) {
-            DBG_LINHA(c, "último: %s, apertou %.0f ms DEPOIS do contato (tarde)", JULG[d->lastJudgement], (d->lastGestureAt - d->lastStrikeAt) * 1000);
-        } else {
-            DBG_LINHA(c, "último: %s, sem aperto", JULG[d->lastJudgement]);
-        }
-    } else {
-        DBG_LINHA(cinza, "último: -");
+    /* os últimos apertos: o resultado, quando foi e o erro em ms */
+    DBG_LINHA(cinza, "apertos, o mais novo em cima (erro: quanto faltou para a janela perfeita)");
+    for (int i = 0; i < nAnot; i++) {
+        if (i >= G.apertos) { y += lh; continue; }
+        const Anotacao *l = &G.aperto[i];
+        Color c = i == 0 ? l->cor : ColorAlpha(l->cor, 0.7f);
+        DrawText(l->res, (int)x, (int)y, fs, c);
+        DrawText(l->quando, (int)(x + 110 * u), (int)y, fs, c);
+        DrawText(l->erro, (int)(x + 340 * u), (int)y, fs, c);
+        y += lh;
     }
     /* linha do tempo do golpe: preparação, lâmina partindo, aviso, janelas e o agora */
     DuelTimeline t = duel_timeline(d);
@@ -2924,7 +3016,10 @@ static void ui_debug(Rectangle dst) {
 #undef DBG_X
     }
     DrawText("azul: aviso  marrom: lâmina partindo  verde/ouro: janelas  vermelho: contato  branco: agora  rosa: seu aperto",
-             (int)x, (int)(bar.y + bar.height + 30 * u), (int)fmaxf(9, 14 * u), cinza);
+             (int)x, (int)(bar.y + bar.height + 30 * u), fp, cinza);
+    DrawText(TextFormat("teclas: R recomeça  V vida cheia  P postura cheia  1 2 3 fase do oboro  N B próximo e anterior%s",
+                        G.teste ? "   |   modo de teste: o progresso não é salvo" : ""),
+             (int)x, (int)(bar.y + bar.height + 50 * u), fp, G.teste ? (Color){255, 200, 120, 255} : cinza);
 #undef DBG_LINHA
 }
 
@@ -3187,6 +3282,8 @@ static void parse_args(int argc, char **argv, int *startMaster, bool *direct, co
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--master") && i + 1 < argc) *startMaster = atoi(argv[++i]) - 1;
         else if (!strcmp(argv[i], "--duel")) *direct = true;
+        else if (!strcmp(argv[i], "--teste")) { *direct = true; G.debug = G.teste = true; }
+        else if (!strcmp(argv[i], "--fase") && i + 1 < argc) G.startSeal = atoi(argv[++i]) - 1;
         else if (!strcmp(argv[i], "--demo")) G.demo = true;
         else if (!strcmp(argv[i], "--state") && i + 1 < argc) *startState = argv[++i];
         else if (!strcmp(argv[i], "--final") && i + 1 < argc) G.demoChoice = strcmp(argv[++i], "sim") ? 1 : 0;
@@ -3197,6 +3294,7 @@ static void parse_args(int argc, char **argv, int *startMaster, bool *direct, co
             G.recEnd = (float)atof(argv[++i]);
         }
     }
+    if (G.teste && *startMaster < 0) *startMaster = 0;
 }
 
 static void step(float dtReal) {
@@ -3344,6 +3442,7 @@ int main(int argc, char **argv) {
         if (!IsWindowFocused() && G.state == ST_DUEL && !G.shotFile && !G.recDir) G.paused = true;
         if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
         if (IsKeyPressed(KEY_F3)) G.debug = !G.debug;
+        teclas_de_teste();
         if (IsKeyPressed(KEY_F)) G.fx.shakeEnabled = !G.fx.shakeEnabled;
         if (IsKeyPressed(KEY_ESCAPE) && in_arena_state()) G.paused = !G.paused;
         if (G.paused) {

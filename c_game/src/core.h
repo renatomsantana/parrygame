@@ -208,8 +208,10 @@ typedef enum {
     EV_WINDUP,        /* a: duração */
     EV_LAUNCH,        /* a lâmina parte */
     EV_CUE,           /* o aviso; i: qual golpe da sequência (0 = o primeiro); flag: o som (false: o brilho) */
-    EV_PRESS,         /* gesto aceito; i: PressKind */
-    EV_IMPACT,        /* judgement, a: antecedência (negativa = depois do contato; -1 = sem defesa), flag: quebrou postura */
+    EV_PRESS,         /* gesto aceito; i: PressKind; a: antecedência ao contato (CEDO, TENTATIVA) ou atraso
+                         depois do contato que entrou (TARDE); b: CEDO, quanto faltava para o aviso */
+    EV_IMPACT,        /* judgement, a: antecedência (negativa = depois do contato; -1 = sem defesa), flag: quebrou
+                         postura; b: quanto o aperto ficou fora da janela perfeita (>0 cedo, <0 tarde, 0 dentro) */
     EV_STANCE,        /* i: nova postura */
     EV_SEAL,          /* i: novo selo (o BIG BOSS entrou em outra fase) */
     EV_COMBO,         /* i: golpes na sequência (só quando mais de um) */
@@ -230,7 +232,7 @@ typedef enum {
 typedef struct {
     EventKind kind;
     Judgement judgement;
-    float a;
+    float a, b;
     int i;
     bool flag;
 } DuelEvent;
@@ -282,6 +284,10 @@ typedef struct {
 
 void duel_init(Duel *d, const Settings *s, const MasterProfile *m, uint32_t seed);
 void duel_reset(Duel *d);
+/* Para testar à mão (F3): recomeça a luta direto no selo `seal` (0 = o primeiro), com
+ * vida cheia e a postura e a postura de luta desse selo; e reabastece vida e postura. */
+void duel_start_seal(Duel *d, int seal);
+void duel_refill(Duel *d, bool vida, bool postura);
 void duel_tick(Duel *d, double delta);
 bool duel_press(Duel *d);
 /* Um quadro do jogo: o aperto chegou em algum ponto do quadro e entra no meio dele. */

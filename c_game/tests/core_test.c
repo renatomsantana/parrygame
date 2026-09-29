@@ -1121,6 +1121,140 @@ static void test_vantagem(void) {
     CHECK(!d.advantage && d.bossPosture > s.perfectBossDamage * 0.5f, "o mestre que se recupera sai da vantagem (%.1f)", d.bossPosture);
 }
 
+/* Aperta em `quando` (tempo do duelo) numa cópia e devolve o EV_PRESS e o EV_IMPACT. */
+static bool aperta_e_ve(const Duel *d, double quando, DuelEvent *aperto, DuelEvent *impacto) {
+    Duel c = *d;
+    DuelEvent ev[MAX_EVENTS];
+    duel_drain(&c, ev, MAX_EVENTS);
+    if (quando > c.clock) duel_tick(&c, quando - c.clock);
+    duel_drain(&c, ev, MAX_EVENTS);
+    aperto->kind = impacto->kind = EV_WINDUP;
+    if (quando >= 0 && !duel_press(&c)) return false;
+    for (int n = 0; n < 100000; n++) {
+        int k = duel_drain(&c, ev, MAX_EVENTS);
+        for (int e = 0; e < k; e++) {
+            if (ev[e].kind == EV_PRESS) *aperto = ev[e];
+            if (ev[e].kind == EV_IMPACT) { *impacto = ev[e]; return true; }
+        }
+        if (c.phase == PH_FINISHED) break;
+        duel_tick(&c, 1.0 / 1000);
+    }
+    return false;
+}
+
+/* Build de teste: começar num selo do oboro, reabastecer vida e postura, e o que o F3
+ * mostra de cada aperto (resultado e erro em ms) vem certo do core. */
+static void test_teste_a_mao(void) {
+    const MasterProfile *o = roster_get(12);
+    Settings s;
+    settings_default(&s);
+    settings_for_level(&s, 12);
+    for (int f = 0; f < 3; f++) {
+        Duel d;
+        duel_init(&d, &s, o, 7);
+        duel_start_seal(&d, f);
+        CHECK(d.seal == f && d.stanceIndex == f && fabsf(d.bossPosture - o->seals[f].posture) < 1e-3f &&
+                  fabsf(d.renPosture - s.renPosture) < 1e-3f && d.phase == PH_READY,
+              "começa direto na fase %d do oboro: postura %.0f, postura de luta %d, vida cheia", f + 1, o->seals[f].posture, f);
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        const Move *mv = duel_move(&d);
+        char eco[64];
+        snprintf(eco, sizeof eco, "eco %s", roster_get(0)->style + 8);
+        if (f == 0) CHECK(mv && !strcmp(mv->name, "lição completa"), "fase 1 começa pela lição completa");
+        if (f == 1) CHECK(mv && !strcmp(mv->name, eco), "fase 2 começa pelo padrão do primeiro aprendiz (%s)", mv ? mv->name : "-");
+        if (f == 2) CHECK(fabsf(duel_ren_damage(&d) - s.renPosture / o->hitsToFall * 1.25f) < 1e-3f, "fase 3: o erro dói x1,25");
+    }
+    Duel d;
+    duel_init(&d, &s, o, 7);
+    duel_start_seal(&d, 9);
+    CHECK(d.seal == 2, "selo além do último fica no último");
+    duel_init(&d, &s, roster_get(3), 7);
+    duel_start_seal(&d, 2);
+    CHECK(d.seal == 0 && fabsf(d.bossPosture - roster_get(3)->posture) < 1e-3f, "mestre comum: um selo só");
+
+    /* vida e postura cheias de novo; as brasas do enjin apagam */
+    Settings s7;
+    settings_default(&s7);
+    settings_for_level(&s7, 7);
+    duel_init(&d, &s7, roster_get(7), 3);
+    while (d.bads == 0 && d.phase != PH_FINISHED) duel_tick(&d, DT);
+    CHECK(d.renPosture < s7.renPosture && d.burnLeft > 0, "enjin: o erro tira vida e deixa em brasas");
+    duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+    duel_refill(&d, true, false);
+    CHECK(fabsf(d.renPosture - s7.renPosture) < 1e-3f && d.burnLeft <= 0, "vida cheia de novo, sem brasas");
+    duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+    d.bossPosture = s7.perfectBossDamage * 0.5f;
+    d.advantage = true;
+    duel_refill(&d, false, true);
+    DuelEvent ev[MAX_EVENTS];
+    int k = duel_drain(&d, ev, MAX_EVENTS);
+    CHECK(fabsf(d.bossPosture - duel_posture_max(&d)) < 1e-3f && !d.advantage && k == 1 && ev[0].kind == EV_ADVANTAGE && !ev[0].flag,
+          "postura cheia de novo e a vantagem some");
+
+    /* o resultado de cada aperto e o erro em ms */
+    bool cedo = true, perfeito = true, bomCedo = true, bomTarde = true, erroCedo = true, semAperto = true, tarde = true;
+    int tardes = 0;
+    for (int i = 0; i < roster_size(); i++) {
+        Settings si;
+        settings_default(&si);
+        settings_for_level(&si, i);
+        for (int lat = 0; lat < 2; lat++) {
+            si.latency = lat ? 0.050f : 0;
+            duel_init(&d, &si, roster_get(i), 11);
+            while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+            DuelTimeline t = duel_timeline(&d);
+            const Stance *st = duel_stance(&d);
+            double L = si.latency, pw = st->perfectWindow, gw = st->goodWindow;
+            DuelEvent ap, im;
+            /* cedo: antes do aviso; a = antes do contato, b = antes do aviso */
+            if (t.cue - t.start > 0.05) {
+                double q = t.start + 0.02;
+                Duel c = d;
+                duel_tick(&c, q - c.clock);
+                duel_drain(&c, ev, MAX_EVENTS);
+                duel_press(&c);
+                k = duel_drain(&c, ev, MAX_EVENTS);
+                if (!(k >= 1 && ev[k - 1].i == PRESS_CEDO && fabs(ev[k - 1].a - (t.strike - (c.clock - L))) < 1e-4 &&
+                      fabs(ev[k - 1].b - (t.cue + L - c.clock)) < 1e-4))
+                    cedo = false;
+            }
+            if (!aperta_e_ve(&d, t.strike - 0.010 + L, &ap, &im) || ap.i != PRESS_TENTATIVA || fabs(ap.a - 0.010) > 1e-4 ||
+                im.judgement != J_PERFEITO || im.b != 0)
+                perfeito = false;
+            double lb = (pw + gw) / 2;
+            if (!aperta_e_ve(&d, t.strike - lb + L, &ap, &im) || im.judgement != J_BOM || fabs(im.b - (lb - pw)) > 1e-4) bomCedo = false;
+            if (!aperta_e_ve(&d, t.strike + 0.015 + L, &ap, &im) || im.judgement != J_BOM || fabs(im.b + 0.015) > 1e-4 ||
+                fabs(im.a + 0.015) > 1e-4)
+                bomTarde = false;
+            if (t.strike - gw - 0.010 > t.cue + 0.001 &&
+                (!aperta_e_ve(&d, t.strike - gw - 0.010 + L, &ap, &im) || im.judgement != J_RUIM || fabs(im.b - (gw + 0.010 - pw)) > 1e-4))
+                erroCedo = false;
+            if (!aperta_e_ve(&d, -1, &ap, &im) || im.judgement != J_RUIM || im.a != -1 || im.b != 0) semAperto = false;
+            /* tarde: 50 ms depois de levar o golpe que fecha a sequência; a = depois do contato */
+            Duel c = d;
+            while (c.phase != PH_FINISHED && !(c.phase == PH_WINDUP && c.comboRemaining == 0)) duel_tick(&c, 0.001);
+            while (c.phase == PH_WINDUP) duel_tick(&c, 0.001);
+            duel_tick(&c, 0.05);
+            if (c.phase == PH_RECOVERY) {
+                duel_drain(&c, ev, MAX_EVENTS);
+                duel_press(&c);
+                k = duel_drain(&c, ev, MAX_EVENTS);
+                if (!(k >= 1 && ev[k - 1].i == PRESS_TARDE && fabs(ev[k - 1].a - (c.clock - L - c.lastStrikeAt)) < 1e-4 &&
+                      ev[k - 1].a > 0.05 + si.lateGrace - 0.002))
+                    tarde = false;
+                tardes++;
+            }
+        }
+    }
+    CHECK(cedo, "cedo: quanto antes do contato e quanto antes do aviso");
+    CHECK(perfeito, "perfeito: 10 ms antes do contato, erro 0 (também com 50 ms de atraso calibrado)");
+    CHECK(bomCedo, "bom cedo: o erro é quanto passou da janela perfeita");
+    CHECK(bomTarde, "bom tarde: 15 ms depois do contato, erro de 15 ms tarde");
+    CHECK(erroCedo, "erro cedo: o erro é a distância até a janela perfeita");
+    CHECK(semAperto, "erro sem aperto: a = -1, sem erro em ms");
+    CHECK(tarde && tardes > 20, "tarde: quanto depois do contato (%d casos)", tardes);
+}
+
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
  * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
 static void test_timeline(void) {
@@ -1494,6 +1628,7 @@ int main(void) {
     test_curva();
     test_oboro_fases();
     test_vantagem();
+    test_teste_a_mao();
     test_timeline();
     test_movesets();
     test_traits();

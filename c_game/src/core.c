@@ -20,14 +20,16 @@ double rng_next(Rng *r) {
 
 /* ------------------------------------------------------------------ */
 
-static void emit(Duel *d, EventKind kind, Judgement j, float a, int i, bool flag) {
-    if (d->eventCount >= MAX_EVENTS) return;
+static DuelEvent *emit(Duel *d, EventKind kind, Judgement j, float a, int i, bool flag) {
+    if (d->eventCount >= MAX_EVENTS) return NULL;
     DuelEvent *e = &d->events[d->eventCount++];
     e->kind = kind;
     e->judgement = j;
     e->a = a;
+    e->b = 0;
     e->i = i;
     e->flag = flag;
+    return e;
 }
 
 int duel_drain(Duel *d, DuelEvent *out, int max) {
@@ -77,6 +79,32 @@ void duel_reset(Duel *d) {
     d->lastAttempted = false;
     d->lastGestureAt = -100;
     d->lastHitstop = 0;
+}
+
+void duel_start_seal(Duel *d, int seal) {
+    duel_reset(d);
+    int n = d->m->sealCount > 0 ? d->m->sealCount : 1;
+    d->seal = seal < 0 ? 0 : seal >= n ? n - 1 : seal;
+    d->bossPosture = duel_posture_max(d);
+    /* uma postura por selo, como quando o selo quebra */
+    if (d->m->stanceCount > 1 && d->seal < d->m->stanceCount) d->stanceIndex = d->seal;
+}
+
+void duel_refill(Duel *d, bool vida, bool postura) {
+    if (d->phase == PH_FINISHED) return;
+    if (vida) {
+        d->renPosture = d->s.renPosture;
+        if (d->burnLeft > 0) {
+            d->burnLeft = 0;
+            emit(d, EV_BURN, J_NONE, 0, 0, false);
+        }
+    }
+    if (postura) d->bossPosture = duel_posture_max(d);
+    bool vantagem = duel_advantage(d);
+    if (vantagem != d->advantage) {
+        d->advantage = vantagem;
+        emit(d, EV_ADVANTAGE, J_NONE, 0, 0, vantagem);
+    }
 }
 
 const Stance *duel_stance(const Duel *d) {
@@ -373,7 +401,8 @@ static void resolve(Duel *d) {
         d->comboRemaining = 0; /* a quebra interrompe o composto */
     }
     /* i: bit 0 = golpe de duas lâminas, bit 1 = a segunda lâmina acertou kojiro */
-    emit(d, EV_IMPACT, j, (float)lead, (dual ? 1 : 0) | (second ? 2 : 0), broke);
+    DuelEvent *ev = emit(d, EV_IMPACT, j, (float)lead, (dual ? 1 : 0) | (second ? 2 : 0), broke);
+    if (ev && d->attempted) ev->b = lead > st->perfectWindow ? (float)(lead - st->perfectWindow) : lead < 0 ? (float)lead : 0;
 
     /* vantagem: falta só um perfeito (a postura cabe num perfeito) */
     bool vantagem = !broke && duel_advantage(d);
@@ -454,9 +483,11 @@ bool duel_press(Duel *d) {
     if (d->clock < d->pressBlockedUntil - 1e-9) return false;
     if (d->phase == PH_WINDUP && d->attempted) return false;
     PressKind kind;
+    double quando = 0, antesDoAviso = 0;   /* o que o evento conta (EV_PRESS: a e b) */
     if (d->phase == PH_WINDUP) {
         /* o jogador vê o aviso `latency` depois: é esse o aviso que conta para ele */
         double aviso = duel_cue_time(d) + d->s.latency;
+        quando = d->strikeAt - (d->clock - d->s.latency);
         if (d->clock < aviso - 1e-9) {
             /* antes do aviso: não trava o golpe; a recarga acaba no aviso, no máximo (a janela
              * boa vem sempre depois dele). O custo: a defesa deste golpe não sai perfeita. */
@@ -464,13 +495,14 @@ bool duel_press(Duel *d) {
             d->pressBlockedUntil = fim < aviso ? fim : aviso;
             d->earlyUsed = true;
             kind = PRESS_CEDO;
+            antesDoAviso = aviso - d->clock;
         } else {
             d->lastPress = d->clock;
             d->attempted = true;
             kind = PRESS_TENTATIVA;
             /* dentro da tolerância tardia: o contato já passou, julga agora */
             if (d->clock >= d->strikeAt) {
-                emit(d, EV_PRESS, J_NONE, 0, kind, false);
+                emit(d, EV_PRESS, J_NONE, (float)quando, kind, false);
                 resolve(d);
                 return true;
             }
@@ -480,8 +512,10 @@ bool duel_press(Duel *d) {
         d->pressBlockedUntil = d->clock + d->s.inputCooldown;
         bool tarde = d->lastJudgement == J_RUIM && !d->lastAttempted && d->clock - d->lastStrikeAt <= AJ_TARDE_JANELA;
         kind = tarde ? PRESS_TARDE : PRESS_GESTO;
+        if (tarde) quando = (d->clock - d->s.latency) - d->lastStrikeAt;
     }
-    emit(d, EV_PRESS, J_NONE, 0, kind, false);
+    DuelEvent *e = emit(d, EV_PRESS, J_NONE, (float)quando, kind, false);
+    if (e) e->b = (float)antesDoAviso;
     return true;
 }
 
