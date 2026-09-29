@@ -30,10 +30,11 @@ trilha, o botão "menu" (ou Esc) volta ao menu. F liga e desliga o tremor. F11
 alterna a tela cheia. **F3** (ou `APARA_DEBUG=1`) mostra o overlay de debug: as
 janelas, a linha do tempo do golpe, os seis últimos apertos (perfeito, bom, erro,
 cedo ou tarde, quando foi em relação ao contato e o erro em ms, que é quanto faltou
-para a janela perfeita), a fase, o golpe, as posturas e a vida. Com o F3 ligado, na
-luta ou na derrota: **R** recomeça, **V** enche a vida, **P** enche a postura do
-mestre, **1 2 3** escolhem a fase do oboro, **N** e **B** vão para o próximo mestre e
-o anterior. Quem usa essas teclas não salva mais o progresso até fechar o jogo. **L** no título ou na pausa abre a calibração de
+para a janela perfeita), a fase, o golpe, as posturas e a vida. Só com `--teste`, na luta ou na derrota: **R** recomeça, **V** enche a vida, **P**
+enche a postura do mestre, **1 2 3** escolhem a fase do oboro, **N** e **B** vão para o
+próximo mestre e o anterior. `--teste`, `--master`, `--duel`, `--state`, `--fase`,
+`--final` e `--demo` jogam sem salvar o progresso (`tests/teste_save.sh`, com o jogo de
+verdade, confere isso: `make teste-jogo`). **L** no título ou na pausa abre a calibração de
 latência (um quadrado que pisca, depois um clique; aperte junto). O progresso
 fica em `apara_save.txt` e a calibração em `apara_opcoes.txt`, ao lado do
 executável. Todas as constantes globais de equilíbrio e de sensação estão em

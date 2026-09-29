@@ -58,4 +58,8 @@ run: apara
 clean:
 	rm -f apara core_test robos_relatorio personagens
 
-.PHONY: packs all test run clean sprites robos
+# O jogo de verdade, sob xvfb: as teclas de teste só existem com --teste e nada grava o progresso.
+teste-jogo: apara
+	sh tests/teste_save.sh
+
+.PHONY: packs all test run clean sprites robos teste-jogo

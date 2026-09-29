@@ -15,12 +15,14 @@
  *                  com --master N --duel: pause | defeat | finisher | cleared)
  *   --demo         um robô apara no tempo perfeito e avança as telas
  *   F3 (ou APARA_DEBUG=1): overlay de debug com janelas, os últimos apertos (resultado e
- *                  erro em ms) e o estado do duelo. Com ele ligado, na luta: R recomeça,
- *                  V enche a vida, P enche a postura do mestre, 1 a 3 escolhem a fase do
- *                  oboro, N e B vão para o próximo mestre e o anterior. Usou uma dessas
- *                  teclas, o progresso da trilha não é mais salvo nesta sessão.
- *   --teste        liga o F3 e vai direto ao duelo (com --master N e --fase F)
+ *                  erro em ms) e o estado do duelo.
+ *   --teste        o modo de teste: liga o F3, vai direto ao duelo (com --master N e --fase F)
+ *                  e liga as teclas de teste, na luta: R recomeça, V enche a vida, P enche a
+ *                  postura do mestre, 1 a 3 escolhem a fase do oboro, N e B vão para o próximo
+ *                  mestre e o anterior. Só existem com --teste.
  *   --fase F       com --master 13: começa na fase F do oboro (1 a 3)
+ *   Nada disso grava o progresso: --teste, --master, --duel, --state, --fase, --final e
+ *   --demo jogam sem salvar (apara_save.txt fica como está).
  *   --shot F T     salva uma captura em F depois de T segundos e sai
  *   --rec D T0 T1  salva os quadros de T0 a T1 segundos em D (30 por segundo, tempo fixo)
  */
@@ -304,7 +306,10 @@ static struct {
 
     bool demo;
     bool debug;               /* overlay de debug: F3 ou APARA_DEBUG=1 */
-    bool teste;               /* usou as teclas de teste (ou --teste): o progresso não é salvo */
+    bool teste;               /* uma opção de teste (--teste, --master, --duel, --state, --fase, --final): o progresso não é salvo */
+    bool teclas;              /* --teste: as teclas de teste (R V P 1 2 3 N B) funcionam */
+    bool autoJogo;            /* APARA_AUTO (tests/teste_save.sh): joga sozinho como o demo, mas salvando */
+    int teclaFalsa;           /* APARA_TECLAS (o mesmo teste): a tecla de teste que o teste "aperta" agora */
     int startSeal;            /* a próxima luta começa neste selo (--fase, teclas 1 a 3) */
     Anotacao aperto[6];       /* F3: os últimos apertos, do mais novo ao mais velho */
     int apertos;
@@ -340,7 +345,7 @@ static float smooth(float t) { t = clampf(t, 0, 1); return t * t * (3 - 2 * t); 
 
 static bool pressed(void) {
     /* No modo demonstração, o robô também avança falas e painéis. */
-    if (G.demo && G.state != ST_DUEL && fmodf(G.stateTime, 0.9f) < GetFrameTime()) return true;
+    if ((G.demo || G.autoJogo) && G.state != ST_DUEL && fmodf(G.stateTime, 0.9f) < GetFrameTime()) return true;
     if (G.demo && (G.shotFile || G.recDir)) return false; /* capturas: só o robô joga */
     return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER);
 }
@@ -1885,7 +1890,7 @@ static void update_duel(float dtReal) {
     if (G.slowmoTime > 0) { G.slowmoTime -= dtReal; if (G.slowmoTime <= 0) G.slowmo = 1; }
     bool press = pressed();
     /* o robô do demo é o mesmo dos testes (robo.c) */
-    if (G.demo && robo_quer_apertar(&G.robo, &G.duel, dt)) press = true;
+    if ((G.demo || G.autoJogo) && robo_quer_apertar(&G.robo, &G.duel, dt)) press = true;
 
     /* Hitstop congela o duelo e as poses. */
     if (G.hitstop > 0) {
@@ -1989,16 +1994,27 @@ static void teste_luta(int indice, int selo) {
     start_duel();
 }
 
-/* Teclas de teste, com o F3 ligado, na luta ou na derrota. */
+/* A tecla de teste `k` foi apertada? (O teste automático "aperta" uma por vez: APARA_TECLAS.) */
+static bool tecla_de_teste(int k) { return IsKeyPressed(k) || G.teclaFalsa == k; }
+
+/* Teclas de teste, só com --teste, na luta ou na derrota. Nenhuma grava no progresso: com
+ * --teste o jogo não salva (save_game). */
 static void teclas_de_teste(void) {
-    if (!G.debug || G.demo || G.paused || !(G.state == ST_DUEL || G.state == ST_DEFEAT)) return;
-    int n = roster_size(), fase = IsKeyPressed(KEY_ONE) ? 0 : IsKeyPressed(KEY_TWO) ? 1 : IsKeyPressed(KEY_THREE) ? 2 : -1;
-    if (IsKeyPressed(KEY_R)) teste_luta(G.camp.index, G.duel.seal);
-    else if (IsKeyPressed(KEY_N) || IsKeyPressed(KEY_PAGE_DOWN)) teste_luta((G.camp.index + 1) % n, 0);
-    else if (IsKeyPressed(KEY_B) || IsKeyPressed(KEY_PAGE_UP)) teste_luta((G.camp.index + n - 1) % n, 0);
+    static const struct { float t; int k; } FALSAS[] = {{1.0f, KEY_R}, {1.6f, KEY_V}, {2.2f, KEY_P}, {2.8f, KEY_N}, {3.4f, KEY_B}, {4.0f, KEY_TWO}};
+    static int falsa = 0;
+    G.teclaFalsa = 0;
+    if (getenv("APARA_TECLAS") && falsa < 6 && G.time >= FALSAS[falsa].t) G.teclaFalsa = FALSAS[falsa++].k;
+    if (!G.teclas || G.demo || G.paused || !(G.state == ST_DUEL || G.state == ST_DEFEAT)) return;
+    int n = roster_size(), fase = tecla_de_teste(KEY_ONE) ? 0 : tecla_de_teste(KEY_TWO) ? 1 : tecla_de_teste(KEY_THREE) ? 2 : -1;
+    bool age = true;
+    if (tecla_de_teste(KEY_R)) teste_luta(G.camp.index, G.duel.seal);
+    else if (tecla_de_teste(KEY_N) || IsKeyPressed(KEY_PAGE_DOWN)) teste_luta((G.camp.index + 1) % n, 0);
+    else if (tecla_de_teste(KEY_B) || IsKeyPressed(KEY_PAGE_UP)) teste_luta((G.camp.index + n - 1) % n, 0);
     else if (fase >= 0 && G.m->sealCount > 1) teste_luta(G.camp.index, fase);
-    else if (G.state == ST_DUEL && IsKeyPressed(KEY_V)) { G.teste = true; duel_refill(&G.duel, true, false); }
-    else if (G.state == ST_DUEL && IsKeyPressed(KEY_P)) { G.teste = true; duel_refill(&G.duel, false, true); }
+    else if (G.state == ST_DUEL && tecla_de_teste(KEY_V)) duel_refill(&G.duel, true, false);
+    else if (G.state == ST_DUEL && tecla_de_teste(KEY_P)) duel_refill(&G.duel, false, true);
+    else age = false;
+    if (age && G.autoJogo) fprintf(stderr, "TESTE_TECLA %d\n", G.teclaFalsa);
 }
 
 /* Kojiro anda (a corrida, devagar) ou corre por `dur` segundos. */
@@ -2279,7 +2295,7 @@ static void update_choice(float dt) {
     if (hover >= 0 && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.choice = hover;
     bool confirm = IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J);
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && hover >= 0) { G.choice = hover; confirm = true; }
-    if (G.demo && G.stateTime > 3) { G.choice = G.demoChoice; confirm = G.stateTime > 4; }
+    if ((G.demo || G.autoJogo) && G.stateTime > 3) { G.choice = G.demoChoice; confirm = G.stateTime > 4; }
     if (G.choice != was) audio_play(SND_UI, 0.8f, 1);
     if (!confirm || G.choice < 0) return;
     audio_play(SND_UI, 1, 0.7f);
@@ -3025,9 +3041,9 @@ static void ui_debug(Rectangle dst) {
     }
     DrawText("azul: aviso  marrom: lâmina partindo  verde/ouro: janelas  vermelho: contato  branco: agora  rosa: seu aperto",
              (int)x, (int)(bar.y + bar.height + 30 * u), fp, cinza);
-    DrawText(TextFormat("teclas: R recomeça  V vida cheia  P postura cheia  1 2 3 fase do oboro  N B próximo e anterior%s",
-                        G.teste ? "   |   modo de teste: o progresso não é salvo" : ""),
-             (int)x, (int)(bar.y + bar.height + 50 * u), fp, G.teste ? (Color){255, 200, 120, 255} : cinza);
+    if (G.teste)
+        DrawText(TextFormat("%s   |   modo de teste: o progresso não é salvo", G.teclas ? "teclas: R recomeça  V vida cheia  P postura cheia  1 2 3 fase do oboro  N B próximo e anterior" : "opções de teste: o progresso não é salvo"),
+                 (int)x, (int)(bar.y + bar.height + 50 * u), fp, (Color){255, 200, 120, 255});
 #undef DBG_LINHA
 }
 
@@ -3175,7 +3191,7 @@ static void finish_lore(void) {
 
 /* A abertura: o texto sobe sozinho; segurar o clique acelera; segurar Esc enche o anel e pula. */
 static void update_lore(float dt) {
-    bool fast = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsKeyDown(KEY_SPACE) || (G.demo && !G.shotFile);
+    bool fast = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsKeyDown(KEY_SPACE) || ((G.demo || G.autoJogo) && !G.shotFile);
     G.loreScroll += dt * (fast ? 90 : 26);
     if (IsKeyDown(KEY_ESCAPE)) G.skipHold += dt;
     else G.skipHold = fmaxf(0, G.skipHold - dt * 3);
@@ -3288,13 +3304,13 @@ static bool in_arena_state(void) {
 
 static void parse_args(int argc, char **argv, int *startMaster, bool *direct, const char **startState) {
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "--master") && i + 1 < argc) *startMaster = atoi(argv[++i]) - 1;
-        else if (!strcmp(argv[i], "--duel")) *direct = true;
-        else if (!strcmp(argv[i], "--teste")) { *direct = true; G.debug = G.teste = true; }
-        else if (!strcmp(argv[i], "--fase") && i + 1 < argc) G.startSeal = atoi(argv[++i]) - 1;
+        if (!strcmp(argv[i], "--master") && i + 1 < argc) { *startMaster = atoi(argv[++i]) - 1; G.teste = true; }
+        else if (!strcmp(argv[i], "--duel")) { *direct = true; G.teste = true; }
+        else if (!strcmp(argv[i], "--teste")) { *direct = true; G.debug = G.teste = G.teclas = true; }
+        else if (!strcmp(argv[i], "--fase") && i + 1 < argc) { G.startSeal = atoi(argv[++i]) - 1; G.teste = true; }
         else if (!strcmp(argv[i], "--demo")) G.demo = true;
-        else if (!strcmp(argv[i], "--state") && i + 1 < argc) *startState = argv[++i];
-        else if (!strcmp(argv[i], "--final") && i + 1 < argc) G.demoChoice = strcmp(argv[++i], "sim") ? 1 : 0;
+        else if (!strcmp(argv[i], "--state") && i + 1 < argc) { *startState = argv[++i]; G.teste = true; }
+        else if (!strcmp(argv[i], "--final") && i + 1 < argc) { G.demoChoice = strcmp(argv[++i], "sim") ? 1 : 0; G.teste = true; }
         else if (!strcmp(argv[i], "--shot") && i + 2 < argc) { G.shotFile = argv[++i]; G.shotTime = (float)atof(argv[++i]); }
         else if (!strcmp(argv[i], "--rec") && i + 3 < argc) {
             G.recDir = argv[++i];
@@ -3375,6 +3391,7 @@ int main(int argc, char **argv) {
     const char *startState = NULL;
     G.demoChoice = 1;
     G.debug = getenv("APARA_DEBUG") && strcmp(getenv("APARA_DEBUG"), "0") != 0;
+    G.autoJogo = getenv("APARA_AUTO") != NULL;
     parse_args(argc, argv, &startMaster, &direct, &startState);
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
@@ -3471,6 +3488,8 @@ int main(int argc, char **argv) {
         G.crack = fmaxf(0, G.crack - dtReal);
         if (G.silence > 0) { G.silence -= dtReal; audio_music_duck(G.silence > 0 ? 1 : 0); }
         if (!G.paused) step(dtReal);
+        /* tests/teste_save.sh: depois de vencer o primeiro mestre (a cabana de hanzo), o jogo sai */
+        if (G.autoJogo && ((G.state == ST_VISIT && G.stateTime > 1.5f) || G.time > 900)) break;
         draw_world();
         /* Interface em 320 x 180. Cor e alfa acumulados separados: a camada sai com
          * alfa pré-multiplicado e pousa certa por cima da cena. */
