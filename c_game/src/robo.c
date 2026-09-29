@@ -96,7 +96,44 @@ bool robo_quer_apertar(RoboMente *m, const Duel *d, double dt) {
     return false;
 }
 
-RoboLuta robo_lutar(const Robo *r, const MasterProfile *m, int vencidos, uint32_t semente) {
+double robo_aperto_em(RoboMente *m, const Duel *d, double dt) {
+    if (d->phase == PH_FINISHED) return -1;
+    switch (m->r.tipo) {
+        case ROBO_NUNCA:
+            return -1;
+        case ROBO_PERFEITO: {
+            if (d->phase != PH_WINDUP || d->attempted) return -1;
+            double alvo = d->strikeAt - AJ_ROBO_ANTECEDENCIA;
+            return alvo < d->clock + dt ? (alvo > d->clock ? alvo - d->clock : 0) : -1;
+        }
+        case ROBO_SPAM: {
+            if (m->spam >= d->clock + dt) return -1;
+            double t = m->spam > d->clock ? m->spam : d->clock;
+            m->spam = t + m->r.periodo;
+            return t - d->clock;
+        }
+        default:
+            break;
+    }
+    /* um golpe novo: planeja o aperto dele. Quem planeja apertar depois de o golpe ser julgado (passou da
+     * tolerância tardia) desiste desse golpe: o aperto não vaza para a preparação seguinte. É regra por
+     * tempo, não por quadro, e por isso a taxa de quadros não muda a luta. */
+    if (d->phase == PH_WINDUP && d->attacks != m->ataque) {
+        m->ataque = d->attacks;
+        double t = planejar(m, d);
+        double limite = d->strikeAt + d->s.lateGrace + d->s.latency;
+        if (t >= 0 && t <= limite + 1e-9 && m->npend < 4) m->pend[m->npend++] = t;
+    }
+    int b = -1;
+    for (int i = 0; i < m->npend; i++)
+        if (m->pend[i] < d->clock + dt && (b < 0 || m->pend[i] < m->pend[b])) b = i;
+    if (b < 0) return -1;
+    double t = m->pend[b];
+    m->pend[b] = m->pend[--m->npend];
+    return t > d->clock ? t - d->clock : 0;
+}
+
+RoboLuta robo_lutar_hz(const Robo *r, const MasterProfile *m, int vencidos, uint32_t semente, double hz, bool quadros) {
     Settings s;
     settings_default(&s);
     settings_for_level(&s, vencidos);
@@ -107,9 +144,10 @@ RoboLuta robo_lutar(const Robo *r, const MasterProfile *m, int vencidos, uint32_
     RoboLuta out;
     memset(&out, 0, sizeof out);
     DuelEvent ev[MAX_EVENTS];
+    const double dt = 1.0 / hz;
     while (d.phase != PH_FINISHED && d.clock < 1800) {
-        bool aperta = robo_quer_apertar(&mente, &d, ROBO_QUADRO);
-        duel_step(&d, ROBO_QUADRO, aperta);
+        if (quadros) duel_step(&d, dt, robo_quer_apertar(&mente, &d, dt));
+        else duel_step_at(&d, dt, robo_aperto_em(&mente, &d, dt));
         int n = duel_drain(&d, ev, MAX_EVENTS);
         for (int i = 0; i < n; i++) {
             if (ev[i].kind == EV_IMPACT) {
@@ -123,4 +161,8 @@ RoboLuta robo_lutar(const Robo *r, const MasterProfile *m, int vencidos, uint32_
     out.duracao = d.clock;
     out.vida = d.renPosture / s.renPosture;
     return out;
+}
+
+RoboLuta robo_lutar(const Robo *r, const MasterProfile *m, int vencidos, uint32_t semente) {
+    return robo_lutar_hz(r, m, vencidos, semente, 60, false);
 }

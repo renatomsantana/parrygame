@@ -44,8 +44,10 @@ LUTAS ?= 300
 robos_relatorio: $(CORE) tests/robos.c src/core.h src/ajuste.h src/robo.h
 	$(CC) $(CFLAGS) $(CORE) tests/robos.c -o $@ -lm
 
+HZ ?= 60
+QUADROS ?= 0
 robos: robos_relatorio
-	./robos_relatorio $(LUTAS)
+	./robos_relatorio $(LUTAS) $(HZ) $(QUADROS)
 
 test: core_test
 	./core_test

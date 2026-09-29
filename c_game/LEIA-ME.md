@@ -13,7 +13,7 @@ make packs ZIP=all_the_animations.zip   # põe as tiras dos packs nas pastas (um
 make sprites          # gera os lutadores em pixel art
 make run              # compila e abre o jogo
 make test             # regras do núcleo, sem janela (inclui robôs e janelas viáveis)
-make robos            # curva de dificuldade: os robôs contra cada mestre (LUTAS=300)
+make robos            # curva de dificuldade: os robôs contra cada mestre (LUTAS=300; HZ=144; QUADROS=1)
 ```
 
 Os lutadores, os efeitos e as teclas vêm de packs pagos da Mattz Art, que não
@@ -79,6 +79,16 @@ Esc enche um anel e pula; segurar o clique acelera).
   0,5 s (que acaba no aviso, nunca na janela boa) e a defesa daquele golpe não sai
   perfeita. Depois do aviso vale uma tentativa só. O jogo mostra "cedo" ou
   "tarde" quando a defesa não pega.
+- **Taxa de quadros:** o núcleo do duelo não depende dela. O tempo avança em
+  `duel_tick(delta)`; a preparação começa e a recuperação conta a partir do instante
+  certo (`phaseEnd`, o impacto), nunca do quadro em que o relógio o passou, e o
+  julgamento usa o instante do aperto e o do contato. Os mesmos apertos, nos
+  mesmos ms, dão o mesmo resultado a 30, 60, 120, 144 e 240 Hz (`test_taxa_de_quadros`).
+  Só o clique do jogo, que só sabe em que quadro veio, entra no meio do quadro
+  (`duel_step`), com ±½ quadro de imprecisão: nos mestres finais o casual vence uns 3
+  a 6 pontos menos a 60 Hz do que a 144 Hz (±8 ms contra ±3 ms). Os robôs decidem em ms e apertam no instante
+  exato (`duel_step_at`, `robo_aperto_em`): `make robos HZ=144` dá a mesma tabela que
+  60; `QUADROS=1` põe o aperto no meio do quadro, como no jogo.
 - **Ritmo:** o mestre não fica parado à toa. A espera antes do aviso (a
   preparação segurada) vale ×0,6 do que estava no roster (piso de 100 ms) e a pausa
   depois de cada sequência é de 0,55 s, cerca de 25% mais golpes por minuto. Do
@@ -117,7 +127,7 @@ duas derrotas seguidas, dá para **conversar com hanzo** (no Oboro, ele só diz
 | 10 | arashi | tempestade (dano 1,2×) | duas katanas | Salão do castelo na tempestade | 550 | 46 / 121 ms | 333 ms | 10 |
 | 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 740 | 44 / 119 ms | 320 ms | 4 |
 | 12 | jinshi | lua (sem som) | katana bem branca, forjada com a lua | Encosta da serra | 610 | 44 / 119 ms | 350 ms (brilho) | 5 |
-| 13 | **oboro** | hanzo → devorador de posturas → oni (uma por selo) | katana de hanzo | Dojo de hanzo | 360 · 1800 · 600 | 62 → 51 → 42 ms | 380 → 350 → 320 ms | 5 · 10 · 4 |
+| 13 | **oboro** | hanzo → devorador de posturas → oni (uma por selo) | katana de hanzo | Dojo de hanzo | 360 · 1800 · 450 | 62 → 51 → 42 ms | 380 → 350 → 320 ms | 5 · 10 · 4 |
 
 A curva foi afinada com os robôs (`make robos`): o humano casual que decora o
 ritmo vence os quatro primeiros sempre, e a vitória cai sem degraus até uns 65%

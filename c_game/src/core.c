@@ -299,6 +299,9 @@ static void begin_attack(Duel *d) {
     }
     const Move *mv = duel_move(d);
     d->strikeLead = blade_lead(d);
+    /* A preparação começa em `phaseEnd`, o instante certo, e não no quadro em que o relógio o
+     * passou: assim o contato, o aviso e o rearme não dependem da taxa de quadros. */
+    const double t0 = d->phaseEnd;
 
     double duration;
     if (continuing) {
@@ -306,7 +309,7 @@ static void begin_attack(Duel *d) {
          * anterior: o hitstop do impacto anterior congelou o duelo e sai daqui. */
         double gap = mv ? mv->gaps[d->comboStrike - 1] : s->minChainGap;
         if (gap < s->minChainGap) gap = s->minChainGap;
-        duration = d->lastStrikeAt + gap - d->lastHitstop - d->clock;
+        duration = d->lastStrikeAt + gap - d->lastHitstop - t0;
         if (duration < duel_strike_lead(d) + AJ_PREPARO_MIN_CADEIA) duration = duel_strike_lead(d) + AJ_PREPARO_MIN_CADEIA;
     } else {
         /* A preparação da sequência: do aviso ao contato é sempre o mesmo tempo (o aviso
@@ -335,7 +338,7 @@ static void begin_attack(Duel *d) {
         d->sequences++;
     }
 
-    d->strikeAt = d->clock + d->windupDuration;
+    d->strikeAt = t0 + d->windupDuration;
     d->attacks++;
     build_schedule(d);
     emit(d, EV_WINDUP, J_NONE, d->windupDuration, 0, false);
@@ -361,7 +364,12 @@ static void resolve(Duel *d) {
     const Settings *s = &d->s;
     /* Consumir o golpe antes dos eventos impede julgamento duplicado. */
     d->phase = PH_RECOVERY;
-    d->phaseEnd = d->clock + (d->comboRemaining > 0 ? s->comboGap : s->recovery);
+    /* O instante do impacto: o contato; se o aperto veio na tolerância tardia, quando ele veio;
+     * sem defesa, quando a tolerância acaba. Não é o quadro em que o núcleo julgou: as pausas
+     * contam daqui, e por isso não dependem da taxa de quadros. */
+    const double impacto = d->attempted ? (d->lastPress > d->strikeAt ? d->lastPress : d->strikeAt)
+                                        : d->strikeAt + s->lateGrace + s->latency;
+    d->phaseEnd = impacto + (d->comboRemaining > 0 ? s->comboGap : s->recovery);
     const Stance *st = duel_stance(d);
     /* o aperto conta `latency` mais cedo: o que o jogador viu e ouviu chegou atrasado */
     double lead = d->attempted ? d->strikeAt - (d->lastPress - s->latency) : -1;
@@ -413,7 +421,7 @@ static void resolve(Duel *d) {
     if (d->comboRemaining > 0 && !broke) {
         double pausa = s->comboGap - d->lastHitstop;
         double fim = d->strikeAt + (pausa > 0 ? pausa : 0);
-        d->phaseEnd = fim > d->clock ? fim : d->clock;
+        d->phaseEnd = fim > impacto ? fim : impacto;
     }
     if (broke) {
         d->bossPosture = 0;
@@ -435,7 +443,7 @@ static void resolve(Duel *d) {
             d->seal++;
             d->bossPosture = duel_posture_max(d);
             d->renPosture = clampf(d->renPosture + s->sealHeal * s->renPosture, 0, s->renPosture);
-            d->phaseEnd = d->clock + s->sealRecovery;
+            d->phaseEnd = impacto + s->sealRecovery;
             emit(d, EV_SEAL, J_NONE, 0, d->seal, false);
             /* uma postura por selo: o selo novo traz a dele */
             if (d->m->stanceCount > 1 && d->seal < d->m->stanceCount) {
@@ -487,18 +495,25 @@ void duel_tick(Duel *d, double delta) {
     if (d->clock >= d->strikeAt && (d->attempted || d->clock >= d->strikeAt + d->s.lateGrace + d->s.latency)) resolve(d);
 }
 
-void duel_step(Duel *d, double dt, bool press) {
-    if (!press) {
+void duel_step_at(Duel *d, double dt, double pressAt) {
+    if (pressAt < 0) {
         duel_tick(d, dt);
         return;
     }
-    duel_tick(d, dt * 0.5);
+    if (pressAt > dt) pressAt = dt;
+    duel_tick(d, pressAt);
     duel_press(d);
-    duel_tick(d, dt * 0.5);
+    duel_tick(d, dt - pressAt);
 }
+
+void duel_step(Duel *d, double dt, bool press) { duel_step_at(d, dt, press ? dt * 0.5 : -1); }
 
 bool duel_press(Duel *d) {
     if (d->phase == PH_FINISHED) return false;
+    /* O núcleo começa uma preparação por tick. Se ela já era devida quando o aperto chegou (o
+     * quadro julgou o golpe anterior e o aperto veio logo depois), começa antes do aperto: o
+     * aperto cai na preparação, como cairia com quadros menores. */
+    if ((d->phase == PH_READY || d->phase == PH_RECOVERY) && d->clock >= d->phaseEnd) begin_attack(d);
     if (d->clock < d->pressBlockedUntil - 1e-9) return false;
     if (d->phase == PH_WINDUP && d->attempted) return false;
     PressKind kind;

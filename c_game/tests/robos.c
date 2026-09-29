@@ -2,6 +2,9 @@
  * robos.c - curva de dificuldade: cada robô enfrenta cada mestre N vezes e a
  * tabela sai em Markdown. Rodar: make robos (ou make robos LUTAS=1000).
  * Kojiro chega em cada mestre depois de vencer os anteriores, como na trilha.
+ * Os robôs decidem em ms e apertam no instante exato: a taxa de quadros não muda
+ * o resultado (make robos HZ=144). Com QUADROS=1 o aperto entra no meio do quadro,
+ * como no jogo, e o resultado passa a depender da taxa.
  */
 #include "../src/robo.h"
 
@@ -12,7 +15,10 @@ typedef struct { const char *nome; Robo r; } Coluna;
 
 int main(int argc, char **argv) {
     int n = argc > 1 ? atoi(argv[1]) : 300;
+    double hz = argc > 2 ? atof(argv[2]) : 60;
+    bool quadros = argc > 3 && atoi(argv[3]) != 0;
     if (n < 1) n = 1;
+    if (hz < 10) hz = 60;
     Coluna col[] = {
         {"Perfeito", ROBO_DO_DEMO},
         {"Nunca defende", ROBO_SEM_DEFESA},
@@ -26,7 +32,7 @@ int main(int argc, char **argv) {
     col[4].r = robo_reacao(0.250f);
     col[5].r = robo_reacao(0.300f);
     int nc = (int)(sizeof col / sizeof col[0]);
-    printf("Vitórias em %d lutas por mestre (%%).\n\n| # | Mestre |", n);
+    printf("Vitórias em %d lutas por mestre (%%), %.0f Hz, aperto %s.\n\n| # | Mestre |", n, hz, quadros ? "no meio do quadro" : "no instante exato");
     for (int c = 0; c < nc; c++) printf(" %s |", col[c].nome);
     printf(" Casual: perf/bom/erro | Casual: duração |\n|---|---|");
     for (int c = 0; c < nc + 2; c++) printf("---|");
@@ -39,7 +45,7 @@ int main(int argc, char **argv) {
         for (int c = 0; c < nc; c++) {
             int v = 0;
             for (int k = 0; k < n; k++) {
-                RoboLuta l = robo_lutar(&col[c].r, m, i, 1000u + (uint32_t)k);
+                RoboLuta l = robo_lutar_hz(&col[c].r, m, i, 1000u + (uint32_t)k, hz, quadros);
                 v += l.vitoria;
                 if (c == nc - 1) { P += l.perfeitos; B += l.bons; E += l.erros; T += l.duracao; }
             }

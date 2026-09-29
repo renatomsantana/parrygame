@@ -397,7 +397,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .seals = {
             {"primeiro selo", 1.00f, 0, 360, 0, true},
             {"segundo selo", 1.00f, 0, 1800, 0.5f, true},  /* comprido: os doze inteiros, até só com perfeitos */
-            {"terceiro selo", 0.85f, 0, 600, 1.25f, true},
+            {"terceiro selo", 0.85f, 0, 450, 1.25f, true},
         },
         .sealCount = 3,
         /* Os ecos copiam uma sequência de cada aprendiz (intervalos, aparência, golpe duplo e

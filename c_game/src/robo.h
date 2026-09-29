@@ -45,11 +45,17 @@ typedef struct {
     int ataque;      /* último golpe planejado */
     double aperta;   /* instante planejado do aperto (-1 = nenhum) */
     double spam;     /* próximo aperto do spam */
+    double pend[4];  /* robo_aperto_em: apertos planejados que ainda não chegaram */
+    int npend;
 } RoboMente;
 
 void robo_iniciar(RoboMente *m, const Robo *r, uint32_t semente);
-/* Chamado no começo de cada quadro, antes de duel_step. */
+/* Chamado no começo de cada quadro, antes de duel_step: o robô aperta neste quadro? O aperto
+ * entra no meio dele, como o do jogo (que só sabe em que quadro o clique veio). */
 bool robo_quer_apertar(RoboMente *m, const Duel *d, double dt);
+/* Decide em ms, sem depender de quadros: quando, dentro do quadro que começa em d->clock, o robô
+ * aperta (segundos depois do começo do quadro; -1 = não aperta neste quadro). Vale para duel_step_at. */
+double robo_aperto_em(RoboMente *m, const Duel *d, double dt);
 
 typedef struct {
     bool vitoria;
@@ -58,7 +64,10 @@ typedef struct {
     float vida;      /* vida que sobrou, fração da inicial */
 } RoboLuta;
 
-/* Uma luta inteira contra `m`, com kojiro depois de `vencidos` mestres. */
-RoboLuta robo_lutar(const Robo *r, const MasterProfile *m, int vencidos, uint32_t semente);
+/* Uma luta inteira contra `m`, com kojiro depois de `vencidos` mestres. O robô decide em ms e
+ * aperta no instante exato, a `hz` quadros por segundo (o resultado não depende de `hz`).
+ * `quadros`: o aperto entra no meio do quadro, como no jogo (o resultado passa a depender de `hz`). */
+RoboLuta robo_lutar_hz(const Robo *r, const MasterProfile *m, int vencidos, uint32_t semente, double hz, bool quadros);
+RoboLuta robo_lutar(const Robo *r, const MasterProfile *m, int vencidos, uint32_t semente);   /* 60 Hz, em ms */
 
 #endif

@@ -760,11 +760,12 @@ static void test_aperto_cedo(void) {
                         if (q > c.clock) duel_tick(&c, q - c.clock);
                         if (c.phase != PH_WINDUP) break;
                         duel_drain(&c, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+                        const double quando = c.clock;   /* a preparação começa no instante certo, que pode ser antes do quadro */
                         bool aceito = duel_press(&c);
                         DuelEvent ev[MAX_EVENTS];
                         int k = duel_drain(&c, ev, MAX_EVENTS);
                         if (!aceito || c.attempted || k < 1 || ev[k - 1].kind != EV_PRESS || ev[k - 1].i != PRESS_CEDO) cedoOk = false;
-                        if (c.pressBlockedUntil > t.cue + 1e-9 || c.pressBlockedUntil > q + AJ_RECARGA_CEDO + 1e-9 ||
+                        if (c.pressBlockedUntil > t.cue + 1e-9 || c.pressBlockedUntil > quando + AJ_RECARGA_CEDO + 1e-9 ||
                             c.pressBlockedUntil >= t.goodFrom) recargaOk = false;
                         sondas++;
                     }
@@ -1145,6 +1146,109 @@ static void test_vantagem(void) {
     d.advantage = true;
     while (d.phase == PH_WINDUP) duel_tick(&d, DT);   /* sem defesa: ele acerta e se recupera */
     CHECK(!d.advantage && d.bossPosture > s.perfectBossDamage * 0.5f, "o mestre que se recupera sai da vantagem (%.1f)", d.bossPosture);
+}
+
+/* Taxa de quadros. O núcleo não pode depender dela: a mesma sequência de apertos, nos
+ * mesmos ms, dá o mesmo julgamento (e o mesmo erro, com 1 ms de folga) a 30, 60, 120, 144
+ * e 240 Hz, e o contato, o aviso e o rearme dentro das sequências caem nos mesmos
+ * instantes. O tempo avança em duel_tick(delta); o julgamento é em resolve(), com o
+ * instante do aperto e do contato, nunca com o quadro. Só o clique do jogo, que só
+ * sabe em que quadro veio, entra no meio do quadro (duel_step). */
+typedef struct { int move, strike, julg; double lead, contato, preparacao, cue; } GolpeFps;
+
+/* aperta em cada golpe numa antecedência (dentro e fora das janelas, e sem aperto), guardada
+ * em instantes absolutos para ser reproduzida em outras taxas */
+static double antecedencia_fps(int k, const Stance *st) {
+    double pw = st->perfectWindow, gw = st->goodWindow;
+    const double L[] = {pw * 0.5, pw - 0.002, pw + 0.002, (pw + gw) * 0.5, gw - 0.002, gw + 0.005, 0.0, -0.010, -0.040, 0.020, 1e9};
+    return L[k % 11];
+}
+
+static int roda_fps(const MasterProfile *m, int nivel, uint32_t seed, double latencia, double hz, double *aperta, int *np, bool gera,
+                    GolpeFps *g, int max) {
+    Settings s;
+    settings_default(&s);
+    settings_for_level(&s, nivel);
+    s.latency = (float)latencia;
+    Duel d;
+    duel_init(&d, &s, m, seed);
+    const double dt = 1.0 / hz;
+    int n = 0, ultimo = -1, ip = 0;
+    if (gera) *np = 0;
+    while (d.phase != PH_FINISHED && d.clock < 300 && n < max) {
+        d.bossPosture = 1e6f;   /* a luta não acaba */
+        d.renPosture = s.renPosture;
+        if (d.phase == PH_WINDUP && d.attacks != ultimo) {
+            ultimo = d.attacks;
+            g[n] = (GolpeFps){d.move, d.comboStrike, -2, 0, d.strikeAt, d.windupDuration, d.strikeAt - duel_cue_time(&d)};
+            if (gera) {
+                double L = antecedencia_fps(n, duel_stance(&d));
+                if (L < 1e8) aperta[(*np)++] = d.strikeAt - L;
+            }
+            n++;
+        }
+        double off = -1;
+        if (ip < *np && aperta[ip] < d.clock + dt) {
+            off = aperta[ip] > d.clock ? aperta[ip] - d.clock : 0;
+            ip++;
+        }
+        duel_step_at(&d, dt, off);
+        DuelEvent ev[MAX_EVENTS];
+        int k = duel_drain(&d, ev, MAX_EVENTS);
+        for (int e = 0; e < k; e++)
+            if (ev[e].kind == EV_IMPACT && n > 0) {
+                g[n - 1].julg = ev[e].judgement;
+                g[n - 1].lead = ev[e].a;
+            }
+    }
+    return n;
+}
+
+static void test_taxa_de_quadros(void) {
+    static const double HZ[] = {30, 60, 120, 144, 240};
+    static const double LAT[] = {0, 0.060};
+    double dContato = 0, dPrep = 0, dCue = 0, dErro = 0;
+    long comparados = 0, julgDif = 0, movDif = 0, cadeias = 0;
+    for (int i = 0; i < roster_size(); i++)
+        for (int li = 0; li < 2; li++)
+            for (uint32_t seed = 1; seed <= 4; seed++) {
+                double aperta[128];
+                int np = 0;
+                GolpeFps ref[80], run[80];
+                int nr = roda_fps(roster_get(i), i, seed, LAT[li], 1000, aperta, &np, true, ref, 60);
+                for (int h = 0; h < 5; h++) {
+                    int n = roda_fps(roster_get(i), i, seed, LAT[li], HZ[h], aperta, &np, false, run, 60);
+                    if (n < nr - 1) julgDif++;   /* mesmo número de golpes (o último pode estar em curso) */
+                    for (int k = 0; k < (n < nr ? n : nr) - 1; k++) {
+                        comparados++;
+                        if (run[k].move != ref[k].move || run[k].strike != ref[k].strike) { movDif++; continue; }
+                        if (run[k].strike > 0) cadeias++;
+                        if (run[k].julg != ref[k].julg) julgDif++;
+                        else if (run[k].julg > 0 && ref[k].lead > -0.5 && fabs(run[k].lead - ref[k].lead) > dErro) dErro = fabs(run[k].lead - ref[k].lead);
+                        if (fabs(run[k].contato - ref[k].contato) > dContato) dContato = fabs(run[k].contato - ref[k].contato);
+                        if (fabs(run[k].preparacao - ref[k].preparacao) > dPrep) dPrep = fabs(run[k].preparacao - ref[k].preparacao);
+                        if (fabs(run[k].cue - ref[k].cue) > dCue) dCue = fabs(run[k].cue - ref[k].cue);
+                    }
+                }
+            }
+    printf("taxa de quadros: %ld golpes conferidos (%ld em sequência); dif máx: contato %.3f ms, preparação %.3f ms, aviso %.3f ms, erro %.3f ms\n",
+           comparados, cadeias, dContato * 1000, dPrep * 1000, dCue * 1000, dErro * 1000);
+    CHECK(comparados > 20000 && cadeias > 8000, "conferidos %ld golpes a 30, 60, 120, 144 e 240 Hz (%ld em sequência)", comparados, cadeias);
+    CHECK(movDif == 0, "os mesmos golpes na mesma ordem em qualquer taxa");
+    CHECK(julgDif == 0, "o mesmo julgamento (perfeito, bom ou erro) em qualquer taxa (%ld diferentes)", julgDif);
+    CHECK(dErro < 0.001, "o erro do aperto muda menos de 1 ms entre as taxas (%.4f ms)", dErro * 1000);
+    CHECK(dContato < 0.001, "o contato cai no mesmo instante em qualquer taxa (%.4f ms)", dContato * 1000);
+    CHECK(dPrep < 0.001 && dCue < 0.001, "a preparação e o aviso, também nas sequências, não dependem da taxa (%.4f, %.4f ms)", dPrep * 1000, dCue * 1000);
+    /* os robôs, que decidem em ms, também: a mesma luta, o mesmo resultado, a 60 e a 144 Hz */
+    int igual = 0, total = 0;
+    for (int i = 0; i < roster_size(); i++)
+        for (uint32_t k = 0; k < 12; k++) {
+            RoboLuta a = robo_lutar_hz(&ROBO_HUMANO_CASUAL, roster_get(i), i, 40000 + k, 60, false);
+            RoboLuta b = robo_lutar_hz(&ROBO_HUMANO_CASUAL, roster_get(i), i, 40000 + k, 144, false);
+            total++;
+            igual += a.vitoria == b.vitoria && a.perfeitos == b.perfeitos && a.bons == b.bons && a.erros == b.erros;
+        }
+    CHECK(igual == total, "o humano casual, decidindo em ms, luta igual a 60 e a 144 Hz (%d de %d lutas idênticas)", igual, total);
 }
 
 /* Ritmo: a espera antes do aviso (o mestre segurando a preparação) e a pausa entre
@@ -1822,6 +1926,7 @@ int main(void) {
     test_oboro_fases();
     test_vantagem();
     test_lamina_variavel();
+    test_taxa_de_quadros();
     test_ritmo();
     test_teste_a_mao();
     test_timeline();

@@ -296,8 +296,12 @@ void duel_start_seal(Duel *d, int seal);
 void duel_refill(Duel *d, bool vida, bool postura);
 void duel_tick(Duel *d, double delta);
 bool duel_press(Duel *d);
-/* Um quadro do jogo: o aperto chegou em algum ponto do quadro e entra no meio dele. */
+/* Um quadro do jogo: o aperto chegou em algum ponto do quadro e entra no meio dele (não há
+ * como saber o instante, só o quadro). */
 void duel_step(Duel *d, double dt, bool press);
+/* Um quadro com o aperto num instante conhecido (pressAt segundos depois do começo do quadro,
+ * -1 = nenhum): os testes e os robôs, que decidem em ms. */
+void duel_step_at(Duel *d, double dt, double pressAt);
 double duel_time_to_impact(const Duel *d);        /* -1 fora da preparação */
 const Stance *duel_stance(const Duel *d);
 const SealRule *duel_seal_rule(const Duel *d);
