@@ -226,24 +226,20 @@ static void begin_attack(Duel *d) {
         if (gap < s->minChainGap) gap = s->minChainGap;
         duration = gap - s->comboGap;
     } else {
-        duration = st->windups[d->sequences % st->windupCount];
-        if (m->accelSteps > 1) duration *= pow(m->accelFactor, d->sequences % m->accelSteps);
-        if (m->rhythmJitter > 0) duration += (rng_next(&d->rng) * 2 - 1) * m->rhythmJitter;
-    }
-    /* A pressa acelera só a preparação; o ritmo dentro de uma sequência nunca muda,
-     * para que dê para decorar. */
-    if (!continuing) {
-        duration *= rule->speedMultiplier;
-        if (m->sealCount <= 1 && duel_under_pressure(d)) duration *= s->pressureSpeed;
-        /* a estocada de longe ganha o tempo extra da ponta viajando: a preparação não encolhe */
-        duration += duel_strike_lead(d) - s->attackLead;
+        /* A preparação da sequência: do aviso ao contato é sempre o mesmo tempo (o aviso
+         * da postura; na lança, mais o tempo da ponta viajando). A pressa, a aceleração,
+         * o selo e o traço aleatório mudam só a espera antes do aviso; o ritmo dentro de
+         * uma sequência nunca muda. Tudo para que dê para decorar. */
+        double base = mv && mv->windup > 0 ? mv->windup : st->aviso + 0.5;
+        double antes = base - st->aviso;
+        if (m->accelSteps > 1) antes *= pow(m->accelFactor, d->sequences % m->accelSteps);
+        antes *= rule->speedMultiplier;
+        if (m->sealCount <= 1 && duel_under_pressure(d)) antes *= s->pressureSpeed;
+        if (m->rhythmJitter > 0) antes += (rng_next(&d->rng) * 2 - 1) * m->rhythmJitter;
+        if (antes < AJ_PREPARO_ANTES_DO_AVISO) antes = AJ_PREPARO_ANTES_DO_AVISO;
+        duration = duel_aviso(d) + antes;
     }
     if (duration < duel_strike_lead(d) + 0.1) duration = duel_strike_lead(d) + 0.1;
-    /* o primeiro golpe: a preparação começa antes do aviso */
-    if (!continuing) {
-        double minimo = st->aviso + (duel_strike_lead(d) - s->attackLead) + AJ_PREPARO_ANTES_DO_AVISO;
-        if (duration < minimo) duration = minimo;
-    }
     d->windupDuration = (float)duration;
 
     if (!continuing) {

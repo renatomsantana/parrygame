@@ -114,7 +114,6 @@ static void test_roster(const Settings *s) {
         CHECK(m->stanceCount >= 1, "ao menos uma guarda (%s)", m->name);
         for (int k = 0; k < m->stanceCount; k++) {
             const Stance *st = &m->stances[k];
-            CHECK(st->windupCount > 0, "preparações (%s)", m->name);
             CHECK(st->perfectWindow > 0 && st->perfectWindow < st->goodWindow, "perfeito dentro do bom (%s)", m->name);
         }
         if (!m->isBigBoss) {
@@ -338,27 +337,40 @@ static void test_one_attempt_and_cooldown(void) {
     CHECK(duel_press(&f), "o golpe novo aceita defesa mesmo logo depois de um gesto");
 }
 
+/* Suiren: as ondas aceleram. Só a espera antes do aviso encurta, a cada sequência do
+ * ciclo; do aviso ao contato é sempre o mesmo tempo. */
 static void test_accelerando(void) {
-    const MasterProfile *taiko = roster_get(8); /* suiren: as ondas aceleram */
+    const MasterProfile *taiko = roster_get(8);
     Settings s;
     settings_default(&s);
     s.pressureSpeed = 1; /* isola o efeito do ciclo */
     Duel d;
     duel_init(&d, &s, taiko, 11);
-    float durations[6];
+    double antes[6], esperado[6];
     int got = 0;
+    bool avisoFixo = true;
     while (got < 6 && d.clock < 60 && d.phase != PH_FINISHED) {
         d.bossPosture = 1e6f; /* o duelo não acaba antes de seis sequências */
         duel_tick(&d, DT);
+        if (d.phase == PH_WINDUP && d.comboStrike == 0 && d.strikeAt - d.clock > d.windupDuration - DT * 1.5 && got < 6 &&
+            (got == 0 || fabs(d.strikeAt - d.windupDuration - antes[5]) > 1e-9)) {
+            const Move *mv = duel_move(&d);
+            double aviso = duel_aviso(&d);
+            antes[got] = d.windupDuration - aviso;
+            esperado[got] = (mv->windup - taiko->stances[0].aviso) * pow(taiko->accelFactor, got % taiko->accelSteps);
+            if (esperado[got] < AJ_PREPARO_ANTES_DO_AVISO) esperado[got] = AJ_PREPARO_ANTES_DO_AVISO;
+            if (fabs(aviso - (taiko->stances[0].aviso + duel_strike_lead(&d) - s.attackLead)) > 1e-6) avisoFixo = false;
+            got++;
+            antes[5] = d.strikeAt - d.windupDuration;
+        }
         if (d.phase == PH_WINDUP && !d.attempted && d.strikeAt - d.clock <= 0.02) duel_press(&d);
-        DuelEvent ev[MAX_EVENTS];
-        int n = duel_drain(&d, ev, MAX_EVENTS);
-        /* Só a primeira preparação de cada sequência acelera. */
-        for (int i = 0; i < n; i++) if (ev[i].kind == EV_WINDUP && d.comboStrike == 0 && got < 6) durations[got++] = ev[i].a;
+        duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
     }
-    CHECK(got == 6, "seis sequências do Taiko");
-    CHECK(durations[4] < durations[0] * 0.6f, "a quinta sequência do ciclo arma bem mais rápido (%.2f -> %.2f)", durations[0], durations[4]);
-    CHECK(durations[5] > durations[4], "o ciclo recomeça");
+    CHECK(got == 6, "seis sequências da suiren");
+    bool ok = true;
+    for (int i = 0; i < got && i < 5; i++) if (fabs(antes[i] - esperado[i]) > 1e-4) ok = false;
+    CHECK(ok, "a espera antes do aviso encurta %.2f x a cada sequência do ciclo", taiko->accelFactor);
+    CHECK(avisoFixo, "do aviso ao contato, sempre o mesmo tempo");
 }
 
 static void test_combos(void) {
@@ -392,7 +404,10 @@ static void test_pressure(void) {
     duel_init(&d, &s, gorou, 2);
     d.bossPosture = gorou->posture / 2;
     while (d.phase != PH_WINDUP) duel_tick(&d, DT);
-    CHECK(fabsf(d.windupDuration - gorou->stances[0].windups[0] * s.pressureSpeed) < 1e-4, "com metade da postura, 10%% mais rápido");
+    const Move *mv = duel_move(&d);
+    float aviso = gorou->stances[0].aviso;
+    CHECK(fabsf(d.windupDuration - (aviso + (mv->windup - aviso) * s.pressureSpeed)) < 1e-4,
+          "com metade da postura, a espera antes do aviso fica 10%% mais curta");
 }
 
 static void test_big_boss(void) {
@@ -612,6 +627,56 @@ static void test_aviso(void) {
     }
 }
 
+/* Cada sequência tem a sua preparação, e ela é sempre a mesma: sem pressa e sem traço
+ * aleatório, o mesmo golpe prepara sempre no mesmo tempo. O hayate (±120 ms) e o jinshi
+ * (±80 ms) variam só a espera antes do aviso: do aviso ao contato nunca muda. */
+static void test_preparacao_por_golpe(void) {
+    Settings s;
+    settings_default(&s);
+    for (int i = 0; i < roster_size(); i++) {
+        const MasterProfile *m = roster_get(i);
+        for (int k = 0; k < m->moveCount; k++) {
+            const Move *mv = &m->moves[k];
+            const Stance *st = &m->stances[mv->stance < 0 ? 0 : mv->stance];
+            CHECK(mv->windup >= st->aviso + AJ_PREPARO_ANTES_DO_AVISO - 1e-6, "%s: %s prepara %.0f ms, mais que o aviso", m->name,
+                  mv->name, mv->windup * 1000);
+        }
+        double vista[MAX_MOVES], avisoVisto[MAX_MOVES];
+        for (int k = 0; k < MAX_MOVES; k++) vista[k] = avisoVisto[k] = -1;
+        bool fixo = true, avisoFixo = true, dentro = true;
+        for (uint32_t seed = 1; seed <= 12; seed++) {
+            Duel d;
+            duel_init(&d, &s, m, seed);
+            int ultimo = -1;
+            while (d.phase != PH_FINISHED && d.clock < 400) {
+                d.bossPosture = 1e6f;   /* sem pressa, e a luta não acaba */
+                d.renPosture = s.renPosture;
+                duel_tick(&d, DT);
+                if (d.phase == PH_WINDUP && d.attacks != ultimo) {
+                    ultimo = d.attacks;
+                    if (d.comboStrike != 0 || d.move < 0 || m->accelSteps > 1) continue;
+                    double aviso = d.strikeAt - duel_cue_time(&d);
+                    const Move *mv = duel_move(&d);
+                    const Stance *st = duel_stance(&d);
+                    double base = st->aviso + (mv->windup - st->aviso) * duel_seal_rule(&d)->speedMultiplier +
+                                  (duel_strike_lead(&d) - s.attackLead);
+                    if (m->rhythmJitter > 0) {
+                        if (fabs(d.windupDuration - base) > m->rhythmJitter + 1e-4) dentro = false;
+                    } else if (vista[d.move] >= 0 && fabs(vista[d.move] - d.windupDuration) > 1e-6) fixo = false;
+                    if (avisoVisto[d.move] >= 0 && fabs(avisoVisto[d.move] - aviso) > 1e-6) avisoFixo = false;
+                    vista[d.move] = d.windupDuration;
+                    avisoVisto[d.move] = aviso;
+                }
+                if (d.phase == PH_WINDUP && !d.attempted && d.strikeAt - d.clock <= 0.02) duel_press(&d);
+                duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+            }
+        }
+        if (m->rhythmJitter > 0) CHECK(dentro, "%s: o traço aleatório fica dentro de ±%.0f ms", m->name, m->rhythmJitter * 1000);
+        else CHECK(fixo, "%s: cada sequência prepara sempre no mesmo tempo", m->name);
+        CHECK(avisoFixo, "%s: do aviso ao contato, sempre o mesmo tempo", m->name);
+    }
+}
+
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
  * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
 static void test_timeline(void) {
@@ -818,7 +883,10 @@ static void test_campaign(void) {
  * karasu e arashi usam as duas lâminas, suiren ataca de longe e jinshi é o mais variado. */
 static void test_traits(void) {
     const MasterProfile *daichi = roster_get(0), *genbu = roster_get(1);
-    CHECK(daichi->stances[0].windups[0] > genbu->stances[0].windups[0], "daichi prepara mais devagar que genbu");
+    float wd = 0, wg = 0;
+    for (int k = 0; k < daichi->moveCount; k++) wd += daichi->moves[k].windup / daichi->moveCount;
+    for (int k = 0; k < genbu->moveCount; k++) wg += genbu->moves[k].windup / genbu->moveCount;
+    CHECK(wd > wg, "daichi prepara mais devagar que genbu (%.2f x %.2f s)", wd, wg);
     int longest = 0;
     for (int k = 0; k < roster_get(4)->moveCount; k++)
         if (roster_get(4)->moves[k].strikes > longest) longest = roster_get(4)->moves[k].strikes;
@@ -964,6 +1032,7 @@ int main(void) {
     test_robos();
     test_janelas_viaveis();
     test_aviso();
+    test_preparacao_por_golpe();
     test_timeline();
     test_movesets();
     test_traits();

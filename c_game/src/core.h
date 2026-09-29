@@ -10,7 +10,6 @@
 
 #include "ajuste.h"   /* constantes globais de equilíbrio e de sensação */
 
-#define MAX_WINDUPS 6
 #define MAX_STANCES 4
 #define MAX_SEALS 3
 #define MAX_LINES 8
@@ -53,8 +52,6 @@ typedef struct {
     const char *name;             /* "" para mestres de uma postura só */
     float perfectWindow, goodWindow;
     float aviso;                  /* o aviso (som e brilho) vem este tempo antes do contato */
-    float windups[MAX_WINDUPS];
-    int windupCount;
 } Stance;
 
 /* Um selo é uma barra de postura inteira. Mestres comuns têm um; o BIG BOSS, três. */
@@ -90,6 +87,10 @@ typedef struct {
     int stance;                   /* -1 = qualquer postura */
     int minSeal;                  /* só a partir deste selo */
     MoveLook look;
+    /* Preparação do primeiro golpe, do começo ao contato: cada sequência tem a sua.
+     * Pressa, aceleração, selo e o traço aleatório mudam só a parte antes do aviso;
+     * do aviso ao contato é sempre o mesmo tempo. */
+    float windup;
     /* Golpes de duas lâminas (bit k = o golpe k da sequência). Um parry só apara
      * as duas se for perfeito; no bom, a segunda passa; no erro, entram as duas. */
     unsigned dual;
