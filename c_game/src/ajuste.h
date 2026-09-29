@@ -49,9 +49,10 @@
 
 /* ---- Calibração de latência (opções: tela de teste) -------------------- */
 /* O atraso de vídeo entra no julgamento: o aperto conta esse tanto mais cedo. O de
- * áudio adianta o som do aviso para chegar junto com o brilho. Com mais de ~70 ms, as
- * sequências mais rápidas (400 ms) podem atrasar um pouco: o golpe seguinte só começa
- * depois de o anterior ser julgado. */
+ * áudio adianta o som do aviso para chegar junto com o brilho. Um golpe sem defesa só é
+ * julgado depois da tolerância tardia mais o atraso, e o golpe seguinte da sequência só
+ * começa depois: a lâmina dele parte no máximo o tempo que falta até o contato (nunca
+ * menos de AJ_LAMINA_MIN), e o ritmo da sequência não atrasa com atraso nenhum. */
 #define AJ_LATENCIA_MAX            0.120f   /* o maior atraso aceito */
 #define AJ_CALIBRA_BATIDA          0.800f   /* a tela de teste pisca (ou toca) a cada isto */
 #define AJ_CALIBRA_APERTOS             8    /* apertos que contam para a média */

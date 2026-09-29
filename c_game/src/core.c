@@ -310,7 +310,13 @@ static void begin_attack(Duel *d) {
         double gap = mv ? mv->gaps[d->comboStrike - 1] : s->minChainGap;
         if (gap < s->minChainGap) gap = s->minChainGap;
         duration = d->lastStrikeAt + gap - d->lastHitstop - t0;
-        if (duration < duel_strike_lead(d) + AJ_PREPARO_MIN_CADEIA) duration = duel_strike_lead(d) + AJ_PREPARO_MIN_CADEIA;
+        /* Com o atraso calibrado alto, um golpe sem defesa só é julgado na tolerância tardia mais o
+         * atraso, e esta preparação começa depois: a lâmina parte no máximo o tempo que falta, e
+         * nunca menos de AJ_LAMINA_MIN, para o contato chegar no tempo da sequência. */
+        double lamina = duel_strike_lead(d), cabe = duration - AJ_PREPARO_MIN_CADEIA;
+        if (lamina > cabe) lamina = cabe > AJ_LAMINA_MIN ? cabe : AJ_LAMINA_MIN;
+        d->strikeLead = (float)lamina;
+        if (duration < lamina + AJ_PREPARO_MIN_CADEIA) duration = lamina + AJ_PREPARO_MIN_CADEIA;
     } else {
         /* A preparação da sequência: do aviso ao contato é sempre o mesmo tempo (o aviso
          * da postura; na lança, mais o tempo da ponta viajando). A pressa, a aceleração,

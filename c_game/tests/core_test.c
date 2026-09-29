@@ -1304,6 +1304,66 @@ static void test_traco_aleatorio(void) {
     }
 }
 
+/* Calibração alta (atraso de até AJ_LATENCIA_MAX = 120 ms). Um golpe sem defesa só é julgado
+ * na tolerância tardia mais o atraso, e a preparação seguinte da sequência começa depois; a
+ * lâmina parte, no máximo, o tempo que falta até o contato (nunca menos de AJ_LAMINA_MIN),
+ * então o ritmo da sequência não atrasa: o contato seguinte chega exatamente `intervalo`
+ * depois do anterior, em tempo real, em todos os mestres e com todo o atraso. */
+static void test_calibracao_alta(void) {
+    static const double ATRASO[] = {0, 0.030, 0.060, 0.090, 0.120};
+    double pior = 0, menorLamina = 9;
+    bool cabe = true;
+    long medidos = 0;
+    for (int i = 0; i < roster_size(); i++)
+        for (int a = 0; a < 5; a++)
+            for (int modo = 0; modo < 3; modo++)   /* 0: sem defesa (o pior), 1: perfeito calibrado, 2: bom */
+                for (uint32_t seed = 1; seed <= 6; seed++) {
+                    const MasterProfile *m = roster_get(i);
+                    Settings s;
+                    settings_default(&s);
+                    settings_for_level(&s, i);
+                    s.latency = (float)ATRASO[a];
+                    Duel d;
+                    duel_init(&d, &s, m, seed);
+                    int ultimo = -1;
+                    double contatoAnt = -1, congelado = 0;
+                    for (int passos = 0; passos < 60 && d.phase != PH_FINISHED;) {
+                        d.bossPosture = 1e6f;
+                        d.renPosture = s.renPosture;
+                        if (d.phase == PH_WINDUP && d.attacks != ultimo) {
+                            ultimo = d.attacks;
+                            passos++;
+                            double lead = duel_strike_lead(&d);
+                            if (d.comboStrike > 0) {
+                                const Move *mv = duel_move(&d);
+                                double gap = mv->gaps[d.comboStrike - 1];
+                                if (gap < s.minChainGap) gap = s.minChainGap;
+                                double erro = fabs((d.strikeAt - contatoAnt + congelado) - gap);
+                                if (erro > pior) pior = erro;
+                                medidos++;
+                                if (lead > d.windupDuration + 1e-9 || lead < AJ_LAMINA_MIN - 1e-9) cabe = false;
+                                if (lead < menorLamina) menorLamina = lead;
+                            }
+                            contatoAnt = d.strikeAt;
+                        }
+                        double off = -1;
+                        if (d.phase == PH_WINDUP && !d.attempted && modo > 0) {
+                            const Stance *st = duel_stance(&d);
+                            double alvo = d.strikeAt - (modo == 1 ? 0.5 * st->perfectWindow : 0.5 * (st->perfectWindow + st->goodWindow)) + ATRASO[a];
+                            if (alvo < d.clock + 1.0 / 60) off = alvo > d.clock ? alvo - d.clock : 0;
+                        }
+                        duel_step_at(&d, 1.0 / 60, off);
+                        DuelEvent ev[MAX_EVENTS];
+                        int k = duel_drain(&d, ev, MAX_EVENTS);
+                        for (int e = 0; e < k; e++) if (ev[e].kind == EV_IMPACT) congelado = d.lastHitstop;
+                    }
+                }
+    printf("calibração alta: %ld intervalos de sequência; pior atraso do ritmo %.3f ms; menor partida da lâmina %.0f ms\n", medidos, pior * 1000, menorLamina * 1000);
+    CHECK(medidos > 5000, "%ld intervalos de sequência conferidos, com atraso de 0 a 120 ms", medidos);
+    CHECK(pior < 0.001, "o ritmo da sequência não atrasa com o atraso calibrado (pior %.3f ms)", pior * 1000);
+    CHECK(cabe, "a lâmina parte no máximo o tempo que falta, e nunca menos de %.0f ms nas sequências", AJ_LAMINA_MIN * 1000);
+}
+
 /* Ritmo: a espera antes do aviso (o mestre segurando a preparação) e a pausa entre
  * sequências são tempo morto, e encurtam. Nada que se julga muda: golpe a golpe, o
  * mesmo movimento, o mesmo aviso e o mesmo intervalo dentro da sequência. Com a espera
@@ -1980,6 +2040,7 @@ int main(void) {
     test_vantagem();
     test_lamina_variavel();
     test_taxa_de_quadros();
+    test_calibracao_alta();
     test_traco_aleatorio();
     test_ritmo();
     test_teste_a_mao();

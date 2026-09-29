@@ -71,7 +71,9 @@ Esc enche um anel e pula; segurar o clique acelera).
   assobio) 220 ms antes do contato; do garfiel em diante, um tempo sorteado a cada
   golpe, entre 140 e 320 ms (240 na sequência): reagir à lâmina não basta, vale o
   ritmo do aviso. O aviso e o contato não mudam, nem os quadros do golpe
-  (`AJ_LAMINA_VARIAVEL` em `src/ajuste.h`; 0 deixa fixa). Na sequência, o aviso de
+  (`AJ_LAMINA_VARIAVEL` em `src/ajuste.h`; 0 deixa fixa). Numa sequência, com o atraso
+  calibrado alto, a lâmina parte no máximo o tempo que falta até o contato (nunca menos
+  de 140 ms): o ritmo não atrasa com atraso até 120 ms. Na sequência, o aviso de
   cada golpe é o contato anterior (o ritmo).
 - **Janela:** perfeito se o aperto cai na janela perfeita antes do contato; bom na
   janela boa ou **até 30 ms depois do contato** (tolerância tardia).
