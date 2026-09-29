@@ -12,7 +12,8 @@ brew install raylib   # uma vez
 make packs ZIP=all_the_animations.zip   # põe as tiras dos packs nas pastas (uma vez)
 make sprites          # gera os lutadores em pixel art
 make run              # compila e abre o jogo
-make test             # regras do núcleo, sem janela
+make test             # regras do núcleo, sem janela (inclui robôs e janelas viáveis)
+make robos            # curva de dificuldade: os robôs contra cada mestre (LUTAS=300)
 ```
 
 Os lutadores, os efeitos e as teclas vêm de packs pagos da Mattz Art, que não
@@ -24,9 +25,15 @@ o Samurai #3 em `assets/sprites/_original/`, os outros packs em
 tiras, o jogo roda com os bonecos de `src/rig.c` e as partículas de sempre.
 
 Controles: **clique, Espaço, J ou Enter** aparam e avançam as falas.
-Esc pausa (T volta à trilha, M volta ao menu, Q sai). Na trilha, o botão "menu"
-(ou Esc) volta ao menu. F liga e desliga o tremor. F11 alterna a tela cheia.
-O progresso fica em `apara_save.txt`, ao lado do executável.
+Esc pausa (T volta à trilha, L calibra o atraso, M volta ao menu, Q sai). Na
+trilha, o botão "menu" (ou Esc) volta ao menu. F liga e desliga o tremor. F11
+alterna a tela cheia. **F3** (ou `APARA_DEBUG=1`) mostra o overlay de debug: as
+janelas, a linha do tempo do golpe, o último aperto com o erro em ms, a fase, o
+golpe, as posturas e a vida. **L** no título ou na pausa abre a calibração de
+latência (um quadrado que pisca, depois um clique; aperte junto). O progresso
+fica em `apara_save.txt` e a calibração em `apara_opcoes.txt`, ao lado do
+executável. Todas as constantes globais de equilíbrio e de sensação estão em
+`src/ajuste.h`; as de cada mestre, em `src/roster.c`.
 
 ## História
 
@@ -53,46 +60,64 @@ Esc enche um anel e pula; segurar o clique acelera).
 
 - **Kojiro tem vida; o adversário, postura.** Errar tira vida de kojiro; aparar
   quebra a postura do mestre. A vida no fim faz a borda da tela pulsar.
-- Nenhum adversário finta, e o jogo não avisa os golpes: o jogador aprende o moveset.
-- Entre um gesto e outro há 0,3 s de espera, que zera a cada golpe novo.
+- **Cada golpe:** o mestre prepara (cada sequência tem a sua preparação, sempre a
+  mesma), e um **aviso**, som e brilho na lâmina, vem sempre o mesmo tempo antes do
+  contato: 450 ms no daichi, descendo até 320 ms (jinshi, sem som, avisa só com o
+  brilho da lua, 350 ms antes). A lâmina parte 220 ms antes do contato. Na
+  sequência, o aviso de cada golpe é o contato anterior (o ritmo).
+- **Janela:** perfeito se o aperto cai na janela perfeita antes do contato; bom na
+  janela boa ou **até 30 ms depois do contato** (tolerância tardia).
+- **Apertar cedo**, antes do aviso, não trava o golpe: dá uma recarga de no máximo
+  0,5 s (que acaba no aviso, nunca na janela boa) e a defesa daquele golpe não sai
+  perfeita. Depois do aviso vale uma tentativa só. O jogo mostra "cedo" ou
+  "tarde" quando a defesa não pega.
+- O **hitstop** congela o duelo no impacto, e o tempo dele sai do golpe seguinte da
+  sequência: o ritmo é sempre o mesmo, qualquer que seja o resultado.
+- Quando falta **um perfeito** para quebrar a postura, aparece "vantagem". O parry
+  que quebra a postura é a execução: sem botão.
 
 | Resultado | Vida de kojiro | Postura do adversário |
 |---|---:|---:|
-| Perfeito | +20 | −20 (+2 por aprendiz vencido) |
+| Perfeito | +3% da vida | −20 (+2 por aprendiz vencido) |
 | Bom | −4 | −6 (+0,5 por aprendiz vencido) |
-| Ruim (cedo ou sem defesa) | um "golpe" (tabela abaixo) | +20 do 5º em diante |
+| Erro (cedo, tarde ou sem defesa) | vida ÷ erros até cair (tabela abaixo) | +20 do 5º em diante |
 
-kojiro começa com 250 de vida e ganha +25 a cada aprendiz vencido (o perfeito
-também devolve vida). Com
-metade da postura, o adversário acelera a preparação (o ritmo dentro de uma
-sequência nunca muda). Quebrar a postura **desarma**: a arma voa, crava no chão
-e o adversário cai de joelhos. Oboro tem três selos de 360 e um golpe especial
-(25% das vezes) que tira o dobro. Depois de duas derrotas seguidas, dá para
-**conversar com hanzo** (no Oboro, ele só diz "Confie em você mesmo. Use tudo
-que aprendeu.").
+kojiro tem 250 de vida contra todos. Com metade da postura, o aprendiz acelera a
+espera antes do aviso (do aviso ao contato, nunca muda). Quebrar a postura
+**desarma**: a arma voa, crava no chão e o adversário cai de joelhos. Depois de
+duas derrotas seguidas, dá para **conversar com hanzo** (no Oboro, ele só diz
+"Confie em você mesmo. Use tudo que aprendeu.").
 
 ## A trilha
 
-| # | Aprendiz | Postura | Arma | Cenário | Postura dele | Perfeito / Bom | Erros até cair |
-|---:|---|---|---|---|---:|---:|---:|
-| 1 | daichi | terra (bem devagar) | katana | Celeiro | 300 | 90 / 220 ms | 50 |
-| 2 | genbu | tartaruga | katana simples | Jardim de pedras do mosteiro | 300 | 87 / 215 ms | 45 |
-| 3 | raizo | touro | espadão | Pátio do dojo | 330 | 84 / 208 ms | 40 |
-| 4 | shizuku | gelo | florete de esgrima com geada | Cachoeira | 330 | 80 / 200 ms | 35 |
-| 5 | garfiel | tigre | garras nas duas mãos | Portão do tigre branco | 360 | 76 / 192 ms | 30 |
-| 6 | karasu | corvo | katana e wakizashi | Telhados da vila na chuva | 360 | 72 / 185 ms | 25 |
-| 7 | hayate | vento (ritmo quebrado) | duas foices pequenas | Ponte de corda no desfiladeiro | 390 | 69 / 178 ms | 22 |
-| 8 | enjin | chama | katana de fogo | Forja | 390 | 66 / 172 ms | 20 |
-| 9 | suiren | mar (acelerando) | lança | Porto | 420 | 63 / 166 ms | 18 |
-| 10 | arashi | tempestade (dano 1,5×) | duas katanas | Salão do castelo na tempestade | 420 | 60 / 160 ms | 15 |
-| 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 450 | 58 / 155 ms | 12 |
-| 12 | jinshi | lua (sem som) | katana bem branca, forjada com a lua | Encosta da serra | 450 | 55 / 150 ms | 10 |
-| 13 | **oboro** | hanzo → devorador de posturas → oni (uma por selo) | katana de hanzo | Dojo de hanzo | 3 × 360 | 70 / 180 → 45 / 130 ms | 10 |
+| # | Aprendiz | Postura | Arma | Cenário | Postura dele | Perfeito / Bom | Aviso | Erros até cair |
+|---:|---|---|---|---|---:|---:|---:|---:|
+| 1 | daichi | terra (bem devagar) | katana | Celeiro | 300 | 90 / 220 ms | 450 ms | 8 |
+| 2 | genbu | tartaruga | katana simples | Jardim de pedras do mosteiro | 330 | 82 / 203 ms | 437 ms | 8 |
+| 3 | raizo | touro | espadão | Pátio do dojo | 350 | 75 / 185 ms | 424 ms | 7 |
+| 4 | shizuku | gelo | florete de esgrima com geada | Cachoeira | 380 | 68 / 171 ms | 411 ms | 7 |
+| 5 | garfiel | tigre | garras nas duas mãos | Portão do tigre branco | 530 | 63 / 158 ms | 398 ms | 4 |
+| 6 | karasu | corvo | katana e wakizashi | Telhados da vila na chuva | 490 | 58 / 148 ms | 385 ms | 7 |
+| 7 | hayate | vento (ritmo quebrado) | duas foices pequenas | Ponte de corda no desfiladeiro | 450 | 54 / 138 ms | 372 ms | 4 |
+| 8 | enjin | chama | katana de fogo | Forja | 460 | 50 / 131 ms | 359 ms | 4 |
+| 9 | suiren | mar (acelerando) | lança | Porto | 490 | 47 / 125 ms | 346 ms | 4 |
+| 10 | arashi | tempestade (dano 1,2×) | duas katanas | Salão do castelo na tempestade | 550 | 46 / 121 ms | 333 ms | 10 |
+| 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 740 | 44 / 119 ms | 320 ms | 4 |
+| 12 | jinshi | lua (sem som) | katana bem branca, forjada com a lua | Encosta da serra | 610 | 44 / 119 ms | 350 ms (brilho) | 5 |
+| 13 | **oboro** | hanzo → devorador de posturas → oni (uma por selo) | katana de hanzo | Dojo de hanzo | 360 · 1800 · 600 | 56 → 46 → 38 ms | 380 → 350 → 320 ms | 11 |
 
-A dificuldade é da posição na trilha, não do personagem: postura, erros até
-cair e janelas apertam a cada passo, e do 5º em diante acertar devolve postura
-ao adversário. O que é de cada um (golpes, cenário, apagões, ritmo quebrado,
-ondas acelerando, silêncio) vai junto quando ele muda de lugar.
+A curva foi afinada com os robôs (`make robos`): o humano casual que decora o
+ritmo vence os quatro primeiros sempre, e a vitória cai sem degraus até uns 65%
+no jinshi e uns 40% no oboro; apertar sem olhar, em qualquer ritmo, perde de
+todos (`test_curva`). As janelas apertam pela trilha; os erros até cair corrigem
+o que é de cada um (o ritmo fácil do garfiel, os golpes duplos do arashi).
+
+**Oboro**, três selos: na **postura de hanzo**, abre sempre com a *lição
+completa*, sete golpes seguidos; no **devorador de posturas** faz os doze padrões
+dos aprendizes, um de cada, iguais ao original, na ordem da trilha na primeira
+volta e depois sorteados; na **postura do oni**, os mesmos doze mais rápidos
+(espera antes do aviso ×0,85) e mais pesados (dano ×1,25), sem o golpe especial
+que tira o dobro (esse sai nas duas primeiras fases, 25% das vezes).
 
 ## Moveset
 
@@ -113,7 +138,7 @@ no alto, pouco antes de ela partir; é o reaparecer que avisa. **⚔** é o golp
 (o corte cruzado, anunciado por um brilho duplo e um tinido duplo): um parry só
 segura as duas se for perfeito; no bom, a segunda entra; no erro, entram as
 duas. Todos têm de sete a dez sequências. Daichi, Genbu e Raizo nunca passam de
-dois contatos; Garfiel chega a oito golpes seguidos; arashi bate 1,5 vez mais
+dois contatos; Garfiel chega a oito golpes seguidos; arashi bate 1,2 vez mais
 forte; enjin deixa kojiro **em brasas** a cada erro
 (ele perde mais 60% de um golpe ao longo de 3 s, e o parry perfeito apaga); yoru
 apaga as luzes em sete de cada dez sequências; jinshi tem o
@@ -133,7 +158,7 @@ repertório mais variado e o ritmo irregular.
 | arashi | faísca (1) · duas tempestades (1) ⚔ · trovoada (2: 0,45) ⚔ no 2º · tormenta (3: 0,40 0,40) ⚔ no 3º · granizo (4: 0,40 0,40 0,40) · ventania (3: 0,40 0,70) · trovão (1) correndo ⚔ · raio duplo (2: 0,40) saltando ⚔ nos dois · céu partido (5: 0,40 0,40 0,40 0,80) ⚔ no 5º · **relâmpago** (forte) ⚔ |
 | yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) · **eclipse** (forte) · vultos (3: 0,40 0,70) · breu (1) correndo · coruja (2: 0,45) saltando · meia-noite (4: 0,40 0,40 0,90) · nevoeiro (2: 0,70) |
 | jinshi | crescente (1) · minguante (3: 0,60 0,60) · fases da lua (4: 0,50 0,50 0,90) · luar (3: 0,45 1,00) · lua cheia (5: 0,50 0,50 0,50 0,90) · lua branca (6: 0,40 0,90 0,45 0,45 1,00) · noite branca (4: 1,00 0,40 0,40) · reflexo no lago (1) correndo · lua alta (2: 0,70) saltando · **halo** (forte) |
-| oboro | **postura de hanzo:** corte do mestre (1) · lição (2: 0,60) · estocada de hanzo (1) · três lições (3: 0,50 0,60) · passo de hanzo (1) correndo · salto do mestre (2: 0,55) saltando · **devorador de posturas:** um eco de cada aprendiz, com o elemento dele (eco da terra, da tartaruga, do touro, do gelo, do tigre, do corvo, do vento, da chama, do mar, da tempestade, da noite, da lua) · **postura do oni** (de máscara, lâmina em chamas): fúria do oni (4: 0,40 0,40 0,70) · chama do oni (3: 0,45 0,45) · doze posturas (6: 0,40 0,40 0,40 0,40 0,90) · investida do oni (1) correndo · mergulho do oni (2: 0,50) saltando · **golpe do oni** (forte) |
+| oboro | **postura de hanzo:** lição completa (7: 0,60 0,50 0,50 0,70 0,45 0,45), sempre a primeira · corte do mestre (1) · lição (2: 0,60) · estocada de hanzo (1) · três lições (3: 0,50 0,60) · passo de hanzo (1) correndo · salto do mestre (2: 0,55) saltando · **devorador de posturas** e **postura do oni:** os doze ecos, cada um igual ao golpe do aprendiz: eco da terra (desabamento) · da tartaruga (mordida) · do touro (investida dupla) · do gelo (nevasca) · do tigre (fúria do tigre) · do corvo (revoada ⚔) · do vento (foices gêmeas ⚔) · da chama (incêndio) · do mar (maré longa, de longe) · da tempestade (tormenta ⚔) · da noite (meia-noite) · da lua (lua cheia) |
 
 ## Visual e som
 
@@ -244,8 +269,10 @@ de um botão só).
 
 | Arquivo | O quê |
 |---|---|
-| `src/core.c`, `core.h` | Regras puras: relógio, tentativa, postura, selos, moveset, trilha. Sem raylib. |
-| `src/roster.c` | Os treze lutadores (doze aprendizes e oboro), falas, visitas e conselhos de hanzo, a lore e as cenas da luta final e dos finais. **Balanceamento é aqui.** |
+| `src/core.c`, `core.h` | Regras puras: relógio, aviso, tentativa, julgamento (com tolerância e latência), hitstop, postura, selos, vantagem, moveset, trilha. Sem raylib. |
+| `src/ajuste.h`, `ajuste.c` | **Todas as constantes globais** de equilíbrio e de sensação, com comentário em cada uma (vida, cura, aviso, tolerância, recarga, hitstop, tremor, câmera lenta, recuo, calibração). |
+| `src/roster.c` | Os treze lutadores (doze aprendizes e oboro): janelas, aviso, preparação de cada sequência, erros até cair, postura, traços; falas, visitas, lore e cenas. **O balanceamento de cada mestre é aqui.** |
+| `src/robo.c`, `robo.h` | Os robôs: o do `--demo`, os dos testes e os da curva de dificuldade (perfeito, sem defesa, spam, reação, humano casual). Sem raylib. |
 | `src/main.c` | Telas, coreografia, interface, visuais de cada lutador (`MASTER_LOOKS`) |
 | `src/sprites.c` | Lê as pranchas geradas (`sprite.txt` e tiras) e desenha e toca os lutadores em pixel art; efeitos em folha e teclas |
 | `src/rig.c` | Bonecos (quando faltam as pranchas): poses, passos, cansaço, roupas, armas |
@@ -255,7 +282,8 @@ de um botão só).
 | `src/lore.c` | Tela de título, trilha e a cabana de hanzo |
 | `src/fx.c` | Faíscas, estrela, anéis, arcos, flash, tremor |
 | `src/audio.c` | Efeitos e trilha ambiente sintetizados |
-| `tests/core_test.c` | Verificações do núcleo (`make test`) |
+| `tests/core_test.c` | Verificações do núcleo (`make test`): regras, janelas viáveis em todo golpe, aviso, aperto cedo, ritmo com hitstop, calibração, curva e Oboro |
+| `tests/robos.c` | A tabela dos robôs por mestre (`make robos`) |
 | `tools/instalar_packs.sh` | Põe o zip das animações nas pastas do gerador e do jogo (`make packs ZIP=...`) |
 | `tools/personagens.c` | Gera os 15 lutadores (cabeça, arma, corpo, rastro, aura, golpe especial, pose desarmada), uma pasta por nome (kojiro, raizo, yoru, garfiel...), a partir do Samurai #3 e dos packs de `assets/sprites/_packs/` (Raizo com o espadão, Shizuku, Suiren e Jinshi no Samurai #4, Arashi, Oboro com as posturas dos outros e o grito): `make sprites`; ver `../docs/PERSONAGENS.md` |
 
