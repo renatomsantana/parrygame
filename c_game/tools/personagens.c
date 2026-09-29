@@ -908,12 +908,13 @@ static const Row CAB_YORU_COSTAS[] = {
 static const Row CAB6_GARFIEL_FRENTE[] = {
     /* rodada 7 (ref. Garfiel, Re:Zero): loiro curto e bem espetado, pontas irregulares para cima e
        para trás, mechas caindo na testa, laterais rentes (a têmpora e a orelha aparecem) */
-    {-10, -6, "i...i"}, {-9, -7, "hi.hi.i"}, {-8, -8, "hHiHhHiHi"}, {-7, -9, "ihHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
-    {-5, -7, "hHHHHHHHHHi"}, {-4, -7, "hhHHHHHHiHi"}, {-3, -6, "hhhHHFHi"}, {-2, -5, "hkFFFHF"},
+    /* etapa 2: curto, em tufinhos repetidos como grama, todos pequenos e do mesmo tamanho (sem coroa) */
+    {-9, -7, "i.i.i.i.i"}, {-8, -8, "hHhHhHhHhi"}, {-7, -8, "hHHHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
+    {-5, -7, "hHHHHHHHHiH"}, {-4, -7, "hhHHHHHHiHi"}, {-3, -6, "hhhHHFHi"}, {-2, -5, "hkFFFHF"},
     {-1, -5, "hkfFFkk"}, {0, -5, "hkfff"}, {1, -4, "kfff"}, {2, -3, "kf"}, {0, 0, NULL},
 };
 static const Row CAB6_GARFIEL_COSTAS[] = {
-    {-10, -6, "i...i"}, {-9, -7, "hi.hi.i"}, {-8, -8, "hHiHhHiHi"}, {-7, -9, "ihHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
+    {-9, -7, "i.i.i.i.i"}, {-8, -8, "hHhHhHhHhi"}, {-7, -8, "hHHHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
     {-5, -7, "hHHHHHHHHHi"}, {-4, -7, "hhHHHHHHHh"}, {-3, -6, "hhHHHHhh"}, {-2, -6, "khhhhhk"},
     {-1, -5, "fhhhhf"}, {0, -4, "ffff"}, {1, -3, "fff"}, {0, 0, NULL},
 };
@@ -933,13 +934,14 @@ static const Row CAB7_KARASU_COSTAS[] = {
 /* Yoru (ref. Yoru, Valorant): preto, curto e espetado, mais comprido em cima e jogado para cima e para
    trás, com uma mecha roxa (o destaque). A máscara continua. Sem barba. */
 static const Row CAB7_YORU_FRENTE[] = {
-    {-10, -6, "H..H"}, {-9, -7, "HhHhH"}, {-8, -8, "HhhAhhH"}, {-7, -8, "HhhhAhhhH"}, {-6, -8, "HhhhhAhhhH"},
-    {-5, -7, "HhhhhAhhiH"}, {-4, -6, "HhhhhhhiH"}, {-3, -6, "HhhhhhHF"}, {-2, -5, "HkFFFFF"},
+    /* etapa 2: curto e rente ao crânio, só um pouco mais comprido em cima; a mecha roxa (A) */
+    {-8, -5, "HhHhH"}, {-7, -7, "HhhhAhhH"}, {-6, -8, "HhhhhAhhiH"},
+    {-5, -7, "HhhhhhAhiH"}, {-4, -6, "HhhhhhhiH"}, {-3, -6, "HhhhhhHF"}, {-2, -5, "HkFFFFF"},
     {-1, -5, "HkfFFkk"}, {0, -5, "hkfff"}, {1, -4, "kfff"}, {2, -3, "kf"}, {0, 0, NULL},
 };
 static const Row CAB7_YORU_COSTAS[] = {
-    {-10, -6, "H..H"}, {-9, -7, "HhHhH"}, {-8, -8, "HhhAhhH"}, {-7, -8, "HhhhAhhhH"}, {-6, -8, "HhhhhAhhhH"},
-    {-5, -7, "HhhhhAhhhH"}, {-4, -6, "HhhhhhhhH"}, {-3, -6, "HhhhhhhH"}, {-2, -5, "khhhhk"},
+    {-8, -5, "HhHhH"}, {-7, -7, "HhhhAhhH"}, {-6, -8, "HhhhhAhhhH"},
+    {-5, -7, "HhhhhhAhhH"}, {-4, -6, "HhhhhhhhH"}, {-3, -6, "HhhhhhhH"}, {-2, -5, "khhhhk"},
     {-1, -4, "ffff"}, {0, -4, "ffff"}, {0, 0, NULL},
 };
 /* Arashi: o comprido solto prateado caindo nas costas, agora com a barba cinza da cor do cabelo
@@ -947,8 +949,9 @@ static const Row CAB7_YORU_COSTAS[] = {
 static const Row CAB7_ARASHI_FRENTE[] = {
     {-7, -5, "HHHH"}, {-6, -6, "HhiihHH"}, {-5, -7, "HhiihhhhH"}, {-4, -8, "HhhhhhhhhhH"},
     {-3, -8, "HhhhhhhhHhH"}, {-2, -8, "HhhhhhhHFFF"}, {-1, -8, "HhhhhhHfkk"}, {0, -8, "HhhhhhHf"},
-    {1, -9, "HhhhhhHfB"}, {2, -9, "HhhhhHbBBbB"}, {3, -9, "HhihhH.BBBB"}, {4, -9, "HhhhH..bBBb"},
-    {5, -9, "HhihH...BB"}, {6, -9, "HhhH"}, {7, -9, "HhH"}, {8, -8, "HH"}, {0, 0, NULL},
+    /* etapa 2: nada cobre o rosto; a barba cinza curta e rente só embaixo do queixo */
+    {1, -9, "HhhhhhH"}, {2, -9, "HhhhhH"}, {3, -9, "HhihhH"}, {3, 0, "bBb"}, {4, -9, "HhhhH"}, {4, 1, "b"},
+    {5, -9, "HhihH"}, {6, -9, "HhhH"}, {7, -9, "HhH"}, {8, -8, "HH"}, {0, 0, NULL},
 };
 
 /* Arashi e Karasu: comprido e solto, cai reto pelas costas até o meio delas (gravidade), a
@@ -1309,6 +1312,10 @@ static const Head HEADS[] = {
        Sem barba. O rosto é o mesmo das chamas (sobrancelha descendo, queixo quadrado). */
     {"desgrenhado", {{0, 1, "H"}, {0, 5, "H"}, {0, 8, "H"}, {1, 0, "HiH"}, {1, 4, "HihHhH"}, {2, 0, "HhAHhiihiH"},
                      {3, 1, "HAhAhhiiihH"}, {4, 2, "HAAhAhhihhH"}, {5, 3, "HAAAhhAhhH"}, {6, 3, "HAkfkhkfFF"},
+                     {7, 4, "HkfkkfkkF"}, {8, 4, "XkkfkfeFF"}, {9, 5, "XXkkffFf"}, {10, 7, "XkkfF"}}},
+    /* etapa 2 (prova CAB_PROVA): o mesmo desenho, metade amarelo e metade vermelho */
+    {"desgrenhado50", {{0, 1, "H"}, {0, 5, "H"}, {0, 8, "H"}, {1, 0, "HiH"}, {1, 4, "HihHhH"}, {2, 0, "HhAHhiihiH"},
+                     {3, 1, "HAAAhAiihAH"}, {4, 2, "HAAAAAhAAhH"}, {5, 3, "HAAAAAAAAH"}, {6, 3, "HAkfkhkfFF"},
                      {7, 4, "HkfkkfkkF"}, {8, 4, "XkkfkfeFF"}, {9, 5, "XXkkffFf"}, {10, 7, "XkkfF"}}},
     /* Suiren: cabelo curto e faixa turquesa com pontas soltas. */
     {"faixa", {{4, 5, "HHhH"}, {5, 4, "HHHhiiH"}, {6, 4, "AAAAAAAA"}, {7, 4, "HHHHHHHF"}, {8, 4, "HHHfFFeF"}},
@@ -1765,11 +1772,11 @@ static void ribbon(Canvas *cv, int x0, int y0, int length, Rgb c0, Rgb c1, int i
 }
 
 static void draw_head(Canvas *cv, const Char *ch, int idx) {
-    const Head *hd = find_head(ch->cabeca);
+    const Head *hd = find_head(getenv("CAB_PROVA") && !strcmp(ch->cabeca, "desgrenhado") ? "desgrenhado50" : ch->cabeca);
     if (!hd) return;
     Pal pal;
     head_palette(ch, &pal);
-    if (!strcmp(hd->name, "desgrenhado")) {   /* loiro mesclado com vermelho: a sombra vermelha, o meio e a luz loiros */
+    if (!strncmp(hd->name, "desgrenhado", 11)) {   /* loiro mesclado com vermelho: a sombra vermelha, o meio e a luz loiros */
         pal.c['H'] = (Rgb){0x6a, 0x1c, 0x12};
         pal.c['h'] = (Rgb){0xe0, 0xa0, 0x40};
         pal.c['i'] = (Rgb){0xf8, 0xdc, 0x80};
@@ -2355,13 +2362,51 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                     /* coque baixo na nuca, com a luz de cima à esquerda, e um grampo
                        (kanzashi) de cristal de gelo espetado para trás e para cima */
                     static const char *B[] = {".hiih.", "hiiihH", "hhhhHH", ".hHHH.", "..HH.."};
-                    int bx = cx0[head] - 4, by = cy0[head] + 1;
-                    for (int r = 0; r < 5; r++)
-                        for (int c = 0; B[r][c]; c++) {
-                            char k = B[r][c];
+                    /* etapa 2 (prova CAB_PROVA): o coque redondo e bem definido, com contorno escuro */
+                    static const char *B2[] = {"..HHHH..", ".HhiihH.", "HhiiihhH", "HhiihhhH", "HhhhhhHH", ".HhhhHH.", "..HHHH.."};
+                    bool p2 = getenv("CAB_PROVA") != NULL;
+                    const char **BB = p2 ? B2 : B;
+                    int nr = p2 ? 7 : 5;
+                    int bx = cx0[head] - (p2 ? 6 : 4), by = cy0[head] + (p2 ? 0 : 1);
+                    for (int r = 0; r < nr; r++)
+                        for (int c = 0; BB[r][c]; c++) {
+                            char k = BB[r][c];
                             if (k == '.') continue;
                             cv_behind(cv, bx + c, by + r, k == 'H' ? ch->cabelo[0] : k == 'h' ? ch->cabelo[1] : ch->cabelo[2]);
                         }
+                    if (p2) {
+                        /* o grampo de gelo: haste clara saindo do coque para trás e para cima, e o cristal
+                           de quatro pontas na ponta; a franja na testa e a mecha do lado caindo na frente
+                           da orelha */
+                        for (int i = 1; i <= 4; i++) cv_put(cv, bx + 1 - i, by + 1 - i, i == 4 ? ch->destaque[0] : ch->destaque[1]);
+                        int kx = bx - 4, ky = by - 4;
+                        cv_put(cv, kx, ky, (Rgb){250, 254, 255});
+                        static const int d4[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+                        for (int k = 0; k < 4; k++) cv_put(cv, kx + d4[k][0], ky + d4[k][1], ch->destaque[0]);
+                        cv_put(cv, kx, ky - 2, (Rgb){250, 254, 255});
+                        cv_put(cv, kx - 2, ky, (Rgb){250, 254, 255});
+                        int fx = cx1[head], fy = cy0[head] + 3;
+                        for (int i = 0; i < 3; i++) if (cv_ok(fx - i, fy + (i == 0))) cv_put(cv, fx - i, fy + (i == 0), i == 1 ? ch->cabelo[2] : ch->cabelo[1]);
+                        for (int i = 0; i < 6; i++) cv_put(cv, cx1[head] - 5 + (i > 3), cy0[head] + 4 + i, i % 2 ? ch->cabelo[1] : ch->cabelo[2]);
+                        /* as formas separadas: contorno escuro de 1 px por fora do cabelo (cabeça e coque) e uma
+                           linha escura entre o coque e a cabeça */
+                        static bool hm[CH][CW];
+                        int ya = cy0[head] - 2, yb = cy0[head] + 12, xa = bx - 2, xb = cx1[head] + 2;
+                        for (int y = ya; y <= yb; y++)
+                            for (int x = xa; x <= xb; x++) hm[y < 0 ? 0 : y][x < 0 ? 0 : x] = cv_ok(x, y) && is_hair(cv, ch, x, y);
+                        for (int y = ya; y <= yb; y++)
+                            for (int x = xa; x <= xb; x++) {
+                                if (!cv_ok(x, y) || cv->a[y][x].a) continue;
+                                bool nb = false;
+                                for (int k = 0; k < 4; k++) {
+                                    int qx = x + d4[k][0], qy = y + d4[k][1];
+                                    nb |= qx >= xa && qx <= xb && qy >= ya && qy <= yb && cv_ok(qx, qy) && hm[qy][qx];
+                                }
+                                if (nb) cv_put(cv, x, y, ch->cabelo[0]);
+                            }
+                        for (int r = 1; r < 6; r++) if (cv_ok(bx + 7, by + r) && is_hair(cv, ch, bx + 7, by + r)) cv_put(cv, bx + 7, by + r, ch->cabelo[0]);
+                        break;
+                    }
                     for (int i = 1; i <= 3; i++) cv_behind(cv, bx + 1 - i, by - i, ch->destaque[1]);
                     int kx = bx - 3, ky = by - 4;
                     cv_behind(cv, kx, ky, (Rgb){250, 254, 255});
@@ -2371,10 +2416,23 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                     cv_behind(cv, kx - 2, ky, ch->destaque[0]);
                     break;
                 }
+                if (getenv("CAB_PROVA") && !strcmp(ch->id, "jinshi")) {
+                    /* etapa 2: o alto preso num coque atrás da cabeça, com a fita branca amarrada */
+                    static const char *K[] = {".HHH.", "HhihH", "HhhhH", ".HHH."};
+                    int kx = cx0[head] + 1, ky = cy0[head] - 3;
+                    for (int r = 0; r < 4; r++)
+                        for (int c = 0; K[r][c]; c++) {
+                            char k = K[r][c];
+                            if (k != '.') cv_put(cv, kx + c, ky + r, k == 'H' ? ch->cabelo[0] : k == 'h' ? ch->cabelo[1] : ch->cabelo[2]);
+                        }
+                    for (int c = -1; c <= 5; c++) cv_put(cv, kx + c, ky + 4, (Rgb){0xf4, 0xf2, 0xee});   /* a fita */
+                    cv_put(cv, kx - 2, ky + 5, (Rgb){0xf4, 0xf2, 0xee});
+                    cv_put(cv, kx - 3, ky + 6, (Rgb){0xd8, 0xd4, 0xd0});                               /* a ponta solta */
+                }
                 /* o cabelo solto: da nuca para baixo, colado nas costas, abrindo um pouco
                    para trás e com as pontas desencontradas */
                 int top = cy0[head] + 2, len = 24;
-                double sway = sin(idx * 0.8) * 1.0;
+                double sway = getenv("CAB_PROVA") ? 0 : sin(idx * 0.8) * 1.0;   /* etapa 2: o cabelo não balança sozinho */
                 /* caído, o cabelo não passa do chão: chega nele e segue deitado para trás
                    da cabeça, ao longo do chão */
                 int ground = 0;
