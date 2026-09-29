@@ -375,6 +375,16 @@ void duel_tick(Duel *d, double delta) {
     if (d->clock >= d->strikeAt) resolve(d);
 }
 
+void duel_step(Duel *d, double dt, bool press) {
+    if (!press) {
+        duel_tick(d, dt);
+        return;
+    }
+    duel_tick(d, dt * 0.5);
+    duel_press(d);
+    duel_tick(d, dt * 0.5);
+}
+
 bool duel_press(Duel *d) {
     if (d->phase == PH_FINISHED) return false;
     if (d->clock - d->lastPress < d->s.inputCooldown) return false;

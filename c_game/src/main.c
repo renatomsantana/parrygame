@@ -26,6 +26,7 @@
 #include "arenas.h"
 #include "audio.h"
 #include "core.h"
+#include "robo.h"
 #include "fx.h"
 #include "katana3d.h"
 #include "lore.h"
@@ -288,6 +289,7 @@ static struct {
     ArenaCtx ctx;
 
     bool demo;
+    RoboMente robo;           /* --demo: o robô perfeito dos testes */
     const char *shotFile;
     float shotTime;
     const char *recDir;       /* --rec: quadros a 30 por segundo, para GIFs */
@@ -806,6 +808,7 @@ static void start_duel(void) {
     settings_for_level(&G.settings, campaign_defeated(&G.camp));
     G.special = false;
     duel_init(&G.duel, &G.settings, G.m, (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919));
+    robo_iniciar(&G.robo, &ROBO_DO_DEMO, 1);
     setup_actors();
     ren_draw_sword();
     fx_clear(&G.fx);
@@ -1755,8 +1758,8 @@ static void update_duel(float dtReal) {
     float dt = dtReal * G.slowmo;
     if (G.slowmoTime > 0) { G.slowmoTime -= dtReal; if (G.slowmoTime <= 0) G.slowmo = 1; }
     bool press = pressed();
-    /* o robô aperta no meio do quadro (ver abaixo), logo antes do contato */
-    if (G.demo && G.duel.phase == PH_WINDUP && !G.duel.attempted && G.duel.strikeAt - G.duel.clock <= dt * 0.5 + AJ_ROBO_ANTECEDENCIA) press = true;
+    /* o robô do demo é o mesmo dos testes (robo.c) */
+    if (G.demo && robo_quer_apertar(&G.robo, &G.duel, dt)) press = true;
 
     /* Hitstop congela o duelo e as poses. */
     if (G.hitstop > 0) {
@@ -1767,14 +1770,8 @@ static void update_duel(float dtReal) {
         return;
     }
     audio_music_duck(G.silence > 0 ? 1 : 0);
-    if (press) {
-        /* O clique chegou em algum ponto do último quadro: aplicamos no meio. */
-        duel_tick(&G.duel, dt * 0.5);
-        duel_press(&G.duel);
-        duel_tick(&G.duel, dt * 0.5);
-    } else {
-        duel_tick(&G.duel, dt);
-    }
+    /* O clique chegou em algum ponto do último quadro: entra no meio dele. */
+    duel_step(&G.duel, dt, press);
     handle_events();
     if (G.state == ST_DUEL || G.state == ST_DEFEAT) update_actors(dt);
 }

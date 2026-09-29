@@ -3,6 +3,7 @@
  * Rodar: make test
  */
 #include "../src/core.h"
+#include "../src/robo.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -558,6 +559,45 @@ static void test_every_master_beatable(void) {
     }
 }
 
+/* Os robôs, com o mesmo passo e os mesmos tempos do demo: o perfeito vence todos sem
+ * errar, quem nunca defende perde de todos, e apertar sem parar também perde. */
+static void test_robos(void) {
+    Robo spam[3] = {ROBO_APERTA_SEM_PARAR, ROBO_APERTA_SEM_PARAR, ROBO_APERTA_SEM_PARAR};
+    spam[0].periodo = 0.10f;
+    spam[2].periodo = 0.30f;
+    for (int i = 0; i < roster_size(); i++) {
+        const MasterProfile *m = roster_get(i);
+        int venceu = 0, limpo = 0, perdeu = 0, spamPerdeu = 0;
+        for (uint32_t k = 1; k <= 20; k++) {
+            RoboLuta l = robo_lutar(&ROBO_DO_DEMO, m, i, k);
+            venceu += l.vitoria;
+            limpo += l.erros == 0 && l.bons == 0;
+        }
+        for (uint32_t k = 1; k <= 5; k++) {
+            perdeu += !robo_lutar(&ROBO_SEM_DEFESA, m, i, k).vitoria;
+            for (int p = 0; p < 3; p++) spamPerdeu += !robo_lutar(&spam[p], m, i, k).vitoria;
+        }
+        CHECK(venceu == 20 && limpo == 20, "o robô do demo vence %s só com perfeitos (%d/20, %d limpas)", m->name, venceu, limpo);
+        CHECK(perdeu == 5, "quem nunca defende perde de %s (%d/5)", m->name, perdeu);
+        CHECK(spamPerdeu == 15, "apertar sem parar perde de %s (%d/15)", m->name, spamPerdeu);
+    }
+    /* o demo usa o mesmo robô: aperta no máximo AJ_ROBO_ANTECEDENCIA antes do contato */
+    Settings s;
+    settings_default(&s);
+    Duel d;
+    duel_init(&d, &s, roster_get(0), 3);
+    RoboMente r;
+    robo_iniciar(&r, &ROBO_DO_DEMO, 3);
+    double lead = -1;
+    while (lead < 0 && d.clock < 10) {
+        bool p = robo_quer_apertar(&r, &d, ROBO_QUADRO);
+        duel_step(&d, ROBO_QUADRO, p);
+        if (p) lead = d.strikeAt - d.lastPress;
+    }
+    CHECK(lead > AJ_ROBO_ANTECEDENCIA - ROBO_QUADRO - 1e-6 && lead <= AJ_ROBO_ANTECEDENCIA + 1e-6,
+          "o robô do demo aperta até %.0f ms antes (%.1f ms)", AJ_ROBO_ANTECEDENCIA * 1000, lead * 1000);
+}
+
 static void test_levels(void) {
     Settings a, b;
     settings_default(&a);
@@ -832,6 +872,7 @@ int main(void) {
     test_mimic();
     test_determinism();
     test_every_master_beatable();
+    test_robos();
     test_movesets();
     test_traits();
     test_dual();

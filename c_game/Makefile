@@ -17,7 +17,7 @@ ifeq ($(shell uname),Darwin)
   RAYLIB_LIBS += -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL
 endif
 
-CORE := src/ajuste.c src/core.c src/roster.c
+CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
 GAME := src/main.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
 all: apara
@@ -36,8 +36,16 @@ packs:
 apara: $(CORE) $(GAME) src/*.h
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(CORE) $(GAME) -o $@ $(RAYLIB_LIBS) -lm
 
-core_test: $(CORE) tests/core_test.c src/core.h src/ajuste.h
+core_test: $(CORE) tests/core_test.c src/core.h src/ajuste.h src/robo.h
 	$(CC) $(CFLAGS) $(CORE) tests/core_test.c -o $@ -lm
+
+# Curva de dificuldade: os robôs contra cada aprendiz (make robos LUTAS=300).
+LUTAS ?= 300
+robos_relatorio: $(CORE) tests/robos.c src/core.h src/ajuste.h src/robo.h
+	$(CC) $(CFLAGS) $(CORE) tests/robos.c -o $@ -lm
+
+robos: robos_relatorio
+	./robos_relatorio $(LUTAS)
 
 test: core_test
 	./core_test
@@ -46,6 +54,6 @@ run: apara
 	./apara
 
 clean:
-	rm -f apara core_test personagens
+	rm -f apara core_test robos_relatorio personagens
 
-.PHONY: packs all test run clean sprites
+.PHONY: packs all test run clean sprites robos

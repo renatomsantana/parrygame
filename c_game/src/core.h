@@ -265,6 +265,8 @@ void duel_init(Duel *d, const Settings *s, const MasterProfile *m, uint32_t seed
 void duel_reset(Duel *d);
 void duel_tick(Duel *d, double delta);
 bool duel_press(Duel *d);
+/* Um quadro do jogo: o aperto chegou em algum ponto do quadro e entra no meio dele. */
+void duel_step(Duel *d, double dt, bool press);
 double duel_time_to_impact(const Duel *d);        /* -1 fora da preparação */
 double duel_time_to_next_instant(const Duel *d);  /* falso ou real: o que a tela mostra */
 const Stance *duel_stance(const Duel *d);

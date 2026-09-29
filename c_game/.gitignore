@@ -13,3 +13,4 @@ assets/sprites/**/.gerado
 # _original/ e _packs/, vão para o git).
 assets/sprites/*/sprite.txt
 !assets/sprites/_original/sprite.txt
+robos_relatorio
