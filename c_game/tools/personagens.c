@@ -1772,7 +1772,7 @@ static void ribbon(Canvas *cv, int x0, int y0, int length, Rgb c0, Rgb c1, int i
 }
 
 static void draw_head(Canvas *cv, const Char *ch, int idx) {
-    const Head *hd = find_head(getenv("CAB_PROVA") && !strcmp(ch->cabeca, "desgrenhado") ? "desgrenhado50" : ch->cabeca);
+    const Head *hd = find_head(!strcmp(ch->cabeca, "desgrenhado") ? "desgrenhado50" : ch->cabeca);
     if (!hd) return;
     Pal pal;
     head_palette(ch, &pal);
@@ -2031,30 +2031,6 @@ static void head_ref(const Frame *f, const Seg *sg, int *hx, int *hy) {
             }
 }
 
-static void hair_drag(const Char *ch, int idx, double *dx, double *dy) {
-    double k = ch->cab_balanco > 0 ? ch->cab_balanco : 1;
-    *dx = *dy = 0;
-    if (g_trk_n > 1 && idx < g_trk_n) {
-        int i1 = idx - 1, i2 = idx - 2;
-        if (g_trk_loop) {
-            i1 = (i1 + g_trk_n) % g_trk_n;
-            i2 = (i2 + g_trk_n) % g_trk_n;
-        }
-        double v1x = 0, v1y = 0, v2x = 0, v2y = 0;
-        if (i1 >= 0) { v1x = g_trk[idx][0] - g_trk[i1][0]; v1y = g_trk[idx][1] - g_trk[i1][1]; }
-        if (i1 >= 0 && i2 >= 0) { v2x = g_trk[i1][0] - g_trk[i2][0]; v2y = g_trk[i1][1] - g_trk[i2][1]; }
-        *dx = -(0.6 * v1x + 0.3 * v2x) * k * 0.45;
-        *dy = -(0.5 * v1y + 0.25 * v2y) * k * 0.45;
-    }
-    double ph = g_trk_loop && g_trk_n > 1 ? 6.2832 * idx / g_trk_n : idx * 1.1;
-    *dy += sin(ph) * 0.45 * k;
-    *dx += cos(ph) * 0.3 * k;
-    double mx = 1.5 * k + 1, my = k + 1;
-    if (*dx > mx) *dx = mx;
-    if (*dx < -mx) *dx = -mx;
-    if (*dy > my) *dy = my;
-    if (*dy < -my) *dy = -my;
-}
 
 static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
     static bool clus[CH][CW];
@@ -2123,11 +2099,12 @@ static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
     if (getenv("DBG_HAIR")) fprintf(stderr, "hair %s %s:%d eye %d %d open %d back %d lying %d\n", ch->id, anim, idx, ex, ey, open, back, lying);
     if (getenv("DBG_NOHAIR")) return;
     const Row *t = back ? ch->cab_costas : ch->cab_frente;
-    bool prova6 = getenv("CAB_PROVA") != NULL;
-    if (prova6 && !strcmp(ch->id, "garfiel")) t = back ? CAB6_GARFIEL_COSTAS : CAB6_GARFIEL_FRENTE;
-    if (prova6 && !strcmp(ch->id, "arashi")) t = back ? CAB6_LONGO_COSTAS : CAB7_ARASHI_FRENTE;
+    /* os cabelos aprovados na etapa 2 (Garfiel, Arashi, Yoru) usam o desenho novo por completo */
+    bool prova6 = getenv("CAB_PROVA") != NULL || !strcmp(ch->id, "garfiel") || !strcmp(ch->id, "arashi") || !strcmp(ch->id, "yoru");
+    if (!strcmp(ch->id, "garfiel")) t = back ? CAB6_GARFIEL_COSTAS : CAB6_GARFIEL_FRENTE;
+    if (!strcmp(ch->id, "arashi")) t = back ? CAB6_LONGO_COSTAS : CAB7_ARASHI_FRENTE;
     if (prova6 && !strcmp(ch->id, "karasu")) t = back ? CAB7_KARASU_COSTAS : CAB7_KARASU_FRENTE;
-    if (prova6 && !strcmp(ch->id, "yoru")) t = back ? CAB7_YORU_COSTAS : CAB7_YORU_FRENTE;
+    if (!strcmp(ch->id, "yoru")) t = back ? CAB7_YORU_COSTAS : CAB7_YORU_FRENTE;
     if (prova6 && !strcmp(ch->id, "hayate")) t = back ? CAB6_HAYATE_COSTAS : CAB6_HAYATE_FRENTE;
     /* o molde numa grade em volta do olho */
     static char M[48][72];
@@ -2146,7 +2123,7 @@ static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
     /* as pontas ficam para trás do movimento (mais longe do crânio, mais atraso): cada
        pixel busca no molde de onde veio, então o cabelo estica sem abrir buraco */
     double DX = 0, DY = 0;
-    if (!lying && !prova6) hair_drag(ch, idx, &DX, &DY);   /* na prova: sem balanço, o cabelo só segue a cabeça */
+    (void)lying;   /* o cabelo não balança sozinho: só segue a cabeça (hair_drag saiu) */
     for (int rr = mr0 - 4; rr <= mr1 + 4; rr++)
         for (int c = mc0 - 6; c <= mc1 + 6; c++) {
             double d = sqrt((c + 3.0) * (c + 3.0) + (rr + 2.0) * (rr + 2.0)), f = (d - 5) / 8;
@@ -2416,7 +2393,7 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                     cv_behind(cv, kx - 2, ky, ch->destaque[0]);
                     break;
                 }
-                if (getenv("CAB_PROVA") && !strcmp(ch->id, "jinshi")) {
+                if (!strcmp(ch->id, "jinshi")) {
                     /* etapa 2: o alto preso num coque atrás da cabeça, com a fita branca amarrada */
                     static const char *K[] = {".HHH.", "HhihH", "HhhhH", ".HHH."};
                     int kx = cx0[head] + 1, ky = cy0[head] - 3;
@@ -2432,7 +2409,7 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                 /* o cabelo solto: da nuca para baixo, colado nas costas, abrindo um pouco
                    para trás e com as pontas desencontradas */
                 int top = cy0[head] + 2, len = 24;
-                double sway = getenv("CAB_PROVA") ? 0 : sin(idx * 0.8) * 1.0;   /* etapa 2: o cabelo não balança sozinho */
+                double sway = 0;   /* etapa 2: o cabelo não balança sozinho */
                 /* caído, o cabelo não passa do chão: chega nele e segue deitado para trás
                    da cabeça, ao longo do chão */
                 int ground = 0;
@@ -2555,35 +2532,55 @@ static Blade other_hand(const Blade *b, double open) {
 
 /* Três lâminas em leque saindo do punho. `behind`: só no vazio (a mão de trás). */
 static void claws(Canvas *cv, const Blade *b, double size, Rgb core, Rgb edge, bool behind) {
-    double ang = atan2(b->u[1], b->u[0]), n[2];
+    /* etapa 2 (aprovado, o desenho do canvas 16x16): 3 lâminas retas de 9 px e 1 px de largura saindo dos
+       nós dos dedos, paralelas, com 1 px de vão; uma peça de metal no dorso da mão; aço em 3 tons (um por
+       lâmina) com a ponta clara e contorno escuro de 1 px só por fora do conjunto (o vão fica vazio) */
+    (void)core; (void)edge; (void)size;
+    enum { LEN = 9 };
+    static const Rgb tom[3] = {HEX(0xd0d8e2), HEX(0x9aa4b2), HEX(0x5a606c)};
+    static const Rgb ponta = HEX(0xeef2f8), contorno = HEX(0x1e1c26), placa = HEX(0x7a8290), placa2 = HEX(0x4a505a);
+    double n[2];
     perp(b->u, n);
-    /* três lâminas saindo direto dos nós dos dedos, abertas em leque (sem barra) */
-    static const double da[3] = {-0.32, 0.0, 0.32};
+    if (n[1] > 0 || (fabs(n[1]) < 1e-9 && n[0] > 0)) { n[0] = -n[0]; n[1] = -n[1]; }   /* j = -1 fica em cima */
+    /* a perpendicular arredondada para 2 px exatos: o vão é sempre de 1 px */
+    int sx = 0, sy = 0;
+    if (fabs(n[0]) > fabs(n[1])) sx = n[0] > 0 ? 2 : -2; else sy = n[1] > 0 ? 2 : -2;
     static Pts p;
-    /* rodada 7 (GARRA_PROVA): as três paralelas, com 1 px de vão entre elas (Wolverine) */
-    bool aco = getenv("GARRA_PROVA") != NULL;
-    for (int j = 0; j < 3; j++) {
-        double a = ang + (aco ? 0 : da[j]), u2x = cos(a), u2y = sin(a), gap = aco ? 2.0 : 0.9;
-        double p0x = b->hilt[0] + b->u[0] * 0.6 + n[0] * (j - 1) * gap;
-        double p0y = b->hilt[1] + b->u[1] * 0.6 + n[1] * (j - 1) * gap;
-        double ln = size - (j != 1 ? 1 : 0);
-        line_pts(&p, p0x, p0y, p0x + u2x * ln, p0y + u2y * ln);
-        for (int i = 0; i < p.n; i++) {
+    static signed char who[CH][CW];
+    memset(who, -1, sizeof who);
+    int kx = pyround(b->hilt[0] + b->u[0] * 0.6), ky = pyround(b->hilt[1] + b->u[1] * 0.6);
+    for (int j = -1; j <= 1; j++) {
+        double ox = kx + sx * j, oy = ky + sy * j;
+        line_pts(&p, ox, oy, ox + b->u[0] * (LEN - 1), oy + b->u[1] * (LEN - 1));
+        for (int i = 0; i < p.n && i < LEN; i++) {
             int x = p.x[i], y = p.y[i];
             bool ok = behind ? empty_orig(cv, x, y) && cv->a[y][x].a == 0
                              : cv_ok(x, y) && (lab_at(cv, x, y) == NONE || lab_at(cv, x, y) == BLADE);
-            if (ok) {
-                /* a raiz fica na cor da borda (sai de dentro da mão); a ponta, clara */
-                Rgb c = i == 0 ? edge : core;
-                if (getenv("GARRA_PROVA")) {   /* rodada 7: aço, sem branco; o brilho corre pela lâmina */
-                    static const Rgb raiz = HEX(0x3a3e48), aco = HEX(0x9aa4b2), aco2 = HEX(0xc0c8d4), luz = HEX(0xeef2f8);
-                    c = i == 0 ? raiz : i == p.n - 1 ? luz : (i + j) % 2 ? aco2 : aco;
-                    if (behind && i > 0) c = (Rgb){(unsigned char)(c.r * 0.8), (unsigned char)(c.g * 0.8), (unsigned char)(c.b * 0.8)};
-                }
-                cv_put(cv, x, y, c);
-                mark(cv, x, y);
-            }
+            if (!ok) continue;
+            Rgb c = i == p.n - 1 || i == LEN - 1 ? ponta : tom[j + 1];
+            if (behind) c = (Rgb){(unsigned char)(c.r * 0.8), (unsigned char)(c.g * 0.8), (unsigned char)(c.b * 0.8)};
+            cv_put(cv, x, y, c);
+            mark(cv, x, y);
+            who[y][x] = (signed char)(j + 1);
         }
+    }
+    /* o contorno por fora: um pixel vazio que encosta em duas lâminas diferentes é o vão e fica vazio */
+    static const int d4[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    int x0 = kx - 12, x1 = kx + 12, y0 = ky - 12, y1 = ky + 12;
+    for (int y = y0; y <= y1; y++)
+        for (int x = x0; x <= x1; x++) {
+            if (!cv_ok(x, y) || cv->a[y][x].a) continue;
+            int seen = 0;
+            for (int k = 0; k < 4; k++) {
+                int qx = x + d4[k][0], qy = y + d4[k][1];
+                if (cv_ok(qx, qy) && who[qy][qx] >= 0) seen |= 1 << who[qy][qx];
+            }
+            if (seen && !(seen & (seen - 1))) cv_put(cv, x, y, contorno);
+        }
+    /* a peça de metal no dorso da mão, de onde as lâminas nascem */
+    for (int j = -1; j <= 1; j++) {
+        int x = kx - pyround(b->u[0]) + sx * j / 2, y = ky - pyround(b->u[1]) + sy * j / 2;
+        if (cv_ok(x, y) && (behind ? cv->a[y][x].a == 0 : true)) cv_put(cv, x, y, j ? placa : placa2);
     }
 }
 
@@ -2656,7 +2653,7 @@ static void kama(Canvas *cv, const Blade *b0, double len, const Weapon *w, Rgb c
 
 static void blade_fx(Canvas *cv, const Char *ch, const char *anim, int idx) {
     Element el = ch->elemento;
-    if (rgb_set(ch->arma.brilho) && !(getenv("GARRA_PROVA") && ch->arma.kind == W_GARRAS))
+    if (rgb_set(ch->arma.brilho) && ch->arma.kind != W_GARRAS)
         for (int x = 0; x < CW; x++)
             for (int y = 0; y < CH; y++) {
                 if (!cv->wpx[y][x]) continue;
