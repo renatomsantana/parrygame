@@ -128,7 +128,7 @@ static void test_roster(const Settings *s) {
     Duel da;
     duel_init(&da, s, roster_get(9), 1);
     CHECK(roster_get(9)->damage > 1 && duel_ren_damage(&da) > s->renPosture / roster_get(9)->hitsToFall, "arashi bate mais pesado");
-    static const int HITS[13] = {8, 8, 7, 7, 4, 7, 4, 4, 4, 10, 4, 5, 11};
+    static const int HITS[13] = {8, 8, 7, 7, 4, 7, 4, 4, 4, 10, 4, 5, 5};
     for (int i = 0; i < roster_size(); i++) {
         CHECK(roster_get(i)->hitsToFall == HITS[i], "Ren aguenta %d erros contra %s", HITS[i], roster_get(i)->name);
         CHECK(roster_get(i)->senseiCount >= 1, "hanzo tem conselho para %s", roster_get(i)->name);
@@ -442,7 +442,9 @@ static void test_big_boss(void) {
         duel_tick(&d, DT);
     }
     CHECK(d.seal == 1, "primeiro selo quebrado");
-    CHECK(fabsf(d.renPosture - (40 + (s.perfectHeal + s.sealHeal) * s.renPosture)) < 1e-4, "selo quebrado devolve fôlego (%.1f)", d.renPosture);
+    CHECK(fabsf(d.renPosture - fminf(s.renPosture, 40 + (s.perfectHeal + s.sealHeal) * s.renPosture)) < 1e-4 &&
+              fabsf(d.renPosture - s.renPosture) < 1e-4,
+          "selo quebrado enche a vida (%.1f)", d.renPosture);
     CHECK(fabsf(d.bossPosture - oboro->seals[1].posture) < 1e-4 && duel_posture_max(&d) == oboro->seals[1].posture,
           "novo selo com a postura cheia dele");
     Tally lose = play(oboro, 99, -1, 600);
@@ -960,7 +962,7 @@ static void test_cura_em_porcentagem(void) {
         CHECK(d.lastJudgement == J_PERFEITO && fabsf(d.renPosture - s.renPosture * (0.5f + AJ_PERFEITO_CURA)) < 1e-3,
               "%s: o perfeito cura %.0f%% da vida (%.1f de %.0f)", roster_get(i)->name, AJ_PERFEITO_CURA * 100, d.renPosture, s.renPosture);
     }
-    CHECK(AJ_PERFEITO_CURA > 0 && AJ_PERFEITO_CURA < 0.1f && AJ_SELO_CURA > AJ_PERFEITO_CURA && AJ_SELO_CURA <= 0.5f, "curas em fração da vida");
+    CHECK(AJ_PERFEITO_CURA > 0 && AJ_PERFEITO_CURA < 0.1f && fabsf(AJ_SELO_CURA - 1.0f) < 1e-6f, "curas em fração da vida (o selo devolve a vida inteira)");
 }
 
 /* A curva de dificuldade, pelos robôs (make robos mostra a tabela). O humano casual que
@@ -1028,8 +1030,25 @@ static void test_oboro_fases(void) {
         }
     }
     CHECK(o->stances[0].ordered == 1 && o->stances[1].ordered == 12 && o->stances[2].ordered == 0, "ordem: 1 na fase 1, 12 na fase 2");
-    CHECK(fabsf(o->seals[2].speedMultiplier - 0.85f) < 1e-6f && fabsf(o->seals[2].damageMultiplier - 1.25f) < 1e-6f && o->seals[2].noSpecial &&
-          !o->seals[0].noSpecial && !o->seals[1].noSpecial, "fase 3: x0,85 na preparação, x1,25 no dano, sem especial");
+    CHECK(fabsf(o->seals[2].speedMultiplier - 0.85f) < 1e-6f && fabsf(o->seals[2].damageMultiplier - 1.25f) < 1e-6f,
+          "fase 3: x0,85 na preparação, x1,25 no dano");
+    CHECK(o->seals[0].noSpecial && o->seals[1].noSpecial && o->seals[2].noSpecial, "nenhuma fase tem o especial x2");
+    CHECK(fabsf(o->seals[1].damageMultiplier - 0.5f) < 1e-6f, "fase 2: dano x0,5");
+    /* erros até cair em cada fase, com a vida cheia a cada selo: 5, 10 e 4 */
+    {
+        static const int ERROS[3] = {5, 10, 4};
+        Settings s0;
+        settings_default(&s0);
+        for (int f = 0; f < 3; f++) {
+            Duel d;
+            duel_init(&d, &s0, o, 1);
+            duel_start_seal(&d, f);
+            int n = (int)ceilf(s0.renPosture / duel_ren_damage(&d) - 1e-4f);
+            CHECK(n == ERROS[f], "fase %d: %d erros até cair (%d)", f + 1, ERROS[f], n);
+        }
+    }
+    static const float PW[3] = {0.062f, 0.051f, 0.042f};
+    for (int k = 0; k < 3; k++) CHECK(fabsf(o->stances[k].perfectWindow - PW[k]) < 1e-6f, "fase %d: perfeita de %.0f ms", k + 1, PW[k] * 1000);
     for (int k = 0; k < o->stanceCount; k++) CHECK(o->stances[k].aviso >= AJ_AVISO_MENOR - 1e-6f, "fase %d: aviso de 320 ms ou mais", k + 1);
 
     /* no duelo, com o robô do demo */
@@ -1060,10 +1079,13 @@ static void test_oboro_fases(void) {
                     if (d.seal == 2) {
                         double esperado = duel_aviso(&d) + (mv->windup - o->stances[2].aviso) * 0.85;
                         if (mv->stance != 2 || strncmp(mv->name, "eco ", 4) || fabs(d.windupDuration - esperado) > 1e-4) fase3 = false;
-                        if (d.special) semEspecial = false;
                         float base = s.renPosture / o->hitsToFall;
                         if (fabsf(duel_ren_damage(&d) - base * 1.25f) > 1e-3f) dano = false;
-                    } else if (d.special) especiaisAntes++;
+                    } else if (d.seal == 1 && fabsf(duel_ren_damage(&d) - s.renPosture / o->hitsToFall * 0.5f) > 1e-3f) {
+                        dano = false;
+                    }
+                    if (d.special) semEspecial = false;
+                    especiaisAntes++;
                 }
             }
             bool p = robo_quer_apertar(&r, &d, ROBO_QUADRO);
@@ -1074,8 +1096,8 @@ static void test_oboro_fases(void) {
     CHECK(abre, "a fase 1 sempre abre com a lição completa");
     CHECK(ordem && vistosFase2 == 40 * 12, "na fase 2, os doze saem na ordem da trilha (%d de %d)", vistosFase2, 40 * 12);
     CHECK(fase3, "na fase 3, os doze ecos com a espera antes do aviso x0,85");
-    CHECK(semEspecial && especiaisAntes > 0, "o especial x2 sai nas fases 1 e 2 (%d) e nunca na 3", especiaisAntes);
-    CHECK(dano, "na fase 3, o dano de um erro x1,25");
+    CHECK(semEspecial && especiaisAntes > 0, "o especial x2 nunca sai (%d sequências)", especiaisAntes);
+    CHECK(dano, "o dano de um erro: x0,5 na fase 2, x1,25 na fase 3");
 }
 
 /* Vantagem: quando falta só um perfeito para quebrar a postura, o duelo avisa (e o
@@ -1363,23 +1385,31 @@ static void test_levels(void) {
           "Ren forte precisa de menos perfeitos");
 }
 
+/* O especial x2: o oboro não usa mais (nenhuma fase), mas a regra continua no core;
+ * confere com uma cópia dele que libera o especial no primeiro selo. */
 static void test_special(void) {
-    const MasterProfile *oboro = roster_get(12);
+    MasterProfile oboro = *roster_get(12);
+    oboro.seals[0].noSpecial = false;
     Settings s;
     settings_default(&s);
-    int specials = 0, doubled = 0;
+    int specials = 0, doubled = 0, real = 0;
     for (uint32_t seed = 1; seed < 80; seed++) {
         Duel d;
-        duel_init(&d, &s, oboro, seed);
+        duel_init(&d, &s, &oboro, seed);
         while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        Duel r;
+        duel_init(&r, &s, roster_get(12), seed);
+        while (r.phase != PH_WINDUP) duel_tick(&r, DT);
+        real += r.special;
         if (!d.special) continue;
         specials++;
         float before = d.renPosture;
         while (d.phase == PH_WINDUP) duel_tick(&d, DT);
-        if (fabsf((before - d.renPosture) - 2 * s.renPosture / oboro->hitsToFall) < 1e-3) doubled++;
+        if (fabsf((before - d.renPosture) - 2 * s.renPosture / oboro.hitsToFall) < 1e-3) doubled++;
     }
-    CHECK(specials > 5, "oboro solta golpes especiais (%d)", specials);
+    CHECK(specials > 5, "com o especial liberado, ele sai (%d)", specials);
     CHECK(doubled == specials, "o especial tira o dobro (%d de %d)", doubled, specials);
+    CHECK(real == 0, "o oboro de verdade não solta o especial (%d)", real);
 }
 
 static void test_movesets(void) {

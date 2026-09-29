@@ -21,7 +21,7 @@
 #define AJ_BOM_POSTURA_NIVEL         0.5f   /*   + isto por mestre já vencido */
 #define AJ_BOM_CUSTO                 4.0f   /* bom: o impacto ainda tira isto de vida */
 #define AJ_ERRO_MESTRE_RECUPERA     20.0f   /* erro: o mestre com cura recupera isto de postura */
-#define AJ_SELO_CURA                 0.30f  /* oboro: cada selo quebrado devolve esta fração da vida */
+#define AJ_SELO_CURA                 1.00f  /* oboro: cada selo quebrado devolve esta fração da vida (1 = cheia) */
 
 /* ---- Tempos do duelo ------------------------------------------------- */
 #define AJ_LAMINA_PARTE            0.220f   /* a lâmina parte este tempo antes do contato */

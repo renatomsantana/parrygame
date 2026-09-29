@@ -108,7 +108,7 @@ duas derrotas seguidas, dá para **conversar com hanzo** (no Oboro, ele só diz
 | 10 | arashi | tempestade (dano 1,2×) | duas katanas | Salão do castelo na tempestade | 550 | 46 / 121 ms | 333 ms | 10 |
 | 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 740 | 44 / 119 ms | 320 ms | 4 |
 | 12 | jinshi | lua (sem som) | katana bem branca, forjada com a lua | Encosta da serra | 610 | 44 / 119 ms | 350 ms (brilho) | 5 |
-| 13 | **oboro** | hanzo → devorador de posturas → oni (uma por selo) | katana de hanzo | Dojo de hanzo | 360 · 1800 · 600 | 56 → 46 → 38 ms | 380 → 350 → 320 ms | 11 |
+| 13 | **oboro** | hanzo → devorador de posturas → oni (uma por selo) | katana de hanzo | Dojo de hanzo | 360 · 1800 · 600 | 62 → 51 → 42 ms | 380 → 350 → 320 ms | 5 · 10 · 4 |
 
 A curva foi afinada com os robôs (`make robos`): o humano casual que decora o
 ritmo vence os quatro primeiros sempre, e a vitória cai sem degraus até uns 65%
@@ -120,8 +120,10 @@ o que é de cada um (o ritmo fácil do garfiel, os golpes duplos do arashi).
 completa*, sete golpes seguidos; no **devorador de posturas** faz os doze padrões
 dos aprendizes, um de cada, iguais ao original, na ordem da trilha na primeira
 volta e depois sorteados; na **postura do oni**, os mesmos doze mais rápidos
-(espera antes do aviso ×0,85) e mais pesados (dano ×1,25), sem o golpe especial
-que tira o dobro (esse sai nas duas primeiras fases, 25% das vezes).
+(espera antes do aviso ×0,85) e mais pesados (dano ×1,25). Cada selo quebrado
+devolve a vida inteira, e cada fase é uma prova: kojiro cai com 5 erros na
+primeira, 10 na segunda (dano ×0,5: é a mais comprida, os doze padrões inteiros) e
+4 na terceira. Nenhuma fase tem o golpe especial que tira o dobro.
 
 ## Moveset
 

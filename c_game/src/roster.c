@@ -382,20 +382,21 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 13, .name = "oboro", .style = "o mestre das doze posturas", .title = "O Mestre das Doze Posturas", .venue = "O dojo de Hanzo, no alto da serra",
         .special = "Três selos, uma postura em cada: a de hanzo, a de quem devorou as doze, e a do oni, de máscara e lâmina em chamas.",
-        .arena = ARENA_CIDADELA, .posture = 360, .hitsToFall = 11, .healsOnHit = true, .specialChance = 0.25f,
+        .arena = ARENA_CIDADELA, .posture = 360, .hitsToFall = 5, .healsOnHit = true, .specialChance = 0.25f,
         .cueVisual = 1, .cueAudio = 1, .tint = 0xE0C8FFFF, .isBigBoss = true,
         /* Três posturas, uma por selo: a de hanzo, que ele aprendeu primeiro; a de quem
            devorou as doze; e a do oni, de máscara e com a lâmina em chamas, em que ele se perde. */
         .stances = {
-            STANCE_EM_ORDEM("postura de hanzo", 0.056f, 0.144f, 0.380f, 1),        /* abre com a lição completa */
-            STANCE_EM_ORDEM("devorador de posturas", 0.046f, 0.124f, 0.350f, 12),  /* os doze na ordem da trilha */
-            STANCE("postura do oni", 0.038f, 0.108f, 0.320f),
+            STANCE_EM_ORDEM("postura de hanzo", 0.062f, 0.144f, 0.380f, 1),        /* abre com a lição completa */
+            STANCE_EM_ORDEM("devorador de posturas", 0.051f, 0.124f, 0.350f, 12),  /* os doze na ordem da trilha */
+            STANCE("postura do oni", 0.042f, 0.108f, 0.320f),
         },
         .stanceCount = 3,
-        /* selo: nome, espera antes do aviso x, troca de postura, postura, dano x, sem especial */
+        /* selo: nome, espera antes do aviso x, troca de postura, postura, dano x, sem especial.
+         * Erros até cair, com a vida cheia a cada selo (AJ_SELO_CURA): 5, 10 e 4. */
         .seals = {
-            {"primeiro selo", 1.00f, 0, 360, 0, false},
-            {"segundo selo", 1.00f, 0, 1800, 0, false},   /* comprido: os doze inteiros, até só com perfeitos */
+            {"primeiro selo", 1.00f, 0, 360, 0, true},
+            {"segundo selo", 1.00f, 0, 1800, 0.5f, true},  /* comprido: os doze inteiros, até só com perfeitos */
             {"terceiro selo", 0.85f, 0, 600, 1.25f, true},
         },
         .sealCount = 3,
