@@ -271,9 +271,9 @@ const SealRule *duel_seal_rule(const Duel *d);
 bool duel_under_pressure(const Duel *d);          /* mestre com metade da postura ou menos */
 bool duel_in_combo(const Duel *d);
 const Move *duel_move(const Duel *d);             /* sequência em curso (NULL = golpe simples) */
-float duel_ren_damage(const Duel *d);
+float duel_ren_damage(const Duel *d);     /* dano de um erro contra este mestre */
 bool duel_strike_dual(const Duel *d);     /* o golpe que vem é de duas lâminas */
-float duel_strike_lead(const Duel *d);    /* segundos entre a lâmina partir e o contato */            /* dano de um erro contra este mestre */
+float duel_strike_lead(const Duel *d);    /* segundos entre a lâmina partir e o contato */
 /* Copia e esvazia a fila de eventos. Devolve quantos. */
 int duel_drain(Duel *d, DuelEvent *out, int max);
 
