@@ -16,8 +16,8 @@ typedef enum {
     ROBO_NUNCA,      /* nunca aperta */
     ROBO_SPAM,       /* aperta a cada `periodo` segundos, sem olhar */
     ROBO_REACAO,     /* não decora nada: reage ao último sinal antes do contato (a lâmina
-                        partindo ou o som de aviso, o que vier depois) depois de `reacao` s;
-                        ao som, 50 ms mais rápido */
+                        partindo, que se ouve no assobio do golpe, ou o aviso, o que vier
+                        depois) depois de `reacao` s; ao som, 50 ms mais rápido */
     ROBO_HUMANO      /* decora o padrão: mede o tempo até o contato a partir do último sinal
                         que ainda dá tempo de usar (o começo da preparação ou o aviso) e
                         erra em proporção ao intervalo medido (`ritmo`) mais a mão (`mao`) */

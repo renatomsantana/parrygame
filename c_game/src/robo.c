@@ -40,11 +40,12 @@ static double planejar(RoboMente *m, const Duel *d) {
     bool avisoPercebido = d->m->cueAudio > 0 || d->m->cueVisual > 0;   /* o som ou o brilho */
     switch (r->tipo) {
         case ROBO_REACAO: {
+            /* a lâmina partindo se vê e se ouve (o assobio do golpe) */
             double partida = contato - duel_strike_lead(d);
-            double sinal = partida, reacao = r->reacao;
+            double sinal = partida, reacao = r->reacao - ROBO_REACAO_SOM;
             if (avisoPercebido && aviso > partida) {
                 sinal = aviso;
-                if (d->m->cueAudio > 0) reacao -= ROBO_REACAO_SOM;
+                reacao = r->reacao - (d->m->cueAudio > 0 ? ROBO_REACAO_SOM : 0);
             }
             return sinal + reacao + normal(&m->rng) * r->mao;
         }
