@@ -11,7 +11,7 @@
  * Opções de teste (sem efeito no jogo normal):
  *   --master N     começa direto nas falas do mestre N (1 a 13)
  *   --duel         pula as falas e vai direto ao duelo
- *   --state S      title | lore | trail | ending (com --master N: sensei;
+ *   --state S      title | lore | trail | ending | calibra (com --master N: sensei;
  *                  com --master N --duel: pause | defeat | finisher | cleared)
  *   --demo         um robô apara no tempo perfeito e avança as telas
  *   F3 (ou APARA_DEBUG=1): overlay de debug com janelas, último aperto e estado do duelo
@@ -77,7 +77,7 @@ static const char *POST_FS =
 
 typedef enum {
     ST_TITLE, ST_LORE, ST_TRAIL, ST_INTRO, ST_DUEL, ST_FINISHER, ST_OUTRO, ST_CLEARED, ST_DEFEAT, ST_SENSEI, ST_ENDING,
-    ST_VISIT, ST_SCENE, ST_CHOICE
+    ST_VISIT, ST_SCENE, ST_CHOICE, ST_CALIBRA
 } State;
 
 /* Paleta da interface. */
@@ -290,6 +290,18 @@ static struct {
 
     bool demo;
     bool debug;               /* overlay de debug: F3 ou APARA_DEBUG=1 */
+    float latVideo, latAudio; /* calibração (s): atraso de vídeo e de áudio do jogador */
+    struct {
+        int modo;             /* 0 vídeo, 1 áudio, 2 resultado */
+        float t;              /* segundos desde o começo do teste */
+        int proxima;          /* próxima batida a tocar */
+        int n;
+        float off[AJ_CALIBRA_APERTOS];
+        float video, audio, ultimo;
+        bool falhou;
+        State voltar;
+        bool pausado;
+    } cal;
     RoboMente robo;           /* --demo: o robô perfeito dos testes */
     const char *shotFile;
     float shotTime;
@@ -534,6 +546,28 @@ static void save_game(void) {
     FILE *f = fopen(SAVE_FILE, "w");
     if (!f) return;
     fprintf(f, "APARA-C 2\n%d %u %d %d\n", G.camp.index, G.camp.clearedMask, G.camp.completed, G.camp.loreSeen);
+    fclose(f);
+}
+
+/* Opções que não são progresso: a calibração de latência. */
+#define OPTIONS_FILE "apara_opcoes.txt"
+
+static void save_options(void) {
+    if (G.demo) return;
+    FILE *f = fopen(OPTIONS_FILE, "w");
+    if (!f) return;
+    fprintf(f, "atraso_video_ms %d\natraso_audio_ms %d\n", (int)lroundf(G.latVideo * 1000), (int)lroundf(G.latAudio * 1000));
+    fclose(f);
+}
+
+static void load_options(void) {
+    FILE *f = fopen(OPTIONS_FILE, "r");
+    if (!f) return;
+    int v = 0, a = 0;
+    if (fscanf(f, "atraso_video_ms %d atraso_audio_ms %d", &v, &a) == 2) {
+        G.latVideo = clampf(v / 1000.0f, 0, AJ_LATENCIA_MAX);
+        G.latAudio = clampf(a / 1000.0f, 0, AJ_LATENCIA_MAX);
+    }
     fclose(f);
 }
 
@@ -807,6 +841,8 @@ static void start_lines(const Line *lines, int count, State s) {
 static void start_duel(void) {
     settings_default(&G.settings);
     settings_for_level(&G.settings, campaign_defeated(&G.camp));
+    G.settings.latency = G.latVideo;                  /* calibração: ver update_calibra */
+    G.settings.audioLead = G.latAudio - G.latVideo;
     G.special = false;
     duel_init(&G.duel, &G.settings, G.m, (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919));
     robo_iniciar(&G.robo, &ROBO_DO_DEMO, 1);
@@ -1497,9 +1533,10 @@ static void handle_events(void) {
                 audio_play(SND_SWING, 0.9f, 1);
                 break;
             case EV_CUE:
-                /* o aviso: sempre o mesmo tempo antes do contato; na sequência, mais discreto */
-                audio_play(SND_CUE, m->cueAudio * (e->i == 0 ? 1 : 0.55f), 1);
-                aviso_brilho(e->i == 0);
+                /* o aviso: sempre o mesmo tempo antes do contato; na sequência, mais discreto.
+                 * O som vem num evento próprio, adiantado pela calibração de áudio. */
+                if (e->flag) audio_play(SND_CUE, m->cueAudio * (e->i == 0 ? 1 : 0.55f), 1);
+                else aviso_brilho(e->i == 0);
                 break;
             case EV_PRESS:
                 if (e->i == PRESS_CEDO) cedo_tarde("cedo");
@@ -2408,6 +2445,7 @@ static void draw_world(void) {
             EndTextureMode();
             break;
         case ST_LORE:
+        case ST_CALIBRA:
             pix_capture_begin();
             begin_world((Vector2){0, 0});
             lore_draw_title(G.time);
@@ -2608,6 +2646,46 @@ static void ui_narration(void) {
     }
 }
 
+static double calibra_batida(int k);
+
+static void ui_calibra(void) {
+    DrawRectangle(0, 0, UI_W, UI_H, fadec(INK, 0.82f));
+    Color claro = {236, 222, 192, 255}, suave = {180, 168, 150, 255};
+    ui_center("calibrar o atraso", UI_W / 2.0f, 70, 44, claro);
+    char buf[160];
+    if (G.cal.modo == 2) {
+        snprintf(buf, sizeof buf, "vídeo: %.0f ms      áudio: %.0f ms", G.cal.video * 1000, G.cal.audio * 1000);
+        ui_center(buf, UI_W / 2.0f, 260, 34, claro);
+        snprintf(buf, sizeof buf, "o aperto conta %.0f ms mais cedo; o som do aviso vem %.0f ms antes do brilho",
+                 G.cal.video * 1000, (G.cal.audio - G.cal.video) * 1000);
+        ui_center(buf, UI_W / 2.0f, 330, 22, suave);
+        ui_center("aperte para salvar      R refaz      Esc cancela", UI_W / 2.0f, 470, 24, claro);
+        return;
+    }
+    ui_center(G.cal.modo == 0 ? "1 de 2: aperte quando o quadrado acender (sem som)" : "2 de 2: aperte junto com o clique (sem imagem)",
+              UI_W / 2.0f, 140, 26, claro);
+    ui_center("aperte no ritmo, não por reação; as duas primeiras batidas são para pegar o ritmo", UI_W / 2.0f, 180, 20, suave);
+    if (G.cal.modo == 0) {
+        double desde = G.cal.t - calibra_batida(G.cal.proxima - 1);
+        bool aceso = G.cal.proxima > 0 && desde >= 0 && desde < 0.1;
+        Rectangle q = {UI_W / 2.0f - 70, 270, 140, 140};
+        DrawRectangleRec(q, aceso ? WHITE : (Color){40, 34, 36, 255});
+        DrawRectangleLinesEx(q, 3, (Color){120, 110, 100, 255});
+    } else {
+        double desde = G.cal.t - calibra_batida(G.cal.proxima - 1);
+        (void)desde;   /* no teste de áudio nada pisca: só o som */
+        ui_center("( só o som )", UI_W / 2.0f, 320, 30, suave);
+    }
+    snprintf(buf, sizeof buf, "apertos %d de %d", G.cal.n, AJ_CALIBRA_APERTOS);
+    ui_center(buf, UI_W / 2.0f, 450, 24, claro);
+    if (G.cal.n > 0) {
+        snprintf(buf, sizeof buf, "último: %+.0f ms", G.cal.ultimo * 1000);
+        ui_center(buf, UI_W / 2.0f, 490, 22, suave);
+    }
+    if (G.cal.falhou) ui_center("apertos muito irregulares: de novo", UI_W / 2.0f, 530, 22, (Color){255, 170, 90, 255});
+    ui_center("Esc cancela", UI_W / 2.0f, 620, 20, suave);
+}
+
 static void ui_title(void) {
     DrawRectangleGradientV(0, 360, UI_W, 360, fadec(INK, 0), fadec(INK, 0.5f));
     float bob = sinf(G.time * 1.2f) * 4;
@@ -2619,6 +2697,9 @@ static void ui_title(void) {
     const char *all[] = {"continuar", "novo jogo", "ver a lore"};
     for (int i = 0; i < options; i++)
         ui_menu_row(all[G.hasSave ? i : i + 1], UI_W / 2.0f, 420 + i * 60.0f, i == G.menuIndex, INK_TEXT, 1);
+    char buf[96];
+    snprintf(buf, sizeof buf, "L  calibrar o atraso (vídeo %.0f ms, áudio %.0f ms)", G.latVideo * 1000, G.latAudio * 1000);
+    ui_center(buf, UI_W / 2.0f, UI_H - 44.0f, 20, (Color){236, 220, 190, 200});
 }
 
 
@@ -2720,9 +2801,10 @@ static void ui_pause(void) {
     parchment(r, 1);
     scroll_rods(r, 1);
     ink_bold_center("pausa", UI_W / 2.0f, r.y + 30, 54, INK_TEXT);
-    const char *keys[] = {"ESC", "T", "F", "M", "Q"};
-    const char *items[] = {"continuar", "voltar à trilha", G.fx.shakeEnabled ? "tremor ligado" : "tremor desligado", "voltar ao menu", "sair"};
-    for (int i = 0; i < 5; i++) ui_key(keys[i], items[i], r.x + 120, r.y + 108 + i * 68.0f, INK_SOFT);
+    const char *keys[] = {"ESC", "T", "F", "L", "M", "Q"};
+    const char *items[] = {"continuar", "voltar à trilha", G.fx.shakeEnabled ? "tremor ligado" : "tremor desligado", "calibrar o atraso",
+                           "voltar ao menu", "sair"};
+    for (int i = 0; i < 6; i++) ui_key(keys[i], items[i], r.x + 120, r.y + 100 + i * 58.0f, INK_SOFT);
 }
 
 /* Primeiro duelo: como se apara, até o primeiro parry que pega. */
@@ -2782,8 +2864,8 @@ static void ui_debug(Rectangle dst) {
               d->m->sealCount > 0 ? d->m->sealCount : 1, duel_under_pressure(d) && d->m->sealCount <= 1 ? "   com pressa" : "");
     DBG_LINHA(branco, "kojiro: vida %.0f / %.0f%s   dano de um erro %.1f", d->renPosture, d->s.renPosture,
               d->burnLeft > 0 ? "  em brasas" : "", duel_ren_damage(d));
-    DBG_LINHA(branco, "hitstop %.0f ms   câmera lenta %.2fx   perfeitos %d  bons %d  erros %d", fmaxf(0, G.hitstop) * 1000, G.slowmo,
-              d->perfects, d->goods, d->bads);
+    DBG_LINHA(branco, "hitstop %.0f ms   câmera lenta %.2fx   perfeitos %d  bons %d  erros %d   atraso: vídeo %.0f, áudio %.0f ms",
+              fmaxf(0, G.hitstop) * 1000, G.slowmo, d->perfects, d->goods, d->bads, G.latVideo * 1000, G.latAudio * 1000);
     /* o último aperto e o erro dele */
     if (d->lastJudgement != J_NONE) {
         const Stance *s0 = st;
@@ -2832,6 +2914,7 @@ static void ui_debug(Rectangle dst) {
 static void draw_ui(void) {
     switch (G.state) {
         case ST_TITLE: ui_title(); break;
+        case ST_CALIBRA: ui_calibra(); break;
         case ST_LORE: ui_narration(); break;
         case ST_TRAIL: ui_trail(); break;
         case ST_SENSEI: {
@@ -2865,7 +2948,78 @@ static void draw_ui(void) {
 /* Telas                                                               */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Calibração de latência (L no título ou na pausa)                    */
+/* ------------------------------------------------------------------ */
+
+/* Um quadrado pisca (vídeo) ou um clique toca (áudio) a cada AJ_CALIBRA_BATIDA; o
+ * jogador aperta junto. A mediana de quanto os apertos chegam depois da batida é o
+ * atraso daquele canal (calibration_result, no núcleo). */
+static double calibra_batida(int k) { return 1.0 + k * AJ_CALIBRA_BATIDA; }
+
+static void start_calibra(bool pausado) {
+    G.cal.voltar = G.state;
+    G.cal.pausado = pausado;
+    G.cal.modo = 0;
+    G.cal.t = 0;
+    G.cal.proxima = 0;
+    G.cal.n = 0;
+    G.cal.falhou = false;
+    G.cal.ultimo = 0;
+    G.cal.video = G.latVideo;
+    G.cal.audio = G.latAudio;
+    G.paused = false;
+    set_state(ST_CALIBRA);
+}
+
+static void end_calibra(bool salva) {
+    if (salva) {
+        G.latVideo = G.cal.video;
+        G.latAudio = G.cal.audio;
+        save_options();
+        /* vale já no duelo em curso */
+        G.settings.latency = G.duel.s.latency = G.latVideo;
+        G.settings.audioLead = G.duel.s.audioLead = G.latAudio - G.latVideo;
+    }
+    G.state = G.cal.voltar;
+    G.paused = G.cal.pausado;
+}
+
+static void update_calibra(float dt) {
+    if (IsKeyPressed(KEY_ESCAPE)) { end_calibra(false); return; }
+    if (G.cal.modo == 2) {
+        if (IsKeyPressed(KEY_R)) { G.cal.modo = 0; G.cal.t = 0; G.cal.proxima = 0; G.cal.n = 0; return; }
+        if (pressed() && G.stateTime > 0.4f) end_calibra(true);
+        return;
+    }
+    G.cal.t += dt;
+    /* a batida: no teste de áudio, o clique */
+    while (calibra_batida(G.cal.proxima) <= G.cal.t) {
+        if (G.cal.modo == 1) audio_play(SND_CUE, 1, 1);
+        G.cal.proxima++;
+    }
+    if (!pressed()) return;
+    double tp = G.cal.t - dt * 0.5;                  /* o aperto chegou em algum ponto do quadro */
+    int k = (int)lround((tp - 1.0) / AJ_CALIBRA_BATIDA);
+    if (k < 2) return;                               /* as duas primeiras batidas são para pegar o ritmo */
+    G.cal.ultimo = (float)(tp - calibra_batida(k));
+    G.cal.off[G.cal.n++] = G.cal.ultimo;
+    if (G.cal.n < AJ_CALIBRA_APERTOS) return;
+    float r = calibration_result(G.cal.off, G.cal.n);
+    G.cal.falhou = r < 0;
+    if (r >= 0) {
+        if (G.cal.modo == 0) G.cal.video = r;
+        else G.cal.audio = r;
+        G.cal.modo++;
+        G.stateTime = 0;
+    }
+    G.cal.t = 0;
+    G.cal.proxima = 0;
+    G.cal.n = 0;
+}
+
 static void update_title(void) {
+    if (IsKeyPressed(KEY_L)) { start_calibra(false); return; }
     int options = G.hasSave ? 3 : 2;
     if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) { G.menuIndex = (G.menuIndex + 1) % options; audio_play(SND_UI, 1, 1); }
     if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) { G.menuIndex = (G.menuIndex + options - 1) % options; audio_play(SND_UI, 1, 1); }
@@ -3031,6 +3185,7 @@ static void parse_args(int argc, char **argv, int *startMaster, bool *direct, co
 static void step(float dtReal) {
     switch (G.state) {
         case ST_TITLE: update_title(); break;
+        case ST_CALIBRA: update_calibra(dtReal); break;
         case ST_LORE: update_lore(dtReal); break;
         case ST_TRAIL: update_trail(); break;
         case ST_INTRO:
@@ -3128,6 +3283,7 @@ int main(int argc, char **argv) {
     settings_default(&G.settings);
     campaign_reset(&G.camp);
     G.hasSave = load_game();
+    load_options();
     G.slowmo = 1;
     G.m = roster_get(G.camp.index);
     setup_actors();
@@ -3147,6 +3303,10 @@ int main(int argc, char **argv) {
     } else if (startState && !strcmp(startState, "lore")) {
         set_state(ST_LORE);
         audio_music(MUSIC_LORE);
+    } else if (startState && !strcmp(startState, "calibra")) {
+        set_state(ST_TITLE);
+        audio_music(MUSIC_TITLE);
+        start_calibra(false);
     } else if (startState && !strcmp(startState, "trail")) {
         set_state(ST_TRAIL);
         audio_music(MUSIC_TITLE);
@@ -3171,6 +3331,7 @@ int main(int argc, char **argv) {
         if (IsKeyPressed(KEY_ESCAPE) && in_arena_state()) G.paused = !G.paused;
         if (G.paused) {
             if (IsKeyPressed(KEY_T)) { G.paused = false; audio_music(MUSIC_TITLE); set_state(ST_TRAIL); }
+            if (IsKeyPressed(KEY_L)) start_calibra(true);
             if (IsKeyPressed(KEY_M)) go_to_menu();
             if (IsKeyPressed(KEY_Q)) break;
             dtReal = 0;

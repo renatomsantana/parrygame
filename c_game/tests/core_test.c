@@ -846,6 +846,106 @@ static void test_tolerancia_tardia(void) {
     }
 }
 
+/* Calibração de latência. A tela de teste mede quanto o jogador aperta depois da
+ * batida (mediana, sem os apertos perdidos). O atraso de vídeo entra no julgamento (o
+ * aperto conta esse tanto mais cedo, e o golpe espera por ele); o de áudio adianta o som
+ * do aviso para chegar junto com o brilho. */
+static void test_calibracao(void) {
+    float a[8] = {0.050f, 0.060f, 0.040f, 0.055f, 0.045f, 0.9f, 0.052f, 0.048f};
+    CHECK(fabsf(calibration_result(a, 8) - 0.050f) < 0.0021f, "mediana dos apertos, sem o perdido (%.1f ms)", calibration_result(a, 8) * 1000);
+    float b[4] = {-0.030f, -0.020f, -0.025f, -0.010f};
+    CHECK(calibration_result(b, 4) == 0, "adiantado vira zero (%.1f)", calibration_result(b, 4));
+    float c[4] = {0.25f, 0.28f, 0.26f, 0.27f};
+    CHECK(fabsf(calibration_result(c, 4) - AJ_LATENCIA_MAX) < 1e-6, "no máximo AJ_LATENCIA_MAX");
+    float d0[6] = {0.9f, -0.8f, 0.7f, 0.05f, 0.6f, 0.5f};
+    CHECK(calibration_result(d0, 6) < 0, "apertos demais fora da batida: refazer");
+
+    Settings s;
+    settings_default(&s);
+    s.latency = 0.050f;
+    s.audioLead = 0.030f;
+    for (int i = 0; i < roster_size(); i++) {
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 6);
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        const Stance *st = duel_stance(&d);
+        double contato = d.strikeAt;
+        /* o aperto 30 ms depois do contato conta como 20 ms antes: perfeito */
+        CHECK(probe(&d, contato + 0.030) == J_PERFEITO, "%s: com 50 ms de atraso, 30 ms depois do contato é perfeito", roster_get(i)->name);
+        CHECK(probe(&d, contato + 0.050 + s.lateGrace * 0.5) == J_BOM, "%s: e a tolerância tardia soma ao atraso", roster_get(i)->name);
+        CHECK(probe(&d, contato + 0.050 - st->perfectWindow - 0.005) == J_BOM, "%s: a janela anda junto", roster_get(i)->name);
+        /* sem aperto, espera o atraso e a tolerância */
+        Duel b = d;
+        double quando = -1;
+        while (b.phase == PH_WINDUP) { duel_tick(&b, 0.0005); if (b.phase != PH_WINDUP) quando = b.clock; }
+        CHECK(fabs(quando - (contato + s.latency + s.lateGrace)) < 0.0011, "%s: sem aperto, o golpe espera o atraso (%.1f ms)",
+              roster_get(i)->name, (quando - contato) * 1000);
+        /* o som do aviso vem 30 ms antes do brilho; o brilho, no tempo de sempre */
+        Duel c = d;
+        double brilho = -1, som = -1;
+        while (c.phase == PH_WINDUP) {
+            duel_tick(&c, 0.0005);
+            DuelEvent ev[MAX_EVENTS];
+            int k = duel_drain(&c, ev, MAX_EVENTS);
+            for (int e = 0; e < k; e++)
+                if (ev[e].kind == EV_CUE) { if (ev[e].flag) som = c.clock; else brilho = c.clock; }
+        }
+        CHECK(brilho > 0 && fabs(brilho - duel_cue_time(&d)) < 0.0011 && fabs((brilho - som) - s.audioLead) < 0.0011,
+              "%s: o som do aviso adiantado %.0f ms", roster_get(i)->name, s.audioLead * 1000);
+        /* antes do aviso que o jogador vê (o do jogo mais o atraso), o aperto ainda é cedo */
+        Duel e = d;
+        double visto = duel_cue_time(&d) + s.latency;
+        if (visto - 0.01 > e.clock && visto < contato - st->goodWindow) {
+            duel_tick(&e, visto - 0.01 - e.clock);
+            duel_press(&e);
+            CHECK(!e.attempted && e.pressBlockedUntil <= visto + 1e-9, "%s: o aperto cedo usa o aviso visto", roster_get(i)->name);
+        }
+    }
+    /* com 60 ms de atraso, apertando no ritmo, a sequência continua no mesmo ritmo */
+    s.latency = 0.060f;
+    s.audioLead = 0;
+    int medidos = 0, perfeitos = 0, total = 0;
+    double pior = 0;
+    for (int i = 0; i < roster_size(); i++) {
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 31);
+        double real = 0, congela = 0, contatoReal = -1;
+        while (d.phase != PH_FINISHED && d.clock < 90) {
+            d.renPosture = s.renPosture;
+            if (d.bossPosture < 60) d.bossPosture = roster_get(i)->posture;
+            if (congela > 0) { congela -= 1.0 / 1000; real += 1.0 / 1000; continue; }
+            /* os eventos de cada passo são lidos antes do passo seguinte (o golpe que vem pode
+             * começar no mesmo quadro em que o anterior é julgado) */
+            DuelEvent ev[MAX_EVENTS];
+            int k = 0;
+            if (d.phase == PH_WINDUP && !d.attempted && d.clock >= d.strikeAt - 0.02 + s.latency) {
+                duel_press(&d);
+                k = duel_drain(&d, ev, MAX_EVENTS);
+            }
+            if (k == 0) {
+                duel_tick(&d, 1.0 / 1000);
+                real += 1.0 / 1000;
+                k = duel_drain(&d, ev, MAX_EVENTS);
+            }
+            for (int e = 0; e < k; e++) {
+                if (ev[e].kind != EV_IMPACT) continue;
+                total++;
+                perfeitos += ev[e].judgement == J_PERFEITO;
+                double agora = real - (d.clock - d.lastStrikeAt);
+                if (d.comboStrike > 0 && contatoReal >= 0) {
+                    double erro = fabs((agora - contatoReal) - duel_move(&d)->gaps[d.comboStrike - 1]);
+                    if (erro > pior) pior = erro;
+                    medidos++;
+                }
+                contatoReal = agora;
+                congela = d.lastHitstop;
+            }
+        }
+    }
+    CHECK(perfeitos == total && total > 300, "com 60 ms de atraso calibrado, apertar 60 ms depois é sempre perfeito (%d de %d)", perfeitos, total);
+    CHECK(medidos > 100 && pior < 0.0015, "com 60 ms de atraso, o ritmo das sequências não muda (%d golpes, pior %.1f ms)", medidos, pior * 1000);
+}
+
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
  * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
 static void test_timeline(void) {
@@ -1209,6 +1309,7 @@ int main(void) {
     test_hitstop_ritmo();
     test_aperto_cedo();
     test_tolerancia_tardia();
+    test_calibracao();
     test_timeline();
     test_movesets();
     test_traits();

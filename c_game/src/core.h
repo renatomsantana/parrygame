@@ -29,7 +29,8 @@ typedef struct {
     float perfectRenRecover;   /* perfeito: Ren recupera */
     float inputCooldown;       /* intervalo mínimo entre gestos dentro do mesmo golpe */
     float lateGrace;           /* um aperto até isto depois do contato ainda é bom */
-    float latency;             /* atraso do jogador (calibração): o aperto conta isto mais cedo */
+    float latency;             /* atraso de vídeo (calibração): o aperto conta isto mais cedo */
+    float audioLead;           /* o som do aviso toca isto antes do brilho (atraso de áudio menos o de vídeo) */
     float attackLead;          /* a lâmina parte este tempo antes do contato */
     float recovery;            /* pausa depois de cada golpe */
     float sealRecovery;        /* pausa depois de quebrar um selo do BIG BOSS */
@@ -201,7 +202,7 @@ typedef enum { J_NONE, J_RUIM, J_BOM, J_PERFEITO } Judgement;
 typedef enum {
     EV_WINDUP,        /* a: duração */
     EV_LAUNCH,        /* a lâmina parte */
-    EV_CUE,           /* o aviso; i: qual golpe da sequência (0 = o primeiro) */
+    EV_CUE,           /* o aviso; i: qual golpe da sequência (0 = o primeiro); flag: o som (false: o brilho) */
     EV_PRESS,         /* gesto aceito; i: PressKind */
     EV_IMPACT,        /* judgement, a: antecedência (negativa = depois do contato; -1 = sem defesa), flag: quebrou postura */
     EV_STANCE,        /* i: nova postura */
@@ -228,7 +229,7 @@ typedef struct {
     bool flag;
 } DuelEvent;
 
-typedef enum { SCH_LAUNCH, SCH_CUE } ScheduleKind;
+typedef enum { SCH_LAUNCH, SCH_CUE, SCH_CUE_SOUND } ScheduleKind;
 typedef struct { double time; ScheduleKind kind; } ScheduleItem;
 
 typedef struct {
@@ -264,7 +265,7 @@ typedef struct {
     double lastGestureAt;         /* último aperto fora da preparação (-100 = nenhum) */
     float lastHitstop;            /* quanto o último impacto congela o duelo (o jogo aplica) */
 
-    ScheduleItem schedule[2];
+    ScheduleItem schedule[3];
     int scheduleCount, scheduleIndex;
 
     DuelEvent events[MAX_EVENTS];
@@ -299,6 +300,10 @@ typedef struct {
     double perfectFrom, goodFrom;
 } DuelTimeline;
 DuelTimeline duel_timeline(const Duel *d);
+/* Calibração: com os apertos da tela de teste (segundos depois da batida; negativo =
+ * antes), o atraso a usar: a mediana dos que ficaram perto da batida, entre 0 e
+ * AJ_LATENCIA_MAX. -1 se sobraram menos da metade. */
+float calibration_result(const float *offsets, int n);
 /* Copia e esvazia a fila de eventos. Devolve quantos. */
 int duel_drain(Duel *d, DuelEvent *out, int max);
 

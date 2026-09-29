@@ -13,6 +13,7 @@ void settings_default(Settings *s) {
     s->inputCooldown = AJ_ENTRE_GESTOS;
     s->lateGrace = AJ_TOLERANCIA_TARDIA;
     s->latency = 0;
+    s->audioLead = 0;
     s->attackLead = AJ_LAMINA_PARTE;
     s->recovery = AJ_PAUSA_SEQUENCIA;
     s->sealRecovery = AJ_PAUSA_SELO;

@@ -36,6 +36,16 @@
 /* Tolerância tardia: um aperto até isto depois do contato ainda defende, como bom
  * (nunca perfeito). Sem aperto, o golpe só entra quando ela acaba. */
 #define AJ_TOLERANCIA_TARDIA       0.030f
+
+/* ---- Calibração de latência (opções: tela de teste) -------------------- */
+/* O atraso de vídeo entra no julgamento: o aperto conta esse tanto mais cedo. O de
+ * áudio adianta o som do aviso para chegar junto com o brilho. Com mais de ~70 ms, as
+ * sequências mais rápidas (400 ms) podem atrasar um pouco: o golpe seguinte só começa
+ * depois de o anterior ser julgado. */
+#define AJ_LATENCIA_MAX            0.120f   /* o maior atraso aceito */
+#define AJ_CALIBRA_BATIDA          0.800f   /* a tela de teste pisca (ou toca) a cada isto */
+#define AJ_CALIBRA_APERTOS             8    /* apertos que contam para a média */
+#define AJ_CALIBRA_ACEITA          0.300f   /* aperto mais longe que isto da batida não conta */
 #define AJ_PAUSA_SEQUENCIA         0.800f   /* pausa depois de cada sequência */
 #define AJ_PAUSA_SELO              2.200f   /* pausa depois de quebrar um selo do oboro */
 #define AJ_PAUSA_INICIO            0.650f   /* pausa antes do primeiro golpe */
@@ -60,7 +70,7 @@
 #define AJ_HITSTOP_QUEBRA          0.160f   /* o parry que quebra a postura */
 /* O hitstop congela o duelo. Dentro de uma sequência ele sai da preparação seguinte:
  * o próximo contato chega no mesmo tempo real, qualquer que seja o resultado. */
-#define AJ_PREPARO_MIN_CADEIA      0.020f   /* na sequência, a preparação é pelo menos a partida da lâmina mais isto */
+#define AJ_PREPARO_MIN_CADEIA      0.000f   /* na sequência, a preparação é pelo menos a partida da lâmina mais isto */
 
 #define AJ_TREMOR_PERFEITO           1.5f   /* força (px) do tremor da tela */
 #define AJ_TREMOR_PERFEITO_TEMPO    0.10f   /*   e quanto dura */

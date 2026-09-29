@@ -157,6 +157,9 @@ static void build_schedule(Duel *d) {
     d->scheduleIndex = 0;
     push_schedule(d, d->strikeAt - duel_strike_lead(d), SCH_LAUNCH);
     push_schedule(d, duel_cue_time(d), SCH_CUE);
+    /* o som do aviso adiantado (ou atrasado) para chegar junto com o brilho */
+    double som = duel_cue_time(d) - d->s.audioLead, start = d->strikeAt - d->windupDuration;
+    push_schedule(d, som < start ? start : (som > d->strikeAt ? d->strikeAt : som), SCH_CUE_SOUND);
     /* Ordenação estável por tempo (inserção: a lista é curta). */
     for (int i = 1; i < d->scheduleCount; i++) {
         ScheduleItem x = d->schedule[i];
@@ -268,6 +271,7 @@ static void fire(Duel *d, ScheduleKind kind) {
     switch (kind) {
         case SCH_LAUNCH: d->attackLaunched = true; emit(d, EV_LAUNCH, J_NONE, 0, 0, false); break;
         case SCH_CUE: d->cuePlayed = true; emit(d, EV_CUE, J_NONE, 0, d->comboStrike, false); break;
+        case SCH_CUE_SOUND: emit(d, EV_CUE, J_NONE, 0, d->comboStrike, true); break;
     }
 }
 
@@ -417,7 +421,8 @@ bool duel_press(Duel *d) {
     if (d->phase == PH_WINDUP && d->attempted) return false;
     PressKind kind;
     if (d->phase == PH_WINDUP) {
-        double aviso = duel_cue_time(d);
+        /* o jogador vê o aviso `latency` depois: é esse o aviso que conta para ele */
+        double aviso = duel_cue_time(d) + d->s.latency;
         if (d->clock < aviso - 1e-9) {
             /* antes do aviso: não trava o golpe; a recarga acaba no aviso, no máximo (a janela
              * boa vem sempre depois dele). O custo: a defesa deste golpe não sai perfeita. */
@@ -447,6 +452,22 @@ bool duel_press(Duel *d) {
 }
 
 /* ------------------------------------------------------------------ */
+
+float calibration_result(const float *offsets, int n) {
+    float ok[64];
+    int k = 0;
+    for (int i = 0; i < n && k < 64; i++)
+        if (offsets[i] > -AJ_CALIBRA_ACEITA && offsets[i] < AJ_CALIBRA_ACEITA) ok[k++] = offsets[i];
+    if (k == 0 || k * 2 < n) return -1;
+    for (int i = 1; i < k; i++) {
+        float x = ok[i];
+        int j = i - 1;
+        while (j >= 0 && ok[j] > x) { ok[j + 1] = ok[j]; j--; }
+        ok[j + 1] = x;
+    }
+    float med = k % 2 ? ok[k / 2] : (ok[k / 2 - 1] + ok[k / 2]) / 2;
+    return clampf(med, 0, AJ_LATENCIA_MAX);
+}
 
 void campaign_reset(Campaign *c) {
     c->index = 0;
