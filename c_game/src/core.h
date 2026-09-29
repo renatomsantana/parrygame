@@ -55,13 +55,18 @@ typedef struct {
     const char *name;             /* "" para mestres de uma postura só */
     float perfectWindow, goodWindow;
     float aviso;                  /* o aviso (som e brilho) vem este tempo antes do contato */
+    int ordered;                  /* as primeiras N sequências desta postura saem na ordem em que
+                                     estão no roster; depois, sorteadas (0 = sempre sorteadas) */
 } Stance;
 
 /* Um selo é uma barra de postura inteira. Mestres comuns têm um; o BIG BOSS, três. */
 typedef struct {
     const char *name;
-    float speedMultiplier;
+    float speedMultiplier;        /* a espera antes do aviso x isto */
     int stanceSwitchEvery;        /* sequências até trocar de postura; 0 = não troca */
+    float posture;                /* postura deste selo (0 = a do mestre) */
+    float damageMultiplier;       /* o dano de um erro x isto (0 = 1) */
+    bool noSpecial;               /* neste selo, nada de golpe especial */
 } SealRule;
 
 /*
@@ -69,7 +74,7 @@ typedef struct {
  * uma preparação seguida de 1 a MAX_CHAIN golpes, com intervalos sempre iguais
  * entre um contato e o próximo. É isso que o jogador estuda e decora.
  */
-#define MAX_MOVES 24
+#define MAX_MOVES 32
 #define MAX_CHAIN 8
 
 /* Preparação que denuncia a sequência. LOOK_HEAVY é o golpe forte: o salto com a
@@ -256,6 +261,7 @@ typedef struct {
     int stanceIndex;
     int comboRemaining, comboStrike;
     int move, sequences;          /* sequência atual e quantas já saíram */
+    int stanceSequences[MAX_STANCES]; /* sequências que já saíram em cada postura */
     int attacks, perfects, goods, bads;
     /* o último golpe julgado e o último gesto, para o overlay de debug e o "cedo/tarde" */
     double lastStrikeAt;          /* instante do contato (-1 = nenhum ainda) */
@@ -282,6 +288,7 @@ double duel_time_to_impact(const Duel *d);        /* -1 fora da preparação */
 const Stance *duel_stance(const Duel *d);
 const SealRule *duel_seal_rule(const Duel *d);
 bool duel_under_pressure(const Duel *d);          /* mestre com metade da postura ou menos */
+float duel_posture_max(const Duel *d);            /* postura cheia do selo atual */
 bool duel_in_combo(const Duel *d);
 const Move *duel_move(const Duel *d);             /* sequência em curso (NULL = golpe simples) */
 float duel_ren_damage(const Duel *d);     /* dano de um erro contra este mestre */

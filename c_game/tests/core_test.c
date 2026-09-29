@@ -128,7 +128,7 @@ static void test_roster(const Settings *s) {
     Duel da;
     duel_init(&da, s, roster_get(9), 1);
     CHECK(roster_get(9)->damage > 1 && duel_ren_damage(&da) > s->renPosture / roster_get(9)->hitsToFall, "arashi bate mais pesado");
-    static const int HITS[13] = {8, 8, 7, 7, 4, 7, 4, 4, 4, 10, 4, 5, 4};
+    static const int HITS[13] = {8, 8, 7, 7, 4, 7, 4, 4, 4, 10, 4, 5, 11};
     for (int i = 0; i < roster_size(); i++) {
         CHECK(roster_get(i)->hitsToFall == HITS[i], "Ren aguenta %d erros contra %s", HITS[i], roster_get(i)->name);
         CHECK(roster_get(i)->senseiCount >= 1, "hanzo tem conselho para %s", roster_get(i)->name);
@@ -410,8 +410,9 @@ static void test_big_boss(void) {
     Tally t = play(oboro, 99, 0.02, 600);
     CHECK(t.finished == 1 && t.victory, "perfeitos vencem o Oboro");
     CHECK(t.seals == 2, "dois selos quebrados antes do último (%d)", t.seals);
-    int perSeal = (int)ceilf(oboro->posture / 20.0f);
-    CHECK(t.impacts[J_PERFEITO] == perSeal * 3, "%d perfeitos por selo (%d)", perSeal, t.impacts[J_PERFEITO]);
+    int need = 0;
+    for (int k = 0; k < oboro->sealCount; k++) need += (int)ceilf(oboro->seals[k].posture / 20.0f);
+    CHECK(t.impacts[J_PERFEITO] == need, "%d perfeitos nos três selos (%d)", need, t.impacts[J_PERFEITO]);
     CHECK(t.stances > 0, "Oboro troca de guarda");
     CHECK(t.combos > 0, "Oboro abre golpes compostos nos selos seguintes");
 
@@ -442,7 +443,8 @@ static void test_big_boss(void) {
     }
     CHECK(d.seal == 1, "primeiro selo quebrado");
     CHECK(fabsf(d.renPosture - (40 + (s.perfectHeal + s.sealHeal) * s.renPosture)) < 1e-4, "selo quebrado devolve fôlego (%.1f)", d.renPosture);
-    CHECK(fabsf(d.bossPosture - oboro->posture) < 1e-4, "novo selo com postura cheia");
+    CHECK(fabsf(d.bossPosture - oboro->seals[1].posture) < 1e-4 && duel_posture_max(&d) == oboro->seals[1].posture,
+          "novo selo com a postura cheia dele");
     Tally lose = play(oboro, 99, -1, 600);
     CHECK(!lose.victory && lose.finished == 1, "sem defesa, Ren cai contra o Oboro");
 }
@@ -992,6 +994,90 @@ static void test_curva(void) {
     CHECK(spam == 0, "apertar sem olhar, em qualquer ritmo de 0,05 a 0,8 s, perde de todos (%d vitórias em 3120)", spam);
 }
 
+/* Oboro. Fase 1: abre com a lição completa, sete golpes. Fase 2: os doze padrões dos
+ * aprendizes, cada um igual ao do aprendiz (intervalos, aparência, duplo e preparação),
+ * na ordem da trilha na primeira volta e depois sorteados. Fase 3: os mesmos doze com a
+ * espera antes do aviso x0,85, dano x1,25, aviso nunca abaixo de 320 ms e sem especial. */
+static const struct { int aprendiz; const char *golpe; } ECO[12] = {
+    {0, "desabamento"}, {1, "mordida"}, {2, "investida dupla"}, {3, "nevasca"}, {4, "fúria do tigre"}, {5, "revoada"},
+    {6, "foices gêmeas"}, {7, "incêndio"}, {8, "maré longa"}, {9, "tormenta"}, {10, "meia-noite"}, {11, "lua cheia"},
+};
+
+static const Move *move_named(const MasterProfile *m, const char *name, int stance) {
+    for (int k = 0; k < m->moveCount; k++)
+        if (!strcmp(m->moves[k].name, name) && (stance < -1 || m->moves[k].stance == stance)) return &m->moves[k];
+    return NULL;
+}
+
+static void test_oboro_fases(void) {
+    const MasterProfile *o = roster_get(12);
+    const Move *licao = &o->moves[0];
+    CHECK(!strcmp(licao->name, "lição completa") && licao->strikes == 7 && licao->stance == 0, "fase 1: a lição completa, sete golpes");
+    /* os ecos, fase 2 e fase 3, iguais ao padrão de cada aprendiz */
+    for (int e = 0; e < 12; e++) {
+        const MasterProfile *a = roster_get(ECO[e].aprendiz);
+        const Move *src = move_named(a, ECO[e].golpe, -2);
+        char nome[64];
+        snprintf(nome, sizeof nome, "eco %s", a->style + 8);
+        for (int f = 1; f <= 2; f++) {
+            const Move *eco = move_named(o, nome, f);
+            bool igual = src && eco && eco->strikes == src->strikes && eco->look == src->look && eco->dual == src->dual &&
+                         fabsf(eco->windup - src->windup) < 1e-6f;
+            for (int g = 0; igual && g + 1 < src->strikes; g++) igual = fabsf(eco->gaps[g] - src->gaps[g]) < 1e-6f;
+            CHECK(igual, "fase %d: %s é o %s de %s", f + 1, nome, ECO[e].golpe, a->name);
+        }
+    }
+    CHECK(o->stances[0].ordered == 1 && o->stances[1].ordered == 12 && o->stances[2].ordered == 0, "ordem: 1 na fase 1, 12 na fase 2");
+    CHECK(fabsf(o->seals[2].speedMultiplier - 0.85f) < 1e-6f && fabsf(o->seals[2].damageMultiplier - 1.25f) < 1e-6f && o->seals[2].noSpecial &&
+          !o->seals[0].noSpecial && !o->seals[1].noSpecial, "fase 3: x0,85 na preparação, x1,25 no dano, sem especial");
+    for (int k = 0; k < o->stanceCount; k++) CHECK(o->stances[k].aviso >= AJ_AVISO_MENOR - 1e-6f, "fase %d: aviso de 320 ms ou mais", k + 1);
+
+    /* no duelo, com o robô do demo */
+    Settings s;
+    settings_default(&s);
+    settings_for_level(&s, MASTER_COUNT);
+    bool abre = true, ordem = true, fase3 = true, semEspecial = true, dano = true;
+    int vistosFase2 = 0, especiaisAntes = 0;
+    for (uint32_t seed = 1; seed <= 40; seed++) {
+        Duel d;
+        duel_init(&d, &s, o, seed);
+        RoboMente r;
+        robo_iniciar(&r, &ROBO_DO_DEMO, seed);
+        int ultimo = -1, seqFase[3] = {0, 0, 0};
+        while (d.phase != PH_FINISHED && d.clock < 900) {
+            if (d.phase == PH_WINDUP && d.attacks != ultimo) {
+                ultimo = d.attacks;
+                const Move *mv = duel_move(&d);
+                if (d.comboStrike == 0) {
+                    int n = seqFase[d.seal]++;
+                    if (d.seal == 0 && n == 0 && mv != licao) abre = false;
+                    if (d.seal == 1 && n < 12) {
+                        char nome[64];
+                        snprintf(nome, sizeof nome, "eco %s", roster_get(ECO[n].aprendiz)->style + 8);
+                        if (strcmp(mv->name, nome) || mv->stance != 1) ordem = false;
+                        vistosFase2++;
+                    }
+                    if (d.seal == 2) {
+                        double esperado = duel_aviso(&d) + (mv->windup - o->stances[2].aviso) * 0.85;
+                        if (mv->stance != 2 || strncmp(mv->name, "eco ", 4) || fabs(d.windupDuration - esperado) > 1e-4) fase3 = false;
+                        if (d.special) semEspecial = false;
+                        float base = s.renPosture / o->hitsToFall;
+                        if (fabsf(duel_ren_damage(&d) - base * 1.25f) > 1e-3f) dano = false;
+                    } else if (d.special) especiaisAntes++;
+                }
+            }
+            bool p = robo_quer_apertar(&r, &d, ROBO_QUADRO);
+            duel_step(&d, ROBO_QUADRO, p);
+            duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+        }
+    }
+    CHECK(abre, "a fase 1 sempre abre com a lição completa");
+    CHECK(ordem && vistosFase2 == 40 * 12, "na fase 2, os doze saem na ordem da trilha (%d de %d)", vistosFase2, 40 * 12);
+    CHECK(fase3, "na fase 3, os doze ecos com a espera antes do aviso x0,85");
+    CHECK(semEspecial && especiaisAntes > 0, "o especial x2 sai nas fases 1 e 2 (%d) e nunca na 3", especiaisAntes);
+    CHECK(dano, "na fase 3, o dano de um erro x1,25");
+}
+
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
  * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
 static void test_timeline(void) {
@@ -1363,6 +1449,7 @@ int main(void) {
     test_calibracao();
     test_cura_em_porcentagem();
     test_curva();
+    test_oboro_fases();
     test_timeline();
     test_movesets();
     test_traits();

@@ -6,7 +6,9 @@
 
 #include <stddef.h>
 
-#define STANCE(name, perfect, good, aviso) {name, perfect, good, aviso}
+#define STANCE(name, perfect, good, aviso) {name, perfect, good, aviso, 0}
+/* as primeiras `n` sequências desta postura saem na ordem em que estão aqui */
+#define STANCE_EM_ORDEM(name, perfect, good, aviso, n) {name, perfect, good, aviso, n}
 
 static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
@@ -380,52 +382,54 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 13, .name = "oboro", .style = "o mestre das doze posturas", .title = "O Mestre das Doze Posturas", .venue = "O dojo de Hanzo, no alto da serra",
         .special = "Três selos, uma postura em cada: a de hanzo, a de quem devorou as doze, e a do oni, de máscara e lâmina em chamas.",
-        .arena = ARENA_CIDADELA, .posture = 360, .hitsToFall = 4, .healsOnHit = true, .specialChance = 0.25f,
+        .arena = ARENA_CIDADELA, .posture = 360, .hitsToFall = 11, .healsOnHit = true, .specialChance = 0.25f,
         .cueVisual = 1, .cueAudio = 1, .tint = 0xE0C8FFFF, .isBigBoss = true,
         /* Três posturas, uma por selo: a de hanzo, que ele aprendeu primeiro; a de quem
            devorou as doze; e a do oni, de máscara e com a lâmina em chamas, em que ele se perde. */
         .stances = {
-            STANCE("postura de hanzo", 0.056f, 0.144f, 0.380f),
-            STANCE("devorador de posturas", 0.046f, 0.124f, 0.350f),
+            STANCE_EM_ORDEM("postura de hanzo", 0.056f, 0.144f, 0.380f, 1),        /* abre com a lição completa */
+            STANCE_EM_ORDEM("devorador de posturas", 0.046f, 0.124f, 0.350f, 12),  /* os doze na ordem da trilha */
             STANCE("postura do oni", 0.038f, 0.108f, 0.320f),
         },
         .stanceCount = 3,
+        /* selo: nome, espera antes do aviso x, troca de postura, postura, dano x, sem especial */
         .seals = {
-            {"primeiro selo", 1.00f, 0},
-            {"segundo selo", 1.00f, 0},
-            {"terceiro selo", 0.90f, 0},
+            {"primeiro selo", 1.00f, 0, 360, 0, false},
+            {"segundo selo", 1.00f, 0, 1800, 0, false},   /* comprido: os doze inteiros, até só com perfeitos */
+            {"terceiro selo", 0.85f, 0, 600, 1.25f, true},
         },
         .sealCount = 3,
+        /* Os ecos copiam uma sequência de cada aprendiz (intervalos, aparência, golpe duplo e
+         * preparação), com a janela e o aviso do oboro naquela fase. O teste confere. */
+#define ECOS(p)                                                                               \
+            {"eco da terra", 2, {1.00f}, 1.0f, p, 0, LOOK_LOW, 1.55f},                          \
+            {"eco da tartaruga", 2, {0.42f}, 1.0f, p, 0, LOOK_THRUST, 1.00f},                   \
+            {"eco do touro", 2, {0.85f}, 1.0f, p, 0, LOOK_LOW, 1.05f},                          \
+            {"eco do gelo", 4, {0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.75f},          \
+            {"eco do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_HIGH, 0.90f}, \
+            {"eco do corvo", 3, {0.50f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 1.13f, 0x4},              \
+            {"eco do vento", 2, {0.45f}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x2},                    \
+            {"eco da chama", 4, {0.45f, 0.45f, 0.80f}, 1.0f, p, 0, LOOK_LOW, 0.65f},            \
+            {"eco do mar", 3, {0.60f, 0.50f}, 1.0f, p, 0, LOOK_FAR, 1.20f},                     \
+            {"eco da tempestade", 3, {0.40f, 0.40f}, 1.0f, p, 0, LOOK_LOW, 0.80f, 0x4},         \
+            {"eco da noite", 4, {0.40f, 0.40f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 0.80f},            \
+            {"eco da lua", 5, {0.50f, 0.50f, 0.50f, 0.90f}, 1.0f, p, 0, LOOK_HIGH, 1.05f}
         .moves = {
-            /* postura de hanzo: a arte como o mestre ensinou, limpa */
+            /* postura de hanzo: a arte como o mestre ensinou; abre com a lição inteira */
+            {"lição completa", 7, {0.60f, 0.50f, 0.50f, 0.70f, 0.45f, 0.45f}, 2.0f, 0, 0, LOOK_HIGH, 1.15f},
             {"corte do mestre", 1, {0}, 2.0f, 0, 0, LOOK_HIGH, 1.05f},
             {"lição", 2, {0.60f}, 1.5f, 0, 0, LOOK_LOW, 0.95f},
             {"estocada de hanzo", 1, {0}, 1.5f, 0, 0, LOOK_THRUST, 1.15f},
             {"três lições", 3, {0.50f, 0.60f}, 1.0f, 0, 0, LOOK_HIGH, 1.05f},
             {"passo de hanzo", 1, {0}, 1.0f, 0, 0, LOOK_DASH, 0.95f},
             {"salto do mestre", 2, {0.55f}, 1.0f, 0, 0, LOOK_JUMP, 1.15f},
-            /* devorador de posturas: um eco de cada aprendiz, com o elemento dele */
-            {"eco da terra", 2, {1.00f}, 1.0f, 1, 0, LOOK_LOW, 1.05f},
-            {"eco da tartaruga", 2, {0.42f}, 1.0f, 1, 0, LOOK_THRUST, 0.80f},
-            {"eco do touro", 2, {0.85f}, 1.0f, 1, 0, LOOK_LOW, 0.95f},
-            {"eco do gelo", 3, {0.50f, 0.45f}, 1.0f, 1, 0, LOOK_THRUST, 0.72f},
-            {"eco do tigre", 3, {0.40f, 0.85f}, 1.0f, 1, 0, LOOK_HIGH, 1.15f},
-            {"eco do corvo", 3, {0.50f, 0.90f}, 1.0f, 1, 0, LOOK_LOW, 1.05f},
-            {"eco do vento", 3, {0.50f, 0.90f}, 1.0f, 1, 0, LOOK_LOW, 0.80f},
-            {"eco da chama", 3, {0.45f, 0.45f}, 1.0f, 1, 0, LOOK_HIGH, 0.95f},
-            {"eco do mar", 4, {0.55f, 0.50f, 0.45f}, 1.0f, 1, 0, LOOK_HIGH, 0.72f},
-            {"eco da tempestade", 3, {0.40f, 0.40f}, 1.0f, 1, 0, LOOK_LOW, 1.15f},
-            {"eco da noite", 3, {0.45f, 0.80f}, 1.0f, 1, 0, LOOK_HIGH, 1.05f},
-            {"eco da lua", 4, {0.50f, 0.50f, 0.90f}, 1.0f, 1, 0, LOOK_HIGH, 0.80f},
-            /* postura do oni: a lâmina em chamas, sem medida */
-            {"fúria do oni", 4, {0.40f, 0.40f, 0.70f}, 1.5f, 2, 0, LOOK_HIGH, 0.72f},
-            {"chama do oni", 3, {0.45f, 0.45f}, 1.5f, 2, 0, LOOK_LOW, 0.85f},
-            {"doze posturas", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.90f}, 1.0f, 2, 0, LOOK_HIGH, 0.62f},
-            {"investida do oni", 1, {0}, 1.2f, 2, 0, LOOK_DASH, 0.78f},
-            {"mergulho do oni", 2, {0.50f}, 1.0f, 2, 0, LOOK_JUMP, 0.72f},
-            {"golpe do oni", 1, {0}, 1.0f, 2, 0, LOOK_HEAVY, 0.85f},
+            /* devorador de posturas: os doze, na ordem da trilha na primeira volta */
+            ECOS(1),
+            /* postura do oni: os mesmos doze, mais rápidos e mais pesados (selo 3) */
+            ECOS(2),
         },
-        .moveCount = 24,
+#undef ECOS
+        .moveCount = 31,
         .intro = {{"oboro", "Então é você. O último que ele mandou."},
                   {"kojiro", "Você traiu o mestre."},
                   {"oboro", "Ele não é quem você pensa."},

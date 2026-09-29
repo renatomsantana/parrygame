@@ -851,7 +851,7 @@ static void start_duel(void) {
     fx_clear(&G.fx);
     vfx_clear();
     G.shownRen = G.ghostRen = G.settings.renPosture;
-    G.shownBoss = G.ghostBoss = G.m->posture;
+    G.shownBoss = G.ghostBoss = duel_posture_max(&G.duel);
     G.hitstop = 0;
     G.slowmo = 1;
     G.slowmoTime = 0;
@@ -1769,7 +1769,7 @@ static void update_actors(float dt) {
     /* O cansaço segue a vida de kojiro e a postura do mestre. */
     if (G.state == ST_DUEL || G.state == ST_INTRO) {
         r->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.renPosture / G.settings.renPosture, 0, 1) : 0;
-        b->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.bossPosture / G.m->posture, 0, 1) : 0;
+        b->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.bossPosture / duel_posture_max(&G.duel), 0, 1) : 0;
     }
     G.renKnock *= expf(-dt * 9);
     G.bossKnock *= expf(-dt * 7);
@@ -2514,8 +2514,9 @@ static void ui_hud(void) {
     float need = 18 + ui_width_f(G.uiBold, name, 24) + (seals ? 16 + seals * SEAL_STEP : 0) + 32 + ui_width(note, 18) + 18;
     float tw = snap(fmaxf(460, need));
     Rectangle top = {snap(UI_W / 2 - tw / 2), 16, tw, 76};
-    ui_status(top, name, note, "postura", seals, G.duel.seal, G.shownBoss, G.ghostBoss, m->posture,
-              pressure ? (Color){150, 40, 30, 255} : (Color){78, 62, 104, 255}, pressure ? (Color){200, 80, 50, 255} : (Color){134, 108, 160, 255});
+    Color barA = pressure ? (Color){150, 40, 30, 255} : (Color){78, 62, 104, 255};
+    Color barB = pressure ? (Color){200, 80, 50, 255} : (Color){134, 108, 160, 255};
+    ui_status(top, name, note, "postura", seals, G.duel.seal, G.shownBoss, G.ghostBoss, duel_posture_max(&G.duel), barA, barB);
     Rectangle bot = {UI_W / 2 - 230, UI_H - 92, 460, 76};
     bool low = G.shownRen <= G.settings.renPosture * 0.25f;
     /* kojiro não tem postura: tem vida, em vermelho, que pulsa quando está no fim */
@@ -2860,7 +2861,7 @@ static void ui_debug(Rectangle dst) {
               mv ? mv->strikes : 1, d->windupDuration * 1000, d->special ? "  ESPECIAL" : "", duel_strike_dual(d) ? "  DUPLO" : "");
     DBG_LINHA(branco, "janela: perfeita %.0f ms, boa %.0f ms   lâmina parte %.0f ms antes, aviso %.0f ms antes",
               st->perfectWindow * 1000, st->goodWindow * 1000, duel_strike_lead(d) * 1000, duel_aviso(d) * 1000);
-    DBG_LINHA(branco, "mestre: postura %.0f / %.0f   selo %d de %d%s", d->bossPosture, d->m->posture, d->seal + 1,
+    DBG_LINHA(branco, "mestre: postura %.0f / %.0f   selo %d de %d%s", d->bossPosture, duel_posture_max(d), d->seal + 1,
               d->m->sealCount > 0 ? d->m->sealCount : 1, duel_under_pressure(d) && d->m->sealCount <= 1 ? "   com pressa" : "");
     DBG_LINHA(branco, "kojiro: vida %.0f / %.0f%s   dano de um erro %.1f", d->renPosture, d->s.renPosture,
               d->burnLeft > 0 ? "  em brasas" : "", duel_ren_damage(d));

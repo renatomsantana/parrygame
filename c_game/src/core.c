@@ -60,8 +60,9 @@ void duel_reset(Duel *d) {
     d->pressBlockedUntil = -100;
     d->attempted = d->attackLaunched = d->cuePlayed = false;
     d->renPosture = d->s.renPosture;
-    d->bossPosture = d->m->posture;
     d->seal = 0;
+    d->bossPosture = duel_posture_max(d);
+    memset(d->stanceSequences, 0, sizeof d->stanceSequences);
     d->stanceIndex = 0;
     d->comboRemaining = d->comboStrike = 0;
     d->move = 0;
@@ -91,10 +92,17 @@ const SealRule *duel_seal_rule(const Duel *d) {
 
 static int seal_total(const Duel *d) { return d->m->sealCount > 0 ? d->m->sealCount : 1; }
 
-bool duel_under_pressure(const Duel *d) { return d->bossPosture <= d->m->posture / 2; }
+float duel_posture_max(const Duel *d) {
+    const SealRule *r = duel_seal_rule(d);
+    return r->posture > 0 ? r->posture : d->m->posture;
+}
+
+bool duel_under_pressure(const Duel *d) { return d->bossPosture <= duel_posture_max(d) / 2; }
 float duel_ren_damage(const Duel *d) {
     float base = d->s.renPosture / (d->m->hitsToFall > 1 ? d->m->hitsToFall : 1);
     if (d->m->damage > 0) base *= d->m->damage;
+    const SealRule *r = duel_seal_rule(d);
+    if (r->damageMultiplier > 0) base *= r->damageMultiplier;
     return d->special ? base * 2 : base;
 }
 
@@ -169,20 +177,33 @@ static void build_schedule(Duel *d) {
     }
 }
 
-/* Sorteia a próxima sequência entre as permitidas na postura e no selo atuais. */
+static bool move_allowed(const Duel *d, const Move *mv) {
+    return (mv->stance < 0 || mv->stance == d->stanceIndex) && mv->minSeal <= d->seal;
+}
+
+/* Sorteia a próxima sequência entre as permitidas na postura e no selo atuais. Numa
+ * postura em ordem, as primeiras seguem a ordem do roster. */
 static int pick_move(Duel *d) {
     const MasterProfile *m = d->m;
+    int n = d->stanceSequences[d->stanceIndex];
+    if (n < duel_stance(d)->ordered) {
+        int k = 0;
+        for (int i = 0; i < m->moveCount; i++) {
+            if (!move_allowed(d, &m->moves[i])) continue;
+            if (k++ == n) return i;
+        }
+    }
     float total = 0;
     for (int i = 0; i < m->moveCount; i++) {
         const Move *mv = &m->moves[i];
-        if ((mv->stance < 0 || mv->stance == d->stanceIndex) && mv->minSeal <= d->seal) total += mv->weight;
+        if (move_allowed(d, mv)) total += mv->weight;
     }
     if (total <= 0) return -1;
     double r = rng_next(&d->rng) * total;
     int last = -1;
     for (int i = 0; i < m->moveCount; i++) {
         const Move *mv = &m->moves[i];
-        if (!((mv->stance < 0 || mv->stance == d->stanceIndex) && mv->minSeal <= d->seal)) continue;
+        if (!move_allowed(d, mv)) continue;
         last = i;
         if (r < mv->weight) return i;
         r -= mv->weight;
@@ -220,6 +241,7 @@ static void begin_attack(Duel *d) {
 
     if (!continuing) {
         d->move = pick_move(d);
+        if (d->stanceIndex >= 0 && d->stanceIndex < MAX_STANCES) d->stanceSequences[d->stanceIndex]++;
         const Move *mv = duel_move(d);
         int strikes = mv ? (mv->strikes < 1 ? 1 : (mv->strikes > MAX_CHAIN ? MAX_CHAIN : mv->strikes)) : 1;
         d->comboRemaining = strikes - 1;
@@ -256,7 +278,7 @@ static void begin_attack(Duel *d) {
         d->blackout = false;
         if (m->blackoutChance > 0) d->blackout = rng_next(&d->rng) < m->blackoutChance;
         /* O especial vale para a sequência inteira. */
-        d->special = m->specialChance > 0 && rng_next(&d->rng) < m->specialChance;
+        d->special = m->specialChance > 0 && !rule->noSpecial && rng_next(&d->rng) < m->specialChance;
         if (d->special) emit(d, EV_SPECIAL, J_NONE, 0, 0, false);
         d->sequences++;
     }
@@ -324,7 +346,7 @@ static void resolve(Duel *d) {
             d->burnRate = duel_ren_damage(d) * d->m->burn / AJ_BRASAS_TEMPO;
             emit(d, EV_BURN, J_NONE, 0, 0, true);
         }
-        if (d->m->healsOnHit) d->bossPosture = clampf(d->bossPosture + s->badBossRecover, 0, d->m->posture);
+        if (d->m->healsOnHit) d->bossPosture = clampf(d->bossPosture + s->badBossRecover, 0, duel_posture_max(d));
     }
 
     d->lastStrikeAt = d->strikeAt;
@@ -351,7 +373,7 @@ static void resolve(Duel *d) {
     if (broke) {
         if (d->seal + 1 < seal_total(d)) {
             d->seal++;
-            d->bossPosture = d->m->posture;
+            d->bossPosture = duel_posture_max(d);
             d->renPosture = clampf(d->renPosture + s->sealHeal * s->renPosture, 0, s->renPosture);
             d->phaseEnd = d->clock + s->sealRecovery;
             emit(d, EV_SEAL, J_NONE, 0, d->seal, false);
