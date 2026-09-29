@@ -559,6 +559,71 @@ static void test_every_master_beatable(void) {
     }
 }
 
+/* Aperta numa cópia do duelo exatamente em `quando` (-1 = não aperta) e devolve o julgamento do golpe. */
+static Judgement probe(const Duel *d, double quando) {
+    Duel c = *d;
+    DuelEvent ev[MAX_EVENTS];
+    duel_drain(&c, ev, MAX_EVENTS);
+    if (quando >= 0) {
+        if (quando > c.clock) duel_tick(&c, quando - c.clock);
+        if (c.phase == PH_WINDUP && c.clock >= quando - 1e-9) duel_press(&c);
+    }
+    for (int n = 0; n < 100000; n++) {
+        int k = duel_drain(&c, ev, MAX_EVENTS);
+        for (int e = 0; e < k; e++) if (ev[e].kind == EV_IMPACT) return ev[e].judgement;
+        if (c.phase == PH_FINISHED) break;
+        duel_tick(&c, 1.0 / 1000);
+    }
+    return J_NONE;
+}
+
+/* Todo golpe de todo mestre tem janela de parry viável: a janela boa inteira cabe na
+ * preparação, a perfeita tem ao menos dois quadros de 60 Hz, apertar no meio da
+ * perfeita dá perfeito, no meio do resto da boa dá bom, e fora dela (ou sem apertar)
+ * dá erro. Cada sequência de cada mestre precisa aparecer ao menos uma vez. */
+static void test_janelas_viaveis(void) {
+    int golpes = 0;
+    for (int i = 0; i < roster_size(); i++) {
+        const MasterProfile *m = roster_get(i);
+        bool visto[MAX_MOVES] = {false};
+        bool ok = true;
+        int seeds = m->isBigBoss ? 120 : 60;
+        for (uint32_t seed = 1; seed <= (uint32_t)seeds && ok; seed++) {
+            Settings s;
+            settings_default(&s);
+            settings_for_level(&s, i);
+            Duel d;
+            duel_init(&d, &s, m, seed);
+            RoboMente r;
+            robo_iniciar(&r, &ROBO_DO_DEMO, seed);
+            int ultimo = -1;
+            while (d.phase != PH_FINISHED && d.clock < 900 && ok) {
+                if (d.phase == PH_WINDUP && d.attacks != ultimo) {
+                    ultimo = d.attacks;
+                    golpes++;
+                    if (d.move >= 0) visto[d.move] = true;
+                    const Stance *st = duel_stance(&d);
+                    double pw = st->perfectWindow, gw = st->goodWindow, inicio = d.strikeAt - d.windupDuration;
+                    const char *mv = duel_move(&d) ? duel_move(&d)->name : "?";
+                    if (!(pw >= 2.0 / 60 - 1e-6 && gw > pw)) { ok = false; CHECK(false, "%s/%s: janela perfeita de %.0f ms", m->name, mv, pw * 1000); }
+                    else if (!(inicio <= d.strikeAt - gw + 1e-9)) { ok = false; CHECK(false, "%s/%s: a janela boa não cabe na preparação (%.0f ms)", m->name, mv, d.windupDuration * 1000); }
+                    else if (probe(&d, d.strikeAt - pw * 0.5) != J_PERFEITO) { ok = false; CHECK(false, "%s/%s golpe %d: o meio da janela perfeita não dá perfeito", m->name, mv, d.comboStrike + 1); }
+                    else if (probe(&d, d.strikeAt - (pw + gw) * 0.5) != J_BOM) { ok = false; CHECK(false, "%s/%s golpe %d: o meio da janela boa não dá bom", m->name, mv, d.comboStrike + 1); }
+                    else if (probe(&d, -1) != J_RUIM) { ok = false; CHECK(false, "%s/%s: sem apertar não dá erro", m->name, mv); }
+                    else if (d.strikeAt - gw - 0.02 >= inicio && probe(&d, d.strikeAt - gw - 0.02) != J_RUIM) { ok = false; CHECK(false, "%s/%s: cedo demais não dá erro", m->name, mv); }
+                }
+                bool p = robo_quer_apertar(&r, &d, ROBO_QUADRO);
+                duel_step(&d, ROBO_QUADRO, p);
+                duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+            }
+        }
+        CHECK(ok, "todo golpe de %s tem janela viável", m->name);
+        for (int k = 0; k < m->moveCount; k++) CHECK(visto[k], "a sequência %s de %s foi testada", m->moves[k].name, m->name);
+    }
+    CHECK(golpes > 5000, "golpes conferidos: %d", golpes);
+    printf("janelas viáveis: %d golpes conferidos\n", golpes);
+}
+
 /* Os robôs, com o mesmo passo e os mesmos tempos do demo: o perfeito vence todos sem
  * errar, quem nunca defende perde de todos, e apertar sem parar também perde. */
 static void test_robos(void) {
@@ -873,6 +938,7 @@ int main(void) {
     test_determinism();
     test_every_master_beatable();
     test_robos();
+    test_janelas_viaveis();
     test_movesets();
     test_traits();
     test_dual();
