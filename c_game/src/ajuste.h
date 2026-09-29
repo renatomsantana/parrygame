@@ -56,7 +56,13 @@
 #define AJ_CALIBRA_BATIDA          0.800f   /* a tela de teste pisca (ou toca) a cada isto */
 #define AJ_CALIBRA_APERTOS             8    /* apertos que contam para a média */
 #define AJ_CALIBRA_ACEITA          0.300f   /* aperto mais longe que isto da batida não conta */
-#define AJ_PAUSA_SEQUENCIA         0.800f   /* pausa depois de cada sequência */
+/* Ritmo: o tempo parado entre os golpes. A espera antes do aviso (o mestre segurando a
+ * preparação) e a pausa depois de cada sequência são só tempo morto: encurtar os dois
+ * deixa a luta mais viva sem tocar em nada que se julga. Do aviso ao contato, as
+ * janelas e o intervalo dentro da sequência não mudam. Antes: espera x1,0 e pausa 0,8 s.
+ * A pausa não pode cair abaixo do fim da animação de recuperação do mestre (0,32 s). */
+#define AJ_ESPERA_X                 0.60f   /* a espera antes do aviso x isto (1 = como antes) */
+#define AJ_PAUSA_SEQUENCIA         0.550f   /* pausa depois de cada sequência */
 #define AJ_PAUSA_SELO              2.200f   /* pausa depois de quebrar um selo do oboro */
 #define AJ_PAUSA_INICIO            0.650f   /* pausa antes do primeiro golpe */
 #define AJ_PRESSA                   0.90f   /* com metade da postura, a preparação x isto */

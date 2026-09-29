@@ -40,6 +40,7 @@ typedef struct {
     float sealHeal;            /* selo quebrado: Ren recupera esta fração da vida */
     float firstWindupDelay;    /* pausa antes do primeiro golpe */
     float pressureSpeed;       /* multiplicador de preparação com metade da postura */
+    float waitScale;           /* multiplicador da espera antes do aviso (a preparação parada) */
     float comboGap;               /* pausa depois de cada golpe de uma sequência */
     float minChainGap;            /* menor intervalo entre contatos de uma sequência */
     float goodHitstop, perfectHitstop, badHitstop, breakHitstop;

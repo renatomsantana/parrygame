@@ -352,7 +352,7 @@ static void test_accelerando(void) {
             const Move *mv = duel_move(&d);
             double aviso = duel_aviso(&d);
             antes[got] = d.windupDuration - aviso;
-            esperado[got] = (mv->windup - taiko->stances[0].aviso) * pow(taiko->accelFactor, got % taiko->accelSteps);
+            esperado[got] = (mv->windup - taiko->stances[0].aviso) * pow(taiko->accelFactor, got % taiko->accelSteps) * s.waitScale;
             if (esperado[got] < AJ_PREPARO_ANTES_DO_AVISO) esperado[got] = AJ_PREPARO_ANTES_DO_AVISO;
             if (fabs(aviso - (taiko->stances[0].aviso + duel_strike_lead_base(&d) - s.attackLead)) > 1e-6) avisoFixo = false;
             got++;
@@ -401,7 +401,7 @@ static void test_pressure(void) {
     while (d.phase != PH_WINDUP) duel_tick(&d, DT);
     const Move *mv = duel_move(&d);
     float aviso = gorou->stances[0].aviso;
-    CHECK(fabsf(d.windupDuration - (aviso + (mv->windup - aviso) * s.pressureSpeed)) < 1e-4,
+    CHECK(fabsf(d.windupDuration - (aviso + (mv->windup - aviso) * s.pressureSpeed * s.waitScale)) < 1e-4,
           "com metade da postura, a espera antes do aviso fica 10%% mais curta");
 }
 
@@ -661,7 +661,7 @@ static void test_preparacao_por_golpe(void) {
                     double aviso = d.strikeAt - duel_cue_time(&d);
                     const Move *mv = duel_move(&d);
                     const Stance *st = duel_stance(&d);
-                    double base = st->aviso + (mv->windup - st->aviso) * duel_seal_rule(&d)->speedMultiplier +
+                    double base = st->aviso + (mv->windup - st->aviso) * duel_seal_rule(&d)->speedMultiplier * s.waitScale +
                                   (duel_strike_lead_base(&d) - s.attackLead);
                     if (m->rhythmJitter > 0) {
                         if (fabs(d.windupDuration - base) > m->rhythmJitter + 1e-4) dentro = false;
@@ -812,10 +812,12 @@ static void test_aperto_cedo(void) {
     DuelEvent ev[MAX_EVENTS];
     int k = duel_drain(&d, ev, MAX_EVENTS);
     CHECK(k >= 1 && ev[k - 1].kind == EV_PRESS && ev[k - 1].i == PRESS_TARDE, "apertar 0,1 s depois de levar o golpe é tarde");
-    duel_tick(&d, 0.5);
+    /* depois da janela de "tarde" e da recarga do gesto, ainda dentro da pausa da sequência */
+    duel_tick(&d, s.inputCooldown + 0.02);
+    CHECK(d.phase == PH_RECOVERY, "0,42 s depois do golpe ainda é a pausa (%.2f s)", s.recovery);
     duel_press(&d);
     k = duel_drain(&d, ev, MAX_EVENTS);
-    CHECK(k >= 1 && ev[k - 1].kind == EV_PRESS && ev[k - 1].i == PRESS_GESTO, "0,6 s depois já é só um gesto");
+    CHECK(k >= 1 && ev[k - 1].kind == EV_PRESS && ev[k - 1].i == PRESS_GESTO, "0,42 s depois já é só um gesto");
 }
 
 /* Tolerância tardia: um aperto até 30 ms depois do contato ainda defende, como bom
@@ -1078,7 +1080,8 @@ static void test_oboro_fases(void) {
                         vistosFase2++;
                     }
                     if (d.seal == 2) {
-                        double esperado = duel_aviso(&d) + (mv->windup - o->stances[2].aviso) * 0.85;
+                        double antes = (mv->windup - o->stances[2].aviso) * 0.85 * s.waitScale;
+                        double esperado = duel_aviso(&d) + (antes < AJ_PREPARO_ANTES_DO_AVISO ? AJ_PREPARO_ANTES_DO_AVISO : antes);
                         if (mv->stance != 2 || strncmp(mv->name, "eco ", 4) || fabs(d.windupDuration - esperado) > 1e-4) fase3 = false;
                         float base = s.renPosture / o->hitsToFall;
                         if (fabsf(duel_ren_damage(&d) - base * 1.25f) > 1e-3f) dano = false;
@@ -1142,6 +1145,95 @@ static void test_vantagem(void) {
     d.advantage = true;
     while (d.phase == PH_WINDUP) duel_tick(&d, DT);   /* sem defesa: ele acerta e se recupera */
     CHECK(!d.advantage && d.bossPosture > s.perfectBossDamage * 0.5f, "o mestre que se recupera sai da vantagem (%.1f)", d.bossPosture);
+}
+
+/* Ritmo: a espera antes do aviso (o mestre segurando a preparação) e a pausa entre
+ * sequências são tempo morto, e encurtam. Nada que se julga muda: golpe a golpe, o
+ * mesmo movimento, o mesmo aviso e o mesmo intervalo dentro da sequência. Com a espera
+ * x1 e a pausa antiga (0,8 s) volta o ritmo de antes. */
+typedef struct { int move, strike; double aviso, gap, espera, contato; } GolpeRitmo;
+
+static int coleta_ritmo(const Settings *s, const MasterProfile *m, uint32_t seed, GolpeRitmo *g, int max, double *duracao) {
+    Duel d;
+    duel_init(&d, s, m, seed);
+    RoboMente r;
+    robo_iniciar(&r, &ROBO_DO_DEMO, seed);
+    int n = 0, ultimo = -1;
+    double contatoAnt = -1, hitAnt = 0;
+    while (n < max && d.clock < 600) {
+        d.bossPosture = 1e6f;   /* sem pressa, e a luta não acaba */
+        d.renPosture = s->renPosture;
+        if (d.phase == PH_WINDUP && d.attacks != ultimo) {
+            ultimo = d.attacks;
+            g[n].move = d.move;
+            g[n].strike = d.comboStrike;
+            g[n].aviso = duel_aviso(&d);
+            g[n].espera = d.windupDuration - duel_aviso(&d);
+            g[n].gap = d.comboStrike > 0 ? d.strikeAt - contatoAnt + hitAnt : 0;
+            g[n].contato = d.strikeAt;
+            contatoAnt = d.strikeAt;
+            n++;
+        }
+        bool p = robo_quer_apertar(&r, &d, ROBO_QUADRO);
+        duel_step(&d, ROBO_QUADRO, p);
+        DuelEvent ev[MAX_EVENTS];
+        int k = duel_drain(&d, ev, MAX_EVENTS);
+        for (int e = 0; e < k; e++) if (ev[e].kind == EV_IMPACT) hitAnt = d.lastHitstop;
+    }
+    *duracao = d.clock;
+    return n;
+}
+
+static void test_ritmo(void) {
+    Settings novo, antigo;
+    settings_default(&novo);
+    settings_default(&antigo);
+    antigo.waitScale = 1;
+    antigo.recovery = 0.8f;
+    CHECK(novo.waitScale == AJ_ESPERA_X && novo.waitScale > 0 && novo.waitScale < 1, "a espera antes do aviso encurta (x%.2f)", novo.waitScale);
+    CHECK(novo.recovery == AJ_PAUSA_SEQUENCIA && novo.recovery < 0.8f, "a pausa entre sequências encurta (%.2f s)", novo.recovery);
+    CHECK(novo.recovery >= 0.40f, "a pausa não corta a recuperação do mestre (0,32 s de hurt, com folga)");
+    bool mesmoGolpe = true, mesmoAviso = true, mesmaCadeia = true, espera = true, maisRapido = true;
+    int golpes = 0;
+    for (int i = 0; i < roster_size(); i++) {
+        const MasterProfile *m = roster_get(i);
+        double dn = 0, da = 0;
+        double tn[64], ta[64];
+        long cn = 0, ca = 0;
+        for (uint32_t seed = 1; seed <= 12; seed++) {
+            GolpeRitmo n[40], a[40];
+            int kn = coleta_ritmo(&novo, m, seed, n, 40, &dn), ka = coleta_ritmo(&antigo, m, seed, a, 40, &da);
+            int k = kn < ka ? kn : ka;
+            cn += kn;
+            ca += ka;
+            (void)tn; (void)ta;
+            for (int j = 0; j < k; j++) {
+                golpes++;
+                if (n[j].move != a[j].move || n[j].strike != a[j].strike) mesmoGolpe = false;
+                /* o 1º golpe avisa no tempo fixo; nos outros o aviso é o contato anterior (o intervalo, abaixo) */
+                if (n[j].strike == 0 && fabs(n[j].aviso - a[j].aviso) > 1e-9) mesmoAviso = false;
+                if (n[j].strike > 0 && fabs(n[j].gap - a[j].gap) > 1e-6) mesmaCadeia = false;
+                /* sem traço aleatório: a espera é a de antes x0,6, com o piso de sempre */
+                if (n[j].strike == 0 && m->rhythmJitter == 0) {
+                    double esp = a[j].espera * novo.waitScale;
+                    if (esp < AJ_PREPARO_ANTES_DO_AVISO) esp = AJ_PREPARO_ANTES_DO_AVISO;
+                    if (fabs(n[j].espera - esp) > 1e-6) espera = false;
+                }
+            }
+        }
+        /* mais golpes no mesmo tempo (o mesmo número de golpes, em menos tempo) */
+        GolpeRitmo n[40], a[40];
+        double tempoN, tempoA;
+        int kn = coleta_ritmo(&novo, m, 3, n, 40, &tempoN), ka = coleta_ritmo(&antigo, m, 3, a, 40, &tempoA);
+        int k = kn < ka ? kn : ka;
+        if (k > 8 && n[k - 1].contato > a[k - 1].contato * 0.90) maisRapido = false;
+    }
+    CHECK(mesmoGolpe, "com o ritmo novo ou o antigo, os mesmos golpes na mesma ordem");
+    CHECK(mesmoAviso, "o aviso não muda (do aviso ao contato é o mesmo tempo)");
+    CHECK(mesmaCadeia, "o intervalo dentro da sequência não muda");
+    CHECK(espera, "a espera antes do aviso é a de antes x%.2f, com o piso de %.0f ms", novo.waitScale, AJ_PREPARO_ANTES_DO_AVISO * 1000);
+    CHECK(maisRapido, "o mesmo número de golpes chega em pelo menos 10%% menos tempo, em todos os mestres");
+    CHECK(golpes > 2000, "ritmo conferido em %d golpes", golpes);
 }
 
 /* Lâmina variável: do garfiel em diante, a lâmina parte entre 140 e 320 ms antes do
@@ -1730,6 +1822,7 @@ int main(void) {
     test_oboro_fases();
     test_vantagem();
     test_lamina_variavel();
+    test_ritmo();
     test_teste_a_mao();
     test_timeline();
     test_movesets();

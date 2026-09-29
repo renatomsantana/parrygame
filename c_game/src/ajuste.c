@@ -24,6 +24,7 @@ void settings_default(Settings *s) {
     s->sealHeal = AJ_SELO_CURA;
     s->firstWindupDelay = AJ_PAUSA_INICIO;
     s->pressureSpeed = AJ_PRESSA;
+    s->waitScale = AJ_ESPERA_X;
     s->comboGap = AJ_PAUSA_NA_CADEIA;
     s->minChainGap = AJ_CADEIA_MIN;
     s->goodHitstop = AJ_HITSTOP_BOM;

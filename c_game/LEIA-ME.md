@@ -79,6 +79,11 @@ Esc enche um anel e pula; segurar o clique acelera).
   0,5 s (que acaba no aviso, nunca na janela boa) e a defesa daquele golpe não sai
   perfeita. Depois do aviso vale uma tentativa só. O jogo mostra "cedo" ou
   "tarde" quando a defesa não pega.
+- **Ritmo:** o mestre não fica parado à toa. A espera antes do aviso (a
+  preparação segurada) vale ×0,6 do que estava no roster (piso de 100 ms) e a pausa
+  depois de cada sequência é de 0,55 s, cerca de 25% mais golpes por minuto. Do
+  aviso ao contato, as janelas e o intervalo dentro da sequência não mudam
+  (`AJ_ESPERA_X` e `AJ_PAUSA_SEQUENCIA`, em `src/ajuste.h`; 1,0 e 0,8 voltam ao antigo).
 - O **hitstop** congela o duelo no impacto, e o tempo dele sai do golpe seguinte da
   sequência: o ritmo é sempre o mesmo, qualquer que seja o resultado.
 - Quando falta **um perfeito** para quebrar a postura, aparece "vantagem". O parry
