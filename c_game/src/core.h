@@ -354,5 +354,9 @@ bool campaign_is_cleared(const Campaign *c, int index);
 int campaign_defeated(const Campaign *c);   /* mestres vencidos, sem contar o BIG BOSS */
 bool campaign_big_boss_open(const Campaign *c);
 bool campaign_advance(Campaign *c);   /* false quando a trilha acabou */
+/* O mestre `index` caiu: marca como vencido e, se é o mestre atual, avança a trilha (no último,
+ * marca a trilha como completa). Pode ser chamada mais de uma vez pela mesma vitória: a segunda
+ * não avança de novo, porque a trilha já não está mais nesse mestre. */
+void campaign_win(Campaign *c, int index);
 
 #endif

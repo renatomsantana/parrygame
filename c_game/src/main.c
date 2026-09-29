@@ -309,6 +309,7 @@ static struct {
     bool teste;               /* uma opção de teste (--teste, --master, --duel, --state, --fase, --final): o progresso não é salvo */
     bool teclas;              /* --teste: as teclas de teste (R V P 1 2 3 N B) funcionam */
     bool autoJogo;            /* APARA_AUTO (tests/teste_save.sh): joga sozinho como o demo, mas salvando */
+    bool lento;               /* APARA_VITORIA_LENTA: depois de salvar a vitória, o jogo anda em tempo real (tests/teste_vitoria.sh) */
     bool rastro;              /* o rastro fantasma do golpe (AJ_RASTRO_FANTASMA; APARA_RASTRO=0/1 só para os testes) */
     bool logImpactos;         /* APARA_LOG_IMPACTOS (tests/teste_rastro.sh): escreve cada impacto e os fantasmas desenhados */
     long fantasmasDesenhados;
@@ -567,6 +568,12 @@ static Vector2 mouse_ui(void) {
 
 #define SAVE_FILE "apara_save.txt"
 
+/* Testes do jogo real (APARA_AUTO): uma linha por marco, para o script saber onde o jogo está. */
+static void marco_de_teste(const char *nome) {
+    if (G.autoJogo) fprintf(stderr, "TESTE_MARCO %s\n", nome);
+    if (G.autoJogo && !strcmp(nome, "vitoria_salva") && getenv("APARA_VITORIA_LENTA")) G.lento = true;
+}
+
 static void save_game(void) {
     if (G.demo || G.teste) return;
     FILE *f = fopen(SAVE_FILE, "w");
@@ -610,6 +617,15 @@ static bool load_game(void) {
     G.camp.completed = done;
     G.camp.loreSeen = lore;
     return true;
+}
+
+/* O mestre atual caiu: a vitória vale desde o golpe final (marca, avança a trilha e salva), sem
+ * esperar o clique na tela de vitória nem o fim da cena. Pode ser chamada de novo pela mesma
+ * vitória (campaign_win não avança duas vezes). */
+static void registra_vitoria(void) {
+    campaign_win(&G.camp, G.m->id - 1);
+    save_game();
+    marco_de_teste("vitoria_salva");
 }
 
 /* ------------------------------------------------------------------ */
@@ -1680,6 +1696,7 @@ static void handle_events(void) {
             }
             case EV_FINISHED:
                 if (e->flag) {
+                    registra_vitoria();
                     start_disarm();
                 } else {
                     ren_falls();
@@ -2236,15 +2253,14 @@ static void scene_done(void) {
             break;
         case SCENE_KNEEL:
             /* a música corta; fica só o vento */
+            marco_de_teste("escolha_final");
             G.choice = -1;
             G.windOnly = true;
             set_state(ST_CHOICE);
             audio_music(MUSIC_WIND);
             break;
         default:
-            campaign_mark_cleared(&G.camp, G.camp.index);
-            campaign_advance(&G.camp);
-            save_game();
+            registra_vitoria();
             set_state(ST_ENDING);
             break;
     }
@@ -3262,7 +3278,8 @@ static void update_lines(float dt, void (*done)(void)) {
 static void intro_done(void) { start_duel(); }
 
 static void outro_done(void) {
-    campaign_mark_cleared(&G.camp, G.camp.index);
+    registra_vitoria();
+    marco_de_teste("tela_de_vitoria");
     set_state(ST_CLEARED);
     audio_play(SND_VICTORY, 0.8f, 1);
 }
@@ -3313,8 +3330,6 @@ static void update_cleared(float dt) {
     f_update(&G.bossS, dt);
     update_sword(dt);
     if (G.stateTime > 1.0f && pressed()) {
-        campaign_advance(&G.camp);
-        save_game();
         if (G.m->visitCount > 0) {
             /* a cabana de hanzo: kojiro conta quem venceu, hanzo fala do próximo */
             start_lines(G.m->visit, G.m->visitCount, ST_VISIT);
@@ -3590,6 +3605,7 @@ int main(int argc, char **argv) {
             break;
         }
         EndDrawing();
+        if (G.lento) WaitTime(1.0 / 30);
     }
 
     audio_shutdown();

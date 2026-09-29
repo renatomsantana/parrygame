@@ -1927,6 +1927,24 @@ static void test_campaign(void) {
     CHECK(campaign_defeated(&c) == 12, "cada aprendiz contado uma vez só");
 }
 
+/* A vitória vale desde o golpe final: campaign_win marca e avança uma vez só, mesmo chamada de novo. */
+static void test_campaign_win(void) {
+    Campaign c;
+    campaign_reset(&c);
+    campaign_win(&c, 0);
+    CHECK(campaign_is_cleared(&c, 0) && c.index == 1 && !c.completed, "a vitória marca o mestre e avança a trilha");
+    campaign_win(&c, 0);
+    CHECK(c.index == 1 && campaign_defeated(&c) == 1, "a mesma vitória de novo não avança outra vez");
+    campaign_win(&c, 5);
+    CHECK(campaign_is_cleared(&c, 5) && c.index == 1, "vencer outro mestre (teste) só marca, sem mover a trilha");
+    for (int i = 1; i < 12; i++) campaign_win(&c, i);
+    CHECK(c.index == 12 && campaign_big_boss_open(&c) && !c.completed, "os doze vencidos abrem o oboro, sem completar");
+    campaign_win(&c, 12);
+    CHECK(c.index == 12 && c.completed && campaign_is_cleared(&c, 12), "vencer o oboro completa a trilha");
+    campaign_win(&c, 12);
+    CHECK(c.index == 12 && c.completed, "e de novo não muda nada");
+}
+
 /* Traços de cada mestre: o primeiro é de katana e lento, garfiel faz combos longos,
  * karasu e arashi usam as duas lâminas, suiren ataca de longe e jinshi é o mais variado. */
 static void test_traits(void) {
@@ -2106,6 +2124,7 @@ int main(void) {
     test_levels();
     test_special();
     test_campaign();
+    test_campaign_win();
     printf("%d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
 }

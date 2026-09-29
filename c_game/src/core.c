@@ -612,3 +612,8 @@ bool campaign_advance(Campaign *c) {
     c->completed = true;
     return false;
 }
+
+void campaign_win(Campaign *c, int index) {
+    campaign_mark_cleared(c, index);
+    if (c->index == index) campaign_advance(c);
+}
