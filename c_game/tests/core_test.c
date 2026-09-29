@@ -123,18 +123,12 @@ static void test_roster(const Settings *s) {
             lastGood = m->stances[0].goodWindow;
         }
     }
-    /* Sem contar quem bate mais pesado (arashi), o dano de um erro só cresce. */
-    float lastDamage = 0;
-    for (int i = 0; i < roster_size(); i++) {
-        float dmg = s->renPosture / roster_get(i)->hitsToFall;
-        CHECK(dmg >= lastDamage, "o dano de um erro não diminui ao longo da trilha (%s)", roster_get(i)->name);
-        lastDamage = dmg;
-    }
-    Duel da, dn;
+    /* Quantos erros kojiro aguenta é de cada mestre (a curva de dificuldade, conferida
+     * pelos robôs em test_curva); arashi bate mais pesado que o próprio erro dele. */
+    Duel da;
     duel_init(&da, s, roster_get(9), 1);
-    duel_init(&dn, s, roster_get(10), 1);
-    CHECK(roster_get(9)->damage > 1 && duel_ren_damage(&da) > duel_ren_damage(&dn), "arashi bate mais pesado que o mestre seguinte");
-    static const int HITS[13] = {50, 45, 40, 35, 30, 25, 22, 20, 18, 15, 12, 10, 10};
+    CHECK(roster_get(9)->damage > 1 && duel_ren_damage(&da) > s->renPosture / roster_get(9)->hitsToFall, "arashi bate mais pesado");
+    static const int HITS[13] = {8, 8, 7, 7, 4, 7, 4, 4, 4, 10, 4, 5, 4};
     for (int i = 0; i < roster_size(); i++) {
         CHECK(roster_get(i)->hitsToFall == HITS[i], "Ren aguenta %d erros contra %s", HITS[i], roster_get(i)->name);
         CHECK(roster_get(i)->senseiCount >= 1, "hanzo tem conselho para %s", roster_get(i)->name);
@@ -247,13 +241,14 @@ static void test_perfect_victory(void) {
 static void test_no_defense(void) {
     Tally t = play(roster_get(0), 7, -1, 120);
     CHECK(t.finished == 1 && !t.victory, "sem defesa, Ren cai");
-    CHECK(t.impacts[J_RUIM] == 50, "contra o primeiro mestre, kojiro aguenta 50 erros (%d)", t.impacts[J_RUIM]);
+    CHECK(t.impacts[J_RUIM] == roster_get(0)->hitsToFall, "contra o primeiro mestre, kojiro aguenta %d erros (%d)", roster_get(0)->hitsToFall,
+          t.impacts[J_RUIM]);
     /* Cada lâmina que entra tira o mesmo; o golpe duplo errado conta duas, e arashi pesa mais. */
     for (int i = 0; i < MASTER_COUNT; i++) {
         const MasterProfile *m = roster_get(i);
         Tally k = play(m, 7, -1, 600);
         int need = (int)ceilf(m->hitsToFall / (m->damage > 0 ? m->damage : 1) - 1e-4f);
-        if (m->burn > 0) CHECK(k.blades < need && k.blades >= need / 2, "%s: as brasas derrubam Ren antes (%d de %d lâminas)", m->name, k.blades, need);
+        if (m->burn > 0) CHECK(k.blades <= need && k.blades >= need / 2, "%s: as brasas ajudam a derrubar Ren (%d de %d lâminas)", m->name, k.blades, need);
         else CHECK(k.blades >= need && k.blades <= need + 1, "%s derruba Ren com %d lâminas (%d)", m->name, need, k.blades);
     }
 }
@@ -966,6 +961,37 @@ static void test_cura_em_porcentagem(void) {
     CHECK(AJ_PERFEITO_CURA > 0 && AJ_PERFEITO_CURA < 0.1f && AJ_SELO_CURA > AJ_PERFEITO_CURA && AJ_SELO_CURA <= 0.5f, "curas em fração da vida");
 }
 
+/* A curva de dificuldade, pelos robôs (make robos mostra a tabela). O humano casual que
+ * decora o ritmo: nos quatro primeiros, 95% ou mais; depois a vitória só cai (com 4 pontos
+ * de folga para o sorteio), chega a uns 65% no jinshi e a uns 40% no oboro. E apertar sem
+ * olhar, em qualquer ritmo de 0,05 a 0,8 s, perde de todos. */
+static void test_curva(void) {
+    double anterior = 101, vit[ROSTER_SIZE];
+    bool crescente = true;
+    for (int i = 0; i < roster_size(); i++) {
+        int w = 0;
+        for (uint32_t k = 0; k < 300; k++) w += robo_lutar(&ROBO_HUMANO_CASUAL, roster_get(i), i, 20000 + k).vitoria;
+        vit[i] = 100.0 * w / 300;
+        if (vit[i] > anterior + 4) crescente = false;
+        if (vit[i] < anterior) anterior = vit[i];
+    }
+    for (int i = 0; i < 4; i++) CHECK(vit[i] >= 95, "o humano casual vence %s em 95%% ou mais (%.0f%%)", roster_get(i)->name, vit[i]);
+    CHECK(crescente, "a dificuldade só cresce pela trilha");
+    CHECK(vit[9] <= vit[8] + 4 && vit[9] >= vit[10] - 4 && vit[9] >= vit[11] - 4, "arashi não é mais difícil que yoru e jinshi (%.0f, %.0f, %.0f)",
+          vit[9], vit[10], vit[11]);
+    CHECK(vit[11] >= 55 && vit[11] <= 75, "uns 65%% no jinshi (%.0f%%)", vit[11]);
+    CHECK(vit[12] >= 30 && vit[12] <= 55 && vit[12] <= vit[11], "uns 40%% no oboro (%.0f%%)", vit[12]);
+    static const float PERIODOS[12] = {0.05f, 0.10f, 0.15f, 0.20f, 0.25f, 0.30f, 0.35f, 0.40f, 0.45f, 0.50f, 0.60f, 0.80f};
+    int spam = 0;
+    for (int i = 0; i < roster_size(); i++)
+        for (int p = 0; p < 12; p++) {
+            Robo r = ROBO_APERTA_SEM_PARAR;
+            r.periodo = PERIODOS[p];
+            for (uint32_t k = 0; k < 20; k++) spam += robo_lutar(&r, roster_get(i), i, 30000 + k).vitoria;
+        }
+    CHECK(spam == 0, "apertar sem olhar, em qualquer ritmo de 0,05 a 0,8 s, perde de todos (%d vitórias em 3120)", spam);
+}
+
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
  * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
 static void test_timeline(void) {
@@ -1029,6 +1055,10 @@ static void test_robos(void) {
         CHECK(perdeu == 5, "quem nunca defende perde de %s (%d/5)", m->name, perdeu);
         CHECK(spamPerdeu == 15, "martelar o botão perde de %s (%d/15)", m->name, spamPerdeu);
     }
+    /* o robô do demo aperta dentro de qualquer janela perfeita do jogo */
+    for (int i = 0; i < roster_size(); i++)
+        for (int k = 0; k < roster_get(i)->stanceCount; k++)
+            CHECK(AJ_ROBO_ANTECEDENCIA < roster_get(i)->stances[k].perfectWindow, "o robô do demo cabe na janela perfeita de %s", roster_get(i)->name);
     /* o demo usa o mesmo robô: aperta no máximo AJ_ROBO_ANTECEDENCIA antes do contato */
     Settings s;
     settings_default(&s);
@@ -1247,8 +1277,9 @@ static void test_far_lead(void) {
     Duel d;
     duel_init(&d, &s, roster_get(8), 5);
     bool seen = false;
-    for (int n = 0; n < 200 && !seen; n++) {
-        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+    for (int n = 0; n < 200 && !seen && d.phase != PH_FINISHED; n++) {
+        d.renPosture = s.renPosture;   /* só mede o tempo da lança: kojiro não cai */
+        while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
         const Move *mv = duel_move(&d);
         bool far = mv && mv->look == LOOK_FAR && d.comboStrike == 0;
         double launchAt = -1;
@@ -1331,6 +1362,7 @@ int main(void) {
     test_tolerancia_tardia();
     test_calibracao();
     test_cura_em_porcentagem();
+    test_curva();
     test_timeline();
     test_movesets();
     test_traits();

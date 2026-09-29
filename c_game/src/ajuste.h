@@ -99,6 +99,6 @@
 #define AJ_RECUO_QUEBRA_MESTRE      10.0f
 
 /* ---- Robô do demo (--demo) e dos testes -------------------------------- */
-#define AJ_ROBO_ANTECEDENCIA       0.040f   /* aperta no máximo este tempo antes do contato */
+#define AJ_ROBO_ANTECEDENCIA       0.030f   /* aperta no máximo este tempo antes do contato (menos que a menor janela perfeita) */
 
 #endif
