@@ -63,6 +63,7 @@ void duel_reset(Duel *d) {
     d->seal = 0;
     d->bossPosture = duel_posture_max(d);
     memset(d->stanceSequences, 0, sizeof d->stanceSequences);
+    d->advantage = false;
     d->stanceIndex = 0;
     d->comboRemaining = d->comboStrike = 0;
     d->move = 0;
@@ -98,6 +99,10 @@ float duel_posture_max(const Duel *d) {
 }
 
 bool duel_under_pressure(const Duel *d) { return d->bossPosture <= duel_posture_max(d) / 2; }
+
+bool duel_advantage(const Duel *d) {
+    return d->phase != PH_FINISHED && d->bossPosture > 0 && d->bossPosture <= d->s.perfectBossDamage + 1e-4f;
+}
 float duel_ren_damage(const Duel *d) {
     float base = d->s.renPosture / (d->m->hitsToFall > 1 ? d->m->hitsToFall : 1);
     if (d->m->damage > 0) base *= d->m->damage;
@@ -370,7 +375,14 @@ static void resolve(Duel *d) {
     /* i: bit 0 = golpe de duas lâminas, bit 1 = a segunda lâmina acertou kojiro */
     emit(d, EV_IMPACT, j, (float)lead, (dual ? 1 : 0) | (second ? 2 : 0), broke);
 
+    /* vantagem: falta só um perfeito (a postura cabe num perfeito) */
+    bool vantagem = !broke && duel_advantage(d);
+    if (vantagem != d->advantage) {
+        d->advantage = vantagem;
+        emit(d, EV_ADVANTAGE, J_NONE, 0, 0, vantagem);
+    }
     if (broke) {
+        d->advantage = false;
         if (d->seal + 1 < seal_total(d)) {
             d->seal++;
             d->bossPosture = duel_posture_max(d);

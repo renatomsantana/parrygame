@@ -215,7 +215,8 @@ typedef enum {
     EV_COMBO,         /* i: golpes na sequência (só quando mais de um) */
     EV_FINISHED,      /* flag: vitória */
     EV_SPECIAL,       /* o próximo golpe é especial: dano dobrado */
-    EV_BURN           /* flag: kojiro pegou fogo (true) ou as brasas apagaram (false) */
+    EV_BURN,          /* flag: kojiro pegou fogo (true) ou as brasas apagaram (false) */
+    EV_ADVANTAGE      /* flag: falta só um perfeito para quebrar a postura (true) ou não falta mais (false) */
 } EventKind;
 
 /* O que foi cada aperto aceito. */
@@ -262,6 +263,7 @@ typedef struct {
     int comboRemaining, comboStrike;
     int move, sequences;          /* sequência atual e quantas já saíram */
     int stanceSequences[MAX_STANCES]; /* sequências que já saíram em cada postura */
+    bool advantage;               /* falta só um perfeito para quebrar a postura */
     int attacks, perfects, goods, bads;
     /* o último golpe julgado e o último gesto, para o overlay de debug e o "cedo/tarde" */
     double lastStrikeAt;          /* instante do contato (-1 = nenhum ainda) */
@@ -289,6 +291,7 @@ const Stance *duel_stance(const Duel *d);
 const SealRule *duel_seal_rule(const Duel *d);
 bool duel_under_pressure(const Duel *d);          /* mestre com metade da postura ou menos */
 float duel_posture_max(const Duel *d);            /* postura cheia do selo atual */
+bool duel_advantage(const Duel *d);               /* um perfeito agora quebra a postura */
 bool duel_in_combo(const Duel *d);
 const Move *duel_move(const Duel *d);             /* sequência em curso (NULL = golpe simples) */
 float duel_ren_damage(const Duel *d);     /* dano de um erro contra este mestre */

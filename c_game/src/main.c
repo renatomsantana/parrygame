@@ -1577,6 +1577,13 @@ static void handle_events(void) {
                 break;
             case EV_COMBO:
                 break;
+            case EV_ADVANTAGE:
+                /* falta um perfeito: o próximo parry perfeito quebra a postura e é a execução */
+                if (e->flag) {
+                    fx_popup(&G.fx, "vantagem", (Vector2){b->x + b->offsetX, GROUND_LOW - 64}, 1.0f, (Color){255, 214, 120, 255});
+                    audio_play(SND_GEM, 0.8f, 1.2f);
+                }
+                break;
             case EV_BURN: {
                 Vector2 at = {r->x + r->offsetX, GROUND_LOW - 22};
                 if (e->flag) {
@@ -2509,6 +2516,10 @@ static void ui_hud(void) {
     const MasterProfile *m = G.m;
     bool pressure = duel_under_pressure(&G.duel) && m->sealCount <= 1;
     const char *name = lower(m->name), *note = lower(m->sealCount > 1 ? duel_stance(&G.duel)->name : m->style);
+    /* vantagem: um perfeito agora quebra a postura (e é a execução) */
+    bool vantagem = G.duel.advantage && G.state == ST_DUEL;
+    if (vantagem) note = "vantagem: um perfeito quebra";
+    float brilho = vantagem ? 0.5f + 0.5f * sinf(G.time * 10) : 0;
     int seals = m->sealCount > 1 ? m->sealCount : 0;
     /* A placa cresce para caber nome, selos e postura na mesma linha. */
     float need = 18 + ui_width_f(G.uiBold, name, 24) + (seals ? 16 + seals * SEAL_STEP : 0) + 32 + ui_width(note, 18) + 18;
@@ -2516,6 +2527,10 @@ static void ui_hud(void) {
     Rectangle top = {snap(UI_W / 2 - tw / 2), 16, tw, 76};
     Color barA = pressure ? (Color){150, 40, 30, 255} : (Color){78, 62, 104, 255};
     Color barB = pressure ? (Color){200, 80, 50, 255} : (Color){134, 108, 160, 255};
+    if (vantagem) {
+        barA = (Color){(unsigned char)(170 + 60 * brilho), 130, 30, 255};
+        barB = (Color){(unsigned char)(220 + 35 * brilho), 190, 70, 255};
+    }
     ui_status(top, name, note, "postura", seals, G.duel.seal, G.shownBoss, G.ghostBoss, duel_posture_max(&G.duel), barA, barB);
     Rectangle bot = {UI_W / 2 - 230, UI_H - 92, 460, 76};
     bool low = G.shownRen <= G.settings.renPosture * 0.25f;
@@ -2861,8 +2876,9 @@ static void ui_debug(Rectangle dst) {
               mv ? mv->strikes : 1, d->windupDuration * 1000, d->special ? "  ESPECIAL" : "", duel_strike_dual(d) ? "  DUPLO" : "");
     DBG_LINHA(branco, "janela: perfeita %.0f ms, boa %.0f ms   lâmina parte %.0f ms antes, aviso %.0f ms antes",
               st->perfectWindow * 1000, st->goodWindow * 1000, duel_strike_lead(d) * 1000, duel_aviso(d) * 1000);
-    DBG_LINHA(branco, "mestre: postura %.0f / %.0f   selo %d de %d%s", d->bossPosture, duel_posture_max(d), d->seal + 1,
-              d->m->sealCount > 0 ? d->m->sealCount : 1, duel_under_pressure(d) && d->m->sealCount <= 1 ? "   com pressa" : "");
+    DBG_LINHA(branco, "mestre: postura %.0f / %.0f   selo %d de %d%s%s", d->bossPosture, duel_posture_max(d), d->seal + 1,
+              d->m->sealCount > 0 ? d->m->sealCount : 1, duel_under_pressure(d) && d->m->sealCount <= 1 ? "   com pressa" : "",
+              d->advantage ? "   VANTAGEM" : "");
     DBG_LINHA(branco, "kojiro: vida %.0f / %.0f%s   dano de um erro %.1f", d->renPosture, d->s.renPosture,
               d->burnLeft > 0 ? "  em brasas" : "", duel_ren_damage(d));
     DBG_LINHA(branco, "hitstop %.0f ms   câmera lenta %.2fx   perfeitos %d  bons %d  erros %d   atraso: vídeo %.0f, áudio %.0f ms",

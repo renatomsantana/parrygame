@@ -1078,6 +1078,49 @@ static void test_oboro_fases(void) {
     CHECK(dano, "na fase 3, o dano de um erro x1,25");
 }
 
+/* Vantagem: quando falta só um perfeito para quebrar a postura, o duelo avisa (e o
+ * perfeito seguinte quebra: é a execução, sem botão). Se o mestre se recupera acima
+ * disso, a vantagem acaba. */
+static void test_vantagem(void) {
+    Settings s;
+    settings_default(&s);
+    for (int i = 0; i < roster_size(); i++) {
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 12);
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        d.bossPosture = s.perfectBossDamage + s.goodBossDamage * 0.5f;   /* um bom leva à vantagem */
+        CHECK(!duel_advantage(&d), "%s: ainda sem vantagem", roster_get(i)->name);
+        const Stance *st = duel_stance(&d);
+        duel_tick(&d, d.strikeAt - (st->perfectWindow + st->goodWindow) / 2 - d.clock);
+        duel_press(&d);
+        DuelEvent ev[MAX_EVENTS];
+        bool avisou = false;
+        while (d.phase == PH_WINDUP) duel_tick(&d, DT);
+        int k = duel_drain(&d, ev, MAX_EVENTS);
+        for (int e = 0; e < k; e++) if (ev[e].kind == EV_ADVANTAGE && ev[e].flag) avisou = true;
+        CHECK(d.lastJudgement == J_BOM && avisou && d.advantage && duel_advantage(&d), "%s: um bom deixa a vantagem, e o duelo avisa", roster_get(i)->name);
+        /* o próximo perfeito quebra (a menos que seja o último golpe de uma sequência sem fim) */
+        while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
+        int sealAntes = d.seal;
+        duel_tick(&d, d.strikeAt - 0.01 - d.clock);
+        duel_press(&d);
+        while (d.phase == PH_WINDUP) duel_tick(&d, DT);
+        bool quebrou = d.phase == PH_FINISHED || d.seal > sealAntes;
+        k = duel_drain(&d, ev, MAX_EVENTS);
+        bool acabou = false;
+        for (int e = 0; e < k; e++) if (ev[e].kind == EV_ADVANTAGE && !ev[e].flag) acabou = true;
+        CHECK(quebrou && acabou && !d.advantage, "%s: o perfeito seguinte quebra a postura e a vantagem acaba", roster_get(i)->name);
+    }
+    /* quem se cura sai da vantagem */
+    Duel d;
+    duel_init(&d, &s, roster_get(4), 3);   /* garfiel se recupera quando acerta */
+    while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+    d.bossPosture = s.perfectBossDamage * 0.5f;
+    d.advantage = true;
+    while (d.phase == PH_WINDUP) duel_tick(&d, DT);   /* sem defesa: ele acerta e se recupera */
+    CHECK(!d.advantage && d.bossPosture > s.perfectBossDamage * 0.5f, "o mestre que se recupera sai da vantagem (%.1f)", d.bossPosture);
+}
+
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
  * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
 static void test_timeline(void) {
@@ -1450,6 +1493,7 @@ int main(void) {
     test_cura_em_porcentagem();
     test_curva();
     test_oboro_fases();
+    test_vantagem();
     test_timeline();
     test_movesets();
     test_traits();
