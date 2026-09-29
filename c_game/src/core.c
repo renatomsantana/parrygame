@@ -302,7 +302,7 @@ static void resolve(Duel *d) {
             emit(d, EV_BURN, J_NONE, 0, 0, false);
         }
         d->bossPosture -= s->perfectBossDamage;
-        d->renPosture = clampf(d->renPosture + s->perfectRenRecover, 0, s->renPosture);
+        d->renPosture = clampf(d->renPosture + s->perfectHeal * s->renPosture, 0, s->renPosture);
     } else if (d->attempted && lead >= -s->lateGrace - 1e-6 && lead <= st->goodWindow + 1e-6) {
         j = J_BOM;
         d->goods++;
@@ -352,7 +352,7 @@ static void resolve(Duel *d) {
         if (d->seal + 1 < seal_total(d)) {
             d->seal++;
             d->bossPosture = d->m->posture;
-            d->renPosture = clampf(d->renPosture + s->sealRenRecover, 0, s->renPosture);
+            d->renPosture = clampf(d->renPosture + s->sealHeal * s->renPosture, 0, s->renPosture);
             d->phaseEnd = d->clock + s->sealRecovery;
             emit(d, EV_SEAL, J_NONE, 0, d->seal, false);
             /* uma postura por selo: o selo novo traz a dele */

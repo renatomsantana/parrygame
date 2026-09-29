@@ -16,12 +16,12 @@
 /* ---- O que cada resultado do parry faz ------------------------------- */
 #define AJ_PERFEITO_POSTURA         20.0f   /* perfeito: o mestre perde isto de postura */
 #define AJ_PERFEITO_POSTURA_NIVEL    2.0f   /*   + isto por mestre já vencido */
-#define AJ_PERFEITO_CURA            20.0f   /* perfeito: kojiro recupera isto de vida */
+#define AJ_PERFEITO_CURA             0.03f  /* perfeito: kojiro recupera esta fração da vida (3%) */
 #define AJ_BOM_POSTURA               6.0f   /* bom: o mestre perde isto de postura */
 #define AJ_BOM_POSTURA_NIVEL         0.5f   /*   + isto por mestre já vencido */
 #define AJ_BOM_CUSTO                 4.0f   /* bom: o impacto ainda tira isto de vida */
 #define AJ_ERRO_MESTRE_RECUPERA     20.0f   /* erro: o mestre com cura recupera isto de postura */
-#define AJ_SELO_CURA                75.0f   /* oboro: cada selo quebrado devolve isto de vida */
+#define AJ_SELO_CURA                 0.30f  /* oboro: cada selo quebrado devolve esta fração da vida */
 
 /* ---- Tempos do duelo ------------------------------------------------- */
 #define AJ_LAMINA_PARTE            0.220f   /* a lâmina parte este tempo antes do contato */

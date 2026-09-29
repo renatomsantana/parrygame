@@ -9,7 +9,7 @@ void settings_default(Settings *s) {
     s->goodBossDamage = AJ_BOM_POSTURA;
     s->goodRenCost = AJ_BOM_CUSTO;
     s->perfectBossDamage = AJ_PERFEITO_POSTURA;
-    s->perfectRenRecover = AJ_PERFEITO_CURA;
+    s->perfectHeal = AJ_PERFEITO_CURA;
     s->inputCooldown = AJ_ENTRE_GESTOS;
     s->lateGrace = AJ_TOLERANCIA_TARDIA;
     s->latency = 0;
@@ -17,7 +17,7 @@ void settings_default(Settings *s) {
     s->attackLead = AJ_LAMINA_PARTE;
     s->recovery = AJ_PAUSA_SEQUENCIA;
     s->sealRecovery = AJ_PAUSA_SELO;
-    s->sealRenRecover = AJ_SELO_CURA;
+    s->sealHeal = AJ_SELO_CURA;
     s->firstWindupDelay = AJ_PAUSA_INICIO;
     s->pressureSpeed = AJ_PRESSA;
     s->comboGap = AJ_PAUSA_NA_CADEIA;

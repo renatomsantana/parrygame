@@ -82,10 +82,10 @@ static void test_ajuste(void) {
     settings_default(&s);
     CHECK(s.renPosture == AJ_VIDA_INICIAL && s.postureGrowth == AJ_VIDA_POR_MESTRE, "vida de kojiro vem do ajuste.h");
     CHECK(s.perfectBossDamage == AJ_PERFEITO_POSTURA && s.perfectGrowth == AJ_PERFEITO_POSTURA_NIVEL &&
-          s.perfectRenRecover == AJ_PERFEITO_CURA, "perfeito vem do ajuste.h");
+          s.perfectHeal == AJ_PERFEITO_CURA, "perfeito vem do ajuste.h");
     CHECK(s.goodBossDamage == AJ_BOM_POSTURA && s.goodGrowth == AJ_BOM_POSTURA_NIVEL && s.goodRenCost == AJ_BOM_CUSTO,
           "bom vem do ajuste.h");
-    CHECK(s.badBossRecover == AJ_ERRO_MESTRE_RECUPERA && s.sealRenRecover == AJ_SELO_CURA,
+    CHECK(s.badBossRecover == AJ_ERRO_MESTRE_RECUPERA && s.sealHeal == AJ_SELO_CURA,
           "erro e selo vêm do ajuste.h");
     CHECK(s.attackLead == AJ_LAMINA_PARTE && s.inputCooldown == AJ_ENTRE_GESTOS &&
           s.recovery == AJ_PAUSA_SEQUENCIA && s.sealRecovery == AJ_PAUSA_SELO && s.firstWindupDelay == AJ_PAUSA_INICIO &&
@@ -446,7 +446,7 @@ static void test_big_boss(void) {
         duel_tick(&d, DT);
     }
     CHECK(d.seal == 1, "primeiro selo quebrado");
-    CHECK(fabsf(d.renPosture - (40 + s.perfectRenRecover + s.sealRenRecover)) < 1e-4, "selo quebrado devolve fôlego (%.1f)", d.renPosture);
+    CHECK(fabsf(d.renPosture - (40 + (s.perfectHeal + s.sealHeal) * s.renPosture)) < 1e-4, "selo quebrado devolve fôlego (%.1f)", d.renPosture);
     CHECK(fabsf(d.bossPosture - oboro->posture) < 1e-4, "novo selo com postura cheia");
     Tally lose = play(oboro, 99, -1, 600);
     CHECK(!lose.victory && lose.finished == 1, "sem defesa, Ren cai contra o Oboro");
@@ -946,6 +946,26 @@ static void test_calibracao(void) {
     CHECK(medidos > 100 && pior < 0.0015, "com 60 ms de atraso, o ritmo das sequências não muda (%d golpes, pior %.1f ms)", medidos, pior * 1000);
 }
 
+/* A cura do perfeito é uma fração da vida (e a do selo do oboro também): vale o mesmo
+ * em qualquer ponto da trilha, em proporção. */
+static void test_cura_em_porcentagem(void) {
+    for (int i = 0; i < roster_size(); i++) {
+        Settings s;
+        settings_default(&s);
+        settings_for_level(&s, i);
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 8);
+        d.renPosture = s.renPosture * 0.5f;
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        duel_tick(&d, d.strikeAt - 0.01 - d.clock);
+        duel_press(&d);
+        while (d.phase == PH_WINDUP) duel_tick(&d, DT);
+        CHECK(d.lastJudgement == J_PERFEITO && fabsf(d.renPosture - s.renPosture * (0.5f + AJ_PERFEITO_CURA)) < 1e-3,
+              "%s: o perfeito cura %.0f%% da vida (%.1f de %.0f)", roster_get(i)->name, AJ_PERFEITO_CURA * 100, d.renPosture, s.renPosture);
+    }
+    CHECK(AJ_PERFEITO_CURA > 0 && AJ_PERFEITO_CURA < 0.1f && AJ_SELO_CURA > AJ_PERFEITO_CURA && AJ_SELO_CURA <= 0.5f, "curas em fração da vida");
+}
+
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
  * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
 static void test_timeline(void) {
@@ -1310,6 +1330,7 @@ int main(void) {
     test_aperto_cedo();
     test_tolerancia_tardia();
     test_calibracao();
+    test_cura_em_porcentagem();
     test_timeline();
     test_movesets();
     test_traits();

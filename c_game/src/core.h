@@ -26,7 +26,7 @@ typedef struct {
     float goodBossDamage;      /* bom: o mestre perde */
     float goodRenCost;         /* bom: Ren perde um pouco (o impacto ainda pesa) */
     float perfectBossDamage;   /* perfeito: o mestre perde */
-    float perfectRenRecover;   /* perfeito: Ren recupera */
+    float perfectHeal;         /* perfeito: Ren recupera esta fração da vida */
     float inputCooldown;       /* intervalo mínimo entre gestos dentro do mesmo golpe */
     float lateGrace;           /* um aperto até isto depois do contato ainda é bom */
     float latency;             /* atraso de vídeo (calibração): o aperto conta isto mais cedo */
@@ -34,7 +34,7 @@ typedef struct {
     float attackLead;          /* a lâmina parte este tempo antes do contato */
     float recovery;            /* pausa depois de cada golpe */
     float sealRecovery;        /* pausa depois de quebrar um selo do BIG BOSS */
-    float sealRenRecover;      /* selo quebrado: Ren recupera o fôlego */
+    float sealHeal;            /* selo quebrado: Ren recupera esta fração da vida */
     float firstWindupDelay;    /* pausa antes do primeiro golpe */
     float pressureSpeed;       /* multiplicador de preparação com metade da postura */
     float comboGap;               /* pausa depois de cada golpe de uma sequência */
