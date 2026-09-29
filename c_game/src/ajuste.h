@@ -26,7 +26,13 @@
 /* ---- Tempos do duelo ------------------------------------------------- */
 #define AJ_LAMINA_PARTE            0.220f   /* a lâmina parte este tempo antes do contato */
 #define AJ_LANCA_PARTE_X            1.75f   /* a estocada de longe parte 1,75 x mais cedo */
-#define AJ_ENTRE_GESTOS            0.300f   /* intervalo mínimo entre dois apertos */
+#define AJ_ENTRE_GESTOS            0.300f   /* fora da preparação, intervalo mínimo entre dois apertos */
+/* Aperto cedo: antes do aviso, apertar não trava o golpe, mas dá uma recarga de no
+ * máximo isto, que termina no aviso (nunca cobre a janela boa, que vem depois dele), e
+ * a defesa daquele golpe não sai perfeita (no máximo bom). Depois do aviso vale uma
+ * tentativa só. */
+#define AJ_RECARGA_CEDO            0.500f
+#define AJ_TARDE_JANELA            0.250f   /* um aperto até isto depois de um golpe que entrou é "tarde" */
 #define AJ_PAUSA_SEQUENCIA         0.800f   /* pausa depois de cada sequência */
 #define AJ_PAUSA_SELO              2.200f   /* pausa depois de quebrar um selo do oboro */
 #define AJ_PAUSA_INICIO            0.650f   /* pausa antes do primeiro golpe */

@@ -728,6 +728,94 @@ static void test_hitstop_ritmo(void) {
     CHECK(medidos > 300 && pior < 0.0015, "em tempo real, o ritmo da sequência não muda com o hitstop (%d golpes, pior %.1f ms)", medidos, pior * 1000);
 }
 
+/* Aperto cedo. Antes do aviso, apertar não trava o golpe: dá uma recarga de no máximo
+ * 0,5 s que termina no aviso, e a defesa daquele golpe não sai perfeita. A recarga nunca
+ * cobre a janela boa: em todo golpe de todo mestre, apertando cedo em qualquer ponto
+ * antes do aviso, a janela boa inteira continua aceitando a defesa. Depois do aviso,
+ * vale uma tentativa só. E o jogo sabe dizer "cedo" e "tarde". */
+static void test_aperto_cedo(void) {
+    int golpes = 0, sondas = 0;
+    bool recargaOk = true, janelaOk = true, cedoOk = true, travaOk = true;
+    for (int i = 0; i < roster_size() && recargaOk && janelaOk; i++) {
+        const MasterProfile *m = roster_get(i);
+        for (uint32_t seed = 1; seed <= 25; seed++) {
+            Settings s;
+            settings_default(&s);
+            settings_for_level(&s, i);
+            Duel d;
+            duel_init(&d, &s, m, seed);
+            RoboMente r;
+            robo_iniciar(&r, &ROBO_DO_DEMO, seed);
+            int ultimo = -1;
+            while (d.phase != PH_FINISHED && d.clock < 900) {
+                if (d.phase == PH_WINDUP && d.attacks != ultimo) {
+                    ultimo = d.attacks;
+                    golpes++;
+                    DuelTimeline t = duel_timeline(&d);
+                    /* cedo, em qualquer ponto antes do aviso (a cada 5 ms) */
+                    for (double q = t.start; q < t.cue - 1e-6; q += 0.005) {
+                        Duel c = d;
+                        if (q > c.clock) duel_tick(&c, q - c.clock);
+                        if (c.phase != PH_WINDUP) break;
+                        duel_drain(&c, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+                        bool aceito = duel_press(&c);
+                        DuelEvent ev[MAX_EVENTS];
+                        int k = duel_drain(&c, ev, MAX_EVENTS);
+                        if (!aceito || c.attempted || k < 1 || ev[k - 1].kind != EV_PRESS || ev[k - 1].i != PRESS_CEDO) cedoOk = false;
+                        if (c.pressBlockedUntil > t.cue + 1e-9 || c.pressBlockedUntil > q + AJ_RECARGA_CEDO + 1e-9 ||
+                            c.pressBlockedUntil >= t.goodFrom) recargaOk = false;
+                        sondas++;
+                    }
+                    /* a janela boa inteira continua valendo: apertou cedo no começo e logo
+                     * antes do aviso, e depois no começo, no meio e no fim da janela boa */
+                    double cedos[2] = {t.start + 1e-4, t.cue - 0.002};
+                    double depois[3] = {t.goodFrom + 0.001, (t.goodFrom + t.strike) / 2, t.strike - 0.001};
+                    for (int a = 0; a < 2 && cedos[a] < t.cue && cedos[a] >= t.start; a++)
+                        for (int b = 0; b < 3; b++) {
+                            Duel c = d;
+                            if (cedos[a] > c.clock) duel_tick(&c, cedos[a] - c.clock);
+                            duel_press(&c);
+                            Judgement j = probe(&c, depois[b]);
+                            if (j != J_BOM) janelaOk = false;
+                        }
+                    /* depois do aviso, uma tentativa só: cedo demais trava e dá erro */
+                    if (t.goodFrom - t.cue > 0.02) {
+                        Duel c = d;
+                        duel_tick(&c, t.cue + 0.005 - c.clock);
+                        duel_press(&c);
+                        if (!c.attempted || duel_press(&c) || probe(&c, t.goodFrom + 0.01) != J_RUIM) travaOk = false;
+                    }
+                }
+                bool p = robo_quer_apertar(&r, &d, ROBO_QUADRO);
+                duel_step(&d, ROBO_QUADRO, p);
+                duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+            }
+        }
+    }
+    CHECK(recargaOk, "a recarga do aperto cedo termina no aviso, no máximo, e nunca cobre a janela boa");
+    CHECK(janelaOk, "depois de apertar cedo, a janela boa inteira continua aceitando a defesa (sem perfeito)");
+    CHECK(cedoOk, "antes do aviso, apertar não trava o golpe e é marcado como cedo");
+    CHECK(travaOk, "depois do aviso, vale uma tentativa só");
+    CHECK(golpes > 2000 && sondas > 50000, "aperto cedo conferido em %d golpes, %d pontos", golpes, sondas);
+    /* tarde: um aperto logo depois de um golpe que entrou sem defesa */
+    Settings s;
+    settings_default(&s);
+    Duel d;
+    duel_init(&d, &s, roster_get(0), 2);
+    while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+    while (d.phase == PH_WINDUP) duel_tick(&d, DT);
+    duel_tick(&d, 0.1);
+    duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+    duel_press(&d);
+    DuelEvent ev[MAX_EVENTS];
+    int k = duel_drain(&d, ev, MAX_EVENTS);
+    CHECK(k >= 1 && ev[k - 1].kind == EV_PRESS && ev[k - 1].i == PRESS_TARDE, "apertar 0,1 s depois de levar o golpe é tarde");
+    duel_tick(&d, 0.5);
+    duel_press(&d);
+    k = duel_drain(&d, ev, MAX_EVENTS);
+    CHECK(k >= 1 && ev[k - 1].kind == EV_PRESS && ev[k - 1].i == PRESS_GESTO, "0,6 s depois já é só um gesto");
+}
+
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
  * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
 static void test_timeline(void) {
@@ -768,11 +856,13 @@ static void test_timeline(void) {
 }
 
 /* Os robôs, com o mesmo passo e os mesmos tempos do demo: o perfeito vence todos sem
- * errar, quem nunca defende perde de todos, e apertar sem parar também perde. */
+ * errar, quem nunca defende perde de todos, e martelar o botão também perde. (O
+ * "metrônomo cego", que aperta devagar sem olhar, é cobrado na curva: ver test_curva.) */
 static void test_robos(void) {
     Robo spam[3] = {ROBO_APERTA_SEM_PARAR, ROBO_APERTA_SEM_PARAR, ROBO_APERTA_SEM_PARAR};
-    spam[0].periodo = 0.10f;
-    spam[2].periodo = 0.30f;
+    spam[0].periodo = 0.05f;
+    spam[1].periodo = 0.10f;
+    spam[2].periodo = 0.20f;
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
         int venceu = 0, limpo = 0, perdeu = 0, spamPerdeu = 0;
@@ -787,7 +877,7 @@ static void test_robos(void) {
         }
         CHECK(venceu == 20 && limpo == 20, "o robô do demo vence %s só com perfeitos (%d/20, %d limpas)", m->name, venceu, limpo);
         CHECK(perdeu == 5, "quem nunca defende perde de %s (%d/5)", m->name, perdeu);
-        CHECK(spamPerdeu == 15, "apertar sem parar perde de %s (%d/15)", m->name, spamPerdeu);
+        CHECK(spamPerdeu == 15, "martelar o botão perde de %s (%d/15)", m->name, spamPerdeu);
     }
     /* o demo usa o mesmo robô: aperta no máximo AJ_ROBO_ANTECEDENCIA antes do contato */
     Settings s;
@@ -1087,6 +1177,7 @@ int main(void) {
     test_aviso();
     test_preparacao_por_golpe();
     test_hitstop_ritmo();
+    test_aperto_cedo();
     test_timeline();
     test_movesets();
     test_traits();

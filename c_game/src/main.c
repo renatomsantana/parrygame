@@ -1440,6 +1440,13 @@ static void second_blade(void) {
     G.renKnock = fmaxf(G.renKnock, AJ_RECUO_SEGUNDA_LAMINA);
 }
 
+/* "cedo" ou "tarde" em cima de kojiro: por que a defesa não pegou. */
+static void cedo_tarde(const char *quando) {
+    Vector2 at = {G.ren.x + G.ren.offsetX, GROUND_LOW - 58};
+    Color c = quando[0] == 'c' ? (Color){150, 205, 255, 255} : (Color){255, 170, 90, 255};
+    fx_popup(&G.fx, quando, at, 0.9f, c);
+}
+
 /* O brilho do aviso na lâmina do mestre. O jinshi, que avisa sem som, ganha o brilho
  * da lua: maior, frio e com um anel. */
 static void aviso_brilho(bool primeiro) {
@@ -1495,12 +1502,16 @@ static void handle_events(void) {
                 aviso_brilho(e->i == 0);
                 break;
             case EV_PRESS:
+                if (e->i == PRESS_CEDO) cedo_tarde("cedo");
+                if (e->i == PRESS_TARDE) cedo_tarde("tarde");
                 rig_pose(r, G.duel.phase == PH_WINDUP ? parry_pose(strike_look()) : POSE_PARRY, 0.06f, EASE_OUT);
                 sprite_press();
                 G.renParryTime = 0;
                 audio_play(SND_GESTURE, 0.8f, 1 + (rand() % 7) * 0.02f);
                 break;
             case EV_IMPACT:
+                /* defendeu cedo demais (depois do aviso vale uma tentativa só) */
+                if (e->judgement == J_RUIM && e->a > duel_stance(&G.duel)->goodWindow) cedo_tarde("cedo");
                 on_impact(e);
                 sprite_impact(e);
                 G.special = false;
@@ -2760,7 +2771,9 @@ static void ui_debug(Rectangle dst) {
     const Move *mv = duel_move(d);
     Color branco = {235, 235, 235, 255}, cinza = {160, 160, 170, 255};
     DBG_LINHA(YELLOW, "DEBUG (F3)  %s  %s", G.m->name, st->name && st->name[0] ? st->name : "");
-    DBG_LINHA(branco, "fase: %s   relógio %.2f s   quadro %.1f ms", FASE[d->phase], d->clock, GetFrameTime() * 1000);
+    DBG_LINHA(branco, "fase: %s   relógio %.2f s   quadro %.1f ms%s%s", FASE[d->phase], d->clock, GetFrameTime() * 1000,
+              d->earlyUsed && d->phase == PH_WINDUP ? "   apertou cedo: sem perfeito" : "",
+              d->pressBlockedUntil > d->clock ? "   recarga" : "");
     DBG_LINHA(branco, "golpe: %s  %d de %d   preparação %.0f ms%s%s", mv ? mv->name : "-", d->comboStrike + 1,
               mv ? mv->strikes : 1, d->windupDuration * 1000, d->special ? "  ESPECIAL" : "", duel_strike_dual(d) ? "  DUPLO" : "");
     DBG_LINHA(branco, "janela: perfeita %.0f ms, boa %.0f ms   lâmina parte %.0f ms antes, aviso %.0f ms antes",

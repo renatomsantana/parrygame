@@ -57,6 +57,7 @@ void duel_reset(Duel *d) {
     d->blackout = false;
     d->special = false;
     d->lastPress = -100;
+    d->pressBlockedUntil = -100;
     d->attempted = d->attackLaunched = d->cuePlayed = false;
     d->renPosture = d->s.renPosture;
     d->bossPosture = d->m->posture;
@@ -198,6 +199,8 @@ static void begin_attack(Duel *d) {
     /* Cada golpe novo zera a espera entre gestos: um gesto feito no intervalo
      * não pode roubar a defesa do golpe que está chegando. */
     d->lastPress = -100;
+    d->pressBlockedUntil = -100;
+    d->earlyUsed = false;
 
     bool continuing = d->comboRemaining > 0;
     if (continuing) { d->comboRemaining--; d->comboStrike++; }
@@ -284,7 +287,7 @@ static void resolve(Duel *d) {
     double lead = d->attempted ? d->strikeAt - d->lastPress : -1;
     bool dual = duel_strike_dual(d), second = false;
     Judgement j;
-    if (d->attempted && lead >= 0 && lead <= st->perfectWindow + 1e-6) {
+    if (d->attempted && lead >= 0 && lead <= st->perfectWindow + 1e-6 && !d->earlyUsed) {
         j = J_PERFEITO;
         d->perfects++;
         /* o parry perfeito apaga as brasas */
@@ -404,12 +407,30 @@ void duel_step(Duel *d, double dt, bool press) {
 
 bool duel_press(Duel *d) {
     if (d->phase == PH_FINISHED) return false;
-    if (d->clock - d->lastPress < d->s.inputCooldown) return false;
+    if (d->clock < d->pressBlockedUntil - 1e-9) return false;
     if (d->phase == PH_WINDUP && d->attempted) return false;
-    d->lastPress = d->clock;
-    if (d->phase == PH_WINDUP) d->attempted = true;
-    else d->lastGestureAt = d->clock;
-    emit(d, EV_PRESS, J_NONE, 0, 0, false);
+    PressKind kind;
+    if (d->phase == PH_WINDUP) {
+        double aviso = duel_cue_time(d);
+        if (d->clock < aviso - 1e-9) {
+            /* antes do aviso: não trava o golpe; a recarga acaba no aviso, no máximo (a janela
+             * boa vem sempre depois dele). O custo: a defesa deste golpe não sai perfeita. */
+            double fim = d->clock + AJ_RECARGA_CEDO;
+            d->pressBlockedUntil = fim < aviso ? fim : aviso;
+            d->earlyUsed = true;
+            kind = PRESS_CEDO;
+        } else {
+            d->lastPress = d->clock;
+            d->attempted = true;
+            kind = PRESS_TENTATIVA;
+        }
+    } else {
+        d->lastGestureAt = d->clock;
+        d->pressBlockedUntil = d->clock + d->s.inputCooldown;
+        bool tarde = d->lastJudgement == J_RUIM && d->lastLead < 0 && d->clock - d->lastStrikeAt <= AJ_TARDE_JANELA;
+        kind = tarde ? PRESS_TARDE : PRESS_GESTO;
+    }
+    emit(d, EV_PRESS, J_NONE, 0, kind, false);
     return true;
 }
 

@@ -200,7 +200,7 @@ typedef enum {
     EV_WINDUP,        /* a: duração */
     EV_LAUNCH,        /* a lâmina parte */
     EV_CUE,           /* o aviso; i: qual golpe da sequência (0 = o primeiro) */
-    EV_PRESS,         /* gesto aceito */
+    EV_PRESS,         /* gesto aceito; i: PressKind */
     EV_IMPACT,        /* judgement, a: antecedência (-1 = sem defesa), flag: quebrou postura */
     EV_STANCE,        /* i: nova postura */
     EV_SEAL,          /* i: novo selo (o BIG BOSS entrou em outra fase) */
@@ -209,6 +209,14 @@ typedef enum {
     EV_SPECIAL,       /* o próximo golpe é especial: dano dobrado */
     EV_BURN           /* flag: kojiro pegou fogo (true) ou as brasas apagaram (false) */
 } EventKind;
+
+/* O que foi cada aperto aceito. */
+typedef enum {
+    PRESS_GESTO,      /* fora da preparação */
+    PRESS_TENTATIVA,  /* a defesa do golpe (depois do aviso: uma só) */
+    PRESS_CEDO,       /* antes do aviso: não trava o golpe, dá uma recarga curta */
+    PRESS_TARDE       /* logo depois de um golpe que entrou sem defesa */
+} PressKind;
 
 typedef struct {
     EventKind kind;
@@ -234,7 +242,9 @@ typedef struct {
     float windupDuration;
     bool blackout, special;
     double lastPress;
+    double pressBlockedUntil;     /* recarga: nenhum aperto aceito antes disto */
     bool attempted, attackLaunched, cuePlayed;
+    bool earlyUsed;               /* apertou antes do aviso neste golpe: a defesa não sai perfeita */
 
     float renPosture;             /* vida de kojiro */
     float burnLeft, burnRate;     /* brasas: segundos que faltam e vida perdida por segundo */
