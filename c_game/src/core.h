@@ -249,6 +249,7 @@ typedef struct {
     Judgement lastJudgement;
     double lastLead;              /* segundos entre o aperto e o contato (-1 = sem aperto) */
     double lastGestureAt;         /* último aperto fora da preparação (-100 = nenhum) */
+    float lastHitstop;            /* quanto o último impacto congela o duelo (o jogo aplica) */
 
     ScheduleItem schedule[2];
     int scheduleCount, scheduleIndex;
@@ -273,6 +274,9 @@ float duel_ren_damage(const Duel *d);     /* dano de um erro contra este mestre 
 bool duel_strike_dual(const Duel *d);     /* o golpe que vem é de duas lâminas */
 float duel_strike_lead(const Duel *d);    /* segundos entre a lâmina partir e o contato */
 float duel_aviso(const Duel *d);          /* segundos entre o aviso e o contato */
+/* Quanto um impacto congela o duelo: o perfeito mais que o bom, a quebra mais ainda;
+ * se a segunda lâmina de um golpe duplo entrou, pelo menos o do erro. */
+float duel_hitstop_for(const Settings *s, Judgement j, bool broke, bool secondBlade);
 double duel_cue_time(const Duel *d);      /* instante do aviso do golpe em preparação */
 /* Linha do tempo do golpe em preparação (tempos do relógio do duelo), para o overlay
  * de debug: perfeito se o aperto cai em [perfectFrom, strike], bom em [goodFrom, strike]. */

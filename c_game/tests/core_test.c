@@ -594,7 +594,7 @@ static void test_aviso(void) {
         duel_init(&d, &s, roster_get(i), 5);
         int primeiros = 0, cadeias = 0;
         bool ok = true;
-        double contatoAnterior = -1;
+        double contatoAnterior = -1, congelado = 0;
         for (int n = 0; n < 60 && d.phase != PH_FINISHED; n++) {
             while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
             if (d.phase == PH_FINISHED) break;
@@ -617,10 +617,11 @@ static void test_aviso(void) {
                 if (fabs((contato - aviso) - esperado) > 0.0015 || aviso > partida) ok = false;
                 primeiros++;
             } else {
-                if (contatoAnterior < 0 || contato - contatoAnterior < s.minChainGap - 1e-3 || aviso > partida) ok = false;
+                if (contatoAnterior < 0 || contato - contatoAnterior + congelado < s.minChainGap - 1e-3 || aviso > partida) ok = false;
                 cadeias++;
             }
             contatoAnterior = contato;
+            congelado = d.lastHitstop;
         }
         CHECK(ok && primeiros > 0, "%s: o aviso sai no tempo fixo, antes da lâmina partir (%d primeiros, %d na sequência)",
               roster_get(i)->name, primeiros, cadeias);
@@ -675,6 +676,56 @@ static void test_preparacao_por_golpe(void) {
         else CHECK(fixo, "%s: cada sequência prepara sempre no mesmo tempo", m->name);
         CHECK(avisoFixo, "%s: do aviso ao contato, sempre o mesmo tempo", m->name);
     }
+}
+
+/* O hitstop congela o duelo (o jogo para de avançar o relógio). Dentro de uma sequência
+ * ele sai da preparação seguinte: em tempo real, o próximo contato chega exatamente o
+ * intervalo da sequência depois do anterior, seja o impacto perfeito, bom ou erro. */
+static void test_hitstop_ritmo(void) {
+    Settings s;
+    settings_default(&s);
+    CHECK(duel_hitstop_for(&s, J_PERFEITO, false, false) == s.perfectHitstop && duel_hitstop_for(&s, J_PERFEITO, true, false) == s.breakHitstop &&
+          duel_hitstop_for(&s, J_BOM, false, false) == s.goodHitstop && duel_hitstop_for(&s, J_RUIM, false, false) == s.badHitstop &&
+          duel_hitstop_for(&s, J_BOM, false, true) >= s.badHitstop, "hitstop de cada impacto");
+    static const double LEADS[3] = {0.02, -2, -1};   /* perfeito, bom (meio da janela boa), sem aperto */
+    int medidos = 0;
+    double pior = 0;
+    for (int i = 0; i < roster_size(); i++) {
+        for (int c = 0; c < 3; c++) {
+            Duel d;
+            duel_init(&d, &s, roster_get(i), 21 + c);
+            double real = 0, congela = 0, contatoReal = -1;
+            int passos = 0;
+            while (d.phase != PH_FINISHED && d.clock < 120 && passos++ < 2000000) {
+                d.renPosture = s.renPosture;   /* ninguém cai: só o ritmo importa */
+                if (d.bossPosture < 60) d.bossPosture = roster_get(i)->posture;
+                if (congela > 0) { congela -= 1.0 / 1000; real += 1.0 / 1000; continue; }
+                if (d.phase == PH_WINDUP && !d.attempted) {
+                    const Stance *st = duel_stance(&d);
+                    double lead = LEADS[c] == -2 ? (st->perfectWindow + st->goodWindow) / 2 : LEADS[c];
+                    if (lead >= 0 && d.strikeAt - d.clock <= lead) duel_press(&d);
+                }
+                duel_tick(&d, 1.0 / 1000);
+                real += 1.0 / 1000;
+                DuelEvent ev[MAX_EVENTS];
+                int k = duel_drain(&d, ev, MAX_EVENTS);
+                for (int e = 0; e < k; e++) {
+                    if (ev[e].kind != EV_IMPACT) continue;
+                    /* o instante real do contato: agora menos o que o relógio passou do contato */
+                    double agora = real - (d.clock - d.lastStrikeAt);
+                    if (d.comboStrike > 0 && contatoReal >= 0) {
+                        const Move *mv = duel_move(&d);
+                        double erro = fabs((agora - contatoReal) - mv->gaps[d.comboStrike - 1]);
+                        if (erro > pior) pior = erro;
+                        medidos++;
+                    }
+                    contatoReal = agora;
+                    congela = d.lastHitstop;
+                }
+            }
+        }
+    }
+    CHECK(medidos > 300 && pior < 0.0015, "em tempo real, o ritmo da sequência não muda com o hitstop (%d golpes, pior %.1f ms)", medidos, pior * 1000);
 }
 
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
@@ -850,8 +901,10 @@ static void test_movesets(void) {
         if (mv && mv->strikes >= 2 && d.comboStrike == 0) {
             double first = d.strikeAt;
             while (d.phase == PH_WINDUP) { if (!d.attempted && d.strikeAt - d.clock <= 0.01) duel_press(&d); duel_tick(&d, DT); }
+            double congelado = d.lastHitstop;   /* o jogo congela o duelo esse tanto */
             while (d.phase != PH_WINDUP) duel_tick(&d, DT);
-            CHECK(fabs((d.strikeAt - first) - mv->gaps[0]) < 0.01, "segundo golpe chega %.2f s depois (%.3f)", mv->gaps[0], d.strikeAt - first);
+            double real = d.strikeAt - first + congelado;
+            CHECK(fabs(real - mv->gaps[0]) < 0.001, "segundo golpe chega %.2f s (de tempo real) depois (%.3f)", mv->gaps[0], real);
             checked = true;
         }
         while (d.phase == PH_WINDUP) { if (!d.attempted && d.strikeAt - d.clock <= 0.01) duel_press(&d); duel_tick(&d, DT); }
@@ -1033,6 +1086,7 @@ int main(void) {
     test_janelas_viaveis();
     test_aviso();
     test_preparacao_por_golpe();
+    test_hitstop_ritmo();
     test_timeline();
     test_movesets();
     test_traits();

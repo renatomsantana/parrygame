@@ -49,6 +49,9 @@
 #define AJ_HITSTOP_BOM             0.045f
 #define AJ_HITSTOP_ERRO            0.045f
 #define AJ_HITSTOP_QUEBRA          0.160f   /* o parry que quebra a postura */
+/* O hitstop congela o duelo. Dentro de uma sequência ele sai da preparação seguinte:
+ * o próximo contato chega no mesmo tempo real, qualquer que seja o resultado. */
+#define AJ_PREPARO_MIN_CADEIA      0.080f   /* na sequência, a preparação é pelo menos a partida da lâmina mais isto */
 
 #define AJ_TREMOR_PERFEITO           1.5f   /* força (px) do tremor da tela */
 #define AJ_TREMOR_PERFEITO_TEMPO    0.10f   /*   e quanto dura */

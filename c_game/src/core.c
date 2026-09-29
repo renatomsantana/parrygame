@@ -72,6 +72,7 @@ void duel_reset(Duel *d) {
     d->lastJudgement = J_NONE;
     d->lastLead = -1;
     d->lastGestureAt = -100;
+    d->lastHitstop = 0;
 }
 
 const Stance *duel_stance(const Duel *d) {
@@ -221,10 +222,12 @@ static void begin_attack(Duel *d) {
 
     double duration;
     if (continuing) {
-        /* O próximo contato chega exatamente `gap` segundos depois do anterior. */
+        /* O próximo contato chega exatamente `gap` segundos (de tempo real) depois do
+         * anterior: o hitstop do impacto anterior congelou o duelo e sai daqui. */
         double gap = mv ? mv->gaps[d->comboStrike - 1] : s->minChainGap;
         if (gap < s->minChainGap) gap = s->minChainGap;
-        duration = gap - s->comboGap;
+        duration = d->lastStrikeAt + gap - d->lastHitstop - d->clock;
+        if (duration < duel_strike_lead(d) + AJ_PREPARO_MIN_CADEIA) duration = duel_strike_lead(d) + AJ_PREPARO_MIN_CADEIA;
     } else {
         /* A preparação da sequência: do aviso ao contato é sempre o mesmo tempo (o aviso
          * da postura; na lança, mais o tempo da ponta viajando). A pressa, a aceleração,
@@ -239,7 +242,7 @@ static void begin_attack(Duel *d) {
         if (antes < AJ_PREPARO_ANTES_DO_AVISO) antes = AJ_PREPARO_ANTES_DO_AVISO;
         duration = duel_aviso(d) + antes;
     }
-    if (duration < duel_strike_lead(d) + 0.1) duration = duel_strike_lead(d) + 0.1;
+    if (!continuing && duration < duel_strike_lead(d) + 0.1) duration = duel_strike_lead(d) + 0.1;
     d->windupDuration = (float)duration;
 
     if (!continuing) {
@@ -265,6 +268,12 @@ static void fire(Duel *d, ScheduleKind kind) {
 }
 
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+float duel_hitstop_for(const Settings *s, Judgement j, bool broke, bool secondBlade) {
+    float h = j == J_PERFEITO ? (broke ? s->breakHitstop : s->perfectHitstop) : j == J_BOM ? s->goodHitstop : s->badHitstop;
+    if (secondBlade && h < s->badHitstop) h = s->badHitstop;
+    return h;
+}
 
 static void resolve(Duel *d) {
     const Settings *s = &d->s;
@@ -314,6 +323,12 @@ static void resolve(Duel *d) {
     d->lastLead = lead;
 
     bool broke = d->bossPosture <= 0;
+    d->lastHitstop = duel_hitstop_for(s, j, broke, second);
+    /* na sequência, a pausa entre golpes já passa congelada no hitstop */
+    if (d->comboRemaining > 0 && !broke) {
+        double pausa = s->comboGap - d->lastHitstop;
+        d->phaseEnd = d->clock + (pausa > 0 ? pausa : 0);
+    }
     if (broke) {
         d->bossPosture = 0;
         d->comboRemaining = 0; /* a quebra interrompe o composto */

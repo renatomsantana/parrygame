@@ -1260,10 +1260,11 @@ static void second_blade(void);
 static void on_impact(const DuelEvent *e) {
     Vector2 at = clash_point();
     Rig *r = &G.ren, *b = &G.boss;
+    /* o núcleo diz quanto congelar (e desconta isso do próximo golpe da sequência) */
+    G.hitstop = G.duel.lastHitstop;
     b->trail = false;
     switch (e->judgement) {
         case J_PERFEITO:
-            G.hitstop = e->flag ? G.settings.breakHitstop : G.settings.perfectHitstop;
             G.aberr = 1.5f;
             audio_play(SND_PERFECT, 1, 1 + (rand() % 5) * 0.02f);
             fx_burst(&G.fx, P_SPARK, at, 26, 170, 1.2f, -0.5f, (Color){255, 255, 230, 255}, (Color){255, 200, 90, 255});
@@ -1283,7 +1284,6 @@ static void on_impact(const DuelEvent *e) {
             G.renKnock = AJ_RECUO_PERFEITO_KOJIRO;
             break;
         case J_BOM:
-            G.hitstop = G.settings.goodHitstop;
             audio_play(SND_GOOD, 0.9f, 1);
             fx_burst(&G.fx, P_SPARK, at, 10, 110, 1.0f, -0.6f, (Color){255, 230, 120, 255}, (Color){255, 170, 50, 255});
             fx_flash(&G.fx, (Color){255, 230, 120, 40}, 1);
@@ -1296,7 +1296,6 @@ static void on_impact(const DuelEvent *e) {
             G.bossKnock = AJ_RECUO_BOM_MESTRE;
             break;
         default: {
-            G.hitstop = G.settings.badHitstop;
             G.aberr = 2.5f;
             audio_play(SND_BAD, 1, 1);
             Vector2 hit = {r->x + 4, GROUND_LOW - 28};
@@ -1439,7 +1438,6 @@ static void second_blade(void) {
     r->flash = 1;
     r->flashColor = (Color){255, 80, 60, 255};
     G.renKnock = fmaxf(G.renKnock, AJ_RECUO_SEGUNDA_LAMINA);
-    G.hitstop = fmaxf(G.hitstop, G.settings.badHitstop);
 }
 
 /* O brilho do aviso na lâmina do mestre. O jinshi, que avisa sem som, ganha o brilho
