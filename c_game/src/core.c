@@ -175,6 +175,13 @@ float duel_aviso(const Duel *d) {
     return duel_stance(d)->aviso + (duel_strike_lead_base(d) - d->s.attackLead);
 }
 
+float duel_launch_progress(const Duel *d) {
+    if (d->phase != PH_WINDUP) return 0;
+    const double partida = d->strikeAt - duel_strike_lead(d);
+    if (d->clock < partida || d->clock >= d->strikeAt) return 0;
+    return (float)((d->clock - partida) / (d->strikeAt - partida));
+}
+
 double duel_cue_time(const Duel *d) {
     double t = d->strikeAt - duel_aviso(d), start = d->strikeAt - d->windupDuration;
     return t < start ? start : t;

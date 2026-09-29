@@ -1364,6 +1364,58 @@ static void test_calibracao_alta(void) {
     CHECK(cabe, "a lâmina parte no máximo o tempo que falta, e nunca menos de %.0f ms nas sequências", AJ_LAMINA_MIN * 1000);
 }
 
+/* Rastro fantasma (só desenho). A função do núcleo que guia o rastro dá 0 antes da partida
+ * da lâmina e do contato em diante, e cresce de 0 a 1 entre os dois: o rastro nunca aparece
+ * no instante do julgamento, e ler o duelo não o muda (o teste compara o duelo antes e
+ * depois). As constantes do rastro moram no ajuste.h. */
+static void test_rastro_fantasma(void) {
+    CHECK(AJ_RASTRO_FANTASMA == 0 || AJ_RASTRO_FANTASMA == 1, "o rastro fantasma liga (1) e desliga (0) no ajuste.h");
+    CHECK(AJ_RASTRO_FANTASMAS >= 1 && AJ_RASTRO_FANTASMAS <= 6 && AJ_RASTRO_ESPACO > 0 && AJ_RASTRO_ALFA > 0 && AJ_RASTRO_ALFA <= 1,
+          "constantes do rastro dentro do que o desenho aceita");
+    Settings s;
+    settings_default(&s);
+    long golpes = 0, passos = 0;
+    bool zeroAntes = true, zeroNoContato = true, cresce = true, dentro = true, intacto = true, ultimoPerto1 = true;
+    for (int i = 0; i < roster_size(); i++)
+        for (uint32_t seed = 1; seed <= 6; seed++) {
+            Duel d;
+            duel_init(&d, &s, roster_get(i), seed);
+            int ultimo = -1;
+            for (int n = 0; n < 30 && d.phase != PH_FINISHED;) {
+                d.bossPosture = 1e6f;
+                d.renPosture = s.renPosture;
+                if (d.phase == PH_WINDUP && d.attacks != ultimo) {
+                    ultimo = d.attacks;
+                    n++;
+                    golpes++;
+                    /* varre o golpe inteiro numa cópia, de 2 em 2 ms, sem apertar */
+                    Duel c = d;
+                    float anterior = 0, ultimoValor = 0;
+                    while (c.phase == PH_WINDUP && c.clock < c.strikeAt + 0.001) {
+                        Duel antes = c;
+                        float p = duel_launch_progress(&c);
+                        if (memcmp(&antes, &c, sizeof c) != 0) intacto = false;
+                        passos++;
+                        if (c.clock < c.strikeAt - duel_strike_lead(&c) && p != 0) zeroAntes = false;
+                        if (c.clock >= c.strikeAt && p != 0) zeroNoContato = false;
+                        if (p < 0 || p > 1) dentro = false;
+                        if (p > 0 && p + 1e-6f < anterior) cresce = false;
+                        if (p > 0) { anterior = p; ultimoValor = p; }
+                        duel_tick(&c, 0.002);
+                    }
+                    if (ultimoValor < 0.9f) ultimoPerto1 = false;
+                }
+                bool p = d.phase == PH_WINDUP && !d.attempted && d.strikeAt - d.clock <= 0.03;
+                duel_step(&d, 1.0 / 60, p);
+                duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+            }
+        }
+    CHECK(zeroAntes, "antes da partida da lâmina não há rastro");
+    CHECK(zeroNoContato, "do contato em diante, no instante do julgamento, não há rastro (nunca se vê o contato antes do impacto)");
+    CHECK(dentro && cresce && ultimoPerto1, "entre a partida e o contato o rastro cresce de 0 a 1");
+    CHECK(intacto, "ler o rastro não muda o duelo (%ld leituras em %ld golpes)", passos, golpes);
+}
+
 /* Ritmo: a espera antes do aviso (o mestre segurando a preparação) e a pausa entre
  * sequências são tempo morto, e encurtam. Nada que se julga muda: golpe a golpe, o
  * mesmo movimento, o mesmo aviso e o mesmo intervalo dentro da sequência. Com a espera
@@ -2040,6 +2092,7 @@ int main(void) {
     test_vantagem();
     test_lamina_variavel();
     test_taxa_de_quadros();
+    test_rastro_fantasma();
     test_calibracao_alta();
     test_traco_aleatorio();
     test_ritmo();

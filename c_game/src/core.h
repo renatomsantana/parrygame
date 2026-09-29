@@ -315,6 +315,10 @@ bool duel_strike_dual(const Duel *d);     /* o golpe que vem é de duas lâminas
 float duel_strike_lead(const Duel *d);    /* segundos entre a lâmina partir e o contato */
 float duel_strike_lead_base(const Duel *d); /* o mesmo, sem a lâmina variável (os quadros tocam neste tempo) */
 float duel_aviso(const Duel *d);          /* segundos entre o aviso e o contato */
+/* Só para o desenho (o rastro fantasma): 0 antes da partida da lâmina e do contato em
+ * diante (no instante do julgamento não há rastro); entre os dois, quanto do caminho a
+ * lâmina já andou, de 0 a 1. Lê o duelo e nada mais. */
+float duel_launch_progress(const Duel *d);
 /* Quanto um impacto congela o duelo: o perfeito mais que o bom, a quebra mais ainda;
  * se a segunda lâmina de um golpe duplo entrou, pelo menos o do erro. */
 float duel_hitstop_for(const Settings *s, Judgement j, bool broke, bool secondBlade);

@@ -92,6 +92,12 @@ Esc enche um anel e pula; segurar o clique acelera).
   a 6 pontos menos a 60 Hz do que a 144 Hz (±8 ms contra ±3 ms). Os robôs decidem em ms e apertam no instante
   exato (`duel_step_at`, `robo_aperto_em`): `make robos HZ=144` dá a mesma tabela que
   60; `QUADROS=1` põe o aperto no meio do quadro, como no jogo.
+- **Rastro fantasma do golpe:** na partida da lâmina, o mestre deixa fantasmas do quadro que
+  já está mostrando, esticados para trás, que crescem até o contato e somem nele. O quadro
+  de contato só aparece no impacto, no instante do julgamento. É só desenho
+  (`AJ_RASTRO_FANTASMA`, `_FANTASMAS`, `_ESPACO` e `_ALFA` em `src/ajuste.h`; 0 desliga) e
+  `tests/teste_rastro.sh` (`make teste-jogo`) confere, no jogo, que os impactos saem idênticos
+  com ele ligado e desligado.
 - **Ritmo:** o mestre não fica parado à toa. A espera antes do aviso (a
   preparação segurada) vale ×0,6 do que estava no roster (piso de 100 ms) e a pausa
   depois de cada sequência é de 0,55 s, cerca de 25% mais golpes por minuto. Do

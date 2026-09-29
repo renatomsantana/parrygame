@@ -309,6 +309,9 @@ static struct {
     bool teste;               /* uma opção de teste (--teste, --master, --duel, --state, --fase, --final): o progresso não é salvo */
     bool teclas;              /* --teste: as teclas de teste (R V P 1 2 3 N B) funcionam */
     bool autoJogo;            /* APARA_AUTO (tests/teste_save.sh): joga sozinho como o demo, mas salvando */
+    bool rastro;              /* o rastro fantasma do golpe (AJ_RASTRO_FANTASMA; APARA_RASTRO=0/1 só para os testes) */
+    bool logImpactos;         /* APARA_LOG_IMPACTOS (tests/teste_rastro.sh): escreve cada impacto e os fantasmas desenhados */
+    long fantasmasDesenhados;
     int teclaFalsa;           /* APARA_TECLAS (o mesmo teste): a tecla de teste que o teste "aperta" agora */
     int startSeal;            /* a próxima luta começa neste selo (--fase, teclas 1 a 3) */
     Anotacao aperto[6];       /* F3: os últimos apertos, do mais novo ao mais velho */
@@ -862,6 +865,7 @@ static void start_lines(const Line *lines, int count, State s) {
 }
 
 static void teste_selo(int selo);
+static void desenha_rastro_do_golpe(void);
 
 static void start_duel(void) {
     settings_default(&G.settings);
@@ -869,7 +873,7 @@ static void start_duel(void) {
     G.settings.latency = G.latVideo;                  /* calibração: ver update_calibra */
     G.settings.audioLead = G.latAudio - G.latVideo;
     G.special = false;
-    duel_init(&G.duel, &G.settings, G.m, (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919));
+    duel_init(&G.duel, &G.settings, G.m, getenv("APARA_SEMENTE") ? (uint32_t)atoi(getenv("APARA_SEMENTE")) : (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919));
     robo_iniciar(&G.robo, &ROBO_DO_DEMO, 1);
     setup_actors();
     ren_draw_sword();
@@ -1620,6 +1624,9 @@ static void handle_events(void) {
                 break;
             case EV_IMPACT:
                 anota_aperto(e);
+                if (G.logImpactos)
+                    fprintf(stderr, "IMPACTO contato %.5f julgamento %d antecedencia %.5f quadro %s %d\n", G.duel.lastStrikeAt, (int)e->judgement, e->a,
+                            G.bossS.pl.anim ? G.bossS.pl.anim->name : "-", G.bossS.pl.frame);
                 /* defendeu cedo demais (depois do aviso vale uma tentativa só) */
                 if (e->judgement == J_RUIM && e->a > duel_stance(&G.duel)->goodWindow) cedo_tarde("cedo");
                 on_impact(e);
@@ -2448,6 +2455,7 @@ static void draw_rigs(Color light) {
             spr_draw(G.bossS.set, G.after[i].a, G.after[i].frame, G.after[i].feet, o);
         }
     }
+    if (G.rastro && G.bossS.set && G.bossS.pl.anim && !dark && !G.bossHidden && G.state == ST_DUEL) desenha_rastro_do_golpe();
     if (G.bossHidden) {
         /* sumiu em penas */
     } else if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
@@ -2558,6 +2566,31 @@ static void draw_illustration(void (*fn)(int, float), int page, float t, float l
 }
 
 static void cabin_scene(int page, float t) { (void)page; lore_draw_cabin(t); }
+
+/* O rastro fantasma do golpe (AJ_RASTRO_*): na partida da lâmina, silhuetas do quadro que o mestre
+ * JÁ está mostrando, esticadas para trás (para longe de kojiro), que crescem com o caminho da
+ * lâmina (duel_launch_progress) e somem no contato. Só desenha: lê o duelo e o quadro atual, e
+ * não mostra o quadro de contato, que sai no impacto, no instante do julgamento. */
+static void desenha_rastro_do_golpe(void) {
+    float p = duel_launch_progress(&G.duel);
+    if (p <= 0) return;
+    static const Color TINT[ROSTER_SIZE] = {
+        {230, 150, 80, 255}, {130, 210, 150, 255}, {235, 90, 70, 255}, {110, 180, 255, 255},
+        {250, 240, 210, 255}, {120, 110, 190, 255}, {140, 240, 200, 255}, {255, 140, 50, 255},
+        {90, 150, 240, 255}, {190, 150, 255, 255}, {130, 110, 220, 255}, {225, 225, 235, 255},
+        {235, 60, 70, 255},
+    };
+    Color c = TINT[(G.m->id - 1) % ROSTER_SIZE];
+    Vector2 pes = {G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};
+    float para_tras = G.boss.faceLeft ? 1.0f : -1.0f;   /* o mestre olha para kojiro: o rastro fica do outro lado */
+    for (int k = AJ_RASTRO_FANTASMAS; k >= 1; k--) {
+        float fim = 1.0f - (float)(k - 1) / (float)AJ_RASTRO_FANTASMAS;   /* o mais longe é o mais fraco */
+        SprDraw o = {G.boss.faceLeft, 0, true, fadec(c, AJ_RASTRO_ALFA * fim * p)};
+        Vector2 at = {pes.x + para_tras * AJ_RASTRO_ESPACO * (float)k * p, pes.y};
+        spr_draw(G.bossS.set, G.bossS.pl.anim, G.bossS.pl.frame, at, o);
+        G.fantasmasDesenhados++;
+    }
+}
 
 static void draw_world(void) {
     switch (G.state) {
@@ -3392,6 +3425,8 @@ int main(int argc, char **argv) {
     G.demoChoice = 1;
     G.debug = getenv("APARA_DEBUG") && strcmp(getenv("APARA_DEBUG"), "0") != 0;
     G.autoJogo = getenv("APARA_AUTO") != NULL;
+    G.rastro = getenv("APARA_RASTRO") ? atoi(getenv("APARA_RASTRO")) != 0 : AJ_RASTRO_FANTASMA != 0;
+    G.logImpactos = getenv("APARA_LOG_IMPACTOS") != NULL;
     parse_args(argc, argv, &startMaster, &direct, &startState);
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
@@ -3400,7 +3435,7 @@ int main(int argc, char **argv) {
     SetExitKey(KEY_NULL);
     SetWindowMinSize(LOW_W, LOW_H);
     ChangeDirectory(GetApplicationDirectory());
-    srand((unsigned)time(NULL));
+    srand(getenv("APARA_SEMENTE") ? (unsigned)atoi(getenv("APARA_SEMENTE")) : (unsigned)time(NULL));
 
     G.scene = LoadRenderTexture(RW, RH);
     G.actors = LoadRenderTexture(LOW_W, LOW_H);
@@ -3566,6 +3601,7 @@ int main(int argc, char **argv) {
     UnloadRenderTexture(G.uiLow);
     spr_shutdown();
     pix_shutdown();
+    if (G.logImpactos) fprintf(stderr, "FANTASMAS %ld\n", G.fantasmasDesenhados);
     CloseWindow();
     return 0;
 }

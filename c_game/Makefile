@@ -61,5 +61,6 @@ clean:
 # O jogo de verdade, sob xvfb: as teclas de teste só existem com --teste e nada grava o progresso.
 teste-jogo: apara
 	sh tests/teste_save.sh
+	sh tests/teste_rastro.sh
 
 .PHONY: packs all test run clean sprites robos teste-jogo
