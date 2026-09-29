@@ -258,6 +258,8 @@ static struct {
     /* Coreografia. */
     bool bossWinding;
     float windupLen, windupTime;
+    float windupSpr;          /* a preparação como se a lâmina partisse no tempo fixo: os quadros
+                                 tocam nela, então a lâmina variável não muda nenhum quadro */
     float renParryTime;       /* tempo desde o gesto; -1 = nenhum pendente */
     float renKnock, bossKnock;
     float bossHome;
@@ -1147,7 +1149,7 @@ static void sprite_windup(void) {
     MoveLook look = strike_look();
     const SprAnim *a = boss_strike_anim(look);
     int hold = anim_hold(a);
-    float w = G.windupLen;
+    float w = G.windupSpr;
     bool first = G.duel.comboStrike == 0;
     f_clear(f, false);
     f->strike = a;
@@ -1210,7 +1212,11 @@ static void sprite_windup(void) {
     if (first && fabsf(G.bossStepTo - G.bossStep) > 4) boss_hop(stepTime, 2);
 }
 
-/* A lâmina parte: os quadros entre o hold e o contato; o contato sai no impacto. */
+/* A lâmina parte: o bote (o passo até a guarda de kojiro) leva o tempo da partida
+ * deste golpe; os quadros entre o hold e o contato, se houver, tocam no tempo fixo
+ * (duel_strike_lead_base), e o contato sai no impacto. Nos golpes das pranchas o
+ * contato vem logo depois do hold: ele fica no hold até o contato, e a preparação que
+ * ainda estiver tocando termina nele (a lâmina variável não corta nenhum quadro). */
 static void sprite_launch(void) {
     Fighter *f = &G.bossS;
     if (!f->set || !f->strike) return;
@@ -1220,11 +1226,12 @@ static void sprite_launch(void) {
     if (G.bossHidden) { G.bossHidden = false; feathers(); }
     G.bossStepTo = G.bossStrikeStep;
     G.bossStepSpeed = fabsf(G.bossStrikeStep - G.bossStep) / fmaxf(0.05f, lead - 0.02f);
-    f_clear(f, false);
     int from = hold + 1;
     if (G.leap == LEAP_DASH) from = hold > 2 ? hold - 2 : 0;   /* da corrida direto para o golpe */
-    if (c - 1 >= from) f_add(f, a, from, c - 1, lead);
-    else f_add(f, a, hold, hold, lead);
+    if (c - 1 >= from) {
+        f_clear(f, false);
+        f_add(f, a, from, c - 1, duel_strike_lead_base(&G.duel));
+    }
 }
 
 /* O gesto de kojiro: a guarda (DEFEND) ou um corte rápido de encontro ao golpe. */
@@ -1567,6 +1574,7 @@ static void handle_events(void) {
         switch (e->kind) {
             case EV_WINDUP:
                 G.windupLen = fmaxf(0.1f, e->a - duel_strike_lead(&G.duel));
+                G.windupSpr = fmaxf(0.1f, e->a - duel_strike_lead_base(&G.duel));
                 G.windupTime = 0;
                 G.bossWinding = true;
                 G.staggerTime = 0;

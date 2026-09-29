@@ -26,6 +26,16 @@
 /* ---- Tempos do duelo ------------------------------------------------- */
 #define AJ_LAMINA_PARTE            0.220f   /* a lâmina parte este tempo antes do contato */
 #define AJ_LANCA_PARTE_X            1.75f   /* a estocada de longe parte 1,75 x mais cedo */
+/* Lâmina variável: do garfiel em diante, a lâmina parte um tempo sorteado a cada golpe
+ * antes do contato, para que reagir à partida não baste (vale o ritmo do aviso). O
+ * aviso e o contato não mudam; nem os quadros do golpe, nem quanto cada um dura: muda
+ * só quando começam o bote, o rastro e o assobio. A lança e a investida (o primeiro
+ * golpe delas toca quadros na partida) partem sempre no tempo fixo. */
+#define AJ_LAMINA_VARIAVEL             1    /* 0 = fixa, sempre AJ_LAMINA_PARTE (como antes) */
+#define AJ_LAMINA_MIN              0.140f
+#define AJ_LAMINA_MAX              0.320f
+#define AJ_LAMINA_MAX_CADEIA       0.240f   /* dentro da sequência (mais que isto atrasaria o ritmo) */
+#define AJ_LAMINA_VARIA_DESDE          5    /* id do primeiro mestre com a lâmina variável (garfiel) */
 #define AJ_ENTRE_GESTOS            0.300f   /* fora da preparação, intervalo mínimo entre dois apertos */
 /* Aperto cedo: antes do aviso, apertar não trava o golpe, mas dá uma recarga de no
  * máximo isto, que termina no aviso (nunca cobre a janela boa, que vem depois dele), e

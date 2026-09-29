@@ -32,6 +32,9 @@ typedef struct {
     float latency;             /* atraso de vídeo (calibração): o aperto conta isto mais cedo */
     float audioLead;           /* o som do aviso toca isto antes do brilho (atraso de áudio menos o de vídeo) */
     float attackLead;          /* a lâmina parte este tempo antes do contato */
+    float bladeMin, bladeMax;  /* lâmina variável: a partida sorteada neste intervalo antes do contato */
+    float bladeChainMax;       /*   dentro da sequência, no máximo isto */
+    int bladeFrom;             /*   do mestre com este id em diante (0 = desligada: sempre attackLead) */
     float recovery;            /* pausa depois de cada golpe */
     float sealRecovery;        /* pausa depois de quebrar um selo do BIG BOSS */
     float sealHeal;            /* selo quebrado: Ren recupera esta fração da vida */
@@ -245,12 +248,14 @@ typedef struct {
     const MasterProfile *m;
     SealRule commonSeal;          /* regra de quem não declara selos */
     Rng rng;
+    Rng bladeRng;                 /* só a lâmina variável: os outros sorteios não mudam com ela */
 
     double clock;
     DuelPhase phase;
     double phaseEnd;
     double strikeAt;
     float windupDuration;
+    float strikeLead;             /* a lâmina deste golpe parte isto antes do contato (0 = ainda nenhum) */
     bool blackout, special;
     double lastPress;
     double pressBlockedUntil;     /* recarga: nenhum aperto aceito antes disto */
@@ -303,6 +308,7 @@ const Move *duel_move(const Duel *d);             /* sequência em curso (NULL =
 float duel_ren_damage(const Duel *d);     /* dano de um erro contra este mestre */
 bool duel_strike_dual(const Duel *d);     /* o golpe que vem é de duas lâminas */
 float duel_strike_lead(const Duel *d);    /* segundos entre a lâmina partir e o contato */
+float duel_strike_lead_base(const Duel *d); /* o mesmo, sem a lâmina variável (os quadros tocam neste tempo) */
 float duel_aviso(const Duel *d);          /* segundos entre o aviso e o contato */
 /* Quanto um impacto congela o duelo: o perfeito mais que o bom, a quebra mais ainda;
  * se a segunda lâmina de um golpe duplo entrou, pelo menos o do erro. */

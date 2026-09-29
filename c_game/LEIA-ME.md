@@ -67,8 +67,12 @@ Esc enche um anel e pula; segurar o clique acelera).
 - **Cada golpe:** o mestre prepara (cada sequência tem a sua preparação, sempre a
   mesma), e um **aviso**, som e brilho na lâmina, vem sempre o mesmo tempo antes do
   contato: 450 ms no daichi, descendo até 320 ms (jinshi, sem som, avisa só com o
-  brilho da lua, 350 ms antes). A lâmina parte 220 ms antes do contato. Na
-  sequência, o aviso de cada golpe é o contato anterior (o ritmo).
+  brilho da lua, 350 ms antes). Nos quatro primeiros, a lâmina parte (o bote e o
+  assobio) 220 ms antes do contato; do garfiel em diante, um tempo sorteado a cada
+  golpe, entre 140 e 320 ms (240 na sequência): reagir à lâmina não basta, vale o
+  ritmo do aviso. O aviso e o contato não mudam, nem os quadros do golpe
+  (`AJ_LAMINA_VARIAVEL` em `src/ajuste.h`; 0 deixa fixa). Na sequência, o aviso de
+  cada golpe é o contato anterior (o ritmo).
 - **Janela:** perfeito se o aperto cai na janela perfeita antes do contato; bom na
   janela boa ou **até 30 ms depois do contato** (tolerância tardia).
 - **Apertar cedo**, antes do aviso, não trava o golpe: dá uma recarga de no máximo

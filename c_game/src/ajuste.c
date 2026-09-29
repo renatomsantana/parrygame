@@ -15,6 +15,10 @@ void settings_default(Settings *s) {
     s->latency = 0;
     s->audioLead = 0;
     s->attackLead = AJ_LAMINA_PARTE;
+    s->bladeMin = AJ_LAMINA_MIN;
+    s->bladeMax = AJ_LAMINA_MAX;
+    s->bladeChainMax = AJ_LAMINA_MAX_CADEIA;
+    s->bladeFrom = AJ_LAMINA_VARIAVEL ? AJ_LAMINA_VARIA_DESDE : 0;
     s->recovery = AJ_PAUSA_SEQUENCIA;
     s->sealRecovery = AJ_PAUSA_SELO;
     s->sealHeal = AJ_SELO_CURA;

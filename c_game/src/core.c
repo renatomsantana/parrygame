@@ -44,6 +44,7 @@ void duel_init(Duel *d, const Settings *s, const MasterProfile *m, uint32_t seed
     d->s = *s;
     d->m = m;
     rng_seed(&d->rng, seed);
+    rng_seed(&d->bladeRng, seed ^ 0xA5F00D5Eu);
     d->commonSeal.name = "";
     d->commonSeal.speedMultiplier = 1;
     d->commonSeal.stanceSwitchEvery = 0;
@@ -56,6 +57,7 @@ void duel_reset(Duel *d) {
     d->phaseEnd = d->s.firstWindupDelay;
     d->strikeAt = 0;
     d->windupDuration = 1;
+    d->strikeLead = 0;
     d->blackout = false;
     d->special = false;
     d->lastPress = -100;
@@ -144,10 +146,25 @@ bool duel_strike_dual(const Duel *d) {
     return mv && d->comboStrike < 32 && (mv->dual >> d->comboStrike) & 1u;
 }
 
-float duel_strike_lead(const Duel *d) {
+float duel_strike_lead_base(const Duel *d) {
     const Move *mv = duel_move(d);
     if (mv && mv->look == LOOK_FAR && d->comboStrike == 0) return d->s.attackLead * AJ_LANCA_PARTE_X;
     return d->s.attackLead;
+}
+
+float duel_strike_lead(const Duel *d) { return d->strikeLead > 0 ? d->strikeLead : duel_strike_lead_base(d); }
+
+/* A lâmina variável (ajuste.h): sorteada a cada golpe, do mestre bladeFrom em diante.
+ * A lança e a investida, no primeiro golpe, partem no tempo fixo: a partida delas toca
+ * quadros (a ponta viajando, a corrida entrando no golpe). */
+static float blade_lead(Duel *d) {
+    float base = duel_strike_lead_base(d);
+    const Move *mv = duel_move(d);
+    if (d->s.bladeFrom <= 0 || d->m->id < d->s.bladeFrom) return base;
+    if (d->comboStrike == 0 && mv && (mv->look == LOOK_FAR || mv->look == LOOK_DASH)) return base;
+    float hi = d->comboStrike > 0 && d->s.bladeChainMax < d->s.bladeMax ? d->s.bladeChainMax : d->s.bladeMax;
+    float lo = d->s.bladeMin < hi ? d->s.bladeMin : hi;
+    return lo + (hi - lo) * (float)rng_next(&d->bladeRng);
 }
 
 /* O aviso do primeiro golpe vem sempre o mesmo tempo antes do contato (o da postura);
@@ -155,7 +172,7 @@ float duel_strike_lead(const Duel *d) {
  * Na sequência, o aviso é o contato anterior: o brilho sai quando a preparação começa. */
 float duel_aviso(const Duel *d) {
     if (d->comboStrike > 0) return d->windupDuration;
-    return duel_stance(d)->aviso + (duel_strike_lead(d) - d->s.attackLead);
+    return duel_stance(d)->aviso + (duel_strike_lead_base(d) - d->s.attackLead);
 }
 
 double duel_cue_time(const Duel *d) {
@@ -281,6 +298,7 @@ static void begin_attack(Duel *d) {
         if (strikes > 1) emit(d, EV_COMBO, J_NONE, 0, strikes, false);
     }
     const Move *mv = duel_move(d);
+    d->strikeLead = blade_lead(d);
 
     double duration;
     if (continuing) {

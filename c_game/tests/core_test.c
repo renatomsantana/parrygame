@@ -354,7 +354,7 @@ static void test_accelerando(void) {
             antes[got] = d.windupDuration - aviso;
             esperado[got] = (mv->windup - taiko->stances[0].aviso) * pow(taiko->accelFactor, got % taiko->accelSteps);
             if (esperado[got] < AJ_PREPARO_ANTES_DO_AVISO) esperado[got] = AJ_PREPARO_ANTES_DO_AVISO;
-            if (fabs(aviso - (taiko->stances[0].aviso + duel_strike_lead(&d) - s.attackLead)) > 1e-6) avisoFixo = false;
+            if (fabs(aviso - (taiko->stances[0].aviso + duel_strike_lead_base(&d) - s.attackLead)) > 1e-6) avisoFixo = false;
             got++;
             antes[5] = d.strikeAt - d.windupDuration;
         }
@@ -600,7 +600,8 @@ static void test_aviso(void) {
             while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
             if (d.phase == PH_FINISHED) break;
             double inicio = d.clock, contato = d.strikeAt, aviso = -1, partida = -1;
-            double esperado = d.m->stances[d.stanceIndex].aviso + (duel_strike_lead(&d) - s.attackLead);
+            /* o aviso não anda com a lâmina variável: só a lança avisa mais cedo */
+            double esperado = d.m->stances[d.stanceIndex].aviso + (duel_strike_lead_base(&d) - s.attackLead);
             while (d.phase == PH_WINDUP) {
                 if (!d.attempted && d.strikeAt - d.clock <= 0.02) duel_press(&d);
                 duel_tick(&d, 1.0 / 1000);
@@ -661,7 +662,7 @@ static void test_preparacao_por_golpe(void) {
                     const Move *mv = duel_move(&d);
                     const Stance *st = duel_stance(&d);
                     double base = st->aviso + (mv->windup - st->aviso) * duel_seal_rule(&d)->speedMultiplier +
-                                  (duel_strike_lead(&d) - s.attackLead);
+                                  (duel_strike_lead_base(&d) - s.attackLead);
                     if (m->rhythmJitter > 0) {
                         if (fabs(d.windupDuration - base) > m->rhythmJitter + 1e-4) dentro = false;
                     } else if (vista[d.move] >= 0 && fabs(vista[d.move] - d.windupDuration) > 1e-6) fixo = false;
@@ -1141,6 +1142,76 @@ static void test_vantagem(void) {
     d.advantage = true;
     while (d.phase == PH_WINDUP) duel_tick(&d, DT);   /* sem defesa: ele acerta e se recupera */
     CHECK(!d.advantage && d.bossPosture > s.perfectBossDamage * 0.5f, "o mestre que se recupera sai da vantagem (%.1f)", d.bossPosture);
+}
+
+/* Lâmina variável: do garfiel em diante, a lâmina parte entre 140 e 320 ms antes do
+ * contato (na sequência, até 240), sorteada a cada golpe; os quatro primeiros, a lança
+ * e a investida (no primeiro golpe) partem no tempo fixo. Com ela desligada, os
+ * contatos, os avisos e as preparações são exatamente os mesmos: só a partida muda. */
+static void test_lamina_variavel(void) {
+    CHECK(AJ_LAMINA_VARIAVEL == 1 && fabsf(AJ_LAMINA_MIN - 0.140f) < 1e-6f && fabsf(AJ_LAMINA_MAX - 0.320f) < 1e-6f &&
+              fabsf(AJ_LAMINA_MAX_CADEIA - 0.240f) < 1e-6f && AJ_LAMINA_VARIA_DESDE == 5,
+          "lâmina variável ligada: 140 a 320 ms, 240 na sequência, do garfiel em diante");
+    Settings on, off;
+    settings_default(&on);
+    settings_default(&off);
+    off.bladeFrom = 0;
+    CHECK(on.bladeFrom == 5 && off.bladeFrom == 0, "a chave desliga (0 = fixa)");
+    double menor = 1, maior = 0, maiorCadeia = 0;
+    bool fixos = true, faixa = true, iguais = true, desligada = true, partida = true;
+    int golpes = 0;
+    for (int i = 0; i < roster_size(); i++) {
+        const MasterProfile *m = roster_get(i);
+        for (uint32_t seed = 1; seed <= 15; seed++) {
+            Duel a, b;
+            duel_init(&a, &on, m, seed);
+            duel_init(&b, &off, m, seed);
+            RoboMente ra, rb;
+            robo_iniciar(&ra, &ROBO_DO_DEMO, seed);
+            robo_iniciar(&rb, &ROBO_DO_DEMO, seed);
+            int ultimo = -1;
+            while (a.phase != PH_FINISHED && b.phase != PH_FINISHED && a.clock < 900) {
+                if (a.phase == PH_WINDUP && a.attacks != ultimo) {
+                    ultimo = a.attacks;
+                    golpes++;
+                    double lead = duel_strike_lead(&a), base = duel_strike_lead_base(&a);
+                    const Move *mv = duel_move(&a);
+                    bool especial = a.comboStrike == 0 && mv && (mv->look == LOOK_FAR || mv->look == LOOK_DASH);
+                    if (m->id < 5 || especial) {
+                        if (fabs(lead - base) > 1e-6) fixos = false;
+                    } else if (a.comboStrike == 0) {
+                        if (lead < 0.140 - 1e-6 || lead > 0.320 + 1e-6) faixa = false;
+                        if (lead < menor) menor = lead;
+                        if (lead > maior) maior = lead;
+                    } else {
+                        if (lead < 0.140 - 1e-6 || lead > 0.240 + 1e-6) faixa = false;
+                        if (lead > maiorCadeia) maiorCadeia = lead;
+                    }
+                    /* desligada: o mesmo golpe, a mesma preparação, o mesmo aviso, o mesmo contato */
+                    if (b.phase != PH_WINDUP || b.attacks != a.attacks || fabs(b.strikeAt - a.strikeAt) > 1e-9 ||
+                        fabs(b.windupDuration - a.windupDuration) > 1e-6 || fabs(duel_cue_time(&b) - duel_cue_time(&a)) > 1e-9 ||
+                        b.move != a.move)
+                        iguais = false;
+                    if (fabs(duel_strike_lead(&b) - duel_strike_lead_base(&b)) > 1e-6) desligada = false;
+                    DuelTimeline t = duel_timeline(&a);
+                    if (fabs(t.launch - (a.strikeAt - lead)) > 1e-9) partida = false;
+                }
+                bool pa = robo_quer_apertar(&ra, &a, ROBO_QUADRO), pb = robo_quer_apertar(&rb, &b, ROBO_QUADRO);
+                duel_step(&a, ROBO_QUADRO, pa);
+                duel_step(&b, ROBO_QUADRO, pb);
+                duel_drain(&a, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+                duel_drain(&b, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+            }
+            if (a.phase != b.phase || a.attacks != b.attacks) iguais = false;
+        }
+    }
+    CHECK(fixos, "os quatro primeiros, a lança e a investida partem no tempo fixo");
+    CHECK(faixa, "a partida fica entre 140 e 320 ms (240 na sequência)");
+    CHECK(menor < 0.160 && maior > 0.300 && maiorCadeia > 0.220, "o sorteio cobre a faixa (%.0f a %.0f ms; %.0f na sequência)", menor * 1000,
+          maior * 1000, maiorCadeia * 1000);
+    CHECK(iguais, "com a lâmina ligada ou não, os mesmos golpes, preparações, avisos e contatos (%d golpes)", golpes);
+    CHECK(desligada, "desligada, a lâmina parte sempre no tempo fixo");
+    CHECK(partida, "a lâmina parte no tempo sorteado (linha do tempo)");
 }
 
 /* Aperta em `quando` (tempo do duelo) numa cópia e devolve o EV_PRESS e o EV_IMPACT. */
@@ -1658,6 +1729,7 @@ int main(void) {
     test_curva();
     test_oboro_fases();
     test_vantagem();
+    test_lamina_variavel();
     test_teste_a_mao();
     test_timeline();
     test_movesets();
