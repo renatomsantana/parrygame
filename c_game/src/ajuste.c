@@ -11,6 +11,8 @@ void settings_default(Settings *s) {
     s->perfectBossDamage = AJ_PERFEITO_POSTURA;
     s->perfectRenRecover = AJ_PERFEITO_CURA;
     s->inputCooldown = AJ_ENTRE_GESTOS;
+    s->lateGrace = AJ_TOLERANCIA_TARDIA;
+    s->latency = 0;
     s->attackLead = AJ_LAMINA_PARTE;
     s->recovery = AJ_PAUSA_SEQUENCIA;
     s->sealRecovery = AJ_PAUSA_SELO;

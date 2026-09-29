@@ -551,6 +551,8 @@ static void test_janelas_viaveis(void) {
                     else if (d.comboStrike == 0 && d.strikeAt - duel_cue_time(&d) < (m->cueAudio > 0 ? AJ_AVISO_MENOR : AJ_AVISO_SO_BRILHO) - 1e-6) {
                         ok = false; CHECK(false, "%s/%s: aviso só %.0f ms antes do contato", m->name, mv, (d.strikeAt - duel_cue_time(&d)) * 1000); }
                     else if (d.strikeAt - gw - 0.02 >= inicio && probe(&d, d.strikeAt - gw - 0.02) != J_RUIM) { ok = false; CHECK(false, "%s/%s: cedo demais não dá erro", m->name, mv); }
+                    else if (probe(&d, d.strikeAt + s.lateGrace * 0.5) != J_BOM) { ok = false; CHECK(false, "%s/%s: dentro da tolerância tardia não dá bom", m->name, mv); }
+                    else if (probe(&d, d.strikeAt + s.lateGrace + 0.005) != J_RUIM) { ok = false; CHECK(false, "%s/%s: depois da tolerância tardia não dá erro", m->name, mv); }
                 }
                 bool p = robo_quer_apertar(&r, &d, ROBO_QUADRO);
                 duel_step(&d, ROBO_QUADRO, p);
@@ -687,11 +689,11 @@ static void test_hitstop_ritmo(void) {
     CHECK(duel_hitstop_for(&s, J_PERFEITO, false, false) == s.perfectHitstop && duel_hitstop_for(&s, J_PERFEITO, true, false) == s.breakHitstop &&
           duel_hitstop_for(&s, J_BOM, false, false) == s.goodHitstop && duel_hitstop_for(&s, J_RUIM, false, false) == s.badHitstop &&
           duel_hitstop_for(&s, J_BOM, false, true) >= s.badHitstop, "hitstop de cada impacto");
-    static const double LEADS[3] = {0.02, -2, -1};   /* perfeito, bom (meio da janela boa), sem aperto */
+    static const double LEADS[4] = {0.02, -2, -0.02, -9};   /* perfeito, bom (meio da janela boa), 20 ms tarde, sem aperto */
     int medidos = 0;
     double pior = 0;
     for (int i = 0; i < roster_size(); i++) {
-        for (int c = 0; c < 3; c++) {
+        for (int c = 0; c < 4; c++) {
             Duel d;
             duel_init(&d, &s, roster_get(i), 21 + c);
             double real = 0, congela = 0, contatoReal = -1;
@@ -703,7 +705,7 @@ static void test_hitstop_ritmo(void) {
                 if (d.phase == PH_WINDUP && !d.attempted) {
                     const Stance *st = duel_stance(&d);
                     double lead = LEADS[c] == -2 ? (st->perfectWindow + st->goodWindow) / 2 : LEADS[c];
-                    if (lead >= 0 && d.strikeAt - d.clock <= lead) duel_press(&d);
+                    if (lead > -5 && d.strikeAt - d.clock <= lead) duel_press(&d);
                 }
                 duel_tick(&d, 1.0 / 1000);
                 real += 1.0 / 1000;
@@ -816,6 +818,34 @@ static void test_aperto_cedo(void) {
     CHECK(k >= 1 && ev[k - 1].kind == EV_PRESS && ev[k - 1].i == PRESS_GESTO, "0,6 s depois já é só um gesto");
 }
 
+/* Tolerância tardia: um aperto até 30 ms depois do contato ainda defende, como bom
+ * (nunca perfeito); sem aperto, o golpe entra quando ela acaba. */
+static void test_tolerancia_tardia(void) {
+    Settings s;
+    settings_default(&s);
+    CHECK(fabsf(s.lateGrace - 0.030f) < 1e-6 && s.lateGrace == AJ_TOLERANCIA_TARDIA, "tolerância tardia de 30 ms, do ajuste.h");
+    for (int i = 0; i < roster_size(); i++) {
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 4);
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        double contato = d.strikeAt;
+        Duel a = d;
+        duel_tick(&a, contato + 0.020 - a.clock);
+        CHECK(a.phase == PH_WINDUP, "%s: 20 ms depois do contato, o golpe ainda espera", roster_get(i)->name);
+        duel_press(&a);
+        CHECK(a.lastJudgement == J_BOM && fabs(a.lastLead + 0.020) < 1e-6 && a.lastAttempted,
+              "%s: apertar 20 ms depois do contato é bom, julgado na hora (%.1f ms)", roster_get(i)->name, a.lastLead * 1000);
+        Duel b = d;
+        double quando = -1;
+        while (b.phase == PH_WINDUP) {
+            duel_tick(&b, 0.0005);
+            if (b.phase != PH_WINDUP) quando = b.clock;
+        }
+        CHECK(b.lastJudgement == J_RUIM && fabs(quando - (contato + s.lateGrace)) < 0.0011,
+              "%s: sem aperto, o golpe entra quando a tolerância acaba (%.1f ms depois)", roster_get(i)->name, (quando - contato) * 1000);
+    }
+}
+
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica
  * registrado com a antecedência certa (ou o atraso, se veio depois do contato). */
 static void test_timeline(void) {
@@ -851,7 +881,7 @@ static void test_timeline(void) {
     double at = d.strikeAt;
     duel_tick(&d, at + 0.040 - d.clock);
     duel_press(&d);
-    CHECK(d.lastJudgement == J_RUIM && d.lastLead < 0 && fabs((d.lastGestureAt - d.lastStrikeAt) - 0.040) < 1e-6,
+    CHECK(d.lastJudgement == J_RUIM && !d.lastAttempted && fabs((d.lastGestureAt - d.lastStrikeAt) - 0.040) < 1e-6,
           "aperto 40 ms depois do contato fica registrado como tarde");
 }
 
@@ -1178,6 +1208,7 @@ int main(void) {
     test_preparacao_por_golpe();
     test_hitstop_ritmo();
     test_aperto_cedo();
+    test_tolerancia_tardia();
     test_timeline();
     test_movesets();
     test_traits();

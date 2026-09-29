@@ -33,6 +33,9 @@
  * tentativa só. */
 #define AJ_RECARGA_CEDO            0.500f
 #define AJ_TARDE_JANELA            0.250f   /* um aperto até isto depois de um golpe que entrou é "tarde" */
+/* Tolerância tardia: um aperto até isto depois do contato ainda defende, como bom
+ * (nunca perfeito). Sem aperto, o golpe só entra quando ela acaba. */
+#define AJ_TOLERANCIA_TARDIA       0.030f
 #define AJ_PAUSA_SEQUENCIA         0.800f   /* pausa depois de cada sequência */
 #define AJ_PAUSA_SELO              2.200f   /* pausa depois de quebrar um selo do oboro */
 #define AJ_PAUSA_INICIO            0.650f   /* pausa antes do primeiro golpe */
@@ -57,7 +60,7 @@
 #define AJ_HITSTOP_QUEBRA          0.160f   /* o parry que quebra a postura */
 /* O hitstop congela o duelo. Dentro de uma sequência ele sai da preparação seguinte:
  * o próximo contato chega no mesmo tempo real, qualquer que seja o resultado. */
-#define AJ_PREPARO_MIN_CADEIA      0.080f   /* na sequência, a preparação é pelo menos a partida da lâmina mais isto */
+#define AJ_PREPARO_MIN_CADEIA      0.020f   /* na sequência, a preparação é pelo menos a partida da lâmina mais isto */
 
 #define AJ_TREMOR_PERFEITO           1.5f   /* força (px) do tremor da tela */
 #define AJ_TREMOR_PERFEITO_TEMPO    0.10f   /*   e quanto dura */

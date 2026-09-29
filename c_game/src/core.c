@@ -72,6 +72,7 @@ void duel_reset(Duel *d) {
     d->lastStrikeAt = -1;
     d->lastJudgement = J_NONE;
     d->lastLead = -1;
+    d->lastAttempted = false;
     d->lastGestureAt = -100;
     d->lastHitstop = 0;
 }
@@ -284,7 +285,8 @@ static void resolve(Duel *d) {
     d->phase = PH_RECOVERY;
     d->phaseEnd = d->clock + (d->comboRemaining > 0 ? s->comboGap : s->recovery);
     const Stance *st = duel_stance(d);
-    double lead = d->attempted ? d->strikeAt - d->lastPress : -1;
+    /* o aperto conta `latency` mais cedo: o que o jogador viu e ouviu chegou atrasado */
+    double lead = d->attempted ? d->strikeAt - (d->lastPress - s->latency) : -1;
     bool dual = duel_strike_dual(d), second = false;
     Judgement j;
     if (d->attempted && lead >= 0 && lead <= st->perfectWindow + 1e-6 && !d->earlyUsed) {
@@ -297,7 +299,7 @@ static void resolve(Duel *d) {
         }
         d->bossPosture -= s->perfectBossDamage;
         d->renPosture = clampf(d->renPosture + s->perfectRenRecover, 0, s->renPosture);
-    } else if (d->attempted && lead >= 0 && lead <= st->goodWindow + 1e-6) {
+    } else if (d->attempted && lead >= -s->lateGrace - 1e-6 && lead <= st->goodWindow + 1e-6) {
         j = J_BOM;
         d->goods++;
         d->bossPosture -= s->goodBossDamage;
@@ -324,13 +326,16 @@ static void resolve(Duel *d) {
     d->lastStrikeAt = d->strikeAt;
     d->lastJudgement = j;
     d->lastLead = lead;
+    d->lastAttempted = d->attempted;
 
     bool broke = d->bossPosture <= 0;
     d->lastHitstop = duel_hitstop_for(s, j, broke, second);
-    /* na sequência, a pausa entre golpes já passa congelada no hitstop */
+    /* na sequência, a pausa entre golpes conta do contato (o julgamento pode vir depois,
+     * na tolerância tardia) e já passa congelada no hitstop */
     if (d->comboRemaining > 0 && !broke) {
         double pausa = s->comboGap - d->lastHitstop;
-        d->phaseEnd = d->clock + (pausa > 0 ? pausa : 0);
+        double fim = d->strikeAt + (pausa > 0 ? pausa : 0);
+        d->phaseEnd = fim > d->clock ? fim : d->clock;
     }
     if (broke) {
         d->bossPosture = 0;
@@ -392,7 +397,8 @@ void duel_tick(Duel *d, double delta) {
         fire(d, d->schedule[d->scheduleIndex].kind);
         d->scheduleIndex++;
     }
-    if (d->clock >= d->strikeAt) resolve(d);
+    /* com defesa, julga no contato; sem, espera a tolerância tardia (e o atraso calibrado) */
+    if (d->clock >= d->strikeAt && (d->attempted || d->clock >= d->strikeAt + d->s.lateGrace + d->s.latency)) resolve(d);
 }
 
 void duel_step(Duel *d, double dt, bool press) {
@@ -423,11 +429,17 @@ bool duel_press(Duel *d) {
             d->lastPress = d->clock;
             d->attempted = true;
             kind = PRESS_TENTATIVA;
+            /* dentro da tolerância tardia: o contato já passou, julga agora */
+            if (d->clock >= d->strikeAt) {
+                emit(d, EV_PRESS, J_NONE, 0, kind, false);
+                resolve(d);
+                return true;
+            }
         }
     } else {
         d->lastGestureAt = d->clock;
         d->pressBlockedUntil = d->clock + d->s.inputCooldown;
-        bool tarde = d->lastJudgement == J_RUIM && d->lastLead < 0 && d->clock - d->lastStrikeAt <= AJ_TARDE_JANELA;
+        bool tarde = d->lastJudgement == J_RUIM && !d->lastAttempted && d->clock - d->lastStrikeAt <= AJ_TARDE_JANELA;
         kind = tarde ? PRESS_TARDE : PRESS_GESTO;
     }
     emit(d, EV_PRESS, J_NONE, 0, kind, false);

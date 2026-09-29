@@ -28,6 +28,8 @@ typedef struct {
     float perfectBossDamage;   /* perfeito: o mestre perde */
     float perfectRenRecover;   /* perfeito: Ren recupera */
     float inputCooldown;       /* intervalo mínimo entre gestos dentro do mesmo golpe */
+    float lateGrace;           /* um aperto até isto depois do contato ainda é bom */
+    float latency;             /* atraso do jogador (calibração): o aperto conta isto mais cedo */
     float attackLead;          /* a lâmina parte este tempo antes do contato */
     float recovery;            /* pausa depois de cada golpe */
     float sealRecovery;        /* pausa depois de quebrar um selo do BIG BOSS */
@@ -201,7 +203,7 @@ typedef enum {
     EV_LAUNCH,        /* a lâmina parte */
     EV_CUE,           /* o aviso; i: qual golpe da sequência (0 = o primeiro) */
     EV_PRESS,         /* gesto aceito; i: PressKind */
-    EV_IMPACT,        /* judgement, a: antecedência (-1 = sem defesa), flag: quebrou postura */
+    EV_IMPACT,        /* judgement, a: antecedência (negativa = depois do contato; -1 = sem defesa), flag: quebrou postura */
     EV_STANCE,        /* i: nova postura */
     EV_SEAL,          /* i: novo selo (o BIG BOSS entrou em outra fase) */
     EV_COMBO,         /* i: golpes na sequência (só quando mais de um) */
@@ -257,7 +259,8 @@ typedef struct {
     /* o último golpe julgado e o último gesto, para o overlay de debug e o "cedo/tarde" */
     double lastStrikeAt;          /* instante do contato (-1 = nenhum ainda) */
     Judgement lastJudgement;
-    double lastLead;              /* segundos entre o aperto e o contato (-1 = sem aperto) */
+    double lastLead;              /* segundos entre o aperto e o contato; negativo = depois dele */
+    bool lastAttempted;           /* o último golpe teve defesa */
     double lastGestureAt;         /* último aperto fora da preparação (-100 = nenhum) */
     float lastHitstop;            /* quanto o último impacto congela o duelo (o jogo aplica) */
 

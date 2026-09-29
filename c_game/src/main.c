@@ -2788,7 +2788,10 @@ static void ui_debug(Rectangle dst) {
     if (d->lastJudgement != J_NONE) {
         const Stance *s0 = st;
         Color c = d->lastJudgement == J_PERFEITO ? GREEN : d->lastJudgement == J_BOM ? GOLD : RED;
-        if (d->lastLead >= 0) {
+        if (d->lastAttempted && d->lastLead < 0) {
+            DBG_LINHA(c, "último: %s, apertou %.0f ms depois do contato (tolerância: %.0f)", JULG[d->lastJudgement], -d->lastLead * 1000,
+                      d->s.lateGrace * 1000);
+        } else if (d->lastAttempted) {
             double lead = d->lastLead * 1000, pw = s0->perfectWindow * 1000, gw = s0->goodWindow * 1000;
             if (lead <= pw) DBG_LINHA(c, "último: %s, apertou %.0f ms antes do contato (perfeita: 0 a %.0f)", JULG[d->lastJudgement], lead, pw);
             else if (lead <= gw) DBG_LINHA(c, "último: %s, apertou %.0f ms antes: %.0f ms cedo para o perfeito", JULG[d->lastJudgement], lead, lead - pw);
