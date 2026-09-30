@@ -215,6 +215,12 @@ const SprFx *spr_fx(const char *name) {
     return f->frames > 0 ? f : NULL;
 }
 
+int spr_fx_cache_count(void) { return nfx; }
+
+void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint) {
+    spr_fx_draw_scaled(f, row, frame, center, flip, tint, 1);
+}
+
 void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale) {
     if (!f || frame < 0 || frame >= f->frames) return;
     if (row < 0) row = 0;
@@ -235,6 +241,8 @@ static void ui_load(void) {
         uiOk = keysTex[0].id && keysTex[1].id;
     }
 }
+
+void spr_ui_preload(void) { ui_load(); }
 
 /* Onde cada tecla está na folha: 16 x 16, e as largas com 24 (a barra, 32). */
 static bool key_rect(const char *k, Rectangle *r) {

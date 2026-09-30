@@ -1553,6 +1553,28 @@ static void on_impact(const DuelEvent *e) {
     }
 }
 
+static const struct { const char *fx; int row; float y; int flags; float scale; } TELL[ROSTER_SIZE] = {
+        {"70", 4, -8, VFX_FRONT, 0.6f},         /* daichi: poeira de terra (na cor do chão) */
+        {"26", 3, -30, VFX_BACK | VFX_GLOW | VFX_BODY},    /* genbu: o casco acompanha o corpo */
+        {"14", 7, -30, VFX_BACK | VFX_GLOW},    /* raizo: rajada vermelha */
+        {"06", 2, -30, VFX_BACK},               /* shizuku: respingo */
+        {"64", 0, -30, VFX_BACK | VFX_GLOW},    /* garfiel: garras */
+        {"64", 8, -30, VFX_BACK},               /* karasu: asas escuras */
+        {"03", 3, -30, VFX_BACK | VFX_GLOW},    /* hayate: redemoinho */
+        {"69", 0, -27, VFX_BACK | VFX_GLOW},    /* enjin: labareda */
+        {"04", 2, -24, VFX_BACK},               /* suiren: onda */
+        {"195", 2, -30, VFX_BACK | VFX_GLOW | VFX_SWORD, 0.45f}, /* arashi: raios na lâmina */
+        {"197", 1, -30, VFX_BACK | VFX_GLOW},   /* yoru: estrela da noite */
+        {"665", 5, -21, VFX_BACK | VFX_GLOW, 0.5f}, /* jinshi: o brilho da lua (pequeno, lilás, luz somada) */
+        {"197", 7, -30, VFX_BACK | VFX_GLOW},   /* oboro */
+    };
+
+/* Consulta todas as folhas usadas por um aviso antes de entrar no jogo. */
+static void preload_runtime_art(void) {
+    for (int i = 0; i < ROSTER_SIZE; i++) spr_fx(TELL[i].fx);
+    spr_ui_preload();
+}
+
 /* Sinal próprio de cada vilão no começo de cada sequência: nunca dois iguais. */
 static void tell_fx(void) {
     Rig *b = &G.boss;
@@ -1579,21 +1601,7 @@ static void tell_fx(void) {
     audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
     /* E o efeito do pack de cada um: onde nasce (no chão ou no corpo) e a cor. Oboro
      * usa o do aprendiz da postura em que está, em vermelho. */
-    static const struct { const char *fx; int row; float y; int flags; float scale; } TELL[ROSTER_SIZE] = {
-        {"70", 4, -8, VFX_FRONT, 0.6f},         /* daichi: poeira de terra (na cor do chão) */
-        {"26", 3, -30, VFX_BACK | VFX_GLOW | VFX_BODY},    /* genbu: o casco acompanha o corpo */
-        {"14", 7, -30, VFX_BACK | VFX_GLOW},    /* raizo: rajada vermelha */
-        {"06", 2, -30, VFX_BACK},               /* shizuku: respingo */
-        {"64", 0, -30, VFX_BACK | VFX_GLOW},    /* garfiel: garras */
-        {"64", 8, -30, VFX_BACK},               /* karasu: asas escuras */
-        {"03", 3, -30, VFX_BACK | VFX_GLOW},    /* hayate: redemoinho */
-        {"69", 0, -27, VFX_BACK | VFX_GLOW},    /* enjin: labareda */
-        {"04", 2, -24, VFX_BACK},               /* suiren: onda */
-        {"195", 2, -30, VFX_BACK | VFX_GLOW | VFX_SWORD, 0.45f}, /* arashi: raios na lâmina */
-        {"197", 1, -30, VFX_BACK | VFX_GLOW},   /* yoru: estrela da noite */
-        {"665", 5, -21, VFX_BACK | VFX_GLOW, 0.5f}, /* jinshi: o brilho da lua (pequeno, lilás, luz somada) */
-        {"197", 7, -30, VFX_BACK | VFX_GLOW},   /* oboro */
-    };
+
     int ti = (G.m->id - 1) % ROSTER_SIZE, row = TELL[ti].row;
     int echo = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
     if (G.m->isBigBoss && G.masked) { ti = 7; row = TELL[7].row; }   /* o oni: a lâmina acende */
@@ -3737,6 +3745,7 @@ int main(int argc, char **argv) {
     katana3d_load("assets/katana");
     perf_carga("katana 3D");
     spr_init();
+    preload_runtime_art();
     perf_carga("sprites");
     pix_init(RW, RH);
     perf_carga("pixelize");

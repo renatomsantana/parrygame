@@ -158,6 +158,13 @@ static void real_assets(void) {
     REQUIRE(IsWindowReady(), "contexto gráfico indisponível para verificar as artes");
     if (!IsWindowReady()) return;
     spr_init();
+    preload_runtime_art();
+    int cachedFx = spr_fx_cache_count();
+    REQUIRE(cachedFx > 0, "efeitos não foram carregados antes da luta");
+    for (int i = 0; i < ROSTER_SIZE; i++) {
+        REQUIRE(spr_fx(TELL[i].fx) != NULL, "mestre sem folha de aviso instalada");
+        REQUIRE(spr_fx_cache_count() == cachedFx, "aviso carregou textura durante a luta");
+    }
     int animations = 0;
     for (int master = 0; master < roster_size(); master++) {
         memset(&G, 0, sizeof G);

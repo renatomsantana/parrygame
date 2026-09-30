@@ -5,7 +5,7 @@
  * uma tira PNG por animação, virada para a direita.
  *
  * As tiras saem de packs pagos e ficam fora do git: sem elas (make sprites com
- * os packs em assets/sprites/), o jogo volta para os bonecos de rig.c.
+ * os packs em assets/sprites/), os personagens não são desenhados.
  */
 #ifndef APARA_SPRITES_H
 #define APARA_SPRITES_H
@@ -89,6 +89,9 @@ typedef struct {
 } SprFx;
 
 const SprFx *spr_fx(const char *name);
+int spr_fx_cache_count(void);    /* diagnóstico: quantas folhas já foram consultadas */
+void spr_ui_preload(void);       /* ícones carregados antes do primeiro quadro */
+void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint);
 /* O mesmo, em outra escala (a poeira menor que a folha do pack). */
 void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale);
 
