@@ -329,7 +329,7 @@ static void begin_attack(Duel *d) {
         if (m->accelSteps > 1) antes *= pow(m->accelFactor, d->sequences % m->accelSteps);
         antes *= rule->speedMultiplier;
         if (m->sealCount <= 1 && duel_under_pressure(d)) antes *= s->pressureSpeed;
-        antes *= s->waitScale;
+        antes *= m->waitScale > 0 ? m->waitScale : s->waitScale;
         if (m->rhythmJitter > 0) antes += (rng_next(&d->rng) * 2 - 1) * m->rhythmJitter;
         if (antes < AJ_PREPARO_ANTES_DO_AVISO) antes = AJ_PREPARO_ANTES_DO_AVISO;
         duration = duel_aviso(d) + antes;

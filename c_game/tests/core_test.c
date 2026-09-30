@@ -663,7 +663,7 @@ static void test_preparacao_por_golpe(void) {
                     double aviso = d.strikeAt - duel_cue_time(&d);
                     const Move *mv = duel_move(&d);
                     const Stance *st = duel_stance(&d);
-                    double base = st->aviso + (mv->windup - st->aviso) * duel_seal_rule(&d)->speedMultiplier * s.waitScale +
+                    double base = st->aviso + (mv->windup - st->aviso) * duel_seal_rule(&d)->speedMultiplier * (m->waitScale > 0 ? m->waitScale : s.waitScale) +
                                   (duel_strike_lead_base(&d) - s.attackLead);
                     if (m->rhythmJitter > 0) {
                         if (fabs(d.windupDuration - base) > m->rhythmJitter + 1e-4) dentro = false;
@@ -815,12 +815,33 @@ static void test_aperto_cedo(void) {
     DuelEvent ev[MAX_EVENTS];
     int k = duel_drain(&d, ev, MAX_EVENTS);
     CHECK(k >= 1 && ev[k - 1].kind == EV_PRESS && ev[k - 1].i == PRESS_TARDE, "apertar 0,1 s depois de levar o golpe é tarde");
-    /* depois da janela de "tarde" e da recarga do gesto, ainda dentro da pausa da sequência */
-    duel_tick(&d, s.inputCooldown + 0.02);
-    CHECK(d.phase == PH_RECOVERY, "0,42 s depois do golpe ainda é a pausa (%.2f s)", s.recovery);
-    duel_press(&d);
-    k = duel_drain(&d, ev, MAX_EVENTS);
-    CHECK(k >= 1 && ev[k - 1].kind == EV_PRESS && ev[k - 1].i == PRESS_GESTO, "0,42 s depois já é só um gesto");
+    /* O que a sonda antiga (0,42 s depois do golpe, com a pausa de 0,55 s) garantia: um aperto dentro da pausa
+     * entre sequências, depois da janela de "tarde", é só um gesto: não vira "cedo" nem gasta a defesa do golpe
+     * seguinte. Com a pausa de 0,40 s a trava do "tarde" (0,1 + 0,3 s) já acaba junto com ela, e não sobra um
+     * instante depois dela: a sonda mede pela pausa, num golpe sem o "tarde" antes, e confere o que importa, que a
+     * defesa perfeita do golpe seguinte continua saindo perfeita. */
+    CHECK(s.recovery - 0.05 > AJ_TARDE_JANELA + 0.02, "há pausa depois da janela de tarde (a pausa é de %.2f s)", s.recovery);
+    Duel g;
+    duel_init(&g, &s, roster_get(0), 2);
+    while (g.phase != PH_WINDUP) duel_tick(&g, DT);
+    while (g.phase == PH_WINDUP) duel_tick(&g, DT);
+    duel_drain(&g, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+    const double alvo = g.phaseEnd - 0.05;                        /* 50 ms antes de a pausa acabar */
+    duel_tick(&g, alvo - g.clock);
+    CHECK(g.phase == PH_RECOVERY, "%.2f s antes do fim da pausa ainda é a pausa", g.phaseEnd - g.clock);
+    duel_press(&g);
+    k = duel_drain(&g, ev, MAX_EVENTS);
+    CHECK(k >= 1 && ev[k - 1].kind == EV_PRESS && ev[k - 1].i == PRESS_GESTO, "no fim da pausa, depois do \"tarde\", o aperto é só um gesto");
+    while (g.phase != PH_WINDUP) duel_tick(&g, DT);
+    CHECK(!g.earlyUsed && !g.attempted, "o gesto da pausa não gastou a defesa do golpe seguinte");
+    CHECK(g.pressBlockedUntil < g.clock, "a trava do gesto se rearmou na preparação nova");
+    while (g.phase == PH_WINDUP && g.strikeAt - g.clock > 0.02) duel_tick(&g, DT);
+    duel_press(&g);
+    while (g.phase == PH_WINDUP) duel_tick(&g, DT);
+    k = duel_drain(&g, ev, MAX_EVENTS);
+    Judgement julgado = J_NONE;
+    for (int i = 0; i < k; i++) if (ev[i].kind == EV_IMPACT) julgado = ev[i].judgement;
+    CHECK(julgado == J_PERFEITO, "depois do gesto na pausa, a defesa perfeita do golpe seguinte sai perfeita");
 }
 
 /* Tolerância tardia: um aperto até 30 ms depois do contato ainda defende, como bom
@@ -1464,14 +1485,23 @@ static void test_ritmo(void) {
     CHECK(novo.waitScale == AJ_ESPERA_X && novo.waitScale > 0 && novo.waitScale < 1, "a espera antes do aviso encurta (x%.2f)", novo.waitScale);
     CHECK(novo.recovery == AJ_PAUSA_SEQUENCIA && novo.recovery < 0.8f, "a pausa entre sequências encurta (%.2f s)", novo.recovery);
     CHECK(novo.recovery >= 0.40f, "a pausa não corta a recuperação do mestre (0,32 s de hurt, com folga)");
+    /* só o hayate e o jinshi (ritmo irregular) encurtam a espera menos; nos outros vale a global */
+    for (int i = 0; i < roster_size(); i++) {
+        bool irregular = !strcmp(roster_get(i)->name, "hayate") || !strcmp(roster_get(i)->name, "jinshi");
+        CHECK(irregular ? roster_get(i)->waitScale == AJ_ESPERA_X_IRREGULAR : roster_get(i)->waitScale == 0, "%s: espera x%.2f do roster", roster_get(i)->name,
+              roster_get(i)->waitScale);
+    }
+    CHECK(AJ_ESPERA_X_IRREGULAR > AJ_ESPERA_X && AJ_ESPERA_X_IRREGULAR < 1, "a espera dos irregulares encurta, mas menos que a dos outros");
     bool mesmoGolpe = true, mesmoAviso = true, mesmaCadeia = true, espera = true, maisRapido = true;
     int golpes = 0;
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
+        MasterProfile ma = *m;
+        ma.waitScale = 0;                 /* o "antigo" é a espera x1,0 em todos, sem a exceção do roster */
         double dn = 0, da = 0;
         for (uint32_t seed = 1; seed <= 12; seed++) {
             GolpeRitmo n[40], a[40];
-            int kn = coleta_ritmo(&novo, m, seed, n, 40, &dn), ka = coleta_ritmo(&antigo, m, seed, a, 40, &da);
+            int kn = coleta_ritmo(&novo, m, seed, n, 40, &dn), ka = coleta_ritmo(&antigo, &ma, seed, a, 40, &da);
             int k = kn < ka ? kn : ka;
             for (int j = 0; j < k; j++) {
                 golpes++;
@@ -1479,18 +1509,38 @@ static void test_ritmo(void) {
                 /* o 1º golpe avisa no tempo fixo; nos outros o aviso é o contato anterior (o intervalo, abaixo) */
                 if (n[j].strike == 0 && fabs(n[j].aviso - a[j].aviso) > 1e-9) mesmoAviso = false;
                 if (n[j].strike > 0 && fabs(n[j].gap - a[j].gap) > 1e-6) mesmaCadeia = false;
-                /* sem traço aleatório: a espera é a de antes x0,6, com o piso de sempre */
+                /* a espera é a de antes x a do mestre, com o piso de sempre (nos de traço aleatório, conferida abaixo,
+                 * numa cópia sem o traço) */
                 if (n[j].strike == 0 && m->rhythmJitter == 0) {
-                    double esp = a[j].espera * novo.waitScale;
+                    double esp = a[j].espera * (m->waitScale > 0 ? m->waitScale : novo.waitScale);
                     if (esp < AJ_PREPARO_ANTES_DO_AVISO) esp = AJ_PREPARO_ANTES_DO_AVISO;
                     if (fabs(n[j].espera - esp) > 1e-6) espera = false;
                 }
             }
         }
+        if (m->rhythmJitter > 0) {
+            MasterProfile sem = *m, semAntigo = ma;
+            sem.rhythmJitter = semAntigo.rhythmJitter = 0;
+            int conferidas = 0;
+            bool ok = true;
+            for (uint32_t seed = 1; seed <= 12; seed++) {
+                GolpeRitmo n[40], a[40];
+                double x, y;
+                int kn = coleta_ritmo(&novo, &sem, seed, n, 40, &x), ka = coleta_ritmo(&antigo, &semAntigo, seed, a, 40, &y);
+                for (int j = 0; j < (kn < ka ? kn : ka); j++) {
+                    if (n[j].strike != 0) continue;
+                    double esp = a[j].espera * m->waitScale;
+                    if (esp < AJ_PREPARO_ANTES_DO_AVISO) esp = AJ_PREPARO_ANTES_DO_AVISO;
+                    if (fabs(n[j].espera - esp) > 1e-6) ok = false;
+                    conferidas++;
+                }
+            }
+            CHECK(ok && conferidas > 50, "%s: sem o traço aleatório, a espera é a de antes x%.2f (%d sequências conferidas)", m->name, m->waitScale, conferidas);
+        }
         /* mais golpes no mesmo tempo (o mesmo número de golpes, em menos tempo) */
         GolpeRitmo n[40], a[40];
         double tempoN, tempoA;
-        int kn = coleta_ritmo(&novo, m, 3, n, 40, &tempoN), ka = coleta_ritmo(&antigo, m, 3, a, 40, &tempoA);
+        int kn = coleta_ritmo(&novo, m, 3, n, 40, &tempoN), ka = coleta_ritmo(&antigo, &ma, 3, a, 40, &tempoA);
         int k = kn < ka ? kn : ka;
         if (k > 8 && n[k - 1].contato > a[k - 1].contato * 0.90) maisRapido = false;
     }

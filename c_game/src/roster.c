@@ -193,7 +193,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 7, .name = "hayate", .style = "postura do vento", .title = "O Impaciente", .venue = "Ponte de corda sobre o desfiladeiro",
         .special = "Duas foices e o vento: rápido, o ritmo muda sem avisar, e às vezes as duas foices cortam juntas.",
         .arena = ARENA_PONTE, .posture = 620, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xD0FFE8FF,
-        .rhythmJitter = 0.12f,
+        .rhythmJitter = 0.12f, .waitScale = AJ_ESPERA_X_IRREGULAR,
         .stances = {STANCE("", 0.049f, 0.138f, 0.372f)}, .stanceCount = 1,
         .moves = {
             {"rajada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST, 0.75f},
@@ -351,7 +351,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .id = 12, .name = "jinshi", .style = "postura da lua", .title = "O que Espera", .venue = "Encosta da serra",
         .special = "Postura da lua, katana branca forjada com ela: o repertório mais variado, ritmo irregular, e na montanha o som não chega.",
         .arena = ARENA_SERRA, .posture = 610, .hitsToFall = 5, .healsOnHit = true, .cueVisual = 1, .cueAudio = 0, .tint = 0xE0D8C8FF,
-        .stances = {STANCE("", 0.044f, 0.119f, 0.350f)}, .rhythmJitter = 0.08f, .stanceCount = 1,
+        .stances = {STANCE("", 0.044f, 0.119f, 0.350f)}, .rhythmJitter = 0.08f, .waitScale = AJ_ESPERA_X_IRREGULAR, .stanceCount = 1,
         .moves = {
             {"crescente", 1, {0}, 1.5f, -1, 0, LOOK_HIGH, 0.95f},
             {"minguante", 3, {0.60f, 0.60f}, 1.5f, -1, 0, LOOK_LOW, 0.70f},

@@ -137,6 +137,7 @@ typedef struct {
     SealRule seals[MAX_SEALS];
     int sealCount;                /* 1 para mestres comuns */
     float rhythmJitter;           /* ± segundos na preparação (Neon Jax) */
+    float waitScale;              /* a espera antes do aviso só deste mestre, x isto (0 = a global, Settings.waitScale) */
     int accelSteps;               /* Taiko: golpes por ciclo de aceleração */
     float accelFactor;            /* Taiko: cada golpe do ciclo encurta por este fator */
     float cueVisual, cueAudio;    /* força do sinal (1 = normal, 0 = escondido) */

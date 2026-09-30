@@ -60,10 +60,16 @@
 /* Ritmo: o tempo parado entre os golpes. A espera antes do aviso (o mestre segurando a
  * preparação) e a pausa depois de cada sequência são só tempo morto: encurtar os dois
  * deixa a luta mais viva sem tocar em nada que se julga. Do aviso ao contato, as
- * janelas e o intervalo dentro da sequência não mudam. Antes: espera x1,0 e pausa 0,8 s.
- * A pausa não pode cair abaixo do fim da animação de recuperação do mestre (0,32 s). */
-#define AJ_ESPERA_X                 0.60f   /* a espera antes do aviso x isto (1 = como antes) */
-#define AJ_PAUSA_SEQUENCIA         0.550f   /* pausa depois de cada sequência */
+ * janelas e o intervalo dentro da sequência não mudam. Antes do primeiro corte: espera
+ * x1,0 e pausa 0,8 s; no segundo: x0,60 e 0,55 s; agora: x0,50 e 0,40 s. A pausa não
+ * pode cair abaixo do fim da animação de recuperação do mestre (0,32 s), e tem de ser
+ * maior que AJ_TARDE_JANELA mais uma folga (o "tarde" acaba dentro da pausa). */
+#define AJ_ESPERA_X                 0.50f   /* a espera antes do aviso x isto (1 = como antes) */
+/* Hayate e Jinshi têm ritmo irregular (traço aleatório na preparação) e o piso de
+ * AJ_PREPARO_ANTES_DO_AVISO já pega uma sequência em cada dez neles: a espera deles encurta
+ * menos (MasterProfile.waitScale, no roster.c). */
+#define AJ_ESPERA_X_IRREGULAR       0.60f
+#define AJ_PAUSA_SEQUENCIA         0.400f   /* pausa depois de cada sequência */
 #define AJ_PAUSA_SELO              2.200f   /* pausa depois de quebrar um selo do oboro */
 #define AJ_PAUSA_INICIO            0.650f   /* pausa antes do primeiro golpe */
 #define AJ_PRESSA                   0.90f   /* com metade da postura, a preparação x isto */

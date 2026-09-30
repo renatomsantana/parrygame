@@ -82,10 +82,12 @@ Esc enche um anel e pula; segurar o clique acelera).
   `tests/teste_rastro.sh` (`make teste-jogo`) confere, no jogo, que os impactos saem idênticos
   com ele ligado e desligado.
 - **Ritmo:** o mestre não fica parado à toa. A espera antes do aviso (a
-  preparação segurada) vale ×0,6 do que estava no roster (piso de 100 ms) e a pausa
-  depois de cada sequência é de 0,55 s, cerca de 25% mais golpes por minuto. Do
-  aviso ao contato, as janelas e o intervalo dentro da sequência não mudam
-  (`AJ_ESPERA_X` e `AJ_PAUSA_SEQUENCIA`, em `src/ajuste.h`; 1,0 e 0,8 voltam ao antigo).
+  preparação segurada) vale ×0,50 do que estava no roster (piso de 100 ms; ×0,60 no hayate e no jinshi, de ritmo
+  irregular, que já batem no piso) e a pausa depois de cada sequência é de 0,40 s: no casual, 6 a 13% menos tempo de
+  duelo em cada mestre, com a curva de vitórias igual. Do aviso ao contato, as janelas e o intervalo dentro da sequência
+  não mudam (`AJ_ESPERA_X`, `AJ_ESPERA_X_IRREGULAR` e `AJ_PAUSA_SEQUENCIA`, em `src/ajuste.h`; 1,0 e 0,8 voltam ao
+  antigo). A pausa não pode cair abaixo do fim da recuperação do mestre (0,32 s) nem deixar de ter um tempo depois da
+  janela de "tarde" (`test_aperto_cedo`, no `core_test`).
 - O **hitstop** congela o duelo no impacto, e o tempo dele sai do golpe seguinte da
   sequência: o ritmo é sempre o mesmo, qualquer que seja o resultado. O jogo congela o
   tempo real pelo mesmo número de segundos (`hitstop_passo`), e o que sobra do quadro
