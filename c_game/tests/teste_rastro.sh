@@ -28,7 +28,7 @@ for M in 5 9 11; do
     grep '^IMPACTO' "$TMP/sem.txt" > "$TMP/sem.imp"
     N=$(wc -l < "$TMP/com.imp")
     confere "$N impactos com o rastro; os mesmos, ao ms, sem ele (contato, julgamento, erro, quadro)" "$(cmp -s "$TMP/com.imp" "$TMP/sem.imp"; echo $?)"
-    confere "a luta teve impactos" "$([ "$N" -gt 20 ]; echo $?)"
+    confere "a luta teve impactos ($N; o mínimo é 10: o tamanho da luta muda quando muda o quadro em que o robô do jogo aperta)" "$([ "$N" -ge 10 ]; echo $?)"
     FC=$(grep '^FANTASMAS' "$TMP/com.txt" | cut -d' ' -f2)
     FS=$(grep '^FANTASMAS' "$TMP/sem.txt" | cut -d' ' -f2)
     confere "o rastro aparece ligado ($FC fantasmas) e some desligado ($FS)" "$([ "${FC:-0}" -gt 0 ] && [ "${FS:-1}" -eq 0 ]; echo $?)"

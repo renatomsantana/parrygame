@@ -1944,13 +1944,17 @@ static void update_duel(float dtReal) {
     /* o robô do demo é o mesmo dos testes (robo.c) */
     if ((G.demo || G.autoJogo) && robo_quer_apertar(&G.robo, &G.duel, dt)) press = true;
 
-    /* Hitstop congela o duelo e as poses. */
+    /* Hitstop congela o duelo e as poses; o quadro em que ele acaba corre só o que sobra dele, e assim
+     * o congelamento dura exatamente o que o núcleo descontou da sequência, em qualquer taxa. */
     if (G.hitstop > 0) {
-        G.hitstop -= dtReal;
-        if (press) duel_press(&G.duel);
-        handle_events();
-        audio_music_duck(G.silence > 0 ? 1 : 0.6f);
-        return;
+        float sobra = hitstop_passo(&G.hitstop, dtReal);
+        if (sobra <= 0) {
+            if (press) duel_press(&G.duel);
+            handle_events();
+            audio_music_duck(G.silence > 0 ? 1 : 0.6f);
+            return;
+        }
+        dt = sobra * G.slowmo;
     }
     audio_music_duck(G.silence > 0 ? 1 : 0);
     /* O clique chegou em algum ponto do último quadro: entra no meio dele. */

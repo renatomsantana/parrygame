@@ -488,6 +488,14 @@ static void resolve(Duel *d) {
     }
 }
 
+float hitstop_passo(float *restante, float dt) {
+    if (*restante <= 0) return dt;
+    if (dt <= *restante) { *restante -= dt; return 0; }
+    float sobra = dt - *restante;
+    *restante = 0;
+    return sobra;
+}
+
 void duel_tick(Duel *d, double delta) {
     if (d->phase == PH_FINISHED) return;
     d->clock += delta > 0 ? delta : 0;

@@ -2004,6 +2004,87 @@ static void test_vozes(void) {
     printf("vozes do parry perfeito: %ld disparos (%ld de golpe duplo); %d vozes: %ld cortes; as %d de antes: %ld cortes\n", disparos, duplos, VOZES_PERFEITO_N, cortes8, VOZES_PADRAO, cortes4);
 }
 
+/* O hitstop no jogo: o duelo congela por lastHitstop segundos de tempo real e o quadro em que o
+ * congelamento acaba corre só o que sobra (hitstop_passo). O núcleo desconta o hitstop da preparação
+ * seguinte de uma sequência, então o tempo real do contato de cada golpe tem que ser exatamente o
+ * tempo do núcleo mais os congelamentos anteriores, em qualquer taxa de quadros. Antes o quadro em que o
+ * congelamento acabava era jogado fora e cada golpe alongava a luta em até um quadro (16,7 ms a 60 Hz,
+ * 33 ms a 30 Hz), e o erro se acumulava. O laço é o do jogo (update_duel). */
+typedef struct { double c0, realDesde; } TrechoQueEsCorre;
+
+static void test_hitstop_exato(void) {
+    static const double HZ[] = {30, 60, 120, 144, 240};
+    Robo robos[2] = {ROBO_DO_DEMO, ROBO_HUMANO_CASUAL};
+    long contatos = 0, perdidosAntes = 0;
+    double pior = 0, piorAntigo = 0;
+    static TrechoQueEsCorre trechos[70000];
+    for (int mi = 0; mi < roster_size(); mi++) {
+        for (int h = 0; h < 5; h++) {
+            for (uint32_t seed = 1; seed <= 4; seed++) {
+                for (int c = 0; c < 2; c++) {
+                    Settings s;
+                    settings_default(&s);
+                    settings_for_level(&s, mi);
+                    Duel d;
+                    duel_init(&d, &s, roster_get(mi), seed);
+                    RoboMente mente;
+                    robo_iniciar(&mente, &robos[c], seed);
+                    const double dtReal = 1.0 / HZ[h];
+                    float congelado = 0;                      /* o G.hitstop do jogo */
+                    double real = 0, congeladoTotal = 0, nominalTotal = 0, somaAnteriores = 0;
+                    double contatoCore[400], esperado[400], hitstops[400];
+                    int nc = 0, nt = 0;
+                    DuelEvent ev[MAX_EVENTS];
+                    while (d.phase != PH_FINISHED && real < 300 && nt < 70000 && nc < 400) {
+                        double inicio = real, c0 = d.clock;
+                        real += dtReal;
+                        float sobra = hitstop_passo(&congelado, (float)dtReal);
+                        double parado = dtReal - sobra;
+                        congeladoTotal += parado;
+                        if (sobra > 0) {
+                            trechos[nt++] = (TrechoQueEsCorre){c0, inicio + parado};
+                            duel_step_at(&d, sobra, robo_aperto_em(&mente, &d, sobra));
+                        }
+                        int n = duel_drain(&d, ev, MAX_EVENTS);
+                        for (int i = 0; i < n; i++) {
+                            if (ev[i].kind != EV_IMPACT) continue;
+                            contatoCore[nc] = d.lastStrikeAt;
+                            esperado[nc] = d.lastStrikeAt + somaAnteriores;   /* o núcleo mais os congelamentos anteriores */
+                            hitstops[nc] = d.lastHitstop;
+                            somaAnteriores += d.lastHitstop;
+                            nominalTotal += d.lastHitstop;
+                            congelado = d.lastHitstop;
+                            double antigo = ceil(d.lastHitstop / dtReal - 1e-9) * dtReal - d.lastHitstop;
+                            if (antigo > piorAntigo) piorAntigo = antigo;
+                            if (antigo > 1e-6) perdidosAntes++;
+                            nc++;
+                        }
+                    }
+                    /* o tempo real de cada contato, pelos trechos em que o duelo correu */
+                    for (int k = 0; k < nc; k++) {
+                        int f = 0;
+                        for (int lo = 0, hi = nt - 1; lo <= hi;) {
+                            int mid = (lo + hi) / 2;
+                            if (trechos[mid].c0 <= contatoCore[k] + 1e-12) { f = mid; lo = mid + 1; } else hi = mid - 1;
+                        }
+                        double erro = fabs(trechos[f].realDesde + (contatoCore[k] - trechos[f].c0) - esperado[k]);
+                        if (erro > pior) pior = erro;
+                        contatos++;
+                    }
+                    (void)hitstops;
+                    CHECK(fabs(congeladoTotal + congelado - nominalTotal) < 1e-3, "%s, %.0f Hz: o congelamento total (%.4f s + %.4f s pendentes) é o que o núcleo descontou (%.4f s)",
+                          roster_get(mi)->name, HZ[h], congeladoTotal, congelado, nominalTotal);
+                }
+            }
+        }
+    }
+    CHECK(contatos > 5000, "o teste do hitstop cobriu as lutas (%ld contatos)", contatos);
+    CHECK(pior < 1e-4, "o tempo real de cada contato é o do núcleo mais os congelamentos, em qualquer taxa (pior erro %.6f s)", pior);
+    CHECK(piorAntigo > 0.015 && perdidosAntes > 1000, "e o teste enxerga o problema de antes: até %.1f ms perdidos por congelamento (%ld deles)", piorAntigo * 1000, perdidosAntes);
+    printf("hitstop: %ld contatos a 30, 60, 120, 144 e 240 Hz, pior erro de tempo real %.4f ms; o jogo de antes perdia até %.1f ms por congelamento (%ld congelamentos)\n",
+           contatos, pior * 1000, piorAntigo * 1000, perdidosAntes);
+}
+
 /* Um passo grande (uma pausa, uma queda de quadro) não pode pular o aviso: WINDUP, LAUNCH, o brilho e o
  * som do aviso saem, nessa ordem de tempo, antes do PRESS e do IMPACT. Antes, o núcleo começava a
  * preparação numa chamada e só disparava a agenda na seguinte, e um aperto entre as duas julgava o golpe
@@ -2259,6 +2340,7 @@ int main(void) {
     test_campaign_win();
     test_passo_grande();
     test_vozes();
+    test_hitstop_exato();
     printf("%d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
 }

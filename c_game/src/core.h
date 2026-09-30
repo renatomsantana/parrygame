@@ -337,6 +337,11 @@ DuelTimeline duel_timeline(const Duel *d);
 float calibration_result(const float *offsets, int n);
 /* Copia e esvazia a fila de eventos. Devolve quantos. */
 int duel_drain(Duel *d, DuelEvent *out, int max);
+/* O hitstop congela o duelo por `*restante` segundos de tempo real. Gasta `dt` desse congelamento e
+ * devolve quanto do quadro sobra para o duelo correr (o quadro inteiro se não há mais o que congelar).
+ * O quadro em que o congelamento acaba corre a parte que sobra: o congelamento dura exatamente o que o
+ * núcleo descontou da sequência (duel_hitstop_for), em qualquer taxa de quadros. */
+float hitstop_passo(float *restante, float dt);
 
 /* ------------------------------------------------------------------ */
 /* Trilha                                                              */
