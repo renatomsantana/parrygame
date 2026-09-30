@@ -170,7 +170,8 @@ static float blade_lead(Duel *d) {
     const Move *mv = duel_move(d);
     if (d->s.bladeFrom <= 0 || d->m->id < d->s.bladeFrom) return base;
     if (d->comboStrike == 0 && mv && (mv->look == LOOK_FAR || mv->look == LOOK_DASH)) return base;
-    float hi = d->comboStrike > 0 && d->s.bladeChainMax < d->s.bladeMax ? d->s.bladeChainMax : d->s.bladeMax;
+    float teto = d->m->bladeMax > 0 && d->m->bladeMax < d->s.bladeMax ? d->m->bladeMax : d->s.bladeMax;
+    float hi = d->comboStrike > 0 && d->s.bladeChainMax < teto ? d->s.bladeChainMax : teto;
     float lo = d->s.bladeMin < hi ? d->s.bladeMin : hi;
     return lo + (hi - lo) * (float)rng_next(&d->bladeRng);
 }
