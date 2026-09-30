@@ -12,6 +12,8 @@
 #   ARGUMENTOS   os do apara: --demo --master 1 --duel --fase 3 --state defeat ...
 #
 # Precisa de ./apara, xvfb-run e do ffmpeg (FFMPEG=/caminho/ffmpeg, ou o do PATH). FPS=60 e CRF=24 mudam a qualidade.
+# Câmera lenta de verdade, sem quadros repetidos: LENTO=4 joga o jogo a 4 x 60 passos por segundo e o vídeo sai a 60, quatro vezes
+# mais devagar (a legenda avisa). SEM_LEGENDA=1 grava só o jogo (1280 x 720), para juntar vídeos lado a lado.
 cd "$(dirname "$0")/.." || exit 1
 [ $# -ge 6 ] || { sed -n '2,15p' "$0"; exit 2; }
 SAIDA=$1; T0=$2; T1=$3; L1=$4; L2=$5; shift 5
@@ -21,16 +23,17 @@ while [ $# -gt 0 ] && [ "$1" != "--" ]; do AMBIENTE="$AMBIENTE $1"; shift; done
 FFMPEG=${FFMPEG:-$(command -v ffmpeg)}
 [ -x "$FFMPEG" ] || { echo "gravar_video: falta o ffmpeg (FFMPEG=...)"; exit 2; }
 [ -x ./apara ] || { echo "gravar_video: falta ./apara (make)"; exit 2; }
-FPS=${FPS:-60}; CRF=${CRF:-24}
+FPS=${FPS:-60}; CRF=${CRF:-24}; LENTO=${LENTO:-1}
+REC_FPS=$((FPS * LENTO))
 FONTE=${FONTE:-/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf}   # a pasta dele vai para o libass (a família é "DejaVu Sans")
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 mkfifo "$TMP/cru"
 # a legenda vai numa faixa acima do jogo (1280 x 80), sem cobrir nada, escrita como legenda ASS (o ffmpeg de alguns
 # pacotes não traz o drawtext, mas traz o libass); à direita, o tempo de jogo, atualizado 10 vezes por segundo
-python3 - "$TMP/legenda.ass" "$L1" "$L2" "$T0" "$T1" <<'PY'
+python3 - "$TMP/legenda.ass" "$L1" "$L2" "$T0" "$T1" "$LENTO" <<'PY'
 import sys
-arq, l1, l2, t0, t1 = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4]), float(sys.argv[5])
+arq, l1, l2, t0, t1, lento = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4]), float(sys.argv[5]), float(sys.argv[6])
 def hms(t): return "%d:%02d:%05.2f" % (int(t // 3600), int(t % 3600 // 60), t % 60)
 esc = lambda x: x.replace("\\", "/").replace("{", "(").replace("}", ")").replace("\n", " ")
 cab = """[Script Info]
@@ -47,20 +50,21 @@ Style: T,DejaVu Sans,26,&H0070D0FF,&H0070D0FF,&H00000000,&H00000000,-1,0,0,0,100
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
-dur = t1 - t0
+dur = (t1 - t0) * lento                                   # a duração do vídeo
 ev = ["Dialogue: 0,%s,%s,L1,,0,0,0,,%s" % (hms(0), hms(dur + 1), esc(l1)),
       "Dialogue: 0,%s,%s,L2,,0,0,0,,%s" % (hms(0), hms(dur + 1), esc(l2))]
 n = int(dur * 10) + 1
 for i in range(n):
-    ev.append("Dialogue: 0,%s,%s,T,,0,0,0,,jogo %.1f s" % (hms(i / 10), hms((i + 1) / 10), t0 + i / 10))
+    ev.append("Dialogue: 0,%s,%s,T,,0,0,0,,jogo %.1f s%s" % (hms(i / 10), hms((i + 1) / 10), t0 + i / 10 / lento, "  (câmera lenta %gx)" % lento if lento != 1 else ""))
 open(arq, "w", encoding="utf-8").write(cab + "\n".join(ev) + "\n")
 PY
 VF="pad=1280:800:0:80:black,ass=$TMP/legenda.ass:fontsdir=$(dirname "$FONTE")"
+[ -n "$SEM_LEGENDA" ] && VF="null"
 "$FFMPEG" -hide_banner -loglevel error -y -f rawvideo -pixel_format rgb24 -video_size 1280x720 -framerate "$FPS" -i "$TMP/cru" \
     -vf "$VF" -c:v libx264 -preset veryfast -crf "$CRF" -pix_fmt yuv420p -movflags +faststart -r "$FPS" "$SAIDA" &
 FFPID=$!
 # shellcheck disable=SC2086
-env $AMBIENTE APARA_REC_RAW="$TMP/cru" APARA_REC_FPS="$FPS" timeout "${LIMITE:-900}" xvfb-run -a -s '-screen 0 1280x720x24' ./apara "$@" --rec "$TMP/x" "$T0" "$T1" >"$TMP/jogo.log" 2>&1
+env $AMBIENTE APARA_REC_RAW="$TMP/cru" APARA_REC_FPS="$REC_FPS" timeout "${LIMITE:-900}" xvfb-run -a -s '-screen 0 1280x720x24' ./apara "$@" --rec "$TMP/x" "$T0" "$T1" >"$TMP/jogo.log" 2>&1
 wait "$FFPID"
 grep -E "^(REC_RAW|TESTE_MARCO)" "$TMP/jogo.log" | head -5
 ls -l "$SAIDA" | awk '{printf "%s: %.1f MB\n", $NF, $5/1048576}'
