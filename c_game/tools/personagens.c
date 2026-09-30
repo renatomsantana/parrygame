@@ -28,6 +28,7 @@
  *          desarme no jogo), e assets/sprites/_folhas/ com as folhas.
  * Detalhes e o elenco em docs/PERSONAGENS.md.
  */
+#define _DEFAULT_SOURCE   /* realpath com -std=c11 (no macOS já vem) */
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -5338,7 +5339,7 @@ static void drop_helm_fire(Canvas *cv, int top) {
 }
 
 static void unmask(Canvas *cv) {
-    int bx, by;
+    int bx = 0, by = 0;
     if (oni_find(cv, ONI, ONI_ROWS, ONI_TOP + 3, &bx, &by)) {
         if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: frente %s:%d %d %d lean %.2f\n", g_dbg_anim, g_dbg_idx, bx, by + ONI_TOP, oboro_lean(cv, bx, by + ONI_TOP));
         oboro_head(cv, bx, by + ONI_TOP, 16);   /* coluna 0 = olho de trás menos 9, linha 0 = a dos olhos */
@@ -6764,7 +6765,7 @@ static bool grid_dir(const char *dir, const char *title, const char *out, int mo
         grid_text(&im, 8, y0 + head + cellh / 2 - 5, an[i].name, z, (Color){235, 235, 235, 255});
         for (int k = 0; k < nf[i]; k++) {
             int x0 = label + k * (cellw + gap);
-            char num[8];
+            char num[16];
             snprintf(num, sizeof num, "%d", k);
             grid_text(&im, x0 + 2, y0 + 2 * z, num, z, (Color){170, 170, 180, 255});
             Color border = k == an[i].contact ? (Color){255, 70, 70, 255}
@@ -7288,7 +7289,7 @@ int main(int argc, char **argv) {
             const Strip *bs = &sc->strips[t];
             Rendered *r = &rend[si][nr];
             static char nome[MAX_REND][48];
-            snprintf(nome[nr], sizeof nome[nr], "BASE_%s", bs->name);
+            snprintf(nome[nr], sizeof nome[nr], "BASE_%.*s", (int)sizeof nome[nr] - 6, bs->name);
             r->name = nome[nr];
             r->n = bs->nframes;
             r->frames = calloc((size_t)r->n, sizeof(Frame));

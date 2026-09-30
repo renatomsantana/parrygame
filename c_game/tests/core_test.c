@@ -1468,13 +1468,10 @@ static void test_ritmo(void) {
         const MasterProfile *m = roster_get(i);
         double dn = 0, da = 0;
         double tn[64], ta[64];
-        long cn = 0, ca = 0;
         for (uint32_t seed = 1; seed <= 12; seed++) {
             GolpeRitmo n[40], a[40];
             int kn = coleta_ritmo(&novo, m, seed, n, 40, &dn), ka = coleta_ritmo(&antigo, m, seed, a, 40, &da);
             int k = kn < ka ? kn : ka;
-            cn += kn;
-            ca += ka;
             (void)tn; (void)ta;
             for (int j = 0; j < k; j++) {
                 golpes++;

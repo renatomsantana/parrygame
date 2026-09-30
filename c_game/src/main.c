@@ -435,9 +435,15 @@ static const char *lower(const char *s) {
     return buf[slot];
 }
 
+/* Uma linha quebrada do texto cabe em LINHA_MAX bytes (~140 letras de 9 px em 1280 px, mesmo em UTF-8);
+ * uma palavra, em PALAVRA_MAX. O buffer de junção guarda a linha, o espaço e a palavra: nada trunca. */
+#define LINHA_MAX 512
+#define PALAVRA_MAX 256
+#define JUNTA_MAX (LINHA_MAX + PALAVRA_MAX + 2)
+
 /* Quebra em linhas e mostra só os primeiros `visible` bytes (máquina de escrever). */
 static void ink_wrapped(const char *s, float x, float y, float width, float size, Color c, int visible) {
-    char line[512], word[256], trial[512];
+    char line[LINHA_MAX], word[PALAVRA_MAX], trial[JUNTA_MAX];
     int lineLen = 0, used = 0;
     float ly = y;
     const char *p = s;
@@ -445,7 +451,7 @@ static void ink_wrapped(const char *s, float x, float y, float width, float size
     while (*p) {
         int wl = 0;
         while (p[wl] && p[wl] != ' ') wl++;
-        if (wl > 255) wl = 255;
+        if (wl > PALAVRA_MAX - 1) wl = PALAVRA_MAX - 1;
         memcpy(word, p, (size_t)wl);
         word[wl] = 0;
         snprintf(trial, sizeof trial, "%s%s%s", line, lineLen ? " " : "", word);
@@ -459,7 +465,7 @@ static void ink_wrapped(const char *s, float x, float y, float width, float size
             snprintf(line, sizeof line, "%s", word);
             lineLen = wl;
         } else {
-            snprintf(line, sizeof line, "%s", trial);
+            snprintf(line, sizeof line, "%.*s", (int)sizeof line - 1, trial);
             lineLen = (int)strlen(line);
         }
         p += wl;
@@ -2808,23 +2814,23 @@ static void ui_ending(void) {
 }
 
 /* Quebra um parágrafo em linhas que cabem em `width`. Devolve quantas. */
-static int wrap_lines(const char *t, float size, float width, char lines[][256], int max) {
+static int wrap_lines(const char *t, float size, float width, char lines[][LINHA_MAX], int max) {
     int n = 0;
-    char line[256] = "", trial[512];
+    char line[LINHA_MAX] = "", trial[JUNTA_MAX];
     while (*t && n < max) {
         int wl = 0;
-        while (t[wl] && t[wl] != ' ') wl++;
+        while (t[wl] && t[wl] != ' ' && wl < PALAVRA_MAX - 1) wl++;
         snprintf(trial, sizeof trial, "%s%s%.*s", line, line[0] ? " " : "", wl, t);
         if (line[0] && ui_width(trial, size) > width) {
-            snprintf(lines[n++], 256, "%s", line);
+            snprintf(lines[n++], LINHA_MAX, "%s", line);
             snprintf(line, sizeof line, "%.*s", wl, t);
         } else {
-            snprintf(line, sizeof line, "%s", trial);
+            snprintf(line, sizeof line, "%.*s", (int)sizeof line - 1, trial);
         }
         t += wl;
         while (*t == ' ') t++;
     }
-    if (line[0] && n < max) snprintf(lines[n++], 256, "%s", line);
+    if (line[0] && n < max) snprintf(lines[n++], LINHA_MAX, "%s", line);
     return n;
 }
 
@@ -2836,7 +2842,7 @@ static void ui_narration(void) {
     DrawRectangle((int)x, 0, (int)width, UI_H, fadec(INK, 0.45f));
     DrawRectangleGradientH((int)(x + width), 0, 200, UI_H, fadec(INK, 0.45f), fadec(INK, 0));
     float y = UI_H * 0.62f - G.loreScroll;
-    char lines[16][256];
+    char lines[16][LINHA_MAX];
     for (int p = 0; p < LORE_PAGES; p++) {
         int n = wrap_lines(lore_page(p), size, width, lines, 16);
         for (int i = 0; i < n; i++, y += lh) {
@@ -3123,7 +3129,7 @@ static void ui_debug(Rectangle dst) {
 static void ui_aviso_save(void) {
     if (G.avisoSaveAte <= G.time || !G.avisoSave[0]) return;
     const float size = 18, lh = size * 1.5f, w = 420;
-    char linhas[4][256];
+    char linhas[4][LINHA_MAX];
     int n = wrap_lines(G.avisoSave, size, w - 32, linhas, 4);
     float a = clampf(G.avisoSaveAte - G.time, 0, 1);
     Rectangle r = {20, 80, w, 24 + n * lh};

@@ -63,6 +63,10 @@ save_test: src/salvar.c src/salvar.h src/core.h tests/save_test.c
 test-save: save_test
 	./save_test
 
+# Nenhum aviso do gcc nem do clang (-Wall -Wextra -Werror em -O1, -O2 e -O3).
+avisos:
+	RAYLIB_CFLAGS="$(RAYLIB_CFLAGS)" sh tests/avisos.sh
+
 test: core_test test-fonte test-save
 	./core_test
 
