@@ -152,9 +152,14 @@
 #define AJ_SILENCIO_QUEBRA          0.5f    /* a música abaixa depois de quebrar a postura */
 #define AJ_SILENCIO_DESARME         1.0f    /* ...depois do desarme */
 #define AJ_SILENCIO_MORTE_OBORO     1.5f    /* ...e no golpe que mata o oboro */
-#define AJ_DERROTA_TITULO           1.2f    /* tela de derrota: a palavra "derrota" aparece depois disto */
-#define AJ_DERROTA_OPCOES           1.6f    /* ...e as opções, depois disto (só então aceitam clique) */
-#define AJ_VITORIA_TRAVA            1.0f    /* tela de vitória: o clique só vale depois disto */
+/* Quem aperta sem parar, sem ler, tem de ver o resultado: a palavra "derrota" e o pergaminho da vitória entram em fade
+ * (AJ_FADE_RESULTADO) e têm de estar inteiros antes do primeiro clique que vale: na derrota, o título já inteiro com uma
+ * margem de 0,06 s antes de as opções aceitarem clique (como sempre foi: 0,07 s); na vitória, o pergaminho inteiro por
+ * ao menos 0,3 s. O core_test confere as duas contas. */
+#define AJ_FADE_RESULTADO           (1.0f / 3)   /* as telas de derrota e de vitória entram em fade neste tempo */
+#define AJ_DERROTA_TITULO           0.8f    /* tela de derrota: a palavra "derrota" aparece depois disto (antes 1,2) */
+#define AJ_DERROTA_OPCOES           1.2f    /* ...e as opções, depois disto (só então aceitam clique) (antes 1,6) */
+#define AJ_VITORIA_TRAVA            0.7f    /* tela de vitória: o clique só vale depois disto (antes 1,0) */
 #define AJ_ESCOLHA_TRAVA            1.5f    /* a escolha do final (poupar ou matar): idem */
 #define AJ_DICA_PRIMEIRO_DUELO      1.0f    /* a dica "como se apara" aparece depois disto, no primeiro duelo */
 #define AJ_FINAL_TITULO             2.2f    /* o título do final aparece depois disto */

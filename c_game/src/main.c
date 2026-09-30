@@ -685,6 +685,9 @@ static void registra_vitoria(void) {
 /* ------------------------------------------------------------------ */
 
 static void set_state(State s) {
+    char marco[24];
+    snprintf(marco, sizeof marco, "estado_%d", (int)s);
+    marco_de_teste(marco);
     G.state = s;
     G.stateTime = 0;
 }
@@ -3012,7 +3015,7 @@ static int defeat_options(const char **labels) {
 
 static void ui_defeat(void) {
     if (G.stateTime < AJ_DERROTA_TITULO) return;
-    float a = clampf((G.stateTime - AJ_DERROTA_TITULO) * 3, 0, 1);
+    float a = clampf((G.stateTime - AJ_DERROTA_TITULO) / AJ_FADE_RESULTADO, 0, 1);
     DrawRectangle(0, 0, UI_W, UI_H, fadec((Color){20, 6, 4, 255}, 0.6f * a));
     draw_text_f(G.uiBold, "derrota", UI_W / 2.0f - ui_width_f(G.uiBold, "derrota", 80) / 2, 190, 80, fadec((Color){206, 70, 50, 255}, a), true);
     if (G.stateTime < AJ_DERROTA_OPCOES) return;
@@ -3026,7 +3029,7 @@ static void ui_defeat(void) {
 }
 
 static void ui_cleared(void) {
-    float a = clampf(G.stateTime * 3, 0, 1);
+    float a = clampf(G.stateTime / AJ_FADE_RESULTADO, 0, 1);
     DrawRectangle(0, 0, UI_W, UI_H, fadec(INK, 0.45f * a));
     Rectangle r = {UI_W / 2.0f - 300, 200, 600, 220};
     parchment(r, a);

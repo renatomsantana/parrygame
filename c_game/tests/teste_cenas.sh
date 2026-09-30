@@ -6,13 +6,18 @@
 #      e AJ_ESPADA_CRAVADA_ESPERA): 2,57 s hoje, 2,87 s com a espera de 1,1 s de antes;
 #   2. da quebra de um selo do oboro ao começo da cena de fala (a câmera lenta da quebra e AJ_QUEBRA_ATE_A_CENA):
 #      1,57 s hoje, 1,87 s com o 1,3 s de antes.
-# Os limites deixam uns 0,2 s de folga para cada lado: não valem com o valor antigo.
+#   3. a tela de derrota (AJ_DERROTA_OPCOES): quem aperta sem parar, sem ler, só sai dela depois da trava (1,2 s hoje, 1,6 s
+#      antes), e não antes;
+#   4. a tela de vitória (AJ_VITORIA_TRAVA): o mesmo, 0,7 s hoje, 1,0 s antes.
+# Nas duas últimas os cliques são de verdade (XTest, tests/xclique.c, a cada uns 40 ms). Os limites deixam uns 0,2 s de
+# folga para cada lado: não valem com o valor antigo.
 cd "$(dirname "$0")/.." || exit 1
 [ -x ./apara ] || { echo "teste_cenas: falta ./apara (make)"; exit 2; }
 command -v xvfb-run >/dev/null 2>&1 || { echo "teste_cenas: pulado (sem xvfb-run)"; exit 0; }
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 FALHAS=0
+cc -std=c11 -O1 -o "$TMP/xclique" tests/xclique.c -lX11 -lXtst 2>/dev/null || cc -std=c11 -O1 -o "$TMP/xclique" tests/xclique.c -lX11 -l:libXtst.so.6 2>/dev/null || SEM_XTEST=1
 confere() { # descrição, condição (0 = ok)
     if [ "$2" -eq 0 ]; then echo "  ok: $1"; else echo "  FALHA: $1"; FALHAS=$((FALHAS + 1)); fi
 }
@@ -39,6 +44,29 @@ confere "$D s entre o golpe final e a fala do vencido (entre 2,35 e 2,75 s)" "$(
 echo "2. a quebra de um selo do oboro: da quebra à cena de fala"
 D=$(mede 13 selo_quebrado cena_do_selo)
 confere "$D s entre a quebra do selo e a cena (entre 1,35 e 1,75 s)" "$(awk -v d="$D" 'BEGIN { exit !(d != "faltou" && d >= 1.35 && d <= 1.75) }'; echo $?)"
+
+# aperta ESTADO NUMERO_DO_ESTADO: o jogo abre direto na tela (ela começa em t = 0), um clique atrás do outro cai em cima
+# dela; escreve o tempo de jogo entre o começo da tela e o primeiro marco de estado seguinte
+aperta() {
+    APARA_AUTO=1 APARA_SEMENTE=11 timeout 120 xvfb-run -a -s '-screen 0 1280x720x24' sh -c '
+        ./apara --master 1 --duel --state '"$1"' >"'"$TMP"'/'"$1"'.log" 2>&1 &
+        PID=$!
+        N=0
+        until "'"$TMP"'/xclique" 100 40 >/dev/null 2>&1 || [ "$N" -ge 50 ]; do N=$((N + 1)); sleep 0.1; done
+        kill $PID 2>/dev/null; wait $PID 2>/dev/null'
+    awk -v e="estado_$2" '$1 == "TESTE_MARCO" { if (ini == "" && $2 == e) { split($3, x, "="); ini = x[2] } else if (ini != "" && fim == "" && $2 ~ /^estado_/ && $2 != e) { split($3, x, "="); fim = x[2] } } END { if (ini != "" && fim != "") printf("%.3f\n", fim - ini); else print "faltou" }' "$TMP/$1.log"
+}
+
+if [ -n "$SEM_XTEST" ]; then
+    echo "3 e 4. puladas (sem libXtst para compilar tests/xclique.c)"
+else
+    echo "3. a tela de derrota: clique sem parar, a saída só depois da trava"
+    D=$(aperta defeat 8)
+    confere "$D s de tela até sair, com cliques sem parar (entre 1,15 e 1,5 s)" "$(awk -v d="$D" 'BEGIN { exit !(d != "faltou" && d >= 1.15 && d <= 1.5) }'; echo $?)"
+    echo "4. a tela de vitória: clique sem parar, a saída só depois da trava"
+    D=$(aperta cleared 7)
+    confere "$D s de tela até sair, com cliques sem parar (entre 0,65 e 0,95 s)" "$(awk -v d="$D" 'BEGIN { exit !(d != "faltou" && d >= 0.65 && d <= 0.95) }'; echo $?)"
+fi
 
 if [ "$FALHAS" -eq 0 ]; then echo "teste_cenas: tudo certo"; else echo "teste_cenas: $FALHAS falha(s)"; fi
 exit "$FALHAS"

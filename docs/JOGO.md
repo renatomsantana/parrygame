@@ -91,6 +91,9 @@ Esc enche um anel e pula; segurar o clique acelera).
   Nas cenas, do golpe final à fala do vencido passam 2,6 s (o hitstop, a câmera lenta do desarme, a espada que crava e
   `AJ_ESPADA_CRAVADA_ESPERA`) e, do selo quebrado do oboro à cena de fala, 1,6 s (`AJ_QUEBRA_ATE_A_CENA`); a
   câmera lenta e o grito de depois da cena (`AJ_PAUSA_APOS_CENA_SELO`, do tamanho da animação) ficam como estavam.
+  As telas de resultado seguram o clique um pouco menos: a derrota aceita clique 1,2 s depois de aparecer (a palavra
+  "derrota" entra aos 0,8 s, para estar inteira antes disso, como já estava) e a vitória, 0,7 s depois; quem aperta sem
+  parar vê o resultado inteiro antes de o clique valer (`AJ_DERROTA_*`, `AJ_VITORIA_TRAVA`, `AJ_FADE_RESULTADO`).
 - O **hitstop** congela o duelo no impacto, e o tempo dele sai do golpe seguinte da
   sequência: o ritmo é sempre o mesmo, qualquer que seja o resultado. O jogo congela o
   tempo real pelo mesmo número de segundos (`hitstop_passo`), e o que sobra do quadro

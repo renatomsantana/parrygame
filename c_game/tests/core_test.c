@@ -1494,6 +1494,10 @@ static void test_ritmo(void) {
     CHECK(AJ_ESPERA_X_IRREGULAR > AJ_ESPERA_X && AJ_ESPERA_X_IRREGULAR < 1, "a espera dos irregulares encurta, mas menos que a dos outros");
     /* a cena de fala do selo do oboro começa AJ_QUEBRA_ATE_A_CENA depois da quebra (tempo de jogo, na câmera lenta): a pausa
      * do núcleo depois do selo tem de durar mais que isso, ou o mestre começaria o golpe seguinte antes da cena */
+    /* quem aperta sem parar ainda vê o resultado (ajuste.h, AJ_FADE_RESULTADO) */
+    CHECK(AJ_DERROTA_OPCOES >= AJ_DERROTA_TITULO + AJ_FADE_RESULTADO + 0.06f, "derrota: o título está inteiro %.2f s antes de as opções aceitarem clique",
+          AJ_DERROTA_OPCOES - AJ_DERROTA_TITULO - AJ_FADE_RESULTADO);
+    CHECK(AJ_VITORIA_TRAVA >= AJ_FADE_RESULTADO + 0.3f, "vitória: o pergaminho está inteiro por %.2f s antes do primeiro clique que vale", AJ_VITORIA_TRAVA - AJ_FADE_RESULTADO);
     CHECK(AJ_PAUSA_SELO >= AJ_QUEBRA_ATE_A_CENA + 0.5f, "a pausa do selo (%.1f s) cobre a quebra até a cena (%.1f s) com folga", AJ_PAUSA_SELO, AJ_QUEBRA_ATE_A_CENA);
     bool mesmoGolpe = true, mesmoAviso = true, mesmaCadeia = true, espera = true, maisRapido = true;
     int golpes = 0;
