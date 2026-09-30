@@ -59,7 +59,7 @@ Com `--teste`, na luta ou na derrota: **R** recomeça, **V** enche a vida, **P**
 do mestre, **1 2 3** escolhem a fase do oboro, **N** / **B** vão ao próximo / anterior mestre.
 `--teste`, `--master`, `--duel`, `--state`, `--fase`, `--final` e `--demo` nunca gravam o progresso.
 
-## Gravar vídeos (sem tela, sem áudio)
+## Gravar vídeos sem áudio
 
 ```sh
 tools/gravar_video.sh saida.mp4 T0 T1 "linha 1" "linha 2" APARA_DEBUG=1 APARA_SEMENTE=11 -- --demo --master 1 --duel
@@ -137,3 +137,10 @@ os quadros por segundo), `APARA_LOG_CARIMBOS` (escreve cada carimbo e cada apert
 
 Mapa do código: tabela em `../docs/JOGO.md`. O núcleo (`core`, `roster`, `ajuste`, `robo`, `salvar`,
 `fonte`, `entrada`, `desempenho`) não usa raylib.
+
+## Clipes das lutas com impactos
+
+`python3 tools/gravar_lutas.py --seconds 6` gera amostras MP4 dos treze mestres
+em `videos-lutas/`, sem alterar o save. Os clipes usam os quadros do jogo a
+60 fps e os efeitos de impacto sintetizados pelo próprio áudio; não incluem a
+trilha ou a mixagem completa da partida. Requer `ffmpeg`.
