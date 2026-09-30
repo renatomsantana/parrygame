@@ -21,7 +21,7 @@ Se o save estiver estragado, o jogo avisa, guarda o arquivo em `apara_save.txt.b
 ## No macOS: o carimbo do clique
 
 O jogo usa o instante em que o macOS recebeu o clique (`NSEvent.timestamp`, em `src/entrada_mac.m`) e não o meio do
-quadro. Esse arquivo foi escrito sem um Mac à mão: **nunca foi compilado nem rodado**. Confira nesta ordem:
+quadro. O módulo compila no macOS e os testes de conversão passam; confira o comportamento com entradas físicas:
 
 1. `make` (precisa das Command Line Tools). Compila o `src/entrada_mac.m` junto com o resto.
 2. `./apara --carimbo` e clique 20 vezes (depois, 20 vezes com Espaço). A 60 Hz o mínimo sai perto de 0, a média perto de
@@ -40,6 +40,7 @@ XInput2 (Wayland puro) o Makefile já usa esse mesmo `src/entrada_stub.c`: lá o
 | Tecla | O que faz |
 |---|---|
 | clique, **Espaço**, **J**, **Enter** | apara e avança as falas |
+| botão inferior da face do controle | apara e avança as falas; sem carimbo nativo, usa o meio do quadro |
 | **Esc** | pausa (**T** trilha, **L** calibra o atraso, **M** menu, **Q** sai) |
 | **F3** (ou `APARA_DEBUG=1`) | overlay de debug: janelas, linha do tempo do golpe, os seis últimos apertos (perfeito, bom, cedo, tarde, e o erro em ms), fase, posturas, vida, e quantos apertos usaram o instante de hardware do clique |
 | **F** / **F11** | liga e desliga o tremor / tela cheia |

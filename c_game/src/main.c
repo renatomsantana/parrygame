@@ -380,6 +380,10 @@ static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi 
 static Color fadec(Color c, float a) { c.a = (unsigned char)(c.a * clampf(a, 0, 1)); return c; }
 static float smooth(float t) { t = clampf(t, 0, 1); return t * t * (3 - 2 * t); }
 
+static bool pressed_key_mouse(void) {
+    return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER);
+}
+
 static bool pressed(void) {
     /* No modo demonstração, o robô também avança falas e painéis. */
     if ((G.demo || G.autoJogo) && G.state != ST_DUEL && fmodf(G.stateTime, G.cliquePeriodo) < (G.recDir ? (float)G.recDt : GetFrameTime())) {
@@ -387,7 +391,7 @@ static bool pressed(void) {
         return true;
     }
     if (G.demo && (G.shotFile || G.recDir)) return false; /* capturas: só o robô joga */
-    return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER);
+    return pressed_key_mouse() || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN));
 }
 
 /* Não corta um caractere UTF-8 ao meio. */
@@ -2073,8 +2077,11 @@ static void update_hud_values(float dt) {
  * o do carimbo do clique, ou o meio do quadro (o de sempre) quando não há carimbo, ele não é confiável
  * (entrada_no_quadro) ou o jogo está em demonstração. `corrido` é a parte do quadro real em que o tempo
  * correu (o quadro todo, ou o que sobrou dele depois de um hitstop). */
-static double instante_do_aperto(double corrido, double dt) {
+static double instante_do_aperto(double corrido, double dt, bool podeCarimbar) {
     if (!G.usaCarimbo) return dt * 0.5;
+    /* O monitor nativo carimba teclado e mouse, não o botão do controle.
+     * Um evento de teclado no mesmo quadro não pode emprestar seu horário ao gamepad. */
+    if (!podeCarimbar) { G.semCarimbo++; return dt * 0.5; }
     bool valido;
     double t = entrada_no_quadro(G.carimbo, G.poll, G.quadro, corrido, dt, &valido);
     if (valido) G.carimbados++; else G.semCarimbo++;
@@ -2107,7 +2114,7 @@ static void update_duel(float dtReal) {
     }
     audio_music_duck(G.silence > 0 ? 1 : 0);
     /* O clique chegou em algum ponto do último quadro: onde o carimbo diz, ou no meio dele. */
-    duel_step_at(&G.duel, dt, press ? instante_do_aperto(corrido, dt) : -1);
+    duel_step_at(&G.duel, dt, press ? instante_do_aperto(corrido, dt, pressed_key_mouse()) : -1);
     handle_events();
     if (G.state == ST_DUEL || G.state == ST_DEFEAT) update_actors(dt);
 }
@@ -3362,7 +3369,7 @@ static void update_calibra(float dt) {
         G.cal.proxima++;
     }
     if (!pressed()) return;
-    double tp = (G.cal.t - dt) + instante_do_aperto(dt, dt);   /* o aperto chegou em algum ponto do quadro */
+    double tp = (G.cal.t - dt) + instante_do_aperto(dt, dt, pressed_key_mouse());   /* o aperto chegou em algum ponto do quadro */
     int k = (int)lround((tp - 1.0) / AJ_CALIBRA_BATIDA);
     if (k < 2) return;                               /* as duas primeiras batidas são para pegar o ritmo */
     G.cal.ultimo = (float)(tp - calibra_batida(k));

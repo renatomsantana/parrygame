@@ -239,9 +239,21 @@ static void visual_feedback_regressions(void) {
     }
 }
 
+static void gamepad_uses_frame_fallback(void) {
+    memset(&G, 0, sizeof G);
+    G.usaCarimbo = true;
+    G.poll = 10.0;
+    G.quadro = 1.0 / 60.0;
+    G.carimbo = G.poll - 0.002; /* timestamp válido de outro evento no mesmo quadro */
+    double t = instante_do_aperto(G.quadro, G.quadro, false);
+    REQUIRE(fabs(t - G.quadro * 0.5) < 1e-12, "gamepad herdou timestamp de teclado ou mouse");
+    REQUIRE(G.carimbados == 0 && G.semCarimbo == 1, "gamepad não foi contado como fallback");
+}
+
 int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
+    gamepad_uses_frame_fallback();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
