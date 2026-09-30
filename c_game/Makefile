@@ -63,6 +63,22 @@ save_test: src/salvar.c src/salvar.h src/core.h tests/save_test.c
 test-save: save_test
 	./save_test
 
+# Fuzz do núcleo (tests/fuzz.c): make fuzz N=3000. O make teste roda 600 cenários por modo.
+N ?= 3000
+fuzz_test: $(CORE) tests/fuzz.c src/core.h src/robo.h
+	$(CC) $(CFLAGS) $(CORE) tests/fuzz.c -o $@ -lm
+
+fuzz: fuzz_test
+	./fuzz_test $(N) 1
+
+fuzz-rapido: fuzz_test
+	./fuzz_test 600 1
+
+# A mesma luta a 30, 60, 120, 144 e 240 Hz tem que dar o mesmo resultado (tests/robos.c --taxas).
+TAXAS_LUTAS ?= 100
+robos-taxas: robos_relatorio
+	./robos_relatorio --taxas $(TAXAS_LUTAS)
+
 # Nenhum aviso do gcc nem do clang (-Wall -Wextra -Werror em -O1, -O2 e -O3).
 avisos:
 	RAYLIB_CFLAGS="$(RAYLIB_CFLAGS)" sh tests/avisos.sh
@@ -70,15 +86,27 @@ avisos:
 test: core_test test-fonte test-save
 	./core_test
 
+# O jogo de verdade sob xvfb (precisa do ./apara, do xvfb-run e da libX11; sem eles cada script pula):
+# as teclas de teste só existem com --teste e nada grava o progresso (teste_save), o rastro é só visual
+# (teste_rastro), a vitória é salva no golpe final e sobrevive a kill, ESC e Q e fechar (teste_vitoria).
+teste-jogo: apara
+	sh tests/teste_save.sh
+	sh tests/teste_rastro.sh
+	sh tests/teste_vitoria.sh
+
+# Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, avisos e o jogo real.
+teste:
+	$(MAKE) test
+	$(MAKE) fuzz-rapido
+	$(MAKE) robos-taxas
+	$(MAKE) avisos
+	$(MAKE) teste-jogo
+	@echo "teste: tudo certo"
+
 run: apara
 	./apara
 
 clean:
-	rm -f apara core_test fonte_test save_test robos_relatorio personagens
+	rm -f apara core_test fonte_test save_test fuzz_test robos_relatorio personagens
 
-# O jogo de verdade, sob xvfb: as teclas de teste só existem com --teste e nada grava o progresso.
-teste-jogo: apara
-	sh tests/teste_save.sh
-	sh tests/teste_rastro.sh
-
-.PHONY: packs all test run clean sprites robos teste-jogo
+.PHONY: all packs sprites run clean robos robos-taxas fuzz fuzz-rapido avisos test test-fonte test-save teste teste-jogo
