@@ -4,9 +4,11 @@
  */
 #include "../src/core.h"
 #include "../src/robo.h"
+#include "../src/vozes.h"
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int checks = 0, failures = 0;
@@ -1942,6 +1944,66 @@ static void test_campaign_win(void) {
     CHECK(c.index == 12 && c.completed, "e de novo não muda nada");
 }
 
+/* O rodízio de vozes do audio.c: cada disparo pega a próxima voz; se ela ainda está tocando, a cauda é cortada. */
+typedef struct { double livreAte[VOZES_MAX]; int n, proxima; long cortes, disparos; } Rodizio;
+
+static void dispara(Rodizio *r, double t, double cauda) {
+    int v = r->proxima;
+    r->proxima = (r->proxima + 1) % r->n;
+    if (r->livreAte[v] > t + 1e-9) r->cortes++;
+    r->livreAte[v] = t + cauda;
+    r->disparos++;
+}
+
+/* O som do parry perfeito (cauda de 1,6 s de reverb) toca uma vez por golpe perfeito e duas no golpe
+ * duplo. Com as vozes que o audio.c tem, nenhum disparo corta a cauda do anterior em milhares de lutas
+ * dos robôs (o tempo é o real: o do núcleo mais o hitstop que congelou o duelo); com as quatro de antes,
+ * cortava. */
+static void test_vozes(void) {
+    CHECK(VOZES_PERFEITO_N == vozes_precisas(SOM_PERFEITO_CAUDA, AJ_CADEIA_MIN, SOM_PERFEITO_DISPAROS_POR_GOLPE) && VOZES_PERFEITO_N <= VOZES_MAX,
+          "as vozes do perfeito (%d) são as que a cauda pede e cabem no máximo (%d)", VOZES_PERFEITO_N, VOZES_MAX);
+    CHECK(vozes_precisas(0.5f, AJ_CADEIA_MIN, 1) == 2 && vozes_precisas(0.6f, AJ_CADEIA_MIN, 2) == 4 && vozes_precisas(0.22f, AJ_CADEIA_MIN, 3) == 3,
+          "as vozes do bom, do erro e do assobio (4) bastam para as caudas curtas deles");
+    long cortes8 = 0, cortes4 = 0, disparos = 0, duplos = 0;
+    Robo robos[2] = {ROBO_DO_DEMO, ROBO_HUMANO_CASUAL};
+    for (int mi = 0; mi < roster_size(); mi++) {
+        for (uint32_t seed = 1; seed <= 30; seed++) {
+            for (int c = 0; c < 2; c++) {
+                Settings s;
+                settings_default(&s);
+                settings_for_level(&s, mi);
+                Duel d;
+                duel_init(&d, &s, roster_get(mi), seed);
+                RoboMente mente;
+                robo_iniciar(&mente, &robos[c], seed);
+                Rodizio r8 = {{0}, VOZES_PERFEITO_N, 0, 0, 0}, r4 = {{0}, VOZES_PADRAO, 0, 0, 0};
+                double congelado = 0;
+                DuelEvent ev[MAX_EVENTS];
+                while (d.phase != PH_FINISHED && d.clock < 600) {
+                    duel_step_at(&d, 1.0 / 60, robo_aperto_em(&mente, &d, 1.0 / 60));
+                    int n = duel_drain(&d, ev, MAX_EVENTS);
+                    for (int i = 0; i < n; i++) {
+                        if (ev[i].kind != EV_IMPACT) continue;
+                        double t = d.lastStrikeAt + congelado;
+                        if (ev[i].judgement == J_PERFEITO) {
+                            dispara(&r8, t, SOM_PERFEITO_CAUDA); dispara(&r4, t, SOM_PERFEITO_CAUDA);
+                            if (ev[i].i & 1) { dispara(&r8, t, SOM_PERFEITO_CAUDA / 1.25); dispara(&r4, t, SOM_PERFEITO_CAUDA / 1.25); duplos++; }
+                        }
+                        congelado += d.lastHitstop;
+                    }
+                }
+                cortes8 += r8.cortes;
+                cortes4 += r4.cortes;
+                disparos += r8.disparos;
+            }
+        }
+    }
+    CHECK(disparos > 5000 && duplos > 100, "o teste do rodízio cobriu o caso (%ld disparos, %ld golpes duplos perfeitos)", disparos, duplos);
+    CHECK(cortes8 == 0, "com %d vozes nenhuma cauda do parry perfeito é cortada (%ld cortes em %ld disparos)", VOZES_PERFEITO_N, cortes8, disparos);
+    CHECK(cortes4 > 0, "e o teste enxerga o problema: com as %d vozes de antes cortava (%ld cortes)", VOZES_PADRAO, cortes4);
+    printf("vozes do parry perfeito: %ld disparos (%ld de golpe duplo); %d vozes: %ld cortes; as %d de antes: %ld cortes\n", disparos, duplos, VOZES_PERFEITO_N, cortes8, VOZES_PADRAO, cortes4);
+}
+
 /* Um passo grande (uma pausa, uma queda de quadro) não pode pular o aviso: WINDUP, LAUNCH, o brilho e o
  * som do aviso saem, nessa ordem de tempo, antes do PRESS e do IMPACT. Antes, o núcleo começava a
  * preparação numa chamada e só disparava a agenda na seguinte, e um aperto entre as duas julgava o golpe
@@ -2196,6 +2258,7 @@ int main(void) {
     test_campaign();
     test_campaign_win();
     test_passo_grande();
+    test_vozes();
     printf("%d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
 }

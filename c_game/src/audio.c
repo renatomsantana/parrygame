@@ -4,6 +4,7 @@
  * rodando no callback da raylib (drone + sequenciador de 16 passos por cenário).
  */
 #include "audio.h"
+#include "vozes.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -16,9 +17,8 @@
 #define TAU 6.28318530718f
 
 static Sound sounds[SND_COUNT];
-/* Vozes extras dos golpes: num combo, um parry não corta a cauda do anterior. */
-#define FX_VOICES 4
-static Sound voices[SND_COUNT][FX_VOICES];
+/* Vozes extras dos golpes: numa sequência, um parry não corta a cauda do anterior (vozes.h). */
+static Sound voices[SND_COUNT][VOZES_MAX];
 static int voiceCount[SND_COUNT], voiceNext[SND_COUNT];
 static AudioStream stream;
 static float master = 0.85f;
@@ -537,7 +537,7 @@ static void music_callback(void *buffer, unsigned int frames) {
 void audio_init(void) {
     InitAudioDevice();
     sounds[SND_CUE] = make_sound(0.35f, s_cue, 0.55f);
-    sounds[SND_PERFECT] = make_sound_room(1.6f, s_perfect, 0.95f, 0.22f);
+    sounds[SND_PERFECT] = make_sound_room(SOM_PERFEITO_CAUDA, s_perfect, 0.95f, 0.22f);
     sounds[SND_GOOD] = make_sound_room(0.5f, s_good, 0.75f, 0.06f);
     sounds[SND_BAD] = make_sound(0.6f, s_bad, 0.95f);
     sounds[SND_BREAK] = make_sound(2.5f, s_break, 0.95f);
@@ -556,14 +556,16 @@ void audio_init(void) {
     sounds[SND_KOIGUCHI] = make_sound_room(0.04f, s_koiguchi, 0.5f, 0.03f);
     sounds[SND_SAQUE] = make_sound_room(1.3f, s_saque, 0.6f, 0.1f);
 #if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
-    static const SoundId poly[] = {SND_PERFECT, SND_GOOD, SND_BAD, SND_SWING};
+    static const struct { SoundId id; int vozes; } POLI[] = {
+        {SND_PERFECT, VOZES_PERFEITO_N}, {SND_GOOD, VOZES_PADRAO}, {SND_BAD, VOZES_PADRAO}, {SND_SWING, VOZES_PADRAO},
+    };
     /* sem placa de som o Sound vem vazio, e a raylib não confere isso no alias */
-    for (size_t i = 0; i < sizeof poly / sizeof poly[0] && IsAudioDeviceReady(); i++) {
-        SoundId id = poly[i];
+    for (size_t i = 0; i < sizeof POLI / sizeof POLI[0] && IsAudioDeviceReady(); i++) {
+        SoundId id = POLI[i].id;
         if (!sounds[id].stream.buffer) continue;
         voices[id][0] = sounds[id];
-        for (int k = 1; k < FX_VOICES; k++) voices[id][k] = LoadSoundAlias(sounds[id]);
-        voiceCount[id] = FX_VOICES;
+        for (int k = 1; k < POLI[i].vozes; k++) voices[id][k] = LoadSoundAlias(sounds[id]);
+        voiceCount[id] = POLI[i].vozes;
     }
 #endif
 
