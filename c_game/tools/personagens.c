@@ -27,6 +27,12 @@
  *          do golpe), mais ESPECIAL.png e DESARMADO.png (sem a arma, para o
  *          desarme no jogo), e assets/sprites/_folhas/ com as folhas.
  * Detalhes e o elenco em docs/PERSONAGENS.md.
+ *
+ * Variáveis de ambiente das provas (renderizam imagens de conferência; sem nenhuma delas o gerador
+ * faz o de sempre): SEM_ARMA (o corpo sem a arma, para provar posturas), SEM_AURA (sem a aura do
+ * corpo, para provar cabeças), DBG_NOHEAD e DBG_NOHAIR (sem cabeça / sem cabelo), CAB_PROVA (a
+ * prova dos cabelos), OBORO_PROVA (a prova do oboro), KOJ_BASE (a base das provas do kojiro: cada
+ * tira do pack sem a espada), KOJ_PROVA e KOJ_PARRY_B (as provas do saque e do parry do kojiro).
  */
 #define _DEFAULT_SOURCE   /* realpath com -std=c11 (no macOS já vem) */
 #include <math.h>
@@ -2033,7 +2039,7 @@ static void head_ref(const Frame *f, const Seg *sg, int *hx, int *hy) {
 }
 
 
-static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
+static void s5_hair(Canvas *cv, const Char *ch, const char *anim) {
     static bool clus[CH][CW];
     static short st[CW * CH][2];
     memset(clus, 0, sizeof clus);
@@ -2097,7 +2103,6 @@ static void s5_hair(Canvas *cv, const Char *ch, int idx, const char *anim) {
                     touch = cv_ok(x + dx, y + dy) && cv->orig->p[y + dy][x + dx].a && !s5_hair_px(cv, x + dx, y + dy);
             if (!touch) { cv_clear(cv, x, y); cv->empty[y][x] = true; }
         }
-    if (getenv("DBG_HAIR")) fprintf(stderr, "hair %s %s:%d eye %d %d open %d back %d lying %d\n", ch->id, anim, idx, ex, ey, open, back, lying);
     if (getenv("DBG_NOHAIR")) return;
     const Row *t = back ? ch->cab_costas : ch->cab_frente;
     /* os cabelos aprovados na etapa 2 (Garfiel, Arashi, Yoru) usam o desenho novo por completo */
@@ -3757,22 +3762,6 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
     double escala = w->escala > 0 ? w->escala : 1.0;
     /* parado, correndo, caindo: a arma descansa (a foice vira o cabo para cima) */
     bool rest = !strstr(anim, "ATTACK") && !strstr(anim, "ESPECIAL") && !strstr(anim, "DEFEND") && !strstr(anim, "THROW");
-    const char *dbg = getenv("DBG_LAB");
-    if (dbg) {
-        char key[64];
-        snprintf(key, sizeof key, "%s:%d", anim, idx);
-        if (!strcmp(dbg, key))
-            for (int y = 0; y < CH; y++) {
-                char line[CW + 1];
-                bool any = false;
-                for (int x = 0; x < CW; x++) {
-                    line[x] = ".TFhfsCDYHBSo"[s->lab[y][x]];
-                    any |= s->lab[y][x] != NONE;
-                }
-                line[CW] = 0;
-                if (any) fprintf(stderr, "%3d %s\n", y, line);
-            }
-    }
     if (getenv("SEM_ARMA")) {   /* provas das posturas: o corpo sem a arma (a arma nova é desenhada por cima) */
         for (int y = 0; y < CH; y++)
             for (int x = 0; x < CW; x++)
@@ -3813,7 +3802,6 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
             cv->pen = T_FX;
             double a = g_koj_ang * 3.14159265 / 180;
             int cx = pyround(tx - cos(a) * KATANA * 0.3), cy = pyround(ty - sin(a) * KATANA * 0.3);
-            if (getenv("DBG_GUARDA")) fprintf(stderr, "contato do parry: %d %d\n", cx, cy);
             static const int sp[][2] = {{0, 0}, {1, -1}, {2, -2}, {-1, -1}, {1, 1}, {2, 0}, {3, -1}, {0, -2}, {-1, 1}};
             for (size_t i = 0; i < sizeof sp / sizeof sp[0]; i++)
                 fx_put_clean(cv, cx + sp[i][0], cy + sp[i][1], i < 3 ? (Rgb){255, 255, 255} : (Rgb){255, 214, 90});
@@ -3863,9 +3851,6 @@ static void weapons(Canvas *cv, const Char *ch, const Ctx *ctx) {
     for (int bi = 0; bi < s->nblades; bi++) {
         const Blade *b = &s->blades[bi];
         double full = b->farthest;
-        if (getenv("DBG_BLADES"))
-            fprintf(stderr, "%s:%d blade %d n=%d hilt=(%.1f,%.1f) u=(%.2f,%.2f) near=%.1f far=%.1f loose=%d hand=%d\n", anim, idx,
-                    bi, b->n, b->hilt[0], b->hilt[1], b->u[0], b->u[1], b->nearest, b->farthest, b->loose, b->hand);
         if (bi == left_blade) {
             for (int i = 0; i < b->n; i++) {
                 if (b->dist[i] > w->par_comprimento) erase_px(cv, b->x[i], b->y[i]);
@@ -4898,8 +4883,6 @@ static void no_weapon(Canvas *cv, const Char *ch) {
         }
 }
 
-static const char *g_dbg_anim = "";
-static int g_dbg_idx;
 /* ----- Oboro sem o elmo ---------------------------------------------------- */
 /* O elmo de oni do pack Demon (os chifres, o capacete com as placas da nuca e a
  * máscara) é sempre o mesmo desenho, só deslocado de quadro em quadro. Três moldes
@@ -5341,12 +5324,10 @@ static void drop_helm_fire(Canvas *cv, int top) {
 static void unmask(Canvas *cv) {
     int bx = 0, by = 0;
     if (oni_find(cv, ONI, ONI_ROWS, ONI_TOP + 3, &bx, &by)) {
-        if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: frente %s:%d %d %d lean %.2f\n", g_dbg_anim, g_dbg_idx, bx, by + ONI_TOP, oboro_lean(cv, bx, by + ONI_TOP));
         oboro_head(cv, bx, by + ONI_TOP, 16);   /* coluna 0 = olho de trás menos 9, linha 0 = a dos olhos */
         return;
     }
     if (chifres_find(cv, &bx, &by)) {
-        if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: costas %s:%d\n", g_dbg_anim, g_dbg_idx);
         clear_helm(cv, bx, by, -3, 20, 0, 11);
         g_oboro_prova = getenv("OBORO_PROVA") != NULL;
         oboro_head_t(cv, bx + 1, by + ONI_TOP, 18, g_oboro_prova ? OBORO_PROVA_NUCA : OBORO_NUCA, 0);
@@ -5354,17 +5335,14 @@ static void unmask(Canvas *cv) {
         return;
     }
     if (oni_find(cv, DEITADO, (int)(sizeof DEITADO / sizeof DEITADO[0]), 15, &bx, &by)) {
-        if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: deitado %s:%d\n", g_dbg_anim, g_dbg_idx);
         oboro_head_lying(cv, bx, by);
         return;
     }
     if (oni_find_loose(cv, &bx, &by)) {
-        if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: solto %s:%d\n", g_dbg_anim, g_dbg_idx);
         oboro_head(cv, bx, by + ONI_TOP, 16);
         drop_helm_fire(cv, by + ONI_TOP - OBORO_TOPO);
         return;
     }
-    if (getenv("DBG_UNMASK")) fprintf(stderr, "unmask: nada em %s:%d\n", g_dbg_anim, g_dbg_idx);
 }
 
 /* O Hanzo do próprio pack fica como vem (o cabelo branco confundiria o separador
@@ -5576,14 +5554,12 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         return;
     }
     recolor(cv, ch, anim);
-    g_dbg_anim = anim;
-    g_dbg_idx = idx;
     /* de máscara, de costas fica a traseira do kabuto que o pack desenha (a máscara só
        aparece de frente) */
     if (ch->sem_mascara) unmask(cv);
     accessories(cv, ch, idx);
     if (ch->sem_pano) s5_face(cv, ch);
-    if (ch->cab_frente) s5_hair(cv, ch, idx, anim);
+    if (ch->cab_frente) s5_hair(cv, ch, anim);
     if (ch->mechas) s5_mechas(cv, ch);
     if (ch->topete) s5_topete(cv, ch);
     if (ch->kasa) s5_kasa(cv, anim);
@@ -5905,12 +5881,6 @@ static bool reach(const Canvas *cv, int ax, int ay, int *dx, int *dy) {
     int n = 0;
     for (int y = 0; y < CH; y++)
         if ((!any_tag || cv->tag[y][xm] == T_WEAPON) && cv->a[y][xm].a) { sy += y; n++; }
-    if (getenv("DBG_REACH")) {
-        fprintf(stderr, "reach xm=%d n=%d ax=%d ay=%d ys:", xm, n, ax, ay);
-        for (int y = 0; y < CH; y++)
-            if ((!any_tag || cv->tag[y][xm] == T_WEAPON) && cv->a[y][xm].a) fprintf(stderr, " %d", y);
-        fprintf(stderr, "\n");
-    }
     *dx = xm - ax;
     *dy = pyround(sy / n) - ay;
     return true;
@@ -6606,13 +6576,6 @@ static bool load_source(Source *s, const char *dir, int cw, int ch, const Char *
                 strncat(nohat, b, sizeof nohat - strlen(nohat) - 1);
             }
         }
-        if (getenv("DEBUG_BLADES"))  /* lista as lâminas achadas em cada quadro */
-            for (int k = 0; k < s->strips[i].nframes; k++)
-                for (int b = 0; b < s->strips[i].segs[k].nblades; b++) {
-                    const Blade *bl = &s->strips[i].segs[k].blades[b];
-                    printf("    %s %d: n %d perto %.1f longe %.1f cabo %.0f,%.0f u %.2f,%.2f\n", s->strips[i].name, k, bl->n,
-                           bl->nearest, bl->farthest, bl->hilt[0], bl->hilt[1], bl->u[0], bl->u[1]);
-                }
         printf("  %s: %d quadros", s->strips[i].name, s->strips[i].nframes);
         if (unk || nohat[0]) {
             printf(" (");
