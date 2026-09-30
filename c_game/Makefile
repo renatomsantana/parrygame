@@ -123,6 +123,16 @@ avisos:
 test: core_test test-fonte test-save test-entrada test-desempenho
 	./core_test
 
+# Regressões de apresentação: seleciona sprites e acompanha armas sem abrir janela.
+presentation_test: $(CORE) $(GAME) $(ENTRADA_PLAT) tests/presentation_test.c src/*.h
+	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(ENTRADA_CFLAGS) $(CORE) $(filter-out src/main.c,$(GAME)) $(ENTRADA_PLAT) tests/presentation_test.c -o $@ $(RAYLIB_LIBS) $(ENTRADA_LIBS) -lm
+
+test-visual: presentation_test
+	./presentation_test
+
+test-assets: presentation_test
+	./presentation_test --assets
+
 # O jogo de verdade sob xvfb (precisa do ./apara, do xvfb-run e da libX11; sem eles cada script pula):
 # as teclas de teste só existem com --teste e nada grava o progresso (teste_save), o rastro é só visual
 # (teste_rastro), a vitória é salva no golpe final e sobrevive a kill, ESC e Q e fechar (teste_vitoria), e o
@@ -145,12 +155,16 @@ teste:
 	$(MAKE) numeros
 	$(MAKE) avisos
 	$(MAKE) teste-jogo
+	$(MAKE) test-visual
 	@echo "teste: tudo certo"
 
 run: apara
 	./apara
 
 clean:
-	rm -f apara core_test fonte_test save_test entrada_test desempenho_test fuzz_test robos_relatorio personagens
+	rm -f apara core_test fonte_test save_test entrada_test desempenho_test fuzz_test presentation_test robos_relatorio personagens
 
-.PHONY: all packs sprites run clean robos robos-taxas curva-ordem fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho teste teste-jogo
+teste-vitoria: apara
+	sh tests/teste_vitoria.sh
+
+.PHONY: all packs sprites run clean robos robos-taxas curva-ordem fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho test-visual test-assets teste teste-jogo teste-vitoria

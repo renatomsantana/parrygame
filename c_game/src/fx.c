@@ -51,6 +51,7 @@ void fx_update(Fx *fx, float dt) {
         fx->popups[i].pos.y -= 7 * dt;
     }
     for (int i = 0; i < 4; i++) if (fx->stars[i].life > 0) fx->stars[i].life -= dt;
+    for (int i = 0; i < MAX_ARCS; i++) if (fx->arcs[i].life > 0) fx->arcs[i].life -= dt;
     fx->flash = fmaxf(0, fx->flash - dt * 3.5f);
     if (fx->shakeTime > 0) fx->shakeTime -= dt; else fx->shake = 0;
     fx->vignettePulse = fmaxf(0, fx->vignettePulse - dt * 2);
@@ -120,6 +121,14 @@ static void star_shape(Vector2 c, float len, float wid, float rot, Color col) {
     }
 }
 
+void fx_arc(Fx *fx, Vector2 center, float radius, float start, float sweep, float life, float width, Color c) {
+    for (int i = 0; i < MAX_ARCS; i++) {
+        if (fx->arcs[i].life > 0) continue;
+        fx->arcs[i] = (Arc){center, radius, start, sweep, life, life, width, c};
+        return;
+    }
+}
+
 void fx_popup(Fx *fx, const char *text, Vector2 at, float scale, Color c) {
     int slot = 0;
     float oldest = 1e9f;
@@ -173,6 +182,15 @@ void fx_draw_world(const Fx *fx) {
         Color c = r->color;
         c.a = (unsigned char)(c.a * t);
         DrawRing(r->pos, r->radius, r->radius + fmaxf(1, r->width * t), 0, 360, 32, c);
+    }
+    for (int i = 0; i < MAX_ARCS; i++) {
+        const Arc *a = &fx->arcs[i];
+        if (a->life <= 0) continue;
+        float t = a->life / a->maxLife;
+        Color c = a->color;
+        c.a = (unsigned char)(c.a * t);
+        float grow = fminf(1, (1 - t) * 5 + 0.2f);
+        DrawRing(a->center, a->radius - a->width * t, a->radius, a->start, a->start + a->sweep * grow, 40, c);
     }
     for (int i = 0; i < MAX_PARTICLES; i++) {
         const Particle *p = &fx->p[i];

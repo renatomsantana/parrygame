@@ -117,6 +117,24 @@ static bool load_set(SprSet *s, const char *id) {
         else if (!strncmp(line, "ancora ", 7)) sscanf(line + 7, "%d %d", &s->ax, &s->ay);
         else if (!strncmp(line, "guarda ", 7)) s->hasGuard = sscanf(line + 7, "%d %d", &s->guardX, &s->guardY) == 2;
         else if (!strncmp(line, "anim ", 5)) parse_anim(s, line, dir);
+        else if (!strncmp(line, "arma2 ", 6)) {
+            char name[40]; int frame; float x, y;
+            if (sscanf(line + 6, "%39s %d %f %f", name, &frame, &x, &y) != 4 || frame < 0 || frame >= SPR_MAX_FRAMES) continue;
+            for (int i = 0; i < s->count; i++) if (!strcmp(s->anims[i].name, name) && frame < s->anims[i].frames) {
+                s->anims[i].offhand[frame] = (Vector2){x, y};
+                s->anims[i].hasOffhand[frame] = true;
+                break;
+            }
+        }
+        else if (!strncmp(line, "arma ", 5)) {
+            char name[40]; int frame; float x, y;
+            if (sscanf(line + 5, "%39s %d %f %f", name, &frame, &x, &y) != 4 || frame < 0 || frame >= SPR_MAX_FRAMES) continue;
+            for (int i = 0; i < s->count; i++) if (!strcmp(s->anims[i].name, name) && frame < s->anims[i].frames) {
+                s->anims[i].weapon[frame] = (Vector2){x, y};
+                s->anims[i].hasWeapon[frame] = true;
+                break;
+            }
+        }
     }
     fclose(f);
     if (!s->ax && !s->ay) { s->ax = s->cw / 2; s->ay = s->ch - 8; }
@@ -317,4 +335,27 @@ void spr_update(SprPlayer *p, float dt) {
 bool spr_done(const SprPlayer *p) {
     if (!p->anim) return true;
     return p->loop ? p->limit > 0 && p->t >= p->limit : p->t >= p->dur;
+}
+
+bool spr_weapon_point(const SprPlayer *p, Vector2 feet, bool faceLeft, int breath, Vector2 *point) {
+    if (!p || !p->anim || p->frame < 0 || p->frame >= SPR_MAX_FRAMES || !p->anim->hasWeapon[p->frame]) return false;
+    Vector2 local = p->anim->weapon[p->frame];
+    *point = (Vector2){floorf(feet.x + 0.5f) + (faceLeft ? -local.x : local.x), floorf(feet.y + 0.5f) + local.y + breath};
+    return true;
+}
+
+bool spr_offhand_point(const SprPlayer *p, Vector2 feet, bool faceLeft, int breath, Vector2 *point) {
+    if (!p || !p->anim || p->frame < 0 || p->frame >= SPR_MAX_FRAMES) return false;
+    int frame = p->frame;
+    /* A lâmina pode estar coberta pelo corpo em uma pose. O ponto mais próximo
+     * mantém o efeito associado à mesma mão até ela reaparecer. */
+    if (!p->anim->hasOffhand[frame]) {
+        int best = SPR_MAX_FRAMES;
+        for (int i = 0; i < p->anim->frames && i < SPR_MAX_FRAMES; i++)
+            if (p->anim->hasOffhand[i] && abs(i - p->frame) < best) { frame = i; best = abs(i - p->frame); }
+        if (best == SPR_MAX_FRAMES) return false;
+    }
+    Vector2 local = p->anim->offhand[frame];
+    *point = (Vector2){floorf(feet.x + 0.5f) + (faceLeft ? -local.x : local.x), floorf(feet.y + 0.5f) + local.y + breath};
+    return true;
 }

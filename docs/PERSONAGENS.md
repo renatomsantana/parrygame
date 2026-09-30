@@ -117,6 +117,11 @@ como os golpes do Hanzo, não fica para trás).
 - Daqui em diante, os números de `hold` e `contact` se editam em
   `_original/sprite.txt`, e o programa copia para todos.
 
+O gerador também acrescenta linhas `arma ANIMACAO QUADRO X Y` ao `sprite.txt`:
+o ponto da lâmina em cada quadro, relativo aos pés. Os efeitos presos à espada
+usam esses pontos, acompanhando o quadro, o salto e o recuo. Isso não altera
+as imagens, a âncora dos pés, o alcance nem os tempos de animação.
+
 ### Folhas de conferência (`assets/sprites/_folhas/`)
 
 | Arquivo | Para quê |
@@ -585,3 +590,5 @@ PNGs de `c_game/assets/sprites/` (os originais e os gerados, que saem deles)
 `.gitignore`. O programa e os `sprite.txt` das pranchas de origem
 (`_original/` e `_packs/`) vão para o git; os `sprite.txt` gerados em cada pasta
 de personagem saem do `make sprites`, como as tiras.
+
+Os pontos `arma2 ANIMAÇÃO QUADRO X Y` seguem a segunda lâmina visível dos packs de duas armas. O teste `make -C c_game test-assets` carrega as folhas reais dos 13 mestres em uma janela oculta e verifica as animações e os pontos das duas espadas do Arashi.
