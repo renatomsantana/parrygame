@@ -2,8 +2,8 @@
  * curva.c - a curva de dificuldade por mestre, com os cinco robôs que a definem, a 60 e a 144 Hz.
  * Rodar: make curva (ou make curva LUTAS=10000). Só mede: escreve as tabelas em Markdown e confere o que
  * tem de valer sempre (o perfeito vence tudo, o spam e o que nunca defende perdem de todos os mestres).
- * A faixa alvo de cada robô (docs/CURVA.md, proposta) marca com * a célula que cai fora dela e lista o que está fora, com a
- * ordem pedida (sempre mais difícil, sem picos): é só informação, e só o --alvo reprova com ela.
+ * A faixa alvo de cada robô (docs/CURVA.md) marca com * a célula que cai fora dela e lista o que está fora, com a
+ * ordem pedida (sempre mais difícil, sem picos): o make curva só informa, e o --alvo (make curva-alvo, no make test) reprova com ela.
  *
  *   curva_relatorio [lutas [quadros]]     lutas por mestre e robô (10000); quadros != 0: o aperto entra no meio do quadro
  *   curva_relatorio --alvo [lutas]        o mesmo, e sai com erro se algo cair fora da faixa alvo (ms exato)
@@ -67,7 +67,7 @@ static void *trabalha(void *arg) {
     }
 }
 
-/* ---- a curva alvo (docs/CURVA.md: proposta) ---- */
+/* ---- a curva alvo (docs/CURVA.md) ---- */
 typedef struct { double lo, hi; } Faixa;
 #define F(a, b) {a, b}
 #define F100 F(97, 100)
@@ -373,6 +373,6 @@ int main(int argc, char **argv) {
         return falhas ? 1 : 0;
     }
     int fora_ = confere_alvo(true);
-    printf("alvo (docs/CURVA.md, proposta): %d item(ns) fora da faixa ou da ordem %s\n", fora_, rigido ? "(FALHA)" : "(só informação: make curva-alvo reprova)");
+    printf("alvo (docs/CURVA.md): %d item(ns) fora da faixa ou da ordem %s\n", fora_, fora_ == 0 ? "(ok)" : rigido ? "(FALHA)" : "(só informação: make curva-alvo reprova)");
     return falhas || (rigido && fora_) ? 1 : 0;
 }

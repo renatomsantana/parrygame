@@ -161,7 +161,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 6, .name = "karasu", .style = "postura do corvo", .title = "O que Aposta", .venue = "Telhados da vila do castelo, na chuva",
         .special = "Katana e wakizashi: quase sempre a espada longa numa mão só; de repente, as duas lâminas de uma vez.",
-        .arena = ARENA_TELHADOS, .posture = 490, .hitsToFall = 7, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8C8D8FF,
+        .arena = ARENA_TELHADOS, .posture = 490, .hitsToFall = 7, .bladeMax = 0.239f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8C8D8FF,
         .stances = {STANCE("", 0.058f, 0.148f, 0.385f)}, .stanceCount = 1,
         .moves = {
             {"bicada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST, 0.83f},
@@ -287,7 +287,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 10, .name = "arashi", .style = "postura da tempestade", .title = "O Orgulhoso", .venue = "Salão do castelo, noite de tempestade",
         .special = "Duas katanas, golpes pesados: as duas lâminas de uma vez, e só o parry perfeito segura as duas.",
-        .arena = ARENA_SALAO, .posture = 550, .hitsToFall = 10, .damage = 1.2f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE0D0F0FF,
+        .arena = ARENA_SALAO, .posture = 550, .hitsToFall = 10, .damage = 1.2f, .bladeMax = 0.220f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE0D0F0FF,
         .stances = {STANCE("", 0.046f, 0.121f, 0.333f)}, .stanceCount = 1,
         .moves = {
             {"faísca", 1, {0}, 1.0f, -1, 0, LOOK_THRUST, 0.80f},
@@ -350,7 +350,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 12, .name = "jinshi", .style = "postura da lua", .title = "O que Espera", .venue = "Encosta da serra",
         .special = "Postura da lua, katana branca forjada com ela: o repertório mais variado, ritmo irregular, e na montanha o som não chega.",
-        .arena = ARENA_SERRA, .posture = 610, .hitsToFall = 5, .healsOnHit = true, .cueVisual = 1, .cueAudio = 0, .tint = 0xE0D8C8FF,
+        .arena = ARENA_SERRA, .posture = 630, .hitsToFall = 5, .bladeMax = 0.220f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 0, .tint = 0xE0D8C8FF,
         .stances = {STANCE("", 0.043f, 0.119f, 0.350f)}, .rhythmJitter = 0.08f, .waitScale = AJ_ESPERA_X_IRREGULAR, .stanceCount = 1,
         .moves = {
             {"crescente", 1, {0}, 1.5f, -1, 0, LOOK_HIGH, 0.95f},

@@ -72,7 +72,8 @@ curva_relatorio: $(CORE) tests/curva.c src/core.h src/ajuste.h src/robo.h
 curva: curva_relatorio
 	./curva_relatorio $(CURVA_LUTAS) $(QUADROS)
 
-# A mesma medição, reprovando se algo cair fora da curva alvo de docs/CURVA.md (só depois de aprovada e aplicada).
+# A mesma medição, reprovando se algo cair fora da curva alvo de docs/CURVA.md (faixa por mestre e robô, ordem e degrau do casual).
+# No make test, 10 mil lutas por mestre; no make teste, 100 mil (make curva-alvo CURVA_LUTAS=100000).
 curva-alvo: curva_relatorio
 	./curva_relatorio --alvo $(CURVA_LUTAS)
 
@@ -137,7 +138,7 @@ numeros:
 avisos:
 	RAYLIB_CFLAGS="$(RAYLIB_CFLAGS)" sh tests/avisos.sh
 
-test: core_test test-fonte test-save test-entrada test-desempenho test-curva
+test: core_test test-fonte test-save test-entrada test-desempenho test-curva curva-alvo
 	./core_test
 
 # O jogo de verdade sob xvfb (precisa do ./apara, do xvfb-run e da libX11; sem eles cada script pula):
@@ -159,6 +160,7 @@ teste:
 	$(MAKE) fuzz-rapido
 	$(MAKE) robos-taxas
 	$(MAKE) curva-ordem
+	$(MAKE) curva-alvo CURVA_LUTAS=100000
 	$(MAKE) numeros
 	$(MAKE) avisos
 	$(MAKE) teste-jogo
