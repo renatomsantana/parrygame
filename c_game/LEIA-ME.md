@@ -122,7 +122,7 @@ make fuzz N=3000                    # cenários sorteados contra os invariantes 
 
 | Parte | O que confere |
 |---|---|
-| `make test` | `core_test` (regras, janela viável em todo golpe, curva, Oboro, taxa de quadros), `test-fonte` (todo caractere não ASCII tem glifo), `test-save` (formato, saves corrompidos, gravação atômica), `test-entrada` (o carimbo do clique: conversão, carimbo inválido, lutas dos robôs), `test-desempenho` (médias e percentis do `APARA_PERF`) |
+| `make test` | `core_test` (regras, janela viável em todo golpe, curva, Oboro, taxa de quadros), `test-fonte` (todo caractere não ASCII tem glifo), `test-save` (formato, saves corrompidos, gravação atômica), `test-entrada` (o carimbo do clique: conversão, carimbo inválido, lutas dos robôs, e o clique em qualquer instante do hitstop, julgado como em ms exato), `test-desempenho` (médias e percentis do `APARA_PERF`) |
 | `make fuzz-rapido`, `make robos-taxas` | invariantes em cenários sorteados; mesma luta em cinco taxas de quadros |
 | `make numeros`, `make avisos` | nenhum número mágico nas regras; nenhum aviso do gcc e do clang em -O1, -O2 e -O3 |
 | `make teste-jogo` | o jogo de verdade sob `xvfb-run` (precisa dele e da libX11; sem eles pula): teclas de teste só com `--teste`, o rastro é só visual, a vitória é salva no golpe final e sobrevive a kill, Esc+Q e fechar a janela, o carimbo do clique chega ao duelo no instante certo (cliques do XTest; precisa de libXtst), e o `APARA_PERF` mede e sai |
