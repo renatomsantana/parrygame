@@ -1,7 +1,7 @@
 # A curva de dificuldade, mestre a mestre
 
-Medição com robôs (`make curva`, `c_game/tests/curva.c`) e a curva alvo **proposta** (ainda não aplicada: espera aprovação antes de
-qualquer mudança no `roster.c`). Os robôs são estimativa, não verdade: o humano deles não vê a arte, não sofre com a escuridão do
+Medição com robôs (`make curva`, `c_game/tests/curva.c`) e a curva alvo, **aprovada e aplicada** (só o que mudou no `roster.c`: três
+mestres, ver "O que mudou"). Os robôs são estimativa, não verdade: o humano deles não vê a arte, não sofre com a escuridão do
 Yoru e não se distrai.
 
 ## Os cinco robôs
@@ -102,7 +102,7 @@ O que aparece:
    pelo parry perfeito, então o parry bom também custa vida e isso não aparece em "erros". Olhar só "erros por luta" engana nele.
 5. O perfeito vence 100,0% em todos os mestres, em todas as taxas, e o spam perde de todos (0,0%): o que tem de valer sempre está no teste.
 
-## Alvo proposto (NÃO aplicado: espera aprovação)
+## Alvo (aprovado e aplicado)
 
 Vitórias (%), ms exato, medidas com 100 mil lutas por mestre (±0,3 pt); a tolerância é ±3 pontos no alvo, e a regra de ordem é a do
 `make curva-ordem`: cada mestre tem de ser ao menos 0,5 ponto mais difícil que o anterior onde o robô ainda vence mais de 2%.
@@ -123,31 +123,72 @@ Vitórias (%), ms exato, medidas com 100 mil lutas por mestre (±0,3 pt); a tole
 | 12 | jinshi | ≤ 1 | ≤ 1 | 55 | 100 | 0 |
 | 13 | oboro | 0 | 0 | 40 | 100 | 0 |
 
-- **Primeira vez:** vence os quatro primeiros como hoje (88 / 86 / 75 / 70, uma descida sem pico) e perde quase sempre do garfiel em diante (≤ 1%).
-  Já é assim: não exige mudar nada.
-- **Perfeito** 100% em todos, **spam** 0% em todos: já são assim.
-- **Casual decora:** o alvo é o de hoje com uma correção: o jinshi desce de 57,6 para 55 (yoru → jinshi passa de −1,4 para −5) e os degraus
+- **Primeira vez:** vence os quatro primeiros (88 / 86 / 75 / 70, uma descida sem pico) e perde quase sempre do garfiel em diante (≤ 1%).
+  Já era assim: não precisou mudar nada.
+- **Perfeito** 100% em todos, **spam** 0% em todos: já eram assim.
+- **Casual decora:** o alvo era o de antes com uma correção: o jinshi desce de 57,6 para 55 (yoru → jinshi passa de −1,4 para −3) e os degraus
   do karasu ao oboro ficam em 8 / 7 / 5 / 6 / 8 / 5 / 5 / 15 pontos. Os cinco primeiros ficam saturados (≥ 99%): é a entrada do jogo.
   Cabe nas faixas do `test_curva` que já existe (casual ≥ 95 nos quatro primeiros, jinshi 55-75, oboro 30-55).
 - **Reação 250:** os quatro primeiros em 100%, depois 10 / 8 / 6 / 3 e, do suiren em diante, ≤ 1%: o mesmo precipício do garfiel, mas sempre
-  descendo, sem os picos do karasu, do arashi e do jinshi. Precisa tirar ~10 pontos do karasu, ~4 do arashi e ~8 do jinshi sem mexer no casual.
+  descendo, sem os picos do karasu, do arashi e do jinshi. Tirou ~9 pontos do karasu, ~4 do arashi e ~8 do jinshi sem mexer no casual.
 
-`make curva` já marca com `*` a célula fora da faixa e lista o que está fora da faixa, da ordem (cada mestre ao menos 0,5 ponto mais difícil que
-o anterior, entre 2% e 98%) e do degrau mínimo de 3 pontos do casual. Hoje sai exatamente o que a seção acima aponta: karasu, arashi e jinshi
-do Reação 250 (faixa), o karasu depois do garfiel (ordem) e o jinshi depois do yoru no casual (degrau), a 60 e a 144 Hz. É só informação:
-`make curva-alvo` é o mesmo com erro de saída, e só entra no `make test` depois da aprovação e da aplicação no `roster.c`. O verificador
-em si é testado no `make test-curva` com tabelas sintéticas (a do meio das faixas passa; um pico, um degrau curto e um perfeito que perde
-são apontados), conferido por mutação.
+`make curva` marca com `*` a célula fora da faixa e lista o que está fora da faixa, da ordem (cada mestre ao menos 0,5 ponto mais difícil que
+o anterior, entre 2% e 98%) e do degrau mínimo de 3 pontos do casual. `make curva-alvo` é o mesmo com erro de saída: roda no `make test`
+(10 mil lutas por mestre) e no `make teste` (100 mil). Sem a mudança no `roster.c` ele apontava exatamente o que a medição "antes" mostra
+(karasu, arashi e jinshi do Reação 250, o karasu depois do garfiel, o jinshi depois do yoru no casual); com ela, 0 itens. O verificador em si é
+testado no `make test-curva` com tabelas sintéticas (a do meio das faixas passa; um pico, um degrau curto e um perfeito que perde são
+apontados), conferido por mutação.
 
-### O que mexe em quê (alavancas, só `roster.c`; nada disso foi tocado)
+## Depois (medido, 100 mil lutas por mestre e robô)
+
+A 60 e a 144 Hz, com o clique em ms exato, idêntica (o mesmo teste de taxas de antes). O casual do karasu ao oboro passa no `make curva-ordem`
+com folga de 0,5 ponto (karasu 90,64, hayate 84,07, enjin 79,65, suiren 72,40, arashi 63,82, yoru 59,04, jinshi 55,89, oboro 41,16:
+os degraus são 6,6 / 4,4 / 7,3 / 8,6 / 4,8 / 3,2 / 14,7).
+
+| # | Mestre | Primeira vez | Casual decora | Reação 250 | Perfeito | Spam |
+|---|---|---|---|---|---|---|
+| 1 | daichi | 87,0 | 100,0 | 100,0 | 100,0 | 0,0 |
+| 2 | genbu | 84,9 | 100,0 | 100,0 | 100,0 | 0,0 |
+| 3 | raizo | 73,8 | 99,9 | 100,0 | 100,0 | 0,0 |
+| 4 | shizuku | 68,9 | 100,0 | 100,0 | 100,0 | 0,0 |
+| 5 | garfiel | 0,1 | 99,8 | 9,6 | 100,0 | 0,0 |
+| 6 | karasu | 0,1 | 90,6 | 8,3 | 100,0 | 0,0 |
+| 7 | hayate | 0,0 | 84,1 | 6,7 | 100,0 | 0,0 |
+| 8 | enjin | 0,0 | 79,7 | 2,9 | 100,0 | 0,0 |
+| 9 | suiren | 0,0 | 72,4 | 0,0 | 100,0 | 0,0 |
+| 10 | arashi | 0,0 | 63,8 | 0,4 | 100,0 | 0,0 |
+| 11 | yoru | 0,0 | 59,0 | 1,0 | 100,0 | 0,0 |
+| 12 | jinshi | 0,0 | 55,9 | 0,6 | 100,0 | 0,0 |
+| 13 | oboro | 0,0 | 41,2 | 0,0 | 100,0 | 0,0 |
+
+| Mestre | Reação 250: antes | depois | Casual: antes | depois |
+|---|---|---|---|---|
+| karasu | 17,6 | **8,3** | 90,6 | 90,6 |
+| arashi | 4,7 | **0,4** | 63,9 | 63,8 |
+| jinshi | 8,6 | **0,6** | 57,6 | **55,9** |
+
+Os outros dez mestres não mudaram (nem uma lâmina, nem uma postura).
+
+## O que mudou no `roster.c`
+
+Três linhas de cabeçalho, nada de golpes:
+
+| Mestre | Mudança | Efeito |
+|---|---|---|
+| karasu | `bladeMax = 0.239` | a lâmina parte de 140 a 239 ms antes do contato (antes, até 320): o Reação 250 cai de 17,6 para 8,3. Cada 0,001 a mais ou a menos move ~0,7 ponto, então o valor saiu de varredura |
+| arashi | `bladeMax = 0.220` | de 140 a 220 ms (o tempo fixo dos quatro primeiros mestres): o Reação 250 cai de 4,7 para 0,4 |
+| jinshi | `bladeMax = 0.220` e `posture` 610 → 630 | o Reação 250 cai de 8,6 para 0,6; a postura maior alonga a luta e o casual cai de 57,6 para 55,9 |
+
+O aviso, as janelas perfeita e boa e a menor partida da lâmina (140 ms) não mudaram; o casual não sente o teto da lâmina (mede pelo aviso).
+
+### O que mexe em quê (alavancas, só `roster.c`)
 
 | Alavanca | Afeta o casual? | Afeta quem só reage? |
 |---|---|---|
 | erros até cair (`hitsToFall`) | sim, muito | sim, muito |
 | postura do mestre (duração da luta: nº de golpes) | sim | sim |
 | peso dos padrões (mais sequências, mais golpes por luta) | sim | sim |
-| faixa da partida da lâmina por mestre (`MasterProfile.bladeMax`, já no código e sem uso: 0 é o global) | **não** (ele mede pelo aviso) | **sim**, é a que derruba o karasu, o arashi e o jinshi sem mexer no casual |
+| faixa da partida da lâmina por mestre (`MasterProfile.bladeMax`: 0 é o global, nunca sobe o teto global) | **não** (ele mede pelo aviso) | **sim**, é a que derruba o karasu, o arashi e o jinshi sem mexer no casual |
 
-Se aprovado, os valores exatos saem de varredura com 100 mil lutas por mestre, um mestre por vez, com a tabela antes e depois de cada um;
-o `test_curva` do `core_test.c` ganha as faixas por mestre e a regra de ordem do Reação 250 (vira teste do `make test-curva`).
-Nada de aviso abaixo de 300 ms, nenhuma janela perfeita mais estreita que a já medida como viável.
+Nada de aviso abaixo de 300 ms, nenhuma janela perfeita mais estreita que a já medida como viável. Se um dia a curva sair do lugar (outro mestre
+ganha golpes, outra regra muda), o `make curva-alvo` reprova e mostra qual célula, qual ordem ou qual degrau quebrou.
