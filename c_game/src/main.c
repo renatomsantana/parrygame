@@ -3847,9 +3847,15 @@ int main(int argc, char **argv) {
         rlDrawRenderBatchActive();   /* as capturas leem a tela antes do EndDrawing */
         double pf4 = perf_agora();
 
+        if (getenv("APARA_CLIQUE_PERIODO") && (G.demo || G.autoJogo) && G.state != ST_DUEL &&
+            fmodf(G.stateTime, G.cliquePeriodo) < (G.recDir ? (float)G.recDt : GetFrameTime()))
+            G.cliqueFlash = 0.05f;   /* o clique do robô existe mesmo quando a tela o ignora (a trava): o ponto mostra todos */
         if (G.cliqueFlash > 0) {
             /* APARA_CLIQUE_PERIODO: um ponto no canto mostra cada clique do robô (só nos vídeos dos testes) */
-            if (getenv("APARA_CLIQUE_PERIODO")) DrawCircle(GetScreenWidth() - 40, 40, 14, (Color){255, 60, 60, 255});
+            if (getenv("APARA_CLIQUE_PERIODO")) {
+                DrawCircle(GetScreenWidth() - 40, 40, 14, (Color){255, 60, 60, 255});
+                rlDrawRenderBatchActive();   /* a captura lê a tela antes do EndDrawing: o ponto tem de sair do lote antes */
+            }
             G.cliqueFlash -= (float)G.recDt;
         }
         if (G.recDir && wall >= G.recStart) {

@@ -9,6 +9,7 @@
 #   3. a tela de derrota (AJ_DERROTA_OPCOES): quem aperta sem parar, sem ler, só sai dela depois da trava (1,2 s hoje, 1,6 s
 #      antes), e não antes;
 #   4. a tela de vitória (AJ_VITORIA_TRAVA): o mesmo, 0,7 s hoje, 1,0 s antes.
+#   5. o ponto vermelho dos cliques do robô (o gancho dos vídeos) sai nos quadros gravados.
 # Nas duas últimas os cliques são de verdade (XTest, tests/xclique.c, a cada uns 40 ms). Os limites deixam uns 0,2 s de
 # folga para cada lado: não valem com o valor antigo.
 cd "$(dirname "$0")/.." || exit 1
@@ -85,6 +86,25 @@ else
     D=$(aperta cleared 7)
     confere "$D s de tela até sair, com cliques sem parar (entre 0,65 e 0,95 s)" "$(awk -v d="$D" 'BEGIN { exit !(d != "faltou" && d >= 0.65 && d <= 0.95) }'; echo $?)"
 fi
+
+# 5. o ponto vermelho dos cliques do robô (APARA_CLIQUE_PERIODO, o gancho dos vídeos) sai na captura: 12 quadros a 120 por
+# segundo da tela de derrota (a trava ignora os cliques) têm de ter o ponto no canto (255, 60, 60) em alguns quadros, e sem
+# a variável, em nenhum. O ponto era desenhado depois de o lote ser descarregado e nunca chegava ao vídeo.
+echo "5. o ponto dos cliques do robô aparece nos quadros gravados"
+pontos() { # ENV...: quantos dos 12 quadros têm o ponto vermelho em (1240, 40)
+    env "$@" APARA_SEMENTE=11 APARA_REC_FPS=120 APARA_REC_RAW="$TMP/cru.rgb" timeout 120 xvfb-run -a -s '-screen 0 1280x720x24' \
+        ./apara --demo --master 1 --duel --state defeat --rec "$TMP/p" 0.5 0.6 >"$TMP/pontos.log" 2>&1
+    QUADRO=$((1280 * 720 * 3)); N=0; ACHOU=0
+    while [ "$N" -lt 12 ]; do
+        COR=$(dd if="$TMP/cru.rgb" bs=1 skip=$((N * QUADRO + (40 * 1280 + 1240) * 3)) count=3 2>/dev/null | od -An -tu1 | tr -s ' ')
+        [ "$COR" = " 255 60 60" ] && ACHOU=$((ACHOU + 1))
+        N=$((N + 1))
+    done
+    echo "$ACHOU"
+}
+COM=$(pontos APARA_CLIQUE_PERIODO=0.05)
+SEM=$(pontos APARA_X=1)
+confere "$COM de 12 quadros com o ponto (com APARA_CLIQUE_PERIODO=0,05), $SEM sem a variável" "$([ "$COM" -ge 6 ] && [ "$SEM" -eq 0 ]; echo $?)"
 
 if [ "$FALHAS" -eq 0 ]; then echo "teste_cenas: tudo certo"; else echo "teste_cenas: $FALHAS falha(s)"; fi
 exit "$FALHAS"
