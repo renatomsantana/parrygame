@@ -172,6 +172,7 @@
  * relógio do sistema e o do jogo diferem por poeira); fora disto é ruído e o aperto cai no meio do
  * quadro, como sempre foi. */
 #define AJ_CARIMBO_MARGEM           0.005
+#define AJ_CARIMBO_MEDIDAS          20      /* --carimbo mede este tanto de cliques e sai */
 
 /* ---- Tolerâncias numéricas (não são regras: só impedem que o ruído do ponto flutuante decida) ---- */
 #define AJ_EPS_TEMPO                1e-9    /* dois instantes a menos disto de distância são o mesmo */

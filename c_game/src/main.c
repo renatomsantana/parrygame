@@ -35,6 +35,8 @@
 #include "arenas.h"
 #include "audio.h"
 #include "core.h"
+#include "entrada.h"
+#include "entrada_plat.h"
 #include "robo.h"
 #include "salvar.h"
 #include "fonte.h"
@@ -318,6 +320,17 @@ static struct {
     bool logImpactos;         /* APARA_LOG_IMPACTOS (tests/teste_rastro.sh): escreve cada impacto e os fantasmas desenhados */
     long fantasmasDesenhados;
     int teclaFalsa;           /* APARA_TECLAS (o mesmo teste): a tecla de teste que o teste "aperta" agora */
+    /* O carimbo do clique (entrada.h): o instante de hardware que o sistema deu, no lugar do meio do quadro. */
+    bool usaCarimbo;          /* o sistema dá carimbo e nada o desligou (demo, jogo automático, capturas, APARA_SEM_CARIMBO) */
+    bool logCarimbos;         /* APARA_LOG_CARIMBOS (tests/teste_carimbo.sh): escreve cada carimbo e cada aperto do duelo */
+    bool modoCarimbo;         /* --carimbo: só mede o atraso do poll em relação ao clique */
+    double poll;              /* o relógio dos carimbos (entrada_relogio), lido assim que o quadro começa: o fim do quadro */
+    double quadro;            /* a duração real deste quadro, s (0 se o quadro não conta: pausa, travamento) */
+    double carimbo;           /* o carimbo do aperto deste quadro, ou ENTRADA_SEM_CARIMBO */
+    long carimbados, semCarimbo;   /* F3: apertos do duelo que usaram o carimbo e que caíram no meio do quadro */
+    double atrasoPoll;        /* F3: s do último clique carimbado até o poll que o leu */
+    int carimboN;             /* --carimbo: cliques medidos e o atraso somado, mínimo e máximo (s) */
+    double carimboSoma, carimboMin, carimboMax;
     int startSeal;            /* a próxima luta começa neste selo (--fase, teclas 1 a 3) */
     Anotacao aperto[6];       /* F3: os últimos apertos, do mais novo ao mais velho */
     int apertos;
@@ -1930,8 +1943,24 @@ static void update_hud_values(float dt) {
     if (G.ghostBoss < G.shownBoss) G.ghostBoss = G.shownBoss; else G.ghostBoss += (G.shownBoss - G.ghostBoss) * g;
 }
 
+/* Em que instante do passo `dt` o aperto deste quadro aconteceu, em segundos desde o começo do passo:
+ * o do carimbo do clique, ou o meio do quadro (o de sempre) quando não há carimbo, ele não é confiável
+ * (entrada_no_quadro) ou o jogo está em demonstração. `corrido` é a parte do quadro real em que o tempo
+ * correu (o quadro todo, ou o que sobrou dele depois de um hitstop). */
+static double instante_do_aperto(double corrido, double dt) {
+    if (!G.usaCarimbo) return dt * 0.5;
+    bool valido;
+    double t = entrada_no_quadro(G.carimbo, G.poll, G.quadro, corrido, dt, &valido);
+    if (valido) G.carimbados++; else G.semCarimbo++;
+    if (G.logCarimbos)
+        fprintf(stderr, "APERTO valido=%d t_ms=%.3f passo_ms=%.3f corrido_ms=%.3f atraso_ms=%.3f\n", valido, t * 1000, dt * 1000, corrido * 1000,
+                (G.poll - G.carimbo) * 1000);
+    return t;
+}
+
 static void update_duel(float dtReal) {
     float dt = dtReal * G.slowmo;
+    double corrido = dtReal;
     if (G.slowmoTime > 0) { G.slowmoTime -= dtReal; if (G.slowmoTime <= 0) G.slowmo = 1; }
     bool press = pressed();
     /* o robô do demo é o mesmo dos testes (robo.c) */
@@ -1948,10 +1977,11 @@ static void update_duel(float dtReal) {
             return;
         }
         dt = sobra * G.slowmo;
+        corrido = sobra;
     }
     audio_music_duck(G.silence > 0 ? 1 : 0);
-    /* O clique chegou em algum ponto do último quadro: entra no meio dele. */
-    duel_step(&G.duel, dt, press);
+    /* O clique chegou em algum ponto do último quadro: onde o carimbo diz, ou no meio dele. */
+    duel_step_at(&G.duel, dt, press ? instante_do_aperto(corrido, dt) : -1);
     handle_events();
     if (G.state == ST_DUEL || G.state == ST_DEFEAT) update_actors(dt);
 }
@@ -3053,14 +3083,34 @@ static void ui_slash(void) {
 /* ------------------------------------------------------------------ */
 
 /* Desenhado por cima de tudo, em pixels da tela (texto nítido), dentro de `dst`. */
+static void ui_carimbo(Rectangle dst) {
+    float u = dst.width / UI_W, x = dst.x + 40 * u, y = dst.y + 200 * u, lh = 34 * u;
+    int fs = (int)fmaxf(12, 26 * u);
+    DrawRectangleRec((Rectangle){x - 16 * u, y - 16 * u, 900 * u, 7 * lh}, (Color){0, 0, 0, 200});
+    char ln[200];
+    snprintf(ln, sizeof ln, "--carimbo: clique com o mouse ou aperte Espaço, J ou Enter (%d de %d)", G.carimboN, AJ_CARIMBO_MEDIDAS);
+    DrawText(ln, (int)x, (int)y, fs, YELLOW); y += lh;
+    if (!G.usaCarimbo) { DrawText("esta plataforma não dá o instante do clique: todo aperto vale no meio do quadro", (int)x, (int)y, fs, RED); return; }
+    if (G.carimboN > 0) {
+        snprintf(ln, sizeof ln, "o poll leu o clique depois de: mín %.1f ms   média %.1f ms   máx %.1f ms", G.carimboMin * 1000,
+                 G.carimboSoma / G.carimboN * 1000, G.carimboMax * 1000);
+        DrawText(ln, (int)x, (int)y, fs, WHITE);
+    }
+    y += lh;
+    snprintf(ln, sizeof ln, "quadro %.1f ms: os valores devem ir de 0 até uns 1 quadro", GetFrameTime() * 1000);
+    DrawText(ln, (int)x, (int)y, fs, LIGHTGRAY); y += lh;
+    DrawText("se der sempre perto de 0, o carimbo está sendo tirado no poll, e não no clique", (int)x, (int)y, fs, LIGHTGRAY);
+}
+
 static void ui_debug(Rectangle dst) {
+    if (G.modoCarimbo) { ui_carimbo(dst); return; }
     if (!G.debug || !(G.state == ST_DUEL || G.state == ST_DEFEAT || G.state == ST_FINISHER)) return;
     const Duel *d = &G.duel;
     float u = dst.width / UI_W;
     float x = dst.x + 16 * u, y = dst.y + 104 * u, w = 860 * u, lh = 22 * u;
     int fs = (int)fmaxf(10, 18 * u), fp = (int)fmaxf(9, 14 * u);
     int nAnot = (int)(sizeof G.aperto / sizeof G.aperto[0]);
-    DrawRectangleRec((Rectangle){x - 8 * u, y - 8 * u, w + 16 * u, (8 + nAnot) * lh + 128 * u}, (Color){0, 0, 0, 185});
+    DrawRectangleRec((Rectangle){x - 8 * u, y - 8 * u, w + 16 * u, (9 + nAnot) * lh + 128 * u}, (Color){0, 0, 0, 185});
     char ln[200];
 #define DBG_LINHA(cor, ...) do { snprintf(ln, sizeof ln, __VA_ARGS__); DrawText(ln, (int)x, (int)y, fs, cor); y += lh; } while (0)
     static const char *FASE[] = {"pronto", "preparação", "recuperação", "fim"};
@@ -3082,6 +3132,11 @@ static void ui_debug(Rectangle dst) {
               d->burnLeft > 0 ? "  em brasas" : "", duel_ren_damage(d));
     DBG_LINHA(branco, "hitstop %.0f ms   câmera lenta %.2fx   perfeitos %d  bons %d  erros %d   atraso: vídeo %.0f, áudio %.0f ms",
               fmaxf(0, G.hitstop) * 1000, G.slowmo, d->perfects, d->goods, d->bads, G.latVideo * 1000, G.latAudio * 1000);
+    if (G.usaCarimbo)
+        DBG_LINHA(cinza, "carimbo do clique: %ld apertos no instante do clique, %ld no meio do quadro   último lido %.0f ms depois",
+                  G.carimbados, G.semCarimbo, G.atrasoPoll * 1000);
+    else
+        DBG_LINHA(cinza, "carimbo do clique: nenhum (o aperto vale no meio do quadro)");
     /* os últimos apertos: o resultado, quando foi e o erro em ms */
     DBG_LINHA(cinza, "apertos, o mais novo em cima (erro: quanto faltou para a janela perfeita)");
     for (int i = 0; i < nAnot; i++) {
@@ -3223,7 +3278,7 @@ static void update_calibra(float dt) {
         G.cal.proxima++;
     }
     if (!pressed()) return;
-    double tp = G.cal.t - dt * 0.5;                  /* o aperto chegou em algum ponto do quadro */
+    double tp = (G.cal.t - dt) + instante_do_aperto(dt, dt);   /* o aperto chegou em algum ponto do quadro */
     int k = (int)lround((tp - 1.0) / AJ_CALIBRA_BATIDA);
     if (k < 2) return;                               /* as duas primeiras batidas são para pegar o ritmo */
     G.cal.ultimo = (float)(tp - calibra_batida(k));
@@ -3396,6 +3451,7 @@ static void parse_args(int argc, char **argv, int *startMaster, bool *direct, co
         else if (!strcmp(argv[i], "--teste")) { *direct = true; G.debug = G.teste = G.teclas = true; }
         else if (!strcmp(argv[i], "--fase") && i + 1 < argc) { G.startSeal = atoi(argv[++i]) - 1; G.teste = true; }
         else if (!strcmp(argv[i], "--demo")) G.demo = true;
+        else if (!strcmp(argv[i], "--carimbo")) { G.modoCarimbo = true; G.teste = true; }
         else if (!strcmp(argv[i], "--state") && i + 1 < argc) { *startState = argv[++i]; G.teste = true; }
         else if (!strcmp(argv[i], "--final") && i + 1 < argc) { G.demoChoice = strcmp(argv[++i], "sim") ? 1 : 0; G.teste = true; }
         else if (!strcmp(argv[i], "--shot") && i + 2 < argc) { G.shotFile = argv[++i]; G.shotTime = (float)atof(argv[++i]); }
@@ -3478,12 +3534,19 @@ int main(int argc, char **argv) {
     G.autoJogo = getenv("APARA_AUTO") != NULL;
     G.rastro = getenv("APARA_RASTRO") ? atoi(getenv("APARA_RASTRO")) != 0 : AJ_RASTRO_FANTASMA != 0;
     G.logImpactos = getenv("APARA_LOG_IMPACTOS") != NULL;
+    G.logCarimbos = getenv("APARA_LOG_CARIMBOS") != NULL;
     parse_args(argc, argv, &startMaster, &direct, &startState);
+    entrada_preparar();
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(UI_W, UI_H, "aparar - a trilha dos doze aprendizes");
     SetExitKey(KEY_NULL);
+    if (getenv("APARA_FPS")) SetTargetFPS(atoi(getenv("APARA_FPS")));   /* só para os testes e as medidas */
+    /* O instante de hardware do clique só vale com um humano jogando: o demo, o jogo automático e as capturas
+     * apertam por código, e os testes (tests/teste_*.sh) dependem de os cliques deles caírem no meio do quadro. */
+    G.usaCarimbo = !G.demo && !G.autoJogo && !G.recDir && !G.shotFile && !getenv("APARA_SEM_CARIMBO") && entrada_iniciar();
+    G.carimboMin = 1e9;
     SetWindowMinSize(LOW_W, LOW_H);
     ChangeDirectory(GetApplicationDirectory());
     srand(getenv("APARA_SEMENTE") ? (unsigned)atoi(getenv("APARA_SEMENTE")) : (unsigned)time(NULL));
@@ -3543,6 +3606,7 @@ int main(int argc, char **argv) {
 
     double wall = 0;
     while (!WindowShouldClose()) {
+        G.poll = entrada_relogio();
         float dtReal = G.recDir ? 1.0f / 30 : GetFrameTime();
         wall += dtReal;
         /* Travamento longo: pausa em vez de engolir o golpe. */
@@ -3564,6 +3628,37 @@ int main(int argc, char **argv) {
             dtReal = 0;
         }
 
+        if (G.logCarimbos) {
+            static bool pausaAntes;
+            if (G.paused != pausaAntes) fprintf(stderr, "PAUSA %d\n", G.paused);
+            pausaAntes = G.paused;
+        }
+        /* Os cliques que o sistema carimbou desde o quadro passado. Vale um por quadro, como pressed(); um
+         * carimbo que sobra (um clique que nenhuma tecla lida aqui trouxe) só vale para o quadro dele. */
+        G.quadro = dtReal;
+        G.carimbo = ENTRADA_SEM_CARIMBO;
+        if (G.usaCarimbo) {
+            double c[8];
+            int n = entrada_coletar(c, 8, G.poll);
+            if (n > 0) { G.carimbo = c[0]; G.atrasoPoll = G.poll - c[0]; }
+            for (int i = 0; i < n; i++) {
+                if (G.logCarimbos) fprintf(stderr, "CARIMBO ts=%.6f poll=%.6f atraso_ms=%.3f\n", c[i], G.poll, (G.poll - c[i]) * 1000);
+                if (G.modoCarimbo) {
+                    double a = G.poll - c[i];
+                    G.carimboN++;
+                    G.carimboSoma += a;
+                    if (a < G.carimboMin) G.carimboMin = a;
+                    if (a > G.carimboMax) G.carimboMax = a;
+                    printf("clique %2d: o poll leu %.1f ms depois\n", G.carimboN, a * 1000);
+                    fflush(stdout);
+                }
+            }
+            if (G.modoCarimbo && G.carimboN >= AJ_CARIMBO_MEDIDAS) {
+                printf("carimbo: %d cliques, o poll leu de %.1f a %.1f ms depois (média %.1f ms, quadro %.1f ms)\n", G.carimboN, G.carimboMin * 1000,
+                       G.carimboMax * 1000, G.carimboSoma / G.carimboN * 1000, GetFrameTime() * 1000);
+                break;
+            }
+        }
         G.time += dtReal;
         G.stateTime += dtReal;
         G.bannerTime = fmaxf(0, G.bannerTime - dtReal);
@@ -3573,7 +3668,7 @@ int main(int argc, char **argv) {
         G.slash = fmaxf(0, G.slash - dtReal);
         G.crack = fmaxf(0, G.crack - dtReal);
         if (G.silence > 0) { G.silence -= dtReal; audio_music_duck(G.silence > 0 ? 1 : 0); }
-        if (!G.paused) step(dtReal);
+        if (!G.paused && !G.modoCarimbo) step(dtReal);
         /* tests/teste_save.sh: depois de vencer o primeiro mestre (a cabana de hanzo), o jogo sai */
         if (G.autoJogo && ((G.state == ST_VISIT && G.stateTime > AJ_AUTO_VISITA_FIM) || G.time > AJ_AUTO_TEMPO_MAX)) break;
         draw_world();

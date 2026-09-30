@@ -14,7 +14,9 @@ PUROS="src/ajuste.c src/core.c src/roster.c src/robo.c src/fonte.c src/salvar.c 
 JOGO="src/main.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c tools/personagens.c"
 ARQUIVOS="$PUROS"
 if tem_raylib; then ARQUIVOS="$ARQUIVOS $JOGO"; else echo "avisos: sem raylib, pulando o jogo e as ferramentas"; fi
-if tem_x11; then ARQUIVOS="$ARQUIVOS tests/xtecla.c"; else echo "avisos: sem X11, pulando tests/xtecla.c"; fi
+if tem_x11; then ARQUIVOS="$ARQUIVOS tests/xtecla.c tests/xclique.c"; else echo "avisos: sem X11, pulando tests/xtecla.c e tests/xclique.c"; fi
+ARQUIVOS="$ARQUIVOS src/entrada_stub.c"
+if printf '#include <X11/extensions/XInput2.h>\n' | ${CC:-cc} -E -x c - >/dev/null 2>&1; then ARQUIVOS="$ARQUIVOS src/entrada_linux.c"; else echo "avisos: sem XInput2, pulando src/entrada_linux.c"; fi
 
 FALHAS=0
 TOTAL=0

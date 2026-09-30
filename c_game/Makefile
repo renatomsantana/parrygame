@@ -20,6 +20,20 @@ endif
 CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
 GAME := src/main.c src/fonte.c src/salvar.c src/entrada.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
+# O carimbo do clique (src/entrada_plat.h): um arquivo por plataforma. Sem XInput2 (Wayland puro, Windows),
+# o stub: o jogo funciona igual, com o aperto no meio do quadro.
+ifeq ($(shell uname),Darwin)
+  ENTRADA_PLAT := src/entrada_mac.m
+else
+  ifeq ($(shell pkg-config --exists xi x11 2>/dev/null && echo sim),sim)
+    ENTRADA_PLAT := src/entrada_linux.c
+    ENTRADA_CFLAGS := $(shell pkg-config --cflags xi x11)
+    ENTRADA_LIBS := $(shell pkg-config --libs xi x11) -lpthread
+  else
+    ENTRADA_PLAT := src/entrada_stub.c
+  endif
+endif
+
 all: apara
 
 # Gera os lutadores a partir das pranchas do Samurai #3 (ver ../docs/PERSONAGENS.md).
@@ -33,8 +47,8 @@ sprites: personagens
 packs:
 	tools/instalar_packs.sh "$(ZIP)"
 
-apara: $(CORE) $(GAME) src/*.h
-	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(CORE) $(GAME) -o $@ $(RAYLIB_LIBS) -lm
+apara: $(CORE) $(GAME) $(ENTRADA_PLAT) src/*.h
+	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(ENTRADA_CFLAGS) $(CORE) $(GAME) $(ENTRADA_PLAT) -o $@ $(RAYLIB_LIBS) $(ENTRADA_LIBS) -lm
 
 core_test: $(CORE) tests/core_test.c src/core.h src/ajuste.h src/robo.h
 	$(CC) $(CFLAGS) $(CORE) tests/core_test.c -o $@ -lm
@@ -99,11 +113,13 @@ test: core_test test-fonte test-save test-entrada
 
 # O jogo de verdade sob xvfb (precisa do ./apara, do xvfb-run e da libX11; sem eles cada script pula):
 # as teclas de teste só existem com --teste e nada grava o progresso (teste_save), o rastro é só visual
-# (teste_rastro), a vitória é salva no golpe final e sobrevive a kill, ESC e Q e fechar (teste_vitoria).
+# (teste_rastro), a vitória é salva no golpe final e sobrevive a kill, ESC e Q e fechar (teste_vitoria), e o
+# carimbo do clique chega ao duelo no instante certo (teste_carimbo, com libXtst).
 teste-jogo: apara
 	sh tests/teste_save.sh
 	sh tests/teste_rastro.sh
 	sh tests/teste_vitoria.sh
+	sh tests/teste_carimbo.sh
 
 # Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, números, avisos e o jogo real.
 teste:
