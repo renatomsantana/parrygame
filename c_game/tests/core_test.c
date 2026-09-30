@@ -1942,6 +1942,79 @@ static void test_campaign_win(void) {
     CHECK(c.index == 12 && c.completed, "e de novo não muda nada");
 }
 
+/* Um passo grande (uma pausa, uma queda de quadro) não pode pular o aviso: WINDUP, LAUNCH, o brilho e o
+ * som do aviso saem, nessa ordem de tempo, antes do PRESS e do IMPACT. Antes, o núcleo começava a
+ * preparação numa chamada e só disparava a agenda na seguinte, e um aperto entre as duas julgava o golpe
+ * sem lâmina nem aviso (o jogo nunca chegava lá; quem chamava o núcleo com passos grandes, sim). */
+typedef struct { int windup, launch, glint, sound, press, impact, n; } OrdemDoGolpe;
+
+static OrdemDoGolpe ordem_do_golpe(Duel *d, int base) {
+    OrdemDoGolpe o = {-1, -1, -1, -1, -1, -1, 0};
+    DuelEvent ev[MAX_EVENTS];
+    int n = duel_drain(d, ev, MAX_EVENTS);
+    for (int i = 0; i < n; i++) {
+        int k = base + i;
+        switch (ev[i].kind) {
+            case EV_WINDUP: if (o.windup < 0) o.windup = k; break;
+            case EV_LAUNCH: if (o.launch < 0) o.launch = k; break;
+            case EV_CUE: if (ev[i].flag) { if (o.sound < 0) o.sound = k; } else if (o.glint < 0) o.glint = k; break;
+            case EV_PRESS: if (o.press < 0) o.press = k; break;
+            case EV_IMPACT: if (o.impact < 0) o.impact = k; break;
+            default: break;
+        }
+    }
+    o.n = n;
+    return o;
+}
+
+static void test_passo_grande(void) {
+    int passos = 0, comAperto = 0;
+    for (int mi = 0; mi < roster_size(); mi++) {
+        for (uint32_t seed = 1; seed <= 12; seed++) {
+            for (int como = 0; como < 4; como++) {
+                const MasterProfile *m = roster_get(mi);
+                Settings s;
+                settings_default(&s);
+                settings_for_level(&s, mi);
+                s.latency = (como & 1) ? 0.06f : 0;
+                Duel d;
+                duel_init(&d, &s, m, seed);
+                DuelEvent ev[MAX_EVENTS];
+                /* deixa o primeiro golpe entrar sem defesa e para na recuperação */
+                duel_tick(&d, 1.0);
+                while (d.phase != PH_RECOVERY && d.clock < 60) duel_tick(&d, 1.0 / 60);
+                duel_drain(&d, ev, MAX_EVENTS);
+                if (d.phase != PH_RECOVERY) continue;
+                OrdemDoGolpe o;
+                if (como < 2) {
+                    /* um passo enorme: a preparação seguinte, o aviso e o julgamento acontecem dentro dele */
+                    duel_tick(&d, 5.0);
+                    o = ordem_do_golpe(&d, 0);
+                    CHECK(o.windup >= 0 && o.launch > o.windup && o.glint > o.windup && o.sound > o.windup && (o.impact < 0 || (o.launch < o.impact && o.glint < o.impact && o.sound < o.impact)),
+                          "%s, semente %u: passo de 5 s: WINDUP %d, LAUNCH %d, brilho %d, som %d, IMPACT %d", m->name, seed, o.windup, o.launch, o.glint, o.sound, o.impact);
+                    passos++;
+                } else {
+                    /* o passo leva a preparação a uns 10 ms depois do contato, sem julgar, e o aperto vem logo depois */
+                    Duel sonda = d;
+                    duel_tick(&sonda, d.phaseEnd - d.clock + 1e-9);
+                    if (sonda.phase != PH_WINDUP) continue;
+                    double ate = sonda.strikeAt + 0.010 - d.clock;
+                    duel_tick(&d, ate);
+                    if (d.phase != PH_WINDUP) continue;         /* o passo já julgou (chain curta): nada a testar aqui */
+                    OrdemDoGolpe a = ordem_do_golpe(&d, 0);
+                    bool tentou = duel_press(&d);
+                    OrdemDoGolpe b = ordem_do_golpe(&d, a.n);
+                    CHECK(a.windup >= 0 && a.launch > a.windup && a.glint > a.windup && a.sound > a.windup,
+                          "%s, semente %u: passo até 10 ms depois do contato: WINDUP %d, LAUNCH %d, brilho %d, som %d", m->name, seed, a.windup, a.launch, a.glint, a.sound);
+                    CHECK(tentou && b.press >= 0 && b.impact > b.press, "%s, semente %u: o aperto de depois do passo é aceito e julga o golpe (PRESS %d, IMPACT %d)", m->name, seed, b.press, b.impact);
+                    comAperto++;
+                }
+            }
+        }
+    }
+    CHECK(passos > 100 && comAperto > 100, "o teste do passo grande cobriu os casos (%d passos, %d com aperto)", passos, comAperto);
+}
+
 /* Traços de cada mestre: o primeiro é de katana e lento, garfiel faz combos longos,
  * karasu e arashi usam as duas lâminas, suiren ataca de longe e jinshi é o mais variado. */
 static void test_traits(void) {
@@ -2122,6 +2195,7 @@ int main(void) {
     test_special();
     test_campaign();
     test_campaign_win();
+    test_passo_grande();
     printf("%d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
 }

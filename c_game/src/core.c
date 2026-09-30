@@ -365,6 +365,17 @@ static void fire(Duel *d, ScheduleKind kind) {
     }
 }
 
+/* Dispara, na ordem do tempo, os itens da agenda que já venceram: a lâmina que parte, o brilho e o
+ * som do aviso. Vale para um passo grande (uma pausa, uma queda de quadro) e para o aperto que chega
+ * logo depois de uma preparação que começou atrasada: o aviso e a lâmina nunca ficam sem sair antes
+ * do julgamento do golpe. */
+static void fire_due(Duel *d) {
+    while (d->scheduleIndex < d->scheduleCount && d->clock >= d->schedule[d->scheduleIndex].time) {
+        fire(d, d->schedule[d->scheduleIndex].kind);
+        d->scheduleIndex++;
+    }
+}
+
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
 float duel_hitstop_for(const Settings *s, Judgement j, bool broke, bool secondBlade) {
@@ -496,14 +507,13 @@ void duel_tick(Duel *d, double delta) {
         if (d->burnLeft <= 0) emit(d, EV_BURN, J_NONE, 0, 0, false);
     }
     if (d->phase == PH_READY || d->phase == PH_RECOVERY) {
-        if (d->clock >= d->phaseEnd) begin_attack(d);
-        return;
+        if (d->clock < d->phaseEnd) return;
+        /* a preparação começa em phaseEnd; num passo grande o que já venceu nela sai neste mesmo passo
+         * (no máximo um golpe por chamada: o seguinte começa na chamada seguinte) */
+        begin_attack(d);
     }
     /* Os eventos disparam na ordem do tempo, mesmo num passo grande. */
-    while (d->scheduleIndex < d->scheduleCount && d->clock >= d->schedule[d->scheduleIndex].time) {
-        fire(d, d->schedule[d->scheduleIndex].kind);
-        d->scheduleIndex++;
-    }
+    fire_due(d);
     /* com defesa, julga no contato; sem, espera a tolerância tardia (e o atraso calibrado) */
     if (d->clock >= d->strikeAt && (d->attempted || d->clock >= d->strikeAt + d->s.lateGrace + d->s.latency)) resolve(d);
 }
@@ -527,6 +537,7 @@ bool duel_press(Duel *d) {
      * quadro julgou o golpe anterior e o aperto veio logo depois), começa antes do aperto: o
      * aperto cai na preparação, como cairia com quadros menores. */
     if ((d->phase == PH_READY || d->phase == PH_RECOVERY) && d->clock >= d->phaseEnd) begin_attack(d);
+    if (d->phase == PH_WINDUP) fire_due(d);   /* o aviso e a lâmina saem antes do aperto, na ordem */
     if (d->clock < d->pressBlockedUntil - 1e-9) return false;
     if (d->phase == PH_WINDUP && d->attempted) return false;
     PressKind kind;

@@ -34,7 +34,7 @@ static const Modo MODOS[] = {
     {"50ms",   0.05, false, true,  "quedas de quadro de 33 e 50 ms; aperto em ms exato dentro do quadro"},
     {"100ms",  0.10, false, true,  "quedas de até 100 ms; aperto em ms exato dentro do quadro"},
     {"meio",   0.20, true,  true,  "como o jogo: passos de até 0,2 s (acima disso ele pausa) e aperto no meio do quadro"},
-    {"grande", 0,    false, false, "pausa e retomada: passos de até 2 s, e o aperto logo depois do passo (só se pede: fuzz N S grande)"},
+    {"grande", 0,    false, true,  "pausa e retomada: passos de até 2 s, com o aperto logo depois do passo"},
 };
 
 static uint64_t rs = 88172645463325252ull;
