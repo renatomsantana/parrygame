@@ -55,7 +55,7 @@ ev = ["Dialogue: 0,%s,%s,L1,,0,0,0,,%s" % (hms(0), hms(dur + 1), esc(l1)),
       "Dialogue: 0,%s,%s,L2,,0,0,0,,%s" % (hms(0), hms(dur + 1), esc(l2))]
 n = int(dur * 10) + 1
 for i in range(n):
-    ev.append("Dialogue: 0,%s,%s,T,,0,0,0,,jogo %.1f s%s" % (hms(i / 10), hms((i + 1) / 10), t0 + i / 10 / lento, "  (câmera lenta %gx)" % lento if lento != 1 else ""))
+    ev.append("Dialogue: 1,%s,%s,T,,0,0,0,,jogo %.1f s%s" % (hms(i / 10), hms((i + 1) / 10), t0 + i / 10 / lento, "  (câmera lenta %gx)" % lento if lento != 1 else ""))
 open(arq, "w", encoding="utf-8").write(cab + "\n".join(ev) + "\n")
 PY
 VF="pad=1280:800:0:80:black,ass=$TMP/legenda.ass:fontsdir=$(dirname "$FONTE")"

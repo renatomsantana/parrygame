@@ -68,7 +68,10 @@ quadros por segundo de tempo de jogo, por mais lento que o vídeo por software s
 jogo no canto. `T0` e `T1` são segundos de jogo. Sem som: com `APARA_DEBUG=1` o F3 mostra o aviso, o contato e o resultado de cada
 parry. Precisa do `ffmpeg` (com o libass; `FFMPEG=/caminho`). Ganchos para os vídeos: `APARA_ROBO=cedo|tarde|casual|spam|nunca`
 (o robô do `--demo`: `cedo` aperta 0,6 s antes do contato, `tarde` 0,1 s depois), `APARA_CLIQUE_PERIODO=0,05` (fora do duelo o robô
-clica a cada 50 ms e um ponto vermelho no canto mostra cada clique), `APARA_REC_FPS`.
+clica a cada 50 ms e um ponto vermelho no canto mostra cada clique, também os que a trava ignora), `APARA_REC_FPS`.
+`LENTO=4` faz câmera lenta de verdade (o jogo roda a 4 x 60 passos por segundo, sem quadros repetidos) e `SEM_LEGENDA=1` grava só o jogo, para juntar
+vídeos lado a lado. Para cenas (o desarme, a quebra do selo, os finais) rode antes com `APARA_AUTO=1 APARA_SEMENTE=11`: o jogo escreve
+`TESTE_MARCO nome t=segundos` a cada momento, e esses tempos valem para o vídeo com as mesmas variáveis e argumentos.
 
 ## Ajustar
 
