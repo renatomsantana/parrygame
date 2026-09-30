@@ -12,7 +12,7 @@
 #include "entrada_fila.h"
 
 static EntradaFila fila;   /* só a thread principal a toca: o monitor roda dentro do poll */
-static id monitor;
+static void *monitor;      /* o monitor, retido por nós (CFBridgingRetain vale com e sem ARC) */
 
 double entrada_relogio(void) { return [[NSProcessInfo processInfo] systemUptime]; }
 
@@ -20,14 +20,16 @@ void entrada_preparar(void) {}
 
 bool entrada_iniciar(void) {
     if (monitor) return true;
-    monitor = [NSEvent addLocalMonitorForEventsMatchingMask:(NSEventMaskLeftMouseDown | NSEventMaskKeyDown)
-                                                    handler:^NSEvent *(NSEvent *e) {
+    id m = [NSEvent addLocalMonitorForEventsMatchingMask:(NSEventMaskLeftMouseDown | NSEventMaskKeyDown)
+                                                 handler:^NSEvent *(NSEvent *e) {
         /* os códigos de tecla do macOS são posições: 49 espaço, 38 J, 36 Enter (o do teclado numérico não) */
         if (e.type == NSEventTypeKeyDown && (e.isARepeat || (e.keyCode != 49 && e.keyCode != 38 && e.keyCode != 36))) return e;
         fila_empilha(&fila, e.timestamp);
         return e;
     }];
-    return monitor != nil;
+    if (!m) return false;
+    monitor = (void *)CFBridgingRetain(m);
+    return true;
 }
 
 int entrada_coletar(double *carimbos, int max, double ate) { return fila_coleta(&fila, carimbos, max, ate); }

@@ -16,6 +16,23 @@ Os packs (Mattz Art) não vão para o git. Sem eles o jogo roda com os bonecos d
 O progresso fica em `apara_save.txt` e a calibração em `apara_opcoes.txt`, ao lado do executável.
 Se o save estiver estragado, o jogo avisa, guarda o arquivo em `apara_save.txt.bak` e começa de novo.
 
+## No macOS: o carimbo do clique
+
+O jogo usa o instante em que o macOS recebeu o clique (`NSEvent.timestamp`, em `src/entrada_mac.m`) e não o meio do
+quadro. Esse arquivo foi escrito sem um Mac à mão: **nunca foi compilado nem rodado**. Confira nesta ordem:
+
+1. `make` (precisa das Command Line Tools). Compila o `src/entrada_mac.m` junto com o resto.
+2. `./apara --carimbo` e clique 20 vezes (depois, 20 vezes com Espaço). A 60 Hz o mínimo sai perto de 0, a média perto de
+   8 ms e o máximo perto de 16 ms. Sempre perto de 0: o carimbo está sendo tirado no poll, e não no clique (defeito).
+   Aviso vermelho "esta plataforma não dá o instante do clique": o monitor não instalou.
+3. Num duelo (`./apara --teste --master 6 --duel`), aperte **F3**: a linha "carimbo do clique" conta os apertos "no
+   instante do clique" e os "no meio do quadro". Os do meio do quadro têm de ficar perto de zero.
+4. Compare o toque: `APARA_SEM_CARIMBO=1 ./apara --teste --master 6 --duel` aperta no meio do quadro, como antes.
+
+**Se o `.m` não compilar:** `make clean && make ENTRADA_PLAT=src/entrada_stub.c` compila sem o carimbo (o jogo fica como era, com o
+aperto no meio do quadro) e não perde mais nada. Mande as primeiras linhas do erro do compilador. No Windows e no Linux sem
+XInput2 (Wayland puro) o Makefile já usa esse mesmo `src/entrada_stub.c`: lá o aperto vale no meio do quadro, de propósito.
+
 ## Teclas
 
 | Tecla | O que faz |
