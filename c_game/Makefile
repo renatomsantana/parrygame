@@ -18,7 +18,7 @@ ifeq ($(shell uname),Darwin)
 endif
 
 CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
-GAME := src/main.c src/fonte.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
+GAME := src/main.c src/fonte.c src/salvar.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
 all: apara
 
@@ -56,14 +56,21 @@ fonte_test: src/fonte.c src/fonte.h tests/fonte_test.c
 test-fonte: fonte_test
 	./fonte_test assets/fonts/Tiny5-Regular.ttf src/*.c
 
-test: core_test test-fonte
+# O arquivo de progresso: formato, validação, .bak e gravação atômica.
+save_test: src/salvar.c src/salvar.h src/core.h tests/save_test.c
+	$(CC) $(CFLAGS) src/salvar.c src/core.c src/roster.c src/ajuste.c tests/save_test.c -o $@ -lm
+
+test-save: save_test
+	./save_test
+
+test: core_test test-fonte test-save
 	./core_test
 
 run: apara
 	./apara
 
 clean:
-	rm -f apara core_test fonte_test robos_relatorio personagens
+	rm -f apara core_test fonte_test save_test robos_relatorio personagens
 
 # O jogo de verdade, sob xvfb: as teclas de teste só existem com --teste e nada grava o progresso.
 teste-jogo: apara

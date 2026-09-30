@@ -36,6 +36,7 @@
 #include "audio.h"
 #include "core.h"
 #include "robo.h"
+#include "salvar.h"
 #include "fonte.h"
 #include "fx.h"
 #include "katana3d.h"
@@ -257,6 +258,8 @@ static struct {
 
     int menuIndex;
     bool hasSave;
+    char avisoSave[192];      /* o que dizer ao jogador sobre o save (não gravou, estava corrompido) */
+    float avisoSaveAte;       /* G.time até quando a faixa fica na tela */
 
     /* Coreografia. */
     bool bossWinding;
@@ -575,12 +578,22 @@ static void marco_de_teste(const char *nome) {
     if (G.autoJogo && !strcmp(nome, "vitoria_salva") && getenv("APARA_VITORIA_LENTA")) G.lento = true;
 }
 
+/* Uma faixa no canto avisa o jogador (e o terminal), em vez de perder o progresso calado. */
+#define AVISO_SAVE_SEGUNDOS 12.0f
+
+static void avisa_save(const char *texto) {
+    fprintf(stderr, "apara: %s\n", texto);
+    snprintf(G.avisoSave, sizeof G.avisoSave, "%s", texto);
+    G.avisoSaveAte = G.time + AVISO_SAVE_SEGUNDOS;
+}
+
 static void save_game(void) {
     if (G.demo || G.teste) return;
-    FILE *f = fopen(SAVE_FILE, "w");
-    if (!f) return;
-    fprintf(f, "APARA-C 2\n%d %u %d %d\n", G.camp.index, G.camp.clearedMask, G.camp.completed, G.camp.loreSeen);
-    fclose(f);
+    char erro[128], texto[192];
+    if (save_gravar(SAVE_FILE, &G.camp, erro, sizeof erro)) return;
+    snprintf(texto, sizeof texto, "não consegui gravar o progresso (%s): %s", SAVE_FILE, erro);
+    avisa_save(texto);
+    marco_de_teste("save_falhou");
 }
 
 /* Opções que não são progresso: a calibração de latência. */
@@ -606,18 +619,26 @@ static void load_options(void) {
 }
 
 static bool load_game(void) {
-    FILE *f = fopen(SAVE_FILE, "r");
-    if (!f) return false;
-    int idx = 0, done = 0, lore = 0, ver = 0;
-    unsigned mask = 0;
-    bool ok = fscanf(f, "APARA-C %d\n%d %u %d %d", &ver, &idx, &mask, &done, &lore) == 5;
-    fclose(f);
-    if (!ok || idx < 0 || idx >= ROSTER_SIZE) return false;
-    G.camp.index = idx;
-    G.camp.clearedMask = mask;
-    G.camp.completed = done;
-    G.camp.loreSeen = lore;
-    return true;
+    Campaign lida;
+    char aviso[192];
+    switch (save_ler(SAVE_FILE, &lida, aviso, sizeof aviso)) {
+        case SAVE_OK:
+            G.camp.index = lida.index;
+            G.camp.clearedMask = lida.clearedMask;
+            G.camp.completed = lida.completed;
+            G.camp.loreSeen = lida.loreSeen;
+            return true;
+        case SAVE_NAO_EXISTE:
+            return false;
+        case SAVE_CORROMPIDO:
+            avisa_save(aviso);
+            marco_de_teste("save_corrompido");
+            return false;
+        default:
+            avisa_save(aviso);
+            marco_de_teste("save_ilegivel");
+            return false;
+    }
 }
 
 /* O mestre atual caiu: a vitória vale desde o golpe final (marca, avança a trilha e salva), sem
@@ -3097,6 +3118,19 @@ static void ui_debug(Rectangle dst) {
 #undef DBG_LINHA
 }
 
+/* O aviso do save, no canto de cima à esquerda (o placar do mestre fica no meio; a trilha põe a sua
+ * etiqueta acima disto), em qualquer tela. */
+static void ui_aviso_save(void) {
+    if (G.avisoSaveAte <= G.time || !G.avisoSave[0]) return;
+    const float size = 18, lh = size * 1.5f, w = 420;
+    char linhas[4][256];
+    int n = wrap_lines(G.avisoSave, size, w - 32, linhas, 4);
+    float a = clampf(G.avisoSaveAte - G.time, 0, 1);
+    Rectangle r = {20, 80, w, 24 + n * lh};
+    parchment(r, a);
+    for (int i = 0; i < n; i++) ink(linhas[i], r.x + 16, r.y + 12 + i * lh, size, fadec(SEAL_RED, a));
+}
+
 static void draw_ui(void) {
     switch (G.state) {
         case ST_TITLE: ui_title(); break;
@@ -3127,6 +3161,7 @@ static void draw_ui(void) {
             if (G.state == ST_CLEARED) ui_cleared();
             break;
     }
+    ui_aviso_save();
     if (G.paused) ui_pause();
 }
 
