@@ -8,11 +8,11 @@
 
 const Robo ROBO_DO_DEMO = {ROBO_PERFEITO, 0, 0, 0, 0};
 const Robo ROBO_SEM_DEFESA = {ROBO_NUNCA, 0, 0, 0, 0};
-const Robo ROBO_APERTA_SEM_PARAR = {ROBO_SPAM, 0, 0, 0, 0.15f};
-const Robo ROBO_HUMANO_CASUAL = {ROBO_HUMANO, 0.25f, 0.08f, 0.025f, 0};
+const Robo ROBO_APERTA_SEM_PARAR = {ROBO_SPAM, 0, 0, 0, AJ_ROBO_SPAM_PERIODO};
+const Robo ROBO_HUMANO_CASUAL = {ROBO_HUMANO, AJ_ROBO_CASUAL_REACAO, AJ_ROBO_CASUAL_RITMO, AJ_ROBO_CASUAL_MAO, 0};
 
 Robo robo_reacao(float segundos) {
-    Robo r = {ROBO_REACAO, segundos, 0, 0.020f, 0};
+    Robo r = {ROBO_REACAO, segundos, 0, AJ_ROBO_REACAO_MAO, 0};
     return r;
 }
 
@@ -25,10 +25,13 @@ void robo_iniciar(RoboMente *m, const Robo *r, uint32_t semente) {
 }
 
 /* Normal padrão (Box-Muller). */
+static const double DOIS_PI = 6.283185307179586;   /* num-ok: constante matemática */
+static const double MENOR_U = 1e-12;    /* num-ok: u = 0 faria o log valer -infinito */
+
 static double normal(Rng *g) {
     double u = rng_next(g), v = rng_next(g);
-    if (u < 1e-12) u = 1e-12;
-    return sqrt(-2 * log(u)) * cos(6.283185307179586 * v);
+    if (u < MENOR_U) u = MENOR_U;
+    return sqrt(-2 * log(u)) * cos(DOIS_PI * v);
 }
 
 /* Decide, no começo do golpe, quando apertar. */
@@ -122,7 +125,7 @@ double robo_aperto_em(RoboMente *m, const Duel *d, double dt) {
         m->ataque = d->attacks;
         double t = planejar(m, d);
         double limite = d->strikeAt + d->s.lateGrace + d->s.latency;
-        if (t >= 0 && t <= limite + 1e-9 && m->npend < 4) m->pend[m->npend++] = t;
+        if (t >= 0 && t <= limite + AJ_EPS_TEMPO && m->npend < AJ_ROBO_PLANOS) m->pend[m->npend++] = t;
     }
     int b = -1;
     for (int i = 0; i < m->npend; i++)
@@ -145,7 +148,7 @@ RoboLuta robo_lutar_hz(const Robo *r, const MasterProfile *m, int vencidos, uint
     memset(&out, 0, sizeof out);
     DuelEvent ev[MAX_EVENTS];
     const double dt = 1.0 / hz;
-    while (d.phase != PH_FINISHED && d.clock < 1800) {
+    while (d.phase != PH_FINISHED && d.clock < AJ_ROBO_LUTA_MAX) {
         if (quadros) duel_step(&d, dt, robo_quer_apertar(&mente, &d, dt));
         else duel_step_at(&d, dt, robo_aperto_em(&mente, &d, dt));
         int n = duel_drain(&d, ev, MAX_EVENTS);
@@ -163,5 +166,5 @@ RoboLuta robo_lutar_hz(const Robo *r, const MasterProfile *m, int vencidos, uint
 }
 
 RoboLuta robo_lutar(const Robo *r, const MasterProfile *m, int vencidos, uint32_t semente) {
-    return robo_lutar_hz(r, m, vencidos, semente, 60, false);
+    return robo_lutar_hz(r, m, vencidos, semente, AJ_ROBO_HZ_PADRAO, false);
 }

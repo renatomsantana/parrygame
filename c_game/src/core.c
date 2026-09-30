@@ -4,18 +4,21 @@
  */
 #include "core.h"
 
+#include <limits.h>
 #include <math.h>
 #include <string.h>
 
 /* ------------------------------------------------------------------ */
 
+/* Mulberry32: 32 bits de estado, a mesma sequência em qualquer máquina (as lutas dos testes e dos
+ * robôs dependem disso). As constantes são as do algoritmo. */
 void rng_seed(Rng *r, uint32_t seed) { r->state = seed ? seed : 1; }
 
 double rng_next(Rng *r) {
-    uint32_t t = (r->state += 0x6D2B79F5u);
-    t = (t ^ (t >> 15)) * (t | 1u);
-    t ^= t + (t ^ (t >> 7)) * (t | 61u);
-    return (double)(t ^ (t >> 14)) / 4294967296.0;
+    uint32_t t = (r->state += 0x6D2B79F5u);                /* num-ok: algoritmo */
+    t = (t ^ (t >> 15)) * (t | 1u);                        /* num-ok: algoritmo */
+    t ^= t + (t ^ (t >> 7)) * (t | 61u);                   /* num-ok: algoritmo */
+    return (double)(t ^ (t >> 14)) / 4294967296.0;         /* num-ok: algoritmo (2^32) */
 }
 
 /* ------------------------------------------------------------------ */
@@ -60,8 +63,8 @@ void duel_reset(Duel *d) {
     d->strikeLead = 0;
     d->blackout = false;
     d->special = false;
-    d->lastPress = -100;
-    d->pressBlockedUntil = -100;
+    d->lastPress = AJ_NUNCA;
+    d->pressBlockedUntil = AJ_NUNCA;
     d->attempted = false;
     d->renPosture = d->s.renPosture;
     d->seal = 0;
@@ -79,7 +82,7 @@ void duel_reset(Duel *d) {
     d->lastJudgement = J_NONE;
     d->lastLead = -1;
     d->lastAttempted = false;
-    d->lastGestureAt = -100;
+    d->lastGestureAt = AJ_NUNCA;
     d->lastHitstop = 0;
 }
 
@@ -131,7 +134,7 @@ float duel_posture_max(const Duel *d) {
 bool duel_under_pressure(const Duel *d) { return d->bossPosture <= duel_posture_max(d) / 2; }
 
 bool duel_advantage(const Duel *d) {
-    return d->phase != PH_FINISHED && d->bossPosture > 0 && d->bossPosture <= d->s.perfectBossDamage + 1e-4f;
+    return d->phase != PH_FINISHED && d->bossPosture > 0 && d->bossPosture <= d->s.perfectBossDamage + AJ_EPS_PERFEITO;
 }
 float duel_ren_damage(const Duel *d) {
     float base = d->s.renPosture / (d->m->hitsToFall > 1 ? d->m->hitsToFall : 1);
@@ -143,7 +146,7 @@ float duel_ren_damage(const Duel *d) {
 
 bool duel_strike_dual(const Duel *d) {
     const Move *mv = duel_move(d);
-    return mv && d->comboStrike < 32 && (mv->dual >> d->comboStrike) & 1u;
+    return mv && d->comboStrike < (int)(CHAR_BIT * sizeof mv->dual) && (mv->dual >> d->comboStrike) & 1u;
 }
 
 float duel_strike_lead_base(const Duel *d) {
@@ -272,8 +275,8 @@ static void begin_attack(Duel *d) {
     d->attempted = false;
     /* Cada golpe novo zera a espera entre gestos: um gesto feito no intervalo
      * não pode roubar a defesa do golpe que está chegando. */
-    d->lastPress = -100;
-    d->pressBlockedUntil = -100;
+    d->lastPress = AJ_NUNCA;
+    d->pressBlockedUntil = AJ_NUNCA;
     d->earlyUsed = false;
 
     bool continuing = d->comboRemaining > 0;
@@ -331,7 +334,7 @@ static void begin_attack(Duel *d) {
         if (antes < AJ_PREPARO_ANTES_DO_AVISO) antes = AJ_PREPARO_ANTES_DO_AVISO;
         duration = duel_aviso(d) + antes;
     }
-    if (!continuing && duration < duel_strike_lead(d) + 0.1) duration = duel_strike_lead(d) + 0.1;
+    if (!continuing && duration < duel_strike_lead(d) + AJ_PREPARO_MIN_PRIMEIRO) duration = duel_strike_lead(d) + AJ_PREPARO_MIN_PRIMEIRO;
     d->windupDuration = (float)duration;
 
     if (!continuing) {
@@ -391,7 +394,7 @@ static void resolve(Duel *d) {
     double lead = d->attempted ? d->strikeAt - (d->lastPress - s->latency) : -1;
     bool dual = duel_strike_dual(d), second = false;
     Judgement j;
-    if (d->attempted && lead >= 0 && lead <= st->perfectWindow + 1e-6 && !d->earlyUsed) {
+    if (d->attempted && lead >= 0 && lead <= st->perfectWindow + AJ_EPS_JANELA && !d->earlyUsed) {
         j = J_PERFEITO;
         d->perfects++;
         /* o parry perfeito apaga as brasas */
@@ -401,7 +404,7 @@ static void resolve(Duel *d) {
         }
         d->bossPosture -= s->perfectBossDamage;
         d->renPosture = clampf(d->renPosture + s->perfectHeal * s->renPosture, 0, s->renPosture);
-    } else if (d->attempted && lead >= -s->lateGrace - 1e-6 && lead <= st->goodWindow + 1e-6) {
+    } else if (d->attempted && lead >= -s->lateGrace - AJ_EPS_JANELA && lead <= st->goodWindow + AJ_EPS_JANELA) {
         j = J_BOM;
         d->goods++;
         d->bossPosture -= s->goodBossDamage;
@@ -472,7 +475,7 @@ static void resolve(Duel *d) {
         }
         return;
     }
-    if (d->renPosture <= 0.001f) {
+    if (d->renPosture <= AJ_EPS_VIDA) {
         d->renPosture = 0;
         d->phase = PH_FINISHED;
         d->comboRemaining = 0;
@@ -495,7 +498,7 @@ void duel_tick(Duel *d, double delta) {
         float t = (float)delta < d->burnLeft ? (float)delta : d->burnLeft;
         d->burnLeft -= t;
         d->renPosture = clampf(d->renPosture - d->burnRate * t, 0, d->s.renPosture);
-        if (d->renPosture <= 0.001f) {
+        if (d->renPosture <= AJ_EPS_VIDA) {
             /* caiu queimando */
             d->renPosture = 0;
             d->burnLeft = 0;
@@ -538,7 +541,7 @@ bool duel_press(Duel *d) {
      * aperto cai na preparação, como cairia com quadros menores. */
     if ((d->phase == PH_READY || d->phase == PH_RECOVERY) && d->clock >= d->phaseEnd) begin_attack(d);
     if (d->phase == PH_WINDUP) fire_due(d);   /* o aviso e a lâmina saem antes do aperto, na ordem */
-    if (d->clock < d->pressBlockedUntil - 1e-9) return false;
+    if (d->clock < d->pressBlockedUntil - AJ_EPS_TEMPO) return false;
     if (d->phase == PH_WINDUP && d->attempted) return false;
     PressKind kind;
     double quando = 0, antesDoAviso = 0;   /* o que o evento conta (EV_PRESS: a e b) */
@@ -546,7 +549,7 @@ bool duel_press(Duel *d) {
         /* o jogador vê o aviso `latency` depois: é esse o aviso que conta para ele */
         double aviso = duel_cue_time(d) + d->s.latency;
         quando = d->strikeAt - (d->clock - d->s.latency);
-        if (d->clock < aviso - 1e-9) {
+        if (d->clock < aviso - AJ_EPS_TEMPO) {
             /* antes do aviso: não trava o golpe; a recarga acaba no aviso, no máximo (a janela
              * boa vem sempre depois dele). O custo: a defesa deste golpe não sai perfeita. */
             double fim = d->clock + AJ_RECARGA_CEDO;
@@ -580,9 +583,9 @@ bool duel_press(Duel *d) {
 /* ------------------------------------------------------------------ */
 
 float calibration_result(const float *offsets, int n) {
-    float ok[64];
+    float ok[AJ_CALIBRA_MAX_APERTOS];
     int k = 0;
-    for (int i = 0; i < n && k < 64; i++)
+    for (int i = 0; i < n && k < AJ_CALIBRA_MAX_APERTOS; i++)
         if (offsets[i] > -AJ_CALIBRA_ACEITA && offsets[i] < AJ_CALIBRA_ACEITA) ok[k++] = offsets[i];
     if (k == 0 || k * 2 < n) return -1;
     for (int i = 1; i < k; i++) {

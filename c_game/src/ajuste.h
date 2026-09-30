@@ -127,5 +127,54 @@
 
 /* ---- Robô do demo (--demo) e dos testes -------------------------------- */
 #define AJ_ROBO_ANTECEDENCIA       0.030f   /* aperta no máximo este tempo antes do contato (menos que a menor janela perfeita) */
+#define AJ_ROBO_SPAM_PERIODO       0.150f   /* o que martela o botão aperta a cada isto */
+#define AJ_ROBO_CASUAL_REACAO      0.250f   /* o humano casual: só usa um sinal que chegue com esta folga */
+#define AJ_ROBO_CASUAL_RITMO       0.080f   /*   erro ao medir um intervalo: esta fração dele */
+#define AJ_ROBO_CASUAL_MAO         0.025f   /*   erro fixo da mão (desvio padrão, s) */
+#define AJ_ROBO_REACAO_MAO         0.020f   /* o que só reage: erro da mão (desvio padrão, s) */
+#define AJ_ROBO_PLANOS                4     /* apertos planejados que ainda não chegaram (robo_aperto_em) */
+#define AJ_ROBO_LUTA_MAX          1800.0    /* uma luta de robô que passa disto é abandonada (s) */
+#define AJ_ROBO_HZ_PADRAO           60.0    /* taxa de quadros do robô quando ninguém escolhe */
+
+/* ---- Ritmo das cenas e das telas (tempo do jogo; nada disto entra no julgamento) ---------- */
+/* Depois de quebrar um selo do oboro: o mestre se recompõe, e no 1º e no 2º selo a cena de fala
+ * começa este tempo depois da quebra (tempo de jogo, na câmera lenta da quebra). */
+#define AJ_QUEBRA_ATE_A_CENA        1.3f
+/* De volta ao duelo depois da cena do selo, o próximo golpe só começa depois disto (o grito). */
+#define AJ_PAUSA_APOS_CENA_SELO     1.8
+#define AJ_ESPADA_CRAVADA_ESPERA    1.1f    /* a espada do mestre crava; depois disto vem a fala final ou a cena */
+#define AJ_SILENCIO_QUEBRA          0.5f    /* a música abaixa depois de quebrar a postura */
+#define AJ_SILENCIO_DESARME         1.0f    /* ...depois do desarme */
+#define AJ_SILENCIO_MORTE_OBORO     1.5f    /* ...e no golpe que mata o oboro */
+#define AJ_DERROTA_TITULO           1.2f    /* tela de derrota: a palavra "derrota" aparece depois disto */
+#define AJ_DERROTA_OPCOES           1.6f    /* ...e as opções, depois disto (só então aceitam clique) */
+#define AJ_VITORIA_TRAVA            1.0f    /* tela de vitória: o clique só vale depois disto */
+#define AJ_ESCOLHA_TRAVA            1.5f    /* a escolha do final (poupar ou matar): idem */
+#define AJ_DICA_PRIMEIRO_DUELO      1.0f    /* a dica "como se apara" aparece depois disto, no primeiro duelo */
+#define AJ_FINAL_TITULO             2.2f    /* o título do final aparece depois disto */
+#define AJ_FINAL_TRAVA              3.5f    /* o clique que fecha o final só vale depois disto */
+#define AJ_TRAVA_CLIQUE_TITULO      0.3f    /* título e trilha: um clique logo depois de trocar de tela não conta */
+#define AJ_TRAVA_CLIQUE_TRILHA      0.4f
+#define AJ_TRAVA_CLIQUE_CALIBRA     0.4f
+#define AJ_TRAVA_CLIQUE_FALA        0.25f   /* falas e cenas: o clique que pula a fala só vale depois disto */
+/* Um quadro mais longo que isto (arrastar a janela, um travamento) pausa o duelo em vez de engoli-lo. */
+#define AJ_PAUSA_POR_TRAVAMENTO     0.2f
+
+/* ---- Jogo automático (APARA_AUTO e --demo): o robô também clica nas telas ------------------ */
+#define AJ_AUTO_CLIQUE_PERIODO      0.9f    /* fora do duelo, um clique a cada isto */
+#define AJ_AUTO_TEMPO_MAX           900.0f  /* o jogo automático para depois disto (s de jogo) */
+#define AJ_AUTO_VISITA_FIM          1.5f    /* ...ou este tempo depois de entrar na cabana do hanzo */
+#define AJ_AUTO_ESCOLHA_ESCOLHE     3.0f    /* a escolha do final: o robô escolhe depois disto */
+#define AJ_AUTO_ESCOLHA_CONFIRMA    4.0f    /* ...e confirma depois disto */
+
+/* ---- Tolerâncias numéricas (não são regras: só impedem que o ruído do ponto flutuante decida) ---- */
+#define AJ_EPS_TEMPO                1e-9    /* dois instantes a menos disto de distância são o mesmo */
+#define AJ_EPS_JANELA               1e-6    /* um aperto no limite exato de uma janela ainda vale */
+#define AJ_EPS_PERFEITO             1e-4f   /* "falta um perfeito": a postura que sobra cabe num perfeito, com esta folga */
+#define AJ_EPS_VIDA                 0.001f  /* vida ou postura abaixo disto é zero */
+#define AJ_NUNCA                  (-100.0)  /* "ainda não apertou": um instante que nunca chega */
+#define AJ_CALIBRA_MAX_APERTOS     64       /* a calibração nunca guarda mais apertos que isto */
+/* Na primeira preparação de uma sequência, do começo até a lâmina partir sobra ao menos isto. */
+#define AJ_PREPARO_MIN_PRIMEIRO     0.100f
 
 #endif

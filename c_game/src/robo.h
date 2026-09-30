@@ -45,7 +45,7 @@ typedef struct {
     int ataque;      /* último golpe planejado */
     double aperta;   /* instante planejado do aperto (-1 = nenhum) */
     double spam;     /* próximo aperto do spam */
-    double pend[4];  /* robo_aperto_em: apertos planejados que ainda não chegaram */
+    double pend[AJ_ROBO_PLANOS];  /* robo_aperto_em: apertos planejados que ainda não chegaram */
     int npend;
 } RoboMente;
 

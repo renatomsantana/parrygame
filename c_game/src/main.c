@@ -353,7 +353,7 @@ static float smooth(float t) { t = clampf(t, 0, 1); return t * t * (3 - 2 * t); 
 
 static bool pressed(void) {
     /* No modo demonstração, o robô também avança falas e painéis. */
-    if ((G.demo || G.autoJogo) && G.state != ST_DUEL && fmodf(G.stateTime, 0.9f) < GetFrameTime()) return true;
+    if ((G.demo || G.autoJogo) && G.state != ST_DUEL && fmodf(G.stateTime, AJ_AUTO_CLIQUE_PERIODO) < GetFrameTime()) return true;
     if (G.demo && (G.shotFile || G.recDir)) return false; /* capturas: só o robô joga */
     return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER);
 }
@@ -989,7 +989,7 @@ static void start_disarm(void) {
     fx_popup(&G.fx, "desarmado", (Vector2){160, 56}, 1.2f, PAPER);
     G.duo = 0.3f;
     G.slash = 0.35f;
-    G.silence = 1.0f;
+    G.silence = AJ_SILENCIO_DESARME;
     G.slowmo = AJ_LENTA_VITORIA;
     G.slowmoTime = AJ_LENTA_VITORIA_TEMPO;
     set_state(ST_FINISHER);
@@ -1443,7 +1443,7 @@ static void on_impact(const DuelEvent *e) {
         G.aberr = 3.5f;
         G.desat = 1;
         G.crack = 0.14f;
-        G.silence = 0.5f;
+        G.silence = AJ_SILENCIO_QUEBRA;
         audio_play(SND_BREAK, 0.9f, 1); /* cerâmica rachando e taiko; depois, meio segundo de silêncio */
         Vector2 c = {b->x, GROUND_LOW - 30};
         fx_burst(&G.fx, P_SHARD, c, 20, 160, 1.4f, -1.57f, (Color){230, 230, 255, 255}, (Color){180, 140, 255, 255});
@@ -1864,11 +1864,11 @@ static void update_actors(float dt) {
     if (G.staggerTime > 0) {
         G.staggerTime += dt;
         int seal = G.duel.seal;
-        if (G.state == ST_DUEL && G.staggerTime > 1.3f && G.m->isBigBoss && seal >= 1 && seal <= 2 && !G.sealTold[seal]) {
+        if (G.state == ST_DUEL && G.staggerTime > AJ_QUEBRA_ATE_A_CENA && G.m->isBigBoss && seal >= 1 && seal <= 2 && !G.sealTold[seal]) {
             /* oboro para de lutar e fala; o grito vem depois */
             G.sealTold[seal] = true;
             start_scene(seal == 1 ? SCENE_SEAL_1 : SCENE_SEAL_2);
-        } else if (G.state == ST_DUEL && G.staggerTime > 1.3f) {
+        } else if (G.state == ST_DUEL && G.staggerTime > AJ_QUEBRA_ATE_A_CENA) {
             rig_pose(b, POSE_IDLE, 0.5f, EASE_INOUT);
             G.staggerTime = 0;
             /* o grito do pack mostra a máscara: sem ela, o montado */
@@ -1977,7 +1977,7 @@ static void update_finisher(float dt) {
     f_update(&G.renS, dt);
     f_update(&G.bossS, dt);
     update_sword(dt);
-    if (G.sword.stuck && G.sword.stuckTime > 1.1f) {
+    if (G.sword.stuck && G.sword.stuckTime > AJ_ESPADA_CRAVADA_ESPERA) {
         if (G.m->isBigBoss) start_scene(SCENE_KNEEL);   /* de joelhos, ele tira a máscara */
         else start_lines(G.m->outro, G.m->outroCount, ST_OUTRO);
     }
@@ -2114,7 +2114,7 @@ static void oboro_dies(void) {
     fx_burst(&G.fx, P_SHARD, at, 16, 70, 1.2f, -2.4f, (Color){130, 18, 26, 255}, (Color){60, 8, 12, 255});
     G.slash = 0.35f;
     G.duo = 0.5f;
-    G.silence = 1.5f;
+    G.silence = AJ_SILENCIO_MORTE_OBORO;
     audio_play(SND_BREAK, 0.9f, 0.8f);
 }
 
@@ -2272,7 +2272,7 @@ static void scene_done(void) {
         case SCENE_SEAL_1:
         case SCENE_SEAL_2:
             /* de volta ao duelo: o grito vem agora, com tempo de acabar antes do próximo golpe */
-            G.duel.phaseEnd = fmax(G.duel.phaseEnd, G.duel.clock + 1.8);
+            G.duel.phaseEnd = fmax(G.duel.phaseEnd, G.duel.clock + AJ_PAUSA_APOS_CENA_SELO);
             set_state(ST_DUEL);
             banner(duel_stance(&G.duel)->name, G.masked ? VERMILION : AGED_GOLD);
             break;
@@ -2321,7 +2321,7 @@ static void update_scene(float dt) {
     float before = G.typeChars;
     G.typeChars += dt * 50;
     if ((int)G.typeChars / 3 != (int)before / 3 && G.typeChars < len) audio_play(SND_TYPE, 0.5f, strcmp(b->speaker, "kojiro") ? 0.8f : 1.1f);
-    if (!pressed() || G.beatTime - lead < 0.25f) return;
+    if (!pressed() || G.beatTime - lead < AJ_TRAVA_CLIQUE_FALA) return;
     if (G.typeChars < len) { G.typeChars = (float)len; return; }
     audio_play(SND_UI, 0.8f, 1);
     next_beat();
@@ -2332,7 +2332,7 @@ static const Rectangle CHOICE_BOX[2] = {{UI_W / 2.0f - 300, 420, 240, 96}, {UI_W
 
 static void update_choice(float dt) {
     scene_actors(dt);
-    if (G.stateTime < 1.5f) return;
+    if (G.stateTime < AJ_ESCOLHA_TRAVA) return;
     int was = G.choice;
     if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) G.choice = 0;
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) G.choice = 1;
@@ -2343,7 +2343,7 @@ static void update_choice(float dt) {
     if (hover >= 0 && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.choice = hover;
     bool confirm = IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J);
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && hover >= 0) { G.choice = hover; confirm = true; }
-    if ((G.demo || G.autoJogo) && G.stateTime > 3) { G.choice = G.demoChoice; confirm = G.stateTime > 4; }
+    if ((G.demo || G.autoJogo) && G.stateTime > AJ_AUTO_ESCOLHA_ESCOLHE) { G.choice = G.demoChoice; confirm = G.stateTime > AJ_AUTO_ESCOLHA_CONFIRMA; }
     if (G.choice != was) audio_play(SND_UI, 0.8f, 1);
     if (!confirm || G.choice < 0) return;
     audio_play(SND_UI, 1, 0.7f);
@@ -2353,7 +2353,7 @@ static void update_choice(float dt) {
 
 static void update_ending(float dt) {
     scene_actors(dt);
-    if (G.stateTime > 3.5f && pressed()) {
+    if (G.stateTime > AJ_FINAL_TRAVA && pressed()) {
         G.hasSave = true;
         G.menuIndex = 0;
         set_state(ST_TITLE);
@@ -2789,8 +2789,8 @@ static void ui_choice(void) {
     DrawRectangle(0, 0, UI_W, UI_H, fadec((Color){6, 4, 8, 255}, 0.62f * a));
     const char *q = "DESEJA MATAR O OBORO?";
     draw_text_f(G.uiBold, q, UI_W / 2.0f - ui_width_f(G.uiBold, q, 64) / 2, 250, 64, fadec((Color){238, 214, 170, 255}, a), true);
-    if (G.stateTime < 1.5f) return;
-    float b = clampf((G.stateTime - 1.5f) * 2, 0, 1);
+    if (G.stateTime < AJ_ESCOLHA_TRAVA) return;
+    float b = clampf((G.stateTime - AJ_ESCOLHA_TRAVA) * 2, 0, 1);
     static const char *OPT[2] = {"SIM", "NÃO"};
     for (int i = 0; i < 2; i++) {
         Rectangle r = CHOICE_BOX[i];
@@ -2804,9 +2804,9 @@ static void ui_choice(void) {
 static void ui_ending(void) {
     float a = clampf(G.stateTime / 2.0f, 0, 1);
     DrawRectangle(0, 0, UI_W, UI_H, fadec(BLACK, a));
-    if (G.stateTime < 2.2f) return;
+    if (G.stateTime < AJ_FINAL_TITULO) return;
     const char *t = G.ending == SCENE_SIM ? "fim" : "continua";
-    float b = clampf((G.stateTime - 2.2f) / 1.2f, 0, 1);
+    float b = clampf((G.stateTime - AJ_FINAL_TITULO) / 1.2f, 0, 1);
     draw_text_f(G.uiBold, t, UI_W / 2.0f - ui_width_f(G.uiBold, t, 80) / 2, 300, 80, fadec((Color){238, 214, 170, 255}, b), false);
 }
 
@@ -2967,11 +2967,11 @@ static int defeat_options(const char **labels) {
 }
 
 static void ui_defeat(void) {
-    if (G.stateTime < 1.2f) return;
-    float a = clampf((G.stateTime - 1.2f) * 3, 0, 1);
+    if (G.stateTime < AJ_DERROTA_TITULO) return;
+    float a = clampf((G.stateTime - AJ_DERROTA_TITULO) * 3, 0, 1);
     DrawRectangle(0, 0, UI_W, UI_H, fadec((Color){20, 6, 4, 255}, 0.6f * a));
     draw_text_f(G.uiBold, "derrota", UI_W / 2.0f - ui_width_f(G.uiBold, "derrota", 80) / 2, 190, 80, fadec((Color){206, 70, 50, 255}, a), true);
-    if (G.stateTime < 1.6f) return;
+    if (G.stateTime < AJ_DERROTA_OPCOES) return;
     const char *labels[3];
     int n = defeat_options(labels);
     parchment((Rectangle){UI_W / 2.0f - 220, 356, 440, 40 + n * 56.0f}, a);
@@ -2989,7 +2989,7 @@ static void ui_cleared(void) {
     scroll_rods(r, a);
     ink_bold_center("aprendiz vencido", UI_W / 2.0f, r.y + 34, 50, fadec(INK_TEXT, a));
     ink_bold_center(lower(G.m->name), UI_W / 2.0f, r.y + 104, 34, fadec((Color){160, 66, 22, 255}, a));
-    if (G.stateTime > 1.0f)
+    if (G.stateTime > AJ_VITORIA_TRAVA)
         ink_center(campaign_big_boss_open(&G.camp) ? "os doze caíram. oboro espera no dojo de hanzo." : "clique para seguir a trilha",
                    UI_W / 2.0f, r.y + 162, 24, fadec(INK_SOFT, a));
 }
@@ -3025,7 +3025,7 @@ static void ui_pause(void) {
 /* Primeiro duelo: como se apara, até o primeiro parry que pega. */
 static void ui_first_hint(void) {
     if (G.camp.index != 0 || G.state != ST_DUEL || G.duel.perfects + G.duel.goods > 0) return;
-    float a = clampf(G.stateTime - 1.0f, 0, 1);
+    float a = clampf(G.stateTime - AJ_DICA_PRIMEIRO_DUELO, 0, 1);
     if (a <= 0) return;
     Color c = fadec((Color){236, 222, 192, 255}, a);
     float w = ui_width("aparar", 26) + 24 + 128 + 24 + ui_width("ou clique", 26);
@@ -3213,7 +3213,7 @@ static void update_calibra(float dt) {
     if (IsKeyPressed(KEY_ESCAPE)) { end_calibra(false); return; }
     if (G.cal.modo == 2) {
         if (IsKeyPressed(KEY_R)) { G.cal.modo = 0; G.cal.t = 0; G.cal.proxima = 0; G.cal.n = 0; return; }
-        if (pressed() && G.stateTime > 0.4f) end_calibra(true);
+        if (pressed() && G.stateTime > AJ_TRAVA_CLIQUE_CALIBRA) end_calibra(true);
         return;
     }
     G.cal.t += dt;
@@ -3252,7 +3252,7 @@ static void update_title(void) {
         Rectangle r = {UI_W / 2.0f - 200, 414 + i * 60.0f, 400, 54};
         if (CheckCollisionPointRec(v, r) && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.menuIndex = i;
     }
-    if (!pressed() || G.stateTime < 0.3f) return;
+    if (!pressed() || G.stateTime < AJ_TRAVA_CLIQUE_TITULO) return;
     audio_play(SND_UI, 1, 1.2f);
     int choice = G.hasSave ? G.menuIndex : G.menuIndex + 1; /* 0 continuar, 1 novo, 2 lore */
     if (choice == 0) {
@@ -3288,7 +3288,7 @@ static void update_lore(float dt) {
 }
 
 static void update_trail(void) {
-    if (G.stateTime < 0.4f) return;
+    if (G.stateTime < AJ_TRAVA_CLIQUE_TRILHA) return;
     if (IsKeyPressed(KEY_ESCAPE) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse_ui(), MENU_BUTTON))) {
         audio_play(SND_UI, 1, 1);
         go_to_menu();
@@ -3306,7 +3306,7 @@ static void update_lines(float dt, void (*done)(void)) {
     float before = G.typeChars;
     G.typeChars += dt * 50;
     if ((int)G.typeChars / 3 != (int)before / 3 && G.typeChars < len) audio_play(SND_TYPE, 0.5f, strcmp(l->speaker, "kojiro") ? 0.8f : 1.1f);
-    if (!pressed() || G.stateTime < 0.25f) return;
+    if (!pressed() || G.stateTime < AJ_TRAVA_CLIQUE_FALA) return;
     if (G.typeChars < len) { G.typeChars = (float)len; return; }
     audio_play(SND_UI, 0.8f, 1);
     G.lineIndex++;
@@ -3336,7 +3336,7 @@ static void sensei_done(void) {
 static void update_defeat(float dt) {
     if (G.slowmoTime > 0) { G.slowmoTime -= dt; if (G.slowmoTime <= 0) G.slowmo = 1; }
     update_actors(dt * G.slowmo);
-    if (G.stateTime < 1.6f) return;
+    if (G.stateTime < AJ_DERROTA_OPCOES) return;
     const char *labels[3];
     int n = defeat_options(labels);
     if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) { G.defeatIndex = (G.defeatIndex + 1) % n; audio_play(SND_UI, 1, 1); }
@@ -3368,7 +3368,7 @@ static void update_cleared(float dt) {
     f_update(&G.renS, dt);
     f_update(&G.bossS, dt);
     update_sword(dt);
-    if (G.stateTime > 1.0f && pressed()) {
+    if (G.stateTime > AJ_VITORIA_TRAVA && pressed()) {
         if (G.m->visitCount > 0) {
             /* a cabana de hanzo: kojiro conta quem venceu, hanzo fala do próximo */
             start_lines(G.m->visit, G.m->visitCount, ST_VISIT);
@@ -3546,7 +3546,7 @@ int main(int argc, char **argv) {
         float dtReal = G.recDir ? 1.0f / 30 : GetFrameTime();
         wall += dtReal;
         /* Travamento longo: pausa em vez de engolir o golpe. */
-        if (dtReal > 0.2f) {
+        if (dtReal > AJ_PAUSA_POR_TRAVAMENTO) {
             dtReal = 0;
             if (G.state == ST_DUEL && !G.shotFile && !G.recDir) G.paused = true;
         }
@@ -3575,7 +3575,7 @@ int main(int argc, char **argv) {
         if (G.silence > 0) { G.silence -= dtReal; audio_music_duck(G.silence > 0 ? 1 : 0); }
         if (!G.paused) step(dtReal);
         /* tests/teste_save.sh: depois de vencer o primeiro mestre (a cabana de hanzo), o jogo sai */
-        if (G.autoJogo && ((G.state == ST_VISIT && G.stateTime > 1.5f) || G.time > 900)) break;
+        if (G.autoJogo && ((G.state == ST_VISIT && G.stateTime > AJ_AUTO_VISITA_FIM) || G.time > AJ_AUTO_TEMPO_MAX)) break;
         draw_world();
         /* Interface em 320 x 180. Cor e alfa acumulados separados: a camada sai com
          * alfa pré-multiplicado e pousa certa por cima da cena. */

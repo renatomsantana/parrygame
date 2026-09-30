@@ -79,6 +79,10 @@ TAXAS_LUTAS ?= 100
 robos-taxas: robos_relatorio
 	./robos_relatorio --taxas $(TAXAS_LUTAS)
 
+# Nenhum número mágico nas regras (src/core.c e src/robo.c): os números têm nome no ajuste.h ou no roster.c.
+numeros:
+	sh tests/numeros.sh
+
 # Nenhum aviso do gcc nem do clang (-Wall -Wextra -Werror em -O1, -O2 e -O3).
 avisos:
 	RAYLIB_CFLAGS="$(RAYLIB_CFLAGS)" sh tests/avisos.sh
@@ -94,11 +98,12 @@ teste-jogo: apara
 	sh tests/teste_rastro.sh
 	sh tests/teste_vitoria.sh
 
-# Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, avisos e o jogo real.
+# Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, números, avisos e o jogo real.
 teste:
 	$(MAKE) test
 	$(MAKE) fuzz-rapido
 	$(MAKE) robos-taxas
+	$(MAKE) numeros
 	$(MAKE) avisos
 	$(MAKE) teste-jogo
 	@echo "teste: tudo certo"
@@ -109,4 +114,4 @@ run: apara
 clean:
 	rm -f apara core_test fonte_test save_test fuzz_test robos_relatorio personagens
 
-.PHONY: all packs sprites run clean robos robos-taxas fuzz fuzz-rapido avisos test test-fonte test-save teste teste-jogo
+.PHONY: all packs sprites run clean robos robos-taxas fuzz fuzz-rapido numeros avisos test test-fonte test-save teste teste-jogo
