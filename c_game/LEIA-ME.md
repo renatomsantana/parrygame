@@ -22,7 +22,7 @@ Se o save estiver estragado, o jogo avisa, guarda o arquivo em `apara_save.txt.b
 |---|---|
 | clique, **Espaço**, **J**, **Enter** | apara e avança as falas |
 | **Esc** | pausa (**T** trilha, **L** calibra o atraso, **M** menu, **Q** sai) |
-| **F3** (ou `APARA_DEBUG=1`) | overlay de debug: janelas, linha do tempo do golpe, os seis últimos apertos (perfeito, bom, cedo, tarde, e o erro em ms), fase, posturas, vida |
+| **F3** (ou `APARA_DEBUG=1`) | overlay de debug: janelas, linha do tempo do golpe, os seis últimos apertos (perfeito, bom, cedo, tarde, e o erro em ms), fase, posturas, vida, e quantos apertos usaram o instante de hardware do clique |
 | **F** / **F11** | liga e desliga o tremor / tela cheia |
 | segurar Esc, segurar o clique | na abertura: pula / acelera |
 
@@ -33,6 +33,7 @@ Se o save estiver estragado, o jogo avisa, guarda o arquivo em `apara_save.txt.b
 ./apara --master 13 --duel --demo        # um robô apara sozinho contra o oboro
 ./apara --state pause|defeat|finisher|cleared --master 5 --duel
 ./apara --shot arquivo.png 5             # captura depois de 5 s;  --rec pasta 1 5  salva os quadros (GIF)
+./apara --carimbo                        # clique 20 vezes: mostra quanto depois do clique o jogo o leu
 ```
 
 Com `--teste`, na luta ou na derrota: **R** recomeça, **V** enche a vida, **P** enche a postura
@@ -63,13 +64,15 @@ make fuzz N=3000                    # cenários sorteados contra os invariantes 
 
 | Parte | O que confere |
 |---|---|
-| `make test` | `core_test` (regras, janela viável em todo golpe, curva, Oboro, taxa de quadros), `test-fonte` (todo caractere não ASCII tem glifo), `test-save` (formato, saves corrompidos, gravação atômica) |
+| `make test` | `core_test` (regras, janela viável em todo golpe, curva, Oboro, taxa de quadros), `test-fonte` (todo caractere não ASCII tem glifo), `test-save` (formato, saves corrompidos, gravação atômica), `test-entrada` (o carimbo do clique: conversão, carimbo inválido, lutas dos robôs) |
 | `make fuzz-rapido`, `make robos-taxas` | invariantes em cenários sorteados; mesma luta em cinco taxas de quadros |
 | `make numeros`, `make avisos` | nenhum número mágico nas regras; nenhum aviso do gcc e do clang em -O1, -O2 e -O3 |
-| `make teste-jogo` | o jogo de verdade sob `xvfb-run` (precisa dele e da libX11; sem eles pula): teclas de teste só com `--teste`, o rastro é só visual, a vitória é salva no golpe final e sobrevive a kill, Esc+Q e fechar a janela |
+| `make teste-jogo` | o jogo de verdade sob `xvfb-run` (precisa dele e da libX11; sem eles pula): teclas de teste só com `--teste`, o rastro é só visual, a vitória é salva no golpe final e sobrevive a kill, Esc+Q e fechar a janela, e o carimbo do clique chega ao duelo no instante certo (cliques do XTest; precisa de libXtst) |
 
 Ganchos só para os testes (variáveis de ambiente): `APARA_AUTO`, `APARA_SEMENTE`, `APARA_TECLAS`,
-`APARA_RASTRO`, `APARA_LOG_IMPACTOS`, `APARA_VITORIA_LENTA`, `APARA_SEM_UI`, `APARA_SFX`.
+`APARA_RASTRO`, `APARA_LOG_IMPACTOS`, `APARA_VITORIA_LENTA`, `APARA_SEM_UI`, `APARA_SFX`, `APARA_FPS` (limita
+os quadros por segundo), `APARA_LOG_CARIMBOS` (escreve cada carimbo e cada aperto do duelo) e
+`APARA_SEM_CARIMBO=1` (o aperto vale no meio do quadro, como antes: para comparar à mão).
 
 Mapa do código: tabela em `../docs/JOGO.md`. O núcleo (`core`, `roster`, `ajuste`, `robo`, `salvar`,
-`fonte`) não usa raylib.
+`fonte`, `entrada`) não usa raylib.

@@ -60,9 +60,15 @@ Esc enche um anel e pula; segurar o clique acelera).
   certo (`phaseEnd`, o impacto), nunca do quadro em que o relógio o passou, e o
   julgamento usa o instante do aperto e o do contato. Os mesmos apertos, nos
   mesmos ms, dão o mesmo resultado a 30, 60, 120, 144 e 240 Hz (`test_taxa_de_quadros`).
-  Só o clique do jogo, que só sabe em que quadro veio, entra no meio do quadro
-  (`duel_step`), com ±½ quadro de imprecisão: nos mestres finais o casual vence uns 3
-  a 6 pontos menos a 60 Hz do que a 144 Hz (±8 ms contra ±3 ms). Os robôs decidem em ms e apertam no instante
+  O clique do jogo entra no **instante em que o sistema o carimbou**
+  (`src/entrada.c`, `entrada_plat.h`): o macOS dá `NSEvent.timestamp`, o X11 os eventos brutos do
+  XInput2, e o carimbo é convertido para o passo do núcleo (`entrada_no_quadro`), com câmera lenta e
+  hitstop, e entra no `duel_step_at` como o dos robôs. Sem carimbo (Wayland, Windows, gamepad), com um
+  carimbo fora do quadro (mais de 5 ms) ou em demonstração, o clique entra no meio do quadro
+  (`duel_step`), com ±½ quadro de imprecisão: nesse caso, nos mestres finais o casual vence uns 3
+  a 6 pontos menos a 60 Hz do que a 144 Hz (±8 ms contra ±3 ms); com o carimbo, a tabela do casual é a mesma
+  a qualquer taxa (`make test-entrada`). O F3 mostra quantos apertos usaram o carimbo e quantos caíram no meio
+  do quadro; `./apara --carimbo` mede o atraso do poll em 20 cliques. Os robôs decidem em ms e apertam no instante
   exato (`duel_step_at`, `robo_aperto_em`): `make robos HZ=144` dá a mesma tabela que
   60; `QUADROS=1` põe o aperto no meio do quadro, como no jogo. `make robos-taxas`
   (dentro do `make teste`) confere que a mesma luta dá o mesmo resultado a 30, 60, 120,
@@ -286,6 +292,8 @@ de um botão só).
 | Arquivo | O quê |
 |---|---|
 | `src/core.c`, `core.h` | Regras puras: relógio, aviso, tentativa, julgamento (com tolerância e latência), hitstop, postura, selos, vantagem, moveset, trilha. Sem raylib. |
+| `src/entrada.c`, `entrada.h` | O instante do clique no relógio do núcleo: converte o carimbo do sistema para o passo do duelo (câmera lenta, hitstop) e cai no meio do quadro se ele não for confiável. Sem raylib. |
+| `src/entrada_plat.h`, `entrada_linux.c`, `entrada_mac.m`, `entrada_stub.c`, `entrada_fila.h` | De onde vem o carimbo: X11 (eventos brutos do XInput2 numa thread), macOS (monitor local de `NSEvent`), o resto sem carimbo. O Makefile escolhe o arquivo. |
 | `src/salvar.c`, `salvar.h` | O arquivo de progresso, puro: formato, leitura estrita (máscara, vencidos e lore vistos), `.bak` do save corrompido, gravação atômica (`.tmp` + `fsync` + `rename`). Sem raylib. |
 | `src/fonte.c`, `fonte.h` | Quais caracteres pedir à fonte: os ASCII e todo caractere não ASCII de qualquer string do jogo. Sem raylib. |
 | `src/vozes.h` | Quantas vozes cada som precisa para uma cauda não cortar a outra (o PERFECT tem 8). |
@@ -304,6 +312,8 @@ de um botão só).
 | `tests/core_test.c` | Verificações do núcleo (`make test`): regras, janelas viáveis em todo golpe, aviso, aperto cedo, ritmo com hitstop, calibração, curva, Oboro, taxa de quadros, vitória idempotente, vozes |
 | `tests/robos.c` | A tabela dos robôs por mestre (`make robos`) e a mesma luta em cinco taxas (`make robos-taxas`) |
 | `tests/fuzz.c` | Fuzz do núcleo: cenários sorteados, com invariantes (`make fuzz N=3000`) |
+| `tests/entrada_test.c` | O carimbo (`make test-entrada`): a conversão, todo carimbo inválido no meio do quadro, um fuzz de 1.000.000 entradas e lutas dos robôs com carimbo exato = ms exato e com carimbo inválido = o de antes |
+| `tests/teste_carimbo.sh`, `xclique.c` | O jogo de verdade sob xvfb: cliques e Espaço pelo XTest em instantes medidos; o carimbo chega a menos de 1 ms e o duelo o aplica onde ele manda |
 | `tests/save_test.c`, `fonte_test.c` | O save (formato, saves corrompidos, gravação atômica) e os glifos da fonte |
 | `tests/teste_save.sh`, `teste_rastro.sh`, `teste_vitoria.sh`, `xtecla.c` | O jogo de verdade sob xvfb (`make teste-jogo`): nada grava fora do jogo normal, o rastro é só visual, a vitória é salva no golpe final e sobrevive a kill, ESC+Q e fechar a janela |
 | `tests/numeros.sh`, `avisos.sh` | Nenhum número mágico nas regras; nenhum aviso do gcc e do clang em -O1, -O2 e -O3 |
