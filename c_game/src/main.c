@@ -61,7 +61,6 @@
 #define RW (LOW_W * RS)
 #define RH (LOW_H * RS)
 #define SWORD_GRAVITY 380.0f
-#define GHOST_MAX 10
 #define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
 #define AFTER_MAX 8           /* silhuetas que o mestre deixa nos movimentos rápidos */
 enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP };
@@ -224,9 +223,6 @@ static struct {
     float slash;              /* execução: o traço de corte atravessando a tela */
     float crack;              /* rachadura branca no mestre */
     float silence;            /* a trilha some por um instante */
-    struct { Rig rig; float life; Color color; } ghosts[GHOST_MAX];
-    int ghostHead;
-    float ghostTimer;
     Rig ren, boss;
     Fighter renS, bossS;
     float bossStep, bossStepTo, bossStepSpeed; /* passo do mestre até o alcance do golpe */
@@ -1858,22 +1854,6 @@ static void handle_events(void) {
 /* Por quadro                                                          */
 /* ------------------------------------------------------------------ */
 
-/* Guarda uma silhueta de quem está em movimento rápido. */
-static void update_ghosts(float dt) {
-    for (int i = 0; i < GHOST_MAX; i++) G.ghosts[i].life = fmaxf(0, G.ghosts[i].life - dt * 4);
-    Rig *src = G.boss.trail ? &G.boss : ((G.ren.trail || (G.renParryTime >= 0 && G.renParryTime < 0.12f)) ? &G.ren : NULL);
-    /* nas pranchas o rastro do golpe já vem desenhado */
-    if (!src || (src == &G.boss && G.bossS.set) || (src == &G.ren && G.renS.set)) return;
-    G.ghostTimer -= dt;
-    if (G.ghostTimer > 0) return;
-    G.ghostTimer = 0.03f;
-    G.ghostHead = (G.ghostHead + 1) % GHOST_MAX;
-    G.ghosts[G.ghostHead].rig = *src;
-    G.ghosts[G.ghostHead].rig.flash = 0;
-    G.ghosts[G.ghostHead].life = 1;
-    G.ghosts[G.ghostHead].color = (G.ghostHead % 2) ? (Color){80, 220, 255, 255} : (Color){255, 70, 200, 255};
-}
-
 /* Pranchas e o passo do mestre até o alcance do golpe (e de volta ao lugar). */
 static void fighters_update(float dt) {
     f_update(&G.renS, dt);
@@ -2043,7 +2023,6 @@ static void update_actors(float dt) {
         }
     }
     update_hop(dt);
-    update_ghosts(dt);
     /* O cansaço segue a vida de kojiro e a postura do mestre. */
     if (G.state == ST_DUEL || G.state == ST_INTRO) {
         r->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.renPosture / G.settings.renPosture, 0, 1) : 0;
@@ -2550,27 +2529,6 @@ static void begin_world(Vector2 offset) {
     BeginMode2D(cam);
 }
 
-/* Lutador no estilo de ação 2D: contorno escuro de 1 px e um filete de neon do lado de trás. */
-static void draw_fighter(const Rig *r, Color light, Color rim, bool dark) {
-    static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-    Color ink = {16, 12, 18, 255};
-    Rig t = *r;
-    for (int k = 0; k < 4; k++) {
-        t.x = r->x + off[k][0];
-        t.y = r->y + off[k][1];
-        rig_draw_flat(&t, ink);
-    }
-    if (dark) {
-        rig_draw_flat(r, (Color){24, 20, 36, 255});
-        return;
-    }
-    t = *r;
-    t.x = r->x + (r->faceLeft ? 1 : -1);
-    t.y = r->y - 1;
-    rig_draw_flat(&t, rim);
-    rig_draw(r, light);
-}
-
 /* O mesmo contorno escuro e o filete de luz dos bonecos, em volta do sprite. */
 static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Color rim, bool dark) {
     const SprAnim *a = f->pl.anim;
@@ -2642,14 +2600,6 @@ static void draw_rigs(Color light) {
     bool dark = G.ctx.blackout > 0.5f;
     Color rim = G.m->isBigBoss && G.auraLeft > 0 ? posture_color(G.auraEcho) : arena_rim(G.m->arena);
     begin_actors();
-    /* Rastros: silhuetas que ficam para trás, alternando ciano e magenta. */
-    for (int n = GHOST_MAX; n >= 1; n--) {
-        int i = (G.ghostHead - n + GHOST_MAX * 2) % GHOST_MAX;
-        if (G.ghosts[i].life <= 0) continue;
-        Color c = G.ghosts[i].color;
-        c.a = (unsigned char)(150 * G.ghosts[i].life);
-        rig_draw_flat(&G.ghosts[i].rig, c);
-    }
     if (G.bossS.set && G.m->id != 10 && !dark && !G.bossHidden) {
         /* as silhuetas do movimento, na cor do elemento de cada mestre */
         static const Color AFTER_TINT[ROSTER_SIZE] = {
@@ -2670,11 +2620,9 @@ static void draw_rigs(Color light) {
     if (G.bossHidden) {
         /* sumiu em penas */
     } else if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
-    else draw_fighter(&G.boss, light, rim, dark);
     if (G.maskOnGround) draw_oni_mask(light);
     draw_hanzo(light, rim);
     if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, false);
-    else draw_fighter(&G.ren, light, rim, false);
     draw_pole_flying();
     if (G.crack > 0) {
         /* Rachadura branca atravessando o mestre de cima a baixo. */

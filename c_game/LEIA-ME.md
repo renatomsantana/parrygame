@@ -8,11 +8,13 @@ o moveset e o visual estão em `../docs/JOGO.md`; a história, em `../aparar_lor
 ```sh
 brew install raylib                     # uma vez (Linux: o pacote raylib do sistema)
 make packs ZIP=all_the_animations.zip   # uma vez: põe as tiras dos packs pagos nas pastas
-make sprites                            # gera os lutadores em pixel art
 make run                                # compila e abre o jogo
 ```
 
-Os packs (Mattz Art) não vão para o git. Sem eles o jogo roda com os bonecos de `src/rig.c`.
+Os packs pagos não entram no Git. `tools/instalar_packs.sh` organiza as tiras em
+`assets/sprites/_original/`, `_packs/`, `_fx/` e `_ui/`. Os personagens são
+desenhados apenas pelos PNGs de animação; sem os packs, eles não aparecem.
+Os cenários e as partículas embutidas continuam disponíveis.
 O progresso fica em `apara_save.txt` e a calibração em `apara_opcoes.txt`, ao lado do executável.
 Se o save estiver estragado, o jogo avisa, guarda o arquivo em `apara_save.txt.bak` e começa de novo.
 

@@ -42,18 +42,8 @@ static void mountain(float peakX, float peakY, float base, Color c) {
         if (y < base) rect(x, y, 1, base - y + 40, c);
     }
 }
-/* Silhueta humana simples (em pé), altura h. */
-static void person(float x, float feet, float h, Color c, bool sword) {
-    float head = h * 0.14f;
-    DrawCircle((int)x, (int)(feet - h + head), head, c);
-    rect(x - h * 0.13f, feet - h + head * 1.8f, h * 0.26f, h * 0.45f, c);
-    rect(x - h * 0.12f, feet - h * 0.4f, h * 0.09f, h * 0.4f, c);
-    rect(x + h * 0.03f, feet - h * 0.4f, h * 0.09f, h * 0.4f, c);
-    if (sword) DrawLine((int)(x + h * 0.1f), (int)(feet - h * 0.55f), (int)(x + h * 0.5f), (int)(feet - h * 0.85f), c);
-}
 /* O personagem das pranchas, parado e calmo (EMBAINHADO, IDLE, PARADO, o fim da
- * corrida com a lâmina baixa ou a guarda), com o contorno escuro do duelo. Sem as
- * pranchas, devolve false e a ilustração usa a silhueta. */
+ * corrida com a lâmina baixa ou a guarda), usando sempre a arte do pack. */
 static bool sprite_person_pose(const char *id, const char *pose, float x, float feet, bool faceLeft, float t, Color tint,
                                Color rim) {
     const SprSet *s = spr_get(id);
@@ -260,9 +250,8 @@ void lore_draw_cabin(float t) {
         DrawPixel((int)(fx + sinf(i * 3 + t * 2) * (3 + k * 6)), (int)(fy - 8 - k * 30), CA(255, 200, 120, (unsigned char)(255 * (1 - k))));
     }
     /* Hanzo sentado em seiza, as mãos nas coxas, olhando o fogo */
-    if (!sprite_person_pose("hanzo", "SENTADO", 142, 142, false, t, WHITE, CA(0, 0, 0, 0)))
-        person(140, 142, 40, C(200, 200, 204), false);
-    if (!sprite_person("kojiro", 206, 142, true, t + 0.7f)) person(206, 142, 36, C(220, 100, 40), true);
+    sprite_person_pose("hanzo", "SENTADO", 142, 142, false, t, WHITE, CA(0, 0, 0, 0));
+    sprite_person("kojiro", 206, 142, true, t + 0.7f);
 }
 
 void lore_trail_point(int index, float *x, float *y) {
@@ -435,73 +424,8 @@ void lore_draw_title(float t) {
     }
 }
 
-/* Kojiro de costas no alto do morro, a espada na bainha, olhando para o dojo sob
- * o luar (desenhado depois da paleta do fundo, para não perder as cores dele).
- * O vento leva os fiapos do coque e a barra da hakama. */
-static const char *const KOJIRO_COSTAS[] = {
-    "...............h...h....",
-    "..............h.h.h.....",
-    "..............kHhh......",
-    "...........h.kHHk.......",
-    "............kHHHk.......",
-    "............krrk........",
-    "...........kHHHHHk......",
-    "..........kHHHHHHhk.....",
-    "..........kHHHHHHhhk....",
-    "..........kHHHHHHHSk....",
-    "..........kHHHHHHhSk....",
-    "...........kHHHHHhk.....",
-    "............ksSSk.......",
-    "........kkkvWWWwwkkk....",
-    ".......kvWWWWWWWWwwwk...",
-    "......kvWWWWWWWWWWwwwk..",
-    "......kvWWWWWWWWWWWwwk..",
-    ".....kvvWWWvWWWWWWWwwwk.",
-    ".....kvWWWWvWWWWWWWWwwk.",
-    ".....kvWWWWvWWWWWWWWwwk.",
-    ".....kvvWWkvWWWWWkWwwwk.",
-    ".....kvvvkkkOOOOOkkwwk..",
-    "......kkkOOOOOOOOOOokk..",
-    "....bBBgkOOqPPPPqOook...",
-    "..bBBk.kPPqpPPPPpqPPpk..",
-    "bBBk..kPPPqPPPPPPqPPpk..",
-    "Bk....kPPqPPPPPPPPqPPpk.",
-    "......kPPqPPPPPPPPqPPppk.",
-    ".....kPPPqPPPPPPPPPqPPpk.",
-    ".....kPPqPPPPPPPPPPqPPppk",
-    ".....kPPqPPPPPPPPPPqPPPpk",
-    "....kPPPqPPPPPPPPPPPqPPpk",
-    "....kPPqPPPPPkPPPPPPqPPpk",
-    "....kPPqPPPPPkPPPPPPqPPppk",
-    "...kPPPqPPPPkkPPPPPPPqPPpk",
-    "...kPPqPPPPPkkPPPPPPPqPPpk",
-    "...kPPqPPPPk.kPPPPPPPqPPpk",
-    "...kkkkkkkk...kkkkkkkkkkkk",
-};
-/* os fiapos em outra posição, quando o vento sopra mais forte */
-static const char *const FIAPOS_VENTO[] = {
-    "................h..h.h..",
-    "...............hh.h.....",
-    "..............kHhh......",
-    "............hkHHk.......",
-};
-static const Ink KOJIRO_PAL[] = {
-    {'k', {14, 12, 22, 255}}, {'H', {26, 24, 40, 255}}, {'h', {92, 98, 150, 255}},
-    {'r', {150, 40, 52, 255}}, {'s', {104, 82, 90, 255}}, {'S', {166, 140, 150, 255}},
-    {'v', {80, 88, 128, 255}}, {'W', {124, 134, 176, 255}}, {'w', {182, 192, 228, 255}},
-    {'O', {34, 28, 46, 255}}, {'o', {70, 62, 96, 255}},
-    {'P', {30, 30, 48, 255}}, {'p', {62, 64, 98, 255}}, {'q', {44, 44, 68, 255}},
-    {'B', {30, 16, 28, 255}}, {'b', {110, 80, 120, 255}}, {'g', {150, 128, 84, 255}},
-    {0, {0, 0, 0, 0}},
-};
-
+/* O título usa a animação PNG do Kojiro, na escala normal do jogo. */
 void lore_draw_title_hero(float t) {
-    int n = sizeof KOJIRO_COSTAS / sizeof *KOJIRO_COSTAS;
-    float x = 58, feet = hill_y(70) + 1, top = feet - n;
-    bool gust = fract(t * 0.45f) < 0.35f;
-    /* respira: os ombros sobem um pixel e descem */
-    int breath = fract(t / 2.6f) < 0.5f ? 0 : 1;
-    art(KOJIRO_COSTAS + 22, n - 22, x, top + 22, KOJIRO_PAL);
-    art(KOJIRO_COSTAS + 4, 18, x, top + 4 + breath, KOJIRO_PAL);
-    art(gust ? FIAPOS_VENTO : KOJIRO_COSTAS, 4, x, top + breath, KOJIRO_PAL);
+    sprite_person_pose("kojiro", "IDLE", 70, hill_y(70) + 1, false, t,
+                       WHITE, C(78, 83, 130));
 }
