@@ -2309,7 +2309,10 @@ static void hanzo_walk(float to, float len) {
     G.hz.to = to;
     G.hz.t = 0;
     G.hz.len = len;
-    const SprAnim *a = spr_anim(G.hz.f.set, "RUN");
+    /* A caminhada própria, quando o pack trouxer a tira WALK. Até lá, manter
+     * exatamente o RUN lento que as cenas já usam. */
+    const SprAnim *a = spr_anim(G.hz.f.set, "WALK");
+    if (!a) a = spr_anim(G.hz.f.set, "RUN");
     if (!a || len <= 0) return;
     f_clear(&G.hz.f, true);
     float lap = a->frames * a->frameTime * 2;   /* um velho: passos lentos */

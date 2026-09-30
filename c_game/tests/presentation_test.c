@@ -250,10 +250,31 @@ static void gamepad_uses_frame_fallback(void) {
     REQUIRE(G.carimbados == 0 && G.semCarimbo == 1, "gamepad não foi contado como fallback");
 }
 
+static void hanzo_uses_walk_when_available(void) {
+    SprSet sheet = {0};
+    SprAnim *run = &sheet.anims[sheet.count++];
+    snprintf(run->name, sizeof run->name, "RUN");
+    run->frames = 16; run->frameTime = 0.11f;
+    SprAnim *walk = &sheet.anims[sheet.count++];
+    snprintf(walk->name, sizeof walk->name, "WALK");
+    walk->frames = 8; walk->frameTime = 0.11f;
+    memset(&G, 0, sizeof G);
+    G.hz.f.set = &sheet;
+    hanzo_walk(100, 1.5f);
+    REQUIRE(G.hz.f.pl.anim == walk && G.hz.f.pl.frame == 0 &&
+            fabsf(G.hz.f.pl.dur - 8 * 0.11f * 2) < 1e-5f,
+            "Hanzo não selecionou o ciclo WALK quando ele existe");
+    sheet.count = 1;
+    hanzo_walk(100, 1.5f);
+    REQUIRE(G.hz.f.pl.anim == run && G.hz.f.pl.frame == 0 &&
+            fabsf(G.hz.f.pl.dur - 16 * 0.11f * 2) < 1e-5f,
+            "Hanzo perdeu o RUN atual quando WALK ainda não existe");
+}
+
 int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback();
+    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
