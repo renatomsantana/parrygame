@@ -391,8 +391,8 @@ static void teste_clique_no_hitstop(int cenas) {
     CHECK(invalidos == 0, "clique no hitstop: %ld carimbos exatos foram tratados como inválidos", invalidos);
     CHECK(difJulg == 0, "clique no hitstop: %ld de %ld cliques julgados diferente do mesmo clique em ms exato no núcleo", difJulg, total);
     CHECK(difErro == 0, "clique no hitstop: %ld de %ld cliques com o erro em ms diferente", difErro, total);
-    printf("entrada: %ld cliques no hitstop (%ld durante o congelamento, %ld no quadro em que ele acaba, %ld depois), julgados como em ms exato\n", total,
-           noCongelado, noQuadroDoFim, depois);
+    printf("entrada: %ld cliques no hitstop (%ld durante o congelamento, %ld no quadro em que ele acaba, %ld depois), julgados como em ms exato; %ld cenas sem segundo golpe ficaram de fora\n", total,
+           noCongelado, noQuadroDoFim, depois, semSegundoGolpe);
 }
 
 int main(int argc, char **argv) {
