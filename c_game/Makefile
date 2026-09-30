@@ -18,7 +18,7 @@ ifeq ($(shell uname),Darwin)
 endif
 
 CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
-GAME := src/main.c src/fonte.c src/salvar.c src/entrada.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
+GAME := src/main.c src/fonte.c src/salvar.c src/entrada.c src/desempenho.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
 # O carimbo do clique (src/entrada_plat.h): um arquivo por plataforma. Sem XInput2 (Wayland puro, Windows),
 # o stub: o jogo funciona igual, com o aperto no meio do quadro.
@@ -100,6 +100,13 @@ entrada_test: $(CORE) src/entrada.c src/entrada.h tests/entrada_test.c
 test-entrada: entrada_test
 	./entrada_test
 
+# A medida de quadros do APARA_PERF (média, mediana, p95, p99, máximo).
+desempenho_test: src/desempenho.c src/desempenho.h tests/desempenho_test.c
+	$(CC) $(CFLAGS) src/desempenho.c tests/desempenho_test.c -o $@ -lm
+
+test-desempenho: desempenho_test
+	./desempenho_test
+
 # Nenhum número mágico nas regras (src/core.c, src/robo.c e src/entrada.c): os números têm nome no ajuste.h ou no roster.c.
 numeros:
 	sh tests/numeros.sh
@@ -108,18 +115,20 @@ numeros:
 avisos:
 	RAYLIB_CFLAGS="$(RAYLIB_CFLAGS)" sh tests/avisos.sh
 
-test: core_test test-fonte test-save test-entrada
+test: core_test test-fonte test-save test-entrada test-desempenho
 	./core_test
 
 # O jogo de verdade sob xvfb (precisa do ./apara, do xvfb-run e da libX11; sem eles cada script pula):
 # as teclas de teste só existem com --teste e nada grava o progresso (teste_save), o rastro é só visual
 # (teste_rastro), a vitória é salva no golpe final e sobrevive a kill, ESC e Q e fechar (teste_vitoria), e o
-# carimbo do clique chega ao duelo no instante certo (teste_carimbo, com libXtst).
+# carimbo do clique chega ao duelo no instante certo (teste_carimbo, com libXtst), e o APARA_PERF mede e sai
+# (teste_desempenho).
 teste-jogo: apara
 	sh tests/teste_save.sh
 	sh tests/teste_rastro.sh
 	sh tests/teste_vitoria.sh
 	sh tests/teste_carimbo.sh
+	sh tests/teste_desempenho.sh
 
 # Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, números, avisos e o jogo real.
 teste:
@@ -135,6 +144,6 @@ run: apara
 	./apara
 
 clean:
-	rm -f apara core_test fonte_test save_test entrada_test fuzz_test robos_relatorio personagens
+	rm -f apara core_test fonte_test save_test entrada_test desempenho_test fuzz_test robos_relatorio personagens
 
-.PHONY: all packs sprites run clean robos robos-taxas fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada teste teste-jogo
+.PHONY: all packs sprites run clean robos robos-taxas fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho teste teste-jogo

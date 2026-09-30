@@ -294,6 +294,7 @@ de um botão só).
 | `src/core.c`, `core.h` | Regras puras: relógio, aviso, tentativa, julgamento (com tolerância e latência), hitstop, postura, selos, vantagem, moveset, trilha. Sem raylib. |
 | `src/entrada.c`, `entrada.h` | O instante do clique no relógio do núcleo: converte o carimbo do sistema para o passo do duelo (câmera lenta, hitstop) e cai no meio do quadro se ele não for confiável. Sem raylib. |
 | `src/entrada_plat.h`, `entrada_linux.c`, `entrada_mac.m`, `entrada_stub.c`, `entrada_fila.h` | De onde vem o carimbo: X11 (eventos brutos do XInput2 numa thread), macOS (monitor local de `NSEvent`), o resto sem carimbo. O Makefile escolhe o arquivo. |
+| `src/desempenho.c`, `desempenho.h` | A medida de quadros do `APARA_PERF`: guarda o tempo de cada seção do laço (lógica, mundo, interface, composição, swap) e resume em média, mediana, p95, p99 e máximo. Sem raylib. |
 | `src/salvar.c`, `salvar.h` | O arquivo de progresso, puro: formato, leitura estrita (máscara, vencidos e lore vistos), `.bak` do save corrompido, gravação atômica (`.tmp` + `fsync` + `rename`). Sem raylib. |
 | `src/fonte.c`, `fonte.h` | Quais caracteres pedir à fonte: os ASCII e todo caractere não ASCII de qualquer string do jogo. Sem raylib. |
 | `src/vozes.h` | Quantas vozes cada som precisa para uma cauda não cortar a outra (o PERFECT tem 8). |
@@ -314,9 +315,11 @@ de um botão só).
 | `tests/fuzz.c` | Fuzz do núcleo: cenários sorteados, com invariantes (`make fuzz N=3000`) |
 | `tests/entrada_test.c` | O carimbo (`make test-entrada`): a conversão, todo carimbo inválido no meio do quadro, um fuzz de 1.000.000 entradas e lutas dos robôs com carimbo exato = ms exato e com carimbo inválido = o de antes |
 | `tests/teste_carimbo.sh`, `xclique.c` | O jogo de verdade sob xvfb: cliques e Espaço pelo XTest em instantes medidos; o carimbo chega a menos de 1 ms e o duelo o aplica onde ele manda |
+| `tests/desempenho_test.c`, `teste_desempenho.sh` | Os percentis com números que se conferem de cabeça, o aquecimento, a capacidade cheia; e o jogo de verdade sob xvfb medindo 4 s e saindo sozinho |
 | `tests/save_test.c`, `fonte_test.c` | O save (formato, saves corrompidos, gravação atômica) e os glifos da fonte |
 | `tests/teste_save.sh`, `teste_rastro.sh`, `teste_vitoria.sh`, `xtecla.c` | O jogo de verdade sob xvfb (`make teste-jogo`): nada grava fora do jogo normal, o rastro é só visual, a vitória é salva no golpe final e sobrevive a kill, ESC+Q e fechar a janela |
 | `tests/numeros.sh`, `avisos.sh` | Nenhum número mágico nas regras; nenhum aviso do gcc e do clang em -O1, -O2 e -O3 |
+| `tools/medir_desempenho.sh` | A tabela de desempenho dos 13 mestres com o robô do demo (`APARA_PERF`); com `RASTRO=1`, o oboro na 3ª fase e o karasu com e sem o rastro fantasma |
 | `tools/instalar_packs.sh` | Põe o zip das animações nas pastas do gerador e do jogo (`make packs ZIP=...`) |
 | `tools/personagens.c` | Gera os 15 lutadores (cabeça, arma, corpo, rastro, aura, golpe especial, pose desarmada), uma pasta por nome (kojiro, raizo, yoru, garfiel...), a partir do Samurai #3 e dos packs de `assets/sprites/_packs/` (Raizo com o espadão, Shizuku, Suiren e Jinshi no Samurai #4, Arashi, Oboro com as posturas dos outros e o grito): `make sprites`; ver `PERSONAGENS.md` |
 

@@ -48,6 +48,18 @@ do mestre, **1 2 3** escolhem a fase do oboro, **N** / **B** vão ao próximo / 
 - `src/roster.c`: os treze lutadores. **O balanceamento de cada mestre é aqui** (janelas, aviso,
   postura, erros até cair, sequências, falas).
 
+## Desempenho
+
+```sh
+APARA_PERF=30 ./apara --demo --master 13 --duel --fase 3   # joga 30 s com o robô, escreve o relatório e sai
+tools/medir_desempenho.sh                                  # a tabela dos 13 mestres (SEGUNDOS=30 MESTRES="1 13" RASTRO=1)
+```
+
+O relatório traz a carga até o primeiro quadro (janela, sprites, áudio...), o quadro médio, a mediana, o p95, o
+p99 e o máximo, quantos quadros passam de 16,7 ms (a meta a 60 Hz: nenhum), quanto do quadro vai no mundo, na
+interface, na composição e no swap, e os cinco piores quadros com o que o jogo fazia. Meça com a janela em foco e
+o vsync ligado (o jogo liga sozinho); sob xvfb o vídeo é por software e só a lógica e a carga valem.
+
 ## Os robôs (curva de dificuldade)
 
 ```sh
@@ -64,15 +76,16 @@ make fuzz N=3000                    # cenários sorteados contra os invariantes 
 
 | Parte | O que confere |
 |---|---|
-| `make test` | `core_test` (regras, janela viável em todo golpe, curva, Oboro, taxa de quadros), `test-fonte` (todo caractere não ASCII tem glifo), `test-save` (formato, saves corrompidos, gravação atômica), `test-entrada` (o carimbo do clique: conversão, carimbo inválido, lutas dos robôs) |
+| `make test` | `core_test` (regras, janela viável em todo golpe, curva, Oboro, taxa de quadros), `test-fonte` (todo caractere não ASCII tem glifo), `test-save` (formato, saves corrompidos, gravação atômica), `test-entrada` (o carimbo do clique: conversão, carimbo inválido, lutas dos robôs), `test-desempenho` (médias e percentis do `APARA_PERF`) |
 | `make fuzz-rapido`, `make robos-taxas` | invariantes em cenários sorteados; mesma luta em cinco taxas de quadros |
 | `make numeros`, `make avisos` | nenhum número mágico nas regras; nenhum aviso do gcc e do clang em -O1, -O2 e -O3 |
-| `make teste-jogo` | o jogo de verdade sob `xvfb-run` (precisa dele e da libX11; sem eles pula): teclas de teste só com `--teste`, o rastro é só visual, a vitória é salva no golpe final e sobrevive a kill, Esc+Q e fechar a janela, e o carimbo do clique chega ao duelo no instante certo (cliques do XTest; precisa de libXtst) |
+| `make teste-jogo` | o jogo de verdade sob `xvfb-run` (precisa dele e da libX11; sem eles pula): teclas de teste só com `--teste`, o rastro é só visual, a vitória é salva no golpe final e sobrevive a kill, Esc+Q e fechar a janela, o carimbo do clique chega ao duelo no instante certo (cliques do XTest; precisa de libXtst), e o `APARA_PERF` mede e sai |
 
 Ganchos só para os testes (variáveis de ambiente): `APARA_AUTO`, `APARA_SEMENTE`, `APARA_TECLAS`,
 `APARA_RASTRO`, `APARA_LOG_IMPACTOS`, `APARA_VITORIA_LENTA`, `APARA_SEM_UI`, `APARA_SFX`, `APARA_FPS` (limita
 os quadros por segundo), `APARA_LOG_CARIMBOS` (escreve cada carimbo e cada aperto do duelo) e
-`APARA_SEM_CARIMBO=1` (o aperto vale no meio do quadro, como antes: para comparar à mão).
+`APARA_SEM_CARIMBO=1` (o aperto vale no meio do quadro, como antes: para comparar à mão) e `APARA_PERF=segundos`
+(mede o desempenho e sai).
 
 Mapa do código: tabela em `../docs/JOGO.md`. O núcleo (`core`, `roster`, `ajuste`, `robo`, `salvar`,
-`fonte`, `entrada`) não usa raylib.
+`fonte`, `entrada`, `desempenho`) não usa raylib.

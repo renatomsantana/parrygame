@@ -27,6 +27,7 @@
  *   --rec D T0 T1  salva os quadros de T0 a T1 segundos em D (30 por segundo, tempo fixo)
  */
 #include <math.h>
+#include <sys/resource.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +36,7 @@
 #include "arenas.h"
 #include "audio.h"
 #include "core.h"
+#include "desempenho.h"
 #include "entrada.h"
 #include "entrada_plat.h"
 #include "robo.h"
@@ -329,6 +331,15 @@ static struct {
     double carimbo;           /* o carimbo do aperto deste quadro, ou ENTRADA_SEM_CARIMBO */
     long carimbados, semCarimbo;   /* F3: apertos do duelo que usaram o carimbo e que caíram no meio do quadro */
     double atrasoPoll;        /* F3: s do último clique carimbado até o poll que o leu */
+    /* Desempenho (APARA_PERF=segundos: joga esse tempo, escreve o relatório e sai; desempenho.h) */
+    bool perf;
+    double perfSegundos, perfInicio, perfUltimaCarga;
+    Desempenho perfDados;
+    unsigned char *perfEstado;   /* o estado do jogo em cada quadro medido, para achar a causa de um pico */
+    float *perfTempo;            /* e o G.time dele */
+    char perfCarga[16][48];      /* a carga, etapa a etapa: nome e milissegundos */
+    double perfCargaMs[16];
+    int perfCargas;
     int carimboN;             /* --carimbo: cliques medidos e o atraso somado, mínimo e máximo (s) */
     double carimboSoma, carimboMin, carimboMax;
     int startSeal;            /* a próxima luta começa neste selo (--fase, teclas 1 a 3) */
@@ -3525,6 +3536,75 @@ static Font load_font(const char *path, int size) {
     return f;
 }
 
+/* ---- Desempenho (APARA_PERF) ---- */
+
+static double perf_agora(void) { return G.perf ? entrada_relogio() : 0; }
+
+/* Uma etapa da carga terminou: quanto levou desde a anterior. */
+static void perf_carga(const char *nome) {
+    if (!G.perf || G.perfCargas >= 16) return;
+    double t = entrada_relogio();
+    snprintf(G.perfCarga[G.perfCargas], sizeof G.perfCarga[0], "%s", nome);
+    G.perfCargaMs[G.perfCargas++] = (t - G.perfUltimaCarga) * 1000;
+    G.perfUltimaCarga = t;
+}
+
+static void perf_relatorio(void) {
+    const Desempenho *p = &G.perfDados;
+    const int aquecimento = 30;                      /* os primeiros quadros pagam a carga preguiçosa */
+    double total = 0;
+    for (int i = 0; i < G.perfCargas; i++) total += G.perfCargaMs[i];
+    fprintf(stderr, "PERF carga até o primeiro quadro (ms):");
+    for (int i = 0; i < G.perfCargas; i++) fprintf(stderr, "  %s %.0f", G.perfCarga[i], G.perfCargaMs[i]);
+    fprintf(stderr, "  | total %.0f\n", total);
+    if (p->n > 0) {
+        double pior = 0;
+        for (int i = 1; i < p->n && i < aquecimento; i++) if (p->v[PERF_QUADRO][i] > pior) pior = p->v[PERF_QUADRO][i];
+        fprintf(stderr, "PERF primeiro quadro (carga preguiçosa incluída): %.0f ms; o pior dos %d seguintes: %.0f ms\n", p->v[PERF_QUADRO][0] * 1000, aquecimento - 1, pior * 1000);
+    }
+    PerfResumo q = perf_resumo(p, PERF_QUADRO, aquecimento);
+    fprintf(stderr, "PERF %s: %d quadros medidos (%d de aquecimento fora, %d perdidos), %.1f quadros por segundo\n",
+            G.m ? G.m->name : "?", q.n, p->n < aquecimento ? p->n : aquecimento, p->perdidos, q.media > 0 ? 1.0 / q.media : 0);
+    fprintf(stderr, "PERF seção        média    p50    p95    p99    máx   (ms)\n");
+    for (int s = 0; s < PERF_SECOES; s++) {
+        PerfResumo r = perf_resumo(p, (PerfSecao)s, aquecimento);
+        fprintf(stderr, "PERF %-12s %6.2f %6.2f %6.2f %6.2f %6.2f\n", perf_nome((PerfSecao)s), r.media * 1000, r.p50 * 1000, r.p95 * 1000, r.p99 * 1000, r.max * 1000);
+    }
+    PerfResumo a = perf_resumo(p, PERF_ATUALIZA, aquecimento), w = perf_resumo(p, PERF_MUNDO, aquecimento), u = perf_resumo(p, PERF_UI, aquecimento),
+              c = perf_resumo(p, PERF_COMPOE, aquecimento);
+    fprintf(stderr, "PERF trabalho do jogo por quadro (lógica + mundo + interface + composição, sem o swap): média %.2f ms\n",
+            (a.media + w.media + u.media + c.media) * 1000);
+    int pausados = 0;
+    for (int i = aquecimento; i < p->n; i++) pausados += (G.perfEstado[i] & 0x80) != 0;
+    if (pausados > 0) fprintf(stderr, "PERF AVISO: %d quadros com o jogo pausado (a luta não andava): esta medida não vale\n", pausados);
+    const double meta = 1.0 / 60 * 1.001;             /* 16,68 ms */
+    int acima = perf_acima(p, PERF_QUADRO, meta, aquecimento), acima2 = perf_acima(p, PERF_QUADRO, 2 * meta, aquecimento);
+    fprintf(stderr, "PERF quadros acima de %.1f ms: %d de %d (%.1f%%); acima de %.1f ms: %d\n", meta * 1000, acima, q.n, q.n ? 100.0 * acima / q.n : 0, 2 * meta * 1000, acima2);
+    /* os cinco piores quadros, com o que o jogo fazia */
+    static const char *ESTADO[] = {"título", "lore", "trilha", "intro", "duelo", "desarme", "fala final", "vitória", "derrota", "sensei", "final", "visita", "cena", "escolha", "calibração"};
+    int piores[5], nPiores = 0;
+    for (int k = 0; k < 5 && k < p->n - aquecimento; k++) {
+        int pior = -1;
+        for (int i = aquecimento; i < p->n; i++) {
+            bool listado = false;
+            for (int j = 0; j < nPiores; j++) listado = listado || piores[j] == i;
+            if (!listado && (pior < 0 || p->v[PERF_QUADRO][i] > p->v[PERF_QUADRO][pior])) pior = i;
+        }
+        if (pior < 0) break;
+        piores[nPiores++] = pior;
+        int e = G.perfEstado[pior] & 0x7F;
+        fprintf(stderr, "PERF pico %d: quadro %d, jogo %.2f s (%s): quadro %.1f ms = lógica %.1f + mundo %.1f + interface %.1f + composição %.1f + swap %.1f\n", k + 1, pior,
+                G.perfTempo[pior], e < (int)(sizeof ESTADO / sizeof ESTADO[0]) ? ESTADO[e] : "?", p->v[PERF_QUADRO][pior] * 1000, p->v[PERF_ATUALIZA][pior] * 1000,
+                p->v[PERF_MUNDO][pior] * 1000, p->v[PERF_UI][pior] * 1000, p->v[PERF_COMPOE][pior] * 1000, p->v[PERF_SWAP][pior] * 1000);
+    }
+    struct rusage ru;
+    if (getrusage(RUSAGE_SELF, &ru) == 0 && G.perfSegundos > 0) {
+        double cpu = (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec * 1e-6 + (double)ru.ru_stime.tv_sec + (double)ru.ru_stime.tv_usec * 1e-6;
+        fprintf(stderr, "PERF cpu do processo (com o driver de vídeo): %.0f%% de um núcleo (usuário %.1f s, sistema %.1f s em %.1f s)\n", 100 * cpu / (entrada_relogio() - G.perfInicio),
+                (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec * 1e-6, (double)ru.ru_stime.tv_sec + (double)ru.ru_stime.tv_usec * 1e-6, entrada_relogio() - G.perfInicio);
+    }
+}
+
 int main(int argc, char **argv) {
     int startMaster = -1;
     bool direct = false;
@@ -3537,10 +3617,20 @@ int main(int argc, char **argv) {
     G.logCarimbos = getenv("APARA_LOG_CARIMBOS") != NULL;
     parse_args(argc, argv, &startMaster, &direct, &startState);
     entrada_preparar();
+    if (getenv("APARA_PERF") && atof(getenv("APARA_PERF")) > 0) {
+        G.perfSegundos = atof(getenv("APARA_PERF"));
+        int capacidade = (int)fmin(1e6, fmax(20000, G.perfSegundos * 1000));
+        G.perf = perf_iniciar(&G.perfDados, capacidade);
+        G.perfEstado = malloc((size_t)capacidade);
+        G.perfTempo = malloc(sizeof(float) * (size_t)capacidade);
+        G.perf = G.perf && G.perfEstado && G.perfTempo;
+        G.perfUltimaCarga = entrada_relogio();
+    }
 
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(UI_W, UI_H, "aparar - a trilha dos doze aprendizes");
+    perf_carga("janela");
     SetExitKey(KEY_NULL);
     if (getenv("APARA_FPS")) SetTargetFPS(atoi(getenv("APARA_FPS")));   /* só para os testes e as medidas */
     /* O instante de hardware do clique só vale com um humano jogando: o demo, o jogo automático e as capturas
@@ -3562,12 +3652,18 @@ int main(int argc, char **argv) {
     G.locRes = GetShaderLocation(G.post, "res");
     G.locDesat = GetShaderLocation(G.post, "desat");
     G.locDuo = GetShaderLocation(G.post, "duo");
+    perf_carga("texturas e shader");
     katana3d_load("assets/katana");
+    perf_carga("katana 3D");
     spr_init();
+    perf_carga("sprites");
     pix_init(RW, RH);
+    perf_carga("pixelize");
     G.ui = load_font(FONTE_UI_ARQUIVO, FONTE_UI_TAMANHO);
     G.uiBold = G.ui;
+    perf_carga("fonte");
     audio_init();
+    perf_carga("áudio");
     fx_init(&G.fx);
     settings_default(&G.settings);
     campaign_reset(&G.camp);
@@ -3576,6 +3672,7 @@ int main(int argc, char **argv) {
     G.slowmo = 1;
     G.m = roster_get(G.camp.index);
     setup_actors();
+    perf_carga("save e primeiros lutadores");
 
     if (startMaster >= 0 && startMaster < ROSTER_SIZE) {
         for (int i = 0; i < startMaster; i++) campaign_mark_cleared(&G.camp, i);
@@ -3604,17 +3701,19 @@ int main(int argc, char **argv) {
         audio_music(MUSIC_TITLE);
     }
 
+    perf_carga("primeira tela");
     double wall = 0;
     while (!WindowShouldClose()) {
         G.poll = entrada_relogio();
+        if (G.perf && G.perfInicio == 0) G.perfInicio = G.poll;
         float dtReal = G.recDir ? 1.0f / 30 : GetFrameTime();
         wall += dtReal;
         /* Travamento longo: pausa em vez de engolir o golpe. */
         if (dtReal > AJ_PAUSA_POR_TRAVAMENTO) {
             dtReal = 0;
-            if (G.state == ST_DUEL && !G.shotFile && !G.recDir) G.paused = true;
+            if (G.state == ST_DUEL && !G.shotFile && !G.recDir && !G.perf) G.paused = true;
         }
-        if (!IsWindowFocused() && G.state == ST_DUEL && !G.shotFile && !G.recDir) G.paused = true;
+        if (!IsWindowFocused() && G.state == ST_DUEL && !G.shotFile && !G.recDir && !G.perf) G.paused = true;
         if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
         if (IsKeyPressed(KEY_F3)) G.debug = !G.debug;
         teclas_de_teste();
@@ -3668,10 +3767,13 @@ int main(int argc, char **argv) {
         G.slash = fmaxf(0, G.slash - dtReal);
         G.crack = fmaxf(0, G.crack - dtReal);
         if (G.silence > 0) { G.silence -= dtReal; audio_music_duck(G.silence > 0 ? 1 : 0); }
+        double pf0 = perf_agora();
         if (!G.paused && !G.modoCarimbo) step(dtReal);
+        double pf1 = perf_agora();
         /* tests/teste_save.sh: depois de vencer o primeiro mestre (a cabana de hanzo), o jogo sai */
         if (G.autoJogo && ((G.state == ST_VISIT && G.stateTime > AJ_AUTO_VISITA_FIM) || G.time > AJ_AUTO_TEMPO_MAX)) break;
         draw_world();
+        double pf2 = perf_agora();
         /* Interface em 320 x 180. Cor e alfa acumulados separados: a camada sai com
          * alfa pré-multiplicado e pousa certa por cima da cena. */
         BeginTextureMode(G.uiLow);
@@ -3685,6 +3787,7 @@ int main(int argc, char **argv) {
         rlPopMatrix();
         EndBlendMode();
         EndTextureMode();
+        double pf3 = perf_agora();
 
         /* Mundo: ampliação só por número inteiro e sem filtro. Sem mistura,
          * o alfa acumulado na textura não escurece a imagem. */
@@ -3715,6 +3818,7 @@ int main(int argc, char **argv) {
         EndBlendMode();
         ui_debug(dst);
         rlDrawRenderBatchActive();   /* as capturas leem a tela antes do EndDrawing */
+        double pf4 = perf_agora();
 
         if (G.recDir && wall >= G.recStart) {
             char path[512];
@@ -3736,8 +3840,18 @@ int main(int argc, char **argv) {
             break;
         }
         EndDrawing();
+        if (G.perf) {
+            /* o EndDrawing termina no poll do quadro seguinte: daqui até o poll deste quadro é o quadro inteiro */
+            double pf5 = entrada_relogio();
+            const double sec[PERF_SECOES] = {pf5 - G.poll, pf1 - pf0, pf2 - pf1, pf3 - pf2, pf4 - pf3, pf5 - pf4};
+            int i = G.perfDados.n;
+            perf_quadro(&G.perfDados, sec);
+            if (G.perfDados.n > i) { G.perfEstado[i] = (unsigned char)(G.state | (G.paused ? 0x80 : 0)); G.perfTempo[i] = (float)G.time; }
+            if (pf5 - G.perfInicio >= G.perfSegundos) break;
+        }
         if (G.lento) WaitTime(1.0 / 30);
     }
+    if (G.perf) perf_relatorio();
 
     audio_shutdown();
     katana3d_unload();

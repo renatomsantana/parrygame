@@ -9,7 +9,7 @@ FLAGS="-std=c11 -Wall -Wextra -Wno-missing-field-initializers -Werror -Isrc"
 tem_raylib() { printf '#include "raylib.h"\n' | ${CC:-cc} $RAYLIB_CFLAGS -E -x c - >/dev/null 2>&1; }
 tem_x11() { printf '#include <X11/Xlib.h>\n' | ${CC:-cc} -E -x c - >/dev/null 2>&1; }
 
-PUROS="src/ajuste.c src/core.c src/roster.c src/robo.c src/fonte.c src/salvar.c src/entrada.c tests/entrada_test.c tests/core_test.c tests/robos.c tests/save_test.c tests/fonte_test.c"
+PUROS="src/ajuste.c src/core.c src/roster.c src/robo.c src/fonte.c src/salvar.c src/entrada.c tests/entrada_test.c src/desempenho.c tests/desempenho_test.c tests/core_test.c tests/robos.c tests/save_test.c tests/fonte_test.c"
 [ -f tests/fuzz.c ] && PUROS="$PUROS tests/fuzz.c"
 JOGO="src/main.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c tools/personagens.c"
 ARQUIVOS="$PUROS"
