@@ -10,6 +10,8 @@ const Robo ROBO_DO_DEMO = {ROBO_PERFEITO, 0, 0, 0, 0};
 const Robo ROBO_SEM_DEFESA = {ROBO_NUNCA, 0, 0, 0, 0};
 const Robo ROBO_APERTA_SEM_PARAR = {ROBO_SPAM, 0, 0, 0, AJ_ROBO_SPAM_PERIODO};
 const Robo ROBO_HUMANO_CASUAL = {ROBO_HUMANO, AJ_ROBO_CASUAL_REACAO, AJ_ROBO_CASUAL_RITMO, AJ_ROBO_CASUAL_MAO, 0};
+const Robo ROBO_PRIMEIRA_VEZ_PADRAO = {ROBO_PRIMEIRA_VEZ, ROBO_PRIMEIRA_VEZ_REACAO, 0, ROBO_PRIMEIRA_VEZ_MAO, 0, 0,
+                                       ROBO_PRIMEIRA_VEZ_REACAO_DP, ROBO_PRIMEIRA_VEZ_FALHA};
 
 Robo robo_reacao(float segundos) {
     Robo r = {ROBO_REACAO, segundos, 0, AJ_ROBO_REACAO_MAO, 0};
@@ -49,13 +51,23 @@ static double planejar(RoboMente *m, const Duel *d) {
     switch (r->tipo) {
         case ROBO_DESLOCADO:
             return contato + r->desloc;
-        case ROBO_REACAO: {
+        case ROBO_REACAO:
+        case ROBO_PRIMEIRA_VEZ: {
             /* a lâmina partindo se vê e se ouve (o assobio do golpe) */
             double partida = contato - duel_strike_lead(d);
             double sinal = partida, reacao = r->reacao - ROBO_REACAO_SOM;
             if (avisoPercebido && aviso > partida) {
                 sinal = aviso;
                 reacao = r->reacao - (d->m->cueAudio > 0 ? ROBO_REACAO_SOM : 0);
+            }
+            if (r->tipo == ROBO_PRIMEIRA_VEZ) {
+                /* só sorteia o que está ligado: sem falha nem variação é exatamente o ROBO_REACAO, e a sequência
+                 * de números dos outros robôs não muda */
+                if (r->falha > 0 && rng_next(&m->rng) < r->falha) return -1;
+                if (r->reacaoDp > 0) {
+                    reacao += normal(&m->rng) * r->reacaoDp;
+                    if (reacao < ROBO_REACAO_MINIMA) reacao = ROBO_REACAO_MINIMA;
+                }
             }
             return sinal + reacao + normal(&m->rng) * r->mao;
         }
