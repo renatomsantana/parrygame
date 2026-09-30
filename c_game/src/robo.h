@@ -4,7 +4,8 @@
  * raylib: jogam um quadro por vez, como o jogo.
  *
  * Os robôs são estimativa, não verdade: o humano deles não vê a arte, não sofre
- * com a escuridão do Yoru e não se distrai.
+ * com a escuridão do Yoru e não se distrai. O de estreia reage ao último sinal
+ * com mão mais incerta; não sabe o ritmo nem mira a janela perfeita.
  */
 #ifndef APARA_ROBO_H
 #define APARA_ROBO_H
@@ -18,6 +19,7 @@ typedef enum {
     ROBO_REACAO,     /* não decora nada: reage ao último sinal antes do contato (a lâmina
                         partindo, que se ouve no assobio do golpe, ou o aviso, o que vier
                         depois) depois de `reacao` s; ao som, 50 ms mais rápido */
+    ROBO_ESTREIA,    /* reage ao último sinal sem decorar, com erro maior por contato */
     ROBO_DESLOCADO,  /* aperta sempre `desloc` s em relação ao contato (negativo: cedo, antes do aviso; positivo: tarde, depois
                         de o golpe entrar): mostra o "cedo" e o "tarde" do jogo, nos vídeos e nos testes */
     ROBO_HUMANO      /* decora o padrão: mede o tempo até o contato a partir do último sinal
@@ -29,7 +31,7 @@ typedef struct {
     RoboTipo tipo;
     float reacao;    /* s até reagir a um sinal (REACAO, HUMANO) */
     float ritmo;     /* HUMANO: erro ao medir um intervalo, fração dele (0,08 = casual) */
-    float mao;       /* REACAO, HUMANO: desvio-padrão da mão, s */
+    float mao;       /* REACAO, ESTREIA, HUMANO: desvio-padrão da mão, s */
     float periodo;   /* SPAM: s entre apertos */
     float desloc;    /* DESLOCADO: s depois do contato (negativo: antes) */
 } Robo;
@@ -38,7 +40,7 @@ typedef struct {
 #define ROBO_REACAO_SOM 0.050         /* ao som se reage este tanto mais rápido que à imagem */
 
 /* Os robôs do relatório. */
-extern const Robo ROBO_DO_DEMO, ROBO_SEM_DEFESA, ROBO_APERTA_SEM_PARAR, ROBO_HUMANO_CASUAL;
+extern const Robo ROBO_DO_DEMO, ROBO_SEM_DEFESA, ROBO_APERTA_SEM_PARAR, ROBO_HUMANO_CASUAL, ROBO_HUMANO_ESTREIA;
 Robo robo_reacao(float segundos);
 Robo robo_deslocado(float segundos);   /* aperta `segundos` depois do contato (negativo: antes) */
 

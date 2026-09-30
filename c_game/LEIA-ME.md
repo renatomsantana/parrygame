@@ -112,7 +112,7 @@ o jogo esteve pausado durante a medida (então ela não vale). Mande a tabela in
 ## Os robôs (curva de dificuldade)
 
 ```sh
-make robos                          # tabela por mestre: perfeito, nunca defende, spam, reação 200/250/300, humano casual
+make robos                          # tabela por mestre: perfeito, nunca defende, spam, reação 200/250/300, estreia, casual
 make robos LUTAS=1000 HZ=144        # mais lutas, outra taxa de quadros (a tabela não muda: os robôs apertam em ms)
 make robos QUADROS=1                # o aperto no meio do quadro, como o clique do jogo (depende da taxa)
 make robos-taxas                    # a mesma luta a 30, 60, 120, 144 e 240 Hz tem de dar o mesmo resultado

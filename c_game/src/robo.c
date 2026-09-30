@@ -10,6 +10,7 @@ const Robo ROBO_DO_DEMO = {ROBO_PERFEITO, 0, 0, 0, 0};
 const Robo ROBO_SEM_DEFESA = {ROBO_NUNCA, 0, 0, 0, 0};
 const Robo ROBO_APERTA_SEM_PARAR = {ROBO_SPAM, 0, 0, 0, AJ_ROBO_SPAM_PERIODO};
 const Robo ROBO_HUMANO_CASUAL = {ROBO_HUMANO, AJ_ROBO_CASUAL_REACAO, AJ_ROBO_CASUAL_RITMO, AJ_ROBO_CASUAL_MAO, 0};
+const Robo ROBO_HUMANO_ESTREIA = {ROBO_ESTREIA, AJ_ROBO_ESTREIA_REACAO, 0, AJ_ROBO_ESTREIA_MAO, 0};
 
 Robo robo_reacao(float segundos) {
     Robo r = {ROBO_REACAO, segundos, 0, AJ_ROBO_REACAO_MAO, 0};
@@ -49,7 +50,8 @@ static double planejar(RoboMente *m, const Duel *d) {
     switch (r->tipo) {
         case ROBO_DESLOCADO:
             return contato + r->desloc;
-        case ROBO_REACAO: {
+        case ROBO_REACAO:
+        case ROBO_ESTREIA: {
             /* a lâmina partindo se vê e se ouve (o assobio do golpe) */
             double partida = contato - duel_strike_lead(d);
             double sinal = partida, reacao = r->reacao - ROBO_REACAO_SOM;
