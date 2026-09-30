@@ -988,7 +988,8 @@ static void start_lines(const Line *lines, int count, State s) {
 }
 
 static void teste_selo(int selo);
-static void desenha_rastro_do_golpe(void);
+static void desenha_rastro_do_golpe(bool escuro, bool fio);
+static Color cor_rastro(void);
 
 static void start_duel(void) {
     settings_default(&G.settings);
@@ -2679,15 +2680,9 @@ static void draw_rigs(Color light) {
     bool dark = G.ctx.blackout > 0.5f;
     Color rim = G.m->isBigBoss && G.auraLeft > 0 ? posture_color(G.auraEcho) : arena_rim(G.m->arena);
     begin_actors();
-    if (G.bossS.set && G.m->id != 10 && !dark && !G.bossHidden) {
-        /* as silhuetas do movimento, na cor do elemento de cada mestre */
-        static const Color AFTER_TINT[ROSTER_SIZE] = {
-            {230, 150, 80, 255}, {130, 210, 150, 255}, {235, 90, 70, 255}, {110, 180, 255, 255},
-            {250, 240, 210, 255}, {120, 110, 190, 255}, {140, 240, 200, 255}, {255, 140, 50, 255},
-            {90, 150, 240, 255}, {190, 150, 255, 255}, {130, 110, 220, 255}, {225, 225, 235, 255},
-            {235, 60, 70, 255},
-        };
-        Color c = AFTER_TINT[(G.m->id - 1) % ROSTER_SIZE];
+    if (G.rastro && G.bossS.set && G.m->id != 10 && !dark && !G.bossHidden) {
+        /* As silhuetas da corrida usam a mesma cor que o golpe e somem com a chave. */
+        Color c = cor_rastro();
         for (int n = 1; n <= AFTER_MAX; n++) {       /* da mais antiga para a mais nova */
             int i = (G.afterHead + n) % AFTER_MAX;
             if (G.after[i].life <= 0 || !G.after[i].a) continue;
@@ -2695,11 +2690,13 @@ static void draw_rigs(Color light) {
             spr_draw(G.bossS.set, G.after[i].a, G.after[i].frame, G.after[i].feet, o);
         }
     }
-    if (G.rastro && G.bossS.set && G.bossS.pl.anim && !dark && !G.bossHidden && G.state == ST_DUEL) desenha_rastro_do_golpe();
+    bool rastroGolpe = G.rastro && G.bossS.set && G.bossS.pl.anim && !G.bossHidden && G.state == ST_DUEL;
+    if (rastroGolpe) desenha_rastro_do_golpe(dark, false);
     if (G.bossHidden) {
         /* sumiu em penas */
     } else if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
     if (G.maskOnGround) draw_oni_mask(light);
+    if (rastroGolpe) desenha_rastro_do_golpe(dark, true);
     draw_hanzo(light, rim);
     if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, false);
     draw_pole_flying();
@@ -2805,28 +2802,101 @@ static void draw_illustration(void (*fn)(int, float), int page, float t, float l
 
 static void cabin_scene(int page, float t) { (void)page; lore_draw_cabin(t); }
 
-/* O rastro fantasma do golpe (AJ_RASTRO_*): na partida da lâmina, silhuetas do quadro que o mestre
- * JÁ está mostrando, esticadas para trás (para longe de kojiro), que crescem com o caminho da
- * lâmina (duel_launch_progress) e somem no contato. Só desenha: lê o duelo e o quadro atual, e
- * não mostra o quadro de contato, que sai no impacto, no instante do julgamento. */
-static void desenha_rastro_do_golpe(void) {
+/* Uma paleta para a silhueta e a lâmina. Oboro toma a cor do eco que está usando. */
+static int mestre_do_rastro(void) {
+    int eco = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
+    return eco >= 0 ? eco : G.m->id - 1;
+}
+
+static Color cor_rastro(void) {
+    static const Color COR[ROSTER_SIZE] = {
+        {218, 178, 116, 255}, /* daichi: areia */
+        {64, 122, 83, 255},   /* genbu: verde escuro */
+        {207, 175, 93, 255},  /* raizo: pedra ocre */
+        {170, 229, 252, 255}, /* shizuku: gelo */
+        {249, 139, 62, 255},  /* garfiel: laranja */
+        {91, 94, 105, 255},   /* karasu: preto com fio cinza */
+        {136, 230, 167, 255}, /* hayate: verde claro */
+        {237, 77, 52, 255},   /* enjin: brasa */
+        {51, 106, 191, 255},  /* suiren: azul escuro */
+        {89, 160, 251, 255},  /* arashi: raio azul */
+        {164, 99, 203, 255},  /* yoru: roxo */
+        {238, 239, 249, 255}, /* jinshi: branco */
+        {181, 83, 211, 255},  /* oboro sem eco */
+    };
+    return COR[mestre_do_rastro()];
+}
+
+/* O traço acompanha o ponto da arma anotado para cada quadro do PNG Mattz.
+ * Uma estocada fica longa e fina; um corte faz uma curva curta; garras viram
+ * três riscos. É apenas desenho, sem criar contato nem mudar o sprite. */
+static void fio_do_golpe(Vector2 arma, MoveLook look, float progresso, float comprimento, float largura, Color cor) {
+    float direcao = G.boss.faceLeft ? -1.0f : 1.0f;
+    Vector2 inicio, fim;
+    if (look == LOOK_THRUST || look == LOOK_DASH || look == LOOK_FAR) {
+        inicio = (Vector2){arma.x - direcao * comprimento * progresso, arma.y};
+        fim = (Vector2){arma.x + direcao * comprimento * 0.25f * progresso, arma.y};
+    } else {
+        float altura = look == LOOK_LOW ? 1.0f : -1.0f;
+        inicio = (Vector2){arma.x - direcao * comprimento * 0.62f * progresso,
+                           arma.y + altura * comprimento * 0.38f * progresso};
+        fim = (Vector2){arma.x + direcao * comprimento * 0.28f * progresso,
+                        arma.y - altura * comprimento * 0.50f * progresso};
+    }
+    DrawLineEx(inicio, arma, largura, cor);
+    DrawLineEx(arma, fim, fmaxf(1.0f, largura * 0.65f), fadec(cor, 0.72f));
+}
+
+/* Silhueta do quadro que está na tela e fio da arma. Tudo some no contato, que
+ * continua saindo no instante do núcleo. Durante o apagão de Yoru só o fio
+ * aparece, discretamente: o corpo não revela a posição dele. */
+static void desenha_rastro_do_golpe(bool escuro, bool so_fio) {
     float p = duel_launch_progress(&G.duel);
     if (p <= 0) return;
-    static const Color TINT[ROSTER_SIZE] = {
-        {230, 150, 80, 255}, {130, 210, 150, 255}, {190, 172, 136, 255}, {110, 180, 255, 255},
-        {250, 240, 210, 255}, {120, 110, 190, 255}, {140, 240, 200, 255}, {255, 140, 50, 255},
-        {90, 150, 240, 255}, {190, 150, 255, 255}, {130, 110, 220, 255}, {225, 225, 235, 255},
-        {235, 60, 70, 255},
-    };
-    Color c = TINT[(G.m->id - 1) % ROSTER_SIZE];
+    int mestre = mestre_do_rastro();
+    Color c = cor_rastro();
     Vector2 pes = {G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};
-    float para_tras = G.boss.faceLeft ? 1.0f : -1.0f;   /* o mestre olha para kojiro: o rastro fica do outro lado */
-    for (int k = AJ_RASTRO_FANTASMAS; k >= 1; k--) {
-        float fim = 1.0f - (float)(k - 1) / (float)AJ_RASTRO_FANTASMAS;   /* o mais longe é o mais fraco */
-        SprDraw o = {G.boss.faceLeft, 0, true, fadec(c, AJ_RASTRO_ALFA * fim * p)};
-        Vector2 at = {pes.x + para_tras * AJ_RASTRO_ESPACO * (float)k * p, pes.y};
-        spr_draw(G.bossS.set, G.bossS.pl.anim, G.bossS.pl.frame, at, o);
-        G.fantasmasDesenhados++;
+    float para_tras = G.boss.faceLeft ? 1.0f : -1.0f;
+    if (!so_fio && !escuro) {
+        for (int k = AJ_RASTRO_FANTASMAS; k >= 1; k--) {
+            float fim = 1.0f - (float)(k - 1) / (float)AJ_RASTRO_FANTASMAS;
+            SprDraw o = {G.boss.faceLeft, 0, true, fadec(c, AJ_RASTRO_ALFA * fim * p)};
+            Vector2 at = {pes.x + para_tras * AJ_RASTRO_ESPACO * (float)k * p, pes.y};
+            spr_draw(G.bossS.set, G.bossS.pl.anim, G.bossS.pl.frame, at, o);
+            G.fantasmasDesenhados++;
+        }
+    }
+    if (!so_fio) return;
+    Vector2 empunhadura, lamina;
+    boss_blade(&empunhadura, &lamina);
+    (void)empunhadura;
+    static const struct { float comprimento, largura; int riscos; bool duas; } ESTILO[ROSTER_SIZE] = {
+        {15, 2, 1, false}, {14, 2, 1, false}, {22, 3, 1, false},
+        {21, 1, 1, false}, {9, 1, 3, true}, {15, 2, 1, true},
+        {11, 2, 1, true}, {17, 3, 1, false}, {23, 1, 1, false},
+        {17, 2, 1, true}, {10, 2, 1, true}, {19, 2, 1, false},
+        {17, 2, 1, false},
+    };
+    Color fio = fadec(c, AJ_RASTRO_FIO_ALFA * p * (escuro ? 0.38f : 1.0f));
+    MoveLook look = strike_look();
+    int riscos = ESTILO[mestre].riscos;
+    for (int k = 0; k < riscos; k++) {
+        Vector2 centro = {lamina.x, lamina.y + (k - (riscos - 1) * 0.5f) * 3.0f};
+        fio_do_golpe(centro, look, p, ESTILO[mestre].comprimento, ESTILO[mestre].largura, fio);
+    }
+    if (ESTILO[mestre].duas || duel_strike_dual(&G.duel)) {
+        Vector2 outra = {lamina.x + para_tras * 7, lamina.y - 5};
+        spr_offhand_point(&G.bossS.pl, pes, G.boss.faceLeft, G.bossS.squat, &outra);
+        fio_do_golpe(outra, look, p, ESTILO[mestre].comprimento * 0.78f,
+                     ESTILO[mestre].largura, fio);
+    }
+    if (mestre == 5) { /* o fio escuro do karasu precisa aparecer sobre o telhado */
+        fio_do_golpe(lamina, look, p, ESTILO[mestre].comprimento, 1,
+                     fadec((Color){193, 197, 209, 255}, 0.48f * p));
+    }
+    if (mestre == 9) { /* a descarga segue ambas as lâminas */
+        Vector2 raio = {lamina.x + para_tras * 5, lamina.y - 4};
+        DrawLineEx(lamina, raio, 1, fadec((Color){193, 232, 255, 255}, 0.72f * p));
     }
 }
 
