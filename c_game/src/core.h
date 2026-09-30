@@ -143,6 +143,8 @@ typedef struct {
     int sealCount;                /* 1 para mestres comuns */
     float rhythmJitter;           /* ± segundos na preparação (Neon Jax) */
     float waitScale;              /* a espera antes do aviso só deste mestre, x isto (0 = a global, Settings.waitScale) */
+    float bladeMax;               /* a lâmina só deste mestre parte no máximo isto antes do contato (0 = a global, Settings.bladeMax; nunca
+                                     sobe o teto global). Quem mede pelo aviso não sente; quem só reage à lâmina, sim */
     int accelSteps;               /* Taiko: golpes por ciclo de aceleração */
     float accelFactor;            /* Taiko: cada golpe do ciclo encurta por este fator */
     float cueVisual, cueAudio;    /* força do sinal (1 = normal, 0 = escondido) */

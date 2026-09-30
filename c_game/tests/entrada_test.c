@@ -273,6 +273,128 @@ static void teste_tabela(int lutas) {
     printf("\n");
 }
 
+/* ---- o clique no hitstop ---- */
+/* O jogo de verdade (update_duel do main.c), quadro a quadro: o impacto congela o duelo por tempo real (hitstop_passo); o quadro em que o
+ * congelamento acaba corre só o que sobra dele; o clique chega com o carimbo do seu instante real (entrada_no_quadro), no congelamento, no
+ * quadro em que ele acaba ou depois. O que se espera: o clique é julgado no instante do núcleo que o relógio real tinha quando ele veio.
+ * O núcleo para no congelamento, então o instante do núcleo é o mesmo do fim do congelamento para tudo o que veio nele. */
+typedef struct { Duel d; float hs; double agora; } Jogo;
+
+/* Um quadro real de `quadro` segundos. `clique`: o clique deste quadro, com o carimbo dele. Devolve se o quadro foi o em que o congelamento acabou. */
+static bool quadro_do_jogo(Jogo *j, double quadro, bool clique, double carimbo, DuelEvent *ev, int *ne, long *invalidos) {
+    j->agora += quadro;
+    double passo = quadro, corrido = quadro;
+    bool fimDoCongelamento = false;
+    if (j->hs > 0) {
+        float sobra = hitstop_passo(&j->hs, (float)quadro);
+        if (sobra <= 0) {   /* o quadro inteiro congelado: o clique vale no instante em que o núcleo parou */
+            if (clique) duel_press(&j->d);
+            *ne = duel_drain(&j->d, ev, MAX_EVENTS);
+            return false;
+        }
+        passo = corrido = sobra;
+        fimDoCongelamento = true;
+    }
+    double t = -1;
+    if (clique) {
+        bool v;
+        t = entrada_no_quadro(carimbo, j->agora, quadro, corrido, passo, &v);
+        if (!v && invalidos) (*invalidos)++;
+    }
+    duel_step_at(&j->d, passo, t);
+    *ne = duel_drain(&j->d, ev, MAX_EVENTS);
+    for (int i = 0; i < *ne; i++)
+        if (ev[i].kind == EV_IMPACT) j->hs = j->d.lastHitstop;   /* on_impact */
+    return fimDoCongelamento;
+}
+
+static void teste_clique_no_hitstop(int cenas) {
+    static const int MESTRES[] = {4, 6, 11, 12};      /* garfiel, hayate, jinshi, oboro: sequências de vários golpes */
+    static const double HZ[] = {30, 60, 144, 240};
+    long total = 0, difJulg = 0, difErro = 0, noQuadroDoFim = 0, noCongelado = 0, depois = 0, invalidos = 0, semSegundoGolpe = 0;
+    uint64_t s = 424242;
+    for (int mi = 0; mi < 4; mi++) {
+        const MasterProfile *m = roster_get(MESTRES[mi]);
+        for (int k = 0; k < cenas; k++) {
+            double hz = HZ[k % 4];
+            Settings st;
+            settings_default(&st);
+            settings_for_level(&st, MESTRES[mi]);
+            Jogo base;
+            memset(&base, 0, sizeof base);
+            duel_init(&base.d, &st, m, 7000u + (uint32_t)k);
+            base.agora = 5000.0 + 1000.0 * sorteio(&s);
+            DuelEvent ev[MAX_EVENTS];
+            int ne = 0;
+            /* o primeiro golpe de uma sequência: apertado u antes do contato (perfeito, bom ou erro: o congelamento muda) */
+            double u = 0.12 * sorteio(&s) - 0.02;
+            bool achou = false;
+            while (base.d.phase != PH_FINISHED && base.d.clock < 40 && !achou) {
+                double quadro = (1.0 / hz) * (0.6 + 0.8 * sorteio(&s));
+                bool clique = false;
+                double carimbo = 0;
+                if (base.hs <= 0 && base.d.phase == PH_WINDUP && !base.d.attempted) {
+                    double alvo = base.d.strikeAt - u - base.d.clock;
+                    if (alvo >= 0 && alvo < quadro) { clique = true; carimbo = base.agora + alvo; }
+                }
+                quadro_do_jogo(&base, quadro, clique, carimbo, ev, &ne, NULL);
+                for (int i = 0; i < ne; i++)
+                    if (ev[i].kind == EV_IMPACT && base.d.comboRemaining > 0 && base.hs > 0) achou = true;
+            }
+            if (!achou) continue;
+            const double clock0 = base.d.clock, hs0 = base.hs, inicio = base.agora, fim = inicio + hs0;
+            /* o segundo golpe: um clique de cada instante do congelamento e de um pouco depois dele */
+            for (double delta = 0; delta <= hs0 + 0.06; delta += 0.0013) {
+                const double tc = inicio + delta;
+                const double relogio = tc <= fim ? clock0 : clock0 + (tc - fim);   /* o núcleo parado no congelamento */
+                Jogo g = base;
+                Duel w = base.d;
+                bool clicou = false, terminou = false;
+                double clockGolpe = 0;
+                DuelEvent im = {0};
+                int guarda = 0;
+                while (!terminou && g.d.phase != PH_FINISHED && guarda++ < 100000) {
+                    double quadro = (1.0 / hz) * (0.6 + 0.8 * sorteio(&s));
+                    bool clique = !clicou && tc >= g.agora && tc < g.agora + quadro;
+                    bool congeladoAntes = g.hs > 0;
+                    if (clique) {
+                        clicou = true;
+                        if (tc <= fim) noCongelado++; else depois++;
+                    }
+                    bool fimDoCongel = quadro_do_jogo(&g, quadro, clique, tc, ev, &ne, &invalidos);
+                    if (clique && fimDoCongel && congeladoAntes) noQuadroDoFim++;
+                    for (int i = 0; i < ne; i++)
+                        if (ev[i].kind == EV_IMPACT && g.d.attacks >= 0) { im = ev[i]; terminou = true; clockGolpe = g.d.clock; }
+                }
+                if (!terminou || !clicou) { semSegundoGolpe++; continue; }
+                /* o mesmo duelo sem hitstop: o clique no instante do núcleo que o relógio real tinha (em ms exato) */
+                double dd = relogio - clock0;
+                if (dd <= 1e-12) duel_press(&w);
+                else duel_step_at(&w, dd, dd);
+                DuelEvent iw = {0};
+                bool achouW = false;
+                for (int guardaW = 0; !achouW && w.phase != PH_FINISHED && guardaW < 100000; guardaW++) {
+                    duel_step_at(&w, 1.0 / 480, -1);
+                    int nw = duel_drain(&w, ev, MAX_EVENTS);
+                    for (int i = 0; i < nw; i++)
+                        if (ev[i].kind == EV_IMPACT) { iw = ev[i]; achouW = true; }
+                }
+                (void)clockGolpe;
+                total++;
+                if (!achouW || im.judgement != iw.judgement) { if (difJulg++ < 3) printf("DIFERE (julgamento): %s, %.0f Hz, delta %.1f ms\n", m->name, hz, delta * 1000); }
+                else if (fabsf(im.b - iw.b) > 1e-4f) { if (difErro++ < 3) printf("DIFERE (erro em ms): %s, %.0f Hz, delta %.1f ms: %.3f contra %.3f\n", m->name, hz, delta * 1000, im.b * 1000, iw.b * 1000); }
+            }
+        }
+    }
+    CHECK(total > 2000, "clique no hitstop: só %ld cliques conferidos", total);
+    CHECK(noCongelado > 200 && noQuadroDoFim > 100 && depois > 200, "clique no hitstop: poucos casos (congelado %ld, no quadro em que acaba %ld, depois %ld)", noCongelado, noQuadroDoFim, depois);
+    CHECK(invalidos == 0, "clique no hitstop: %ld carimbos exatos foram tratados como inválidos", invalidos);
+    CHECK(difJulg == 0, "clique no hitstop: %ld de %ld cliques julgados diferente do mesmo clique em ms exato no núcleo", difJulg, total);
+    CHECK(difErro == 0, "clique no hitstop: %ld de %ld cliques com o erro em ms diferente", difErro, total);
+    printf("entrada: %ld cliques no hitstop (%ld durante o congelamento, %ld no quadro em que ele acaba, %ld depois), julgados como em ms exato; %ld cenas sem segundo golpe ficaram de fora\n", total,
+           noCongelado, noQuadroDoFim, depois, semSegundoGolpe);
+}
+
 int main(int argc, char **argv) {
     int lutas = argc > 1 ? atoi(argv[1]) : 60;
     if (lutas < 1) lutas = 60;
@@ -281,6 +403,7 @@ int main(int argc, char **argv) {
     teste_fuzz();
     teste_lutas(lutas);
     teste_tabela(lutas);
+    teste_clique_no_hitstop(lutas > 12 ? lutas / 3 : 4);
     printf("entrada: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
 }

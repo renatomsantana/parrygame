@@ -4,8 +4,8 @@
  * raylib: jogam um quadro por vez, como o jogo.
  *
  * Os robôs são estimativa, não verdade: o humano deles não vê a arte, não sofre
- * com a escuridão do Yoru e não se distrai. O de estreia reage ao último sinal
- * com mão mais incerta; não sabe o ritmo nem mira a janela perfeita.
+ * com a escuridão do Yoru e não se distrai. O de primeira vez reage ao último
+ * sinal sem saber o ritmo nem mirar a janela perfeita.
  */
 #ifndef APARA_ROBO_H
 #define APARA_ROBO_H
@@ -19,28 +19,40 @@ typedef enum {
     ROBO_REACAO,     /* não decora nada: reage ao último sinal antes do contato (a lâmina
                         partindo, que se ouve no assobio do golpe, ou o aviso, o que vier
                         depois) depois de `reacao` s; ao som, 50 ms mais rápido */
-    ROBO_ESTREIA,    /* reage ao último sinal sem decorar, com erro maior por contato */
     ROBO_DESLOCADO,  /* aperta sempre `desloc` s em relação ao contato (negativo: cedo, antes do aviso; positivo: tarde, depois
                         de o golpe entrar): mostra o "cedo" e o "tarde" do jogo, nos vídeos e nos testes */
-    ROBO_HUMANO      /* decora o padrão: mede o tempo até o contato a partir do último sinal
+    ROBO_HUMANO,     /* decora o padrão: mede o tempo até o contato a partir do último sinal
                         que ainda dá tempo de usar (o começo da preparação ou o aviso) e
                         erra em proporção ao intervalo medido (`ritmo`) mais a mão (`mao`) */
+    ROBO_PRIMEIRA_VEZ /* quem joga pela primeira vez: como o REACAO (só reage ao último sinal, não decora
+                        nada), mas a reação varia de golpe a golpe (`reacaoDp`), nunca passa do que um
+                        humano consegue (ROBO_REACAO_MINIMA) e às vezes não aperta (`falha`) */
 } RoboTipo;
 
 typedef struct {
     RoboTipo tipo;
     float reacao;    /* s até reagir a um sinal (REACAO, HUMANO) */
     float ritmo;     /* HUMANO: erro ao medir um intervalo, fração dele (0,08 = casual) */
-    float mao;       /* REACAO, ESTREIA, HUMANO: desvio-padrão da mão, s */
+    float mao;       /* REACAO, PRIMEIRA_VEZ, HUMANO: desvio-padrão da mão, s */
     float periodo;   /* SPAM: s entre apertos */
     float desloc;    /* DESLOCADO: s depois do contato (negativo: antes) */
+    float reacaoDp;  /* PRIMEIRA_VEZ: desvio-padrão da reação, s (0 = sempre a mesma) */
+    float falha;     /* PRIMEIRA_VEZ: chance de não apertar neste golpe (0 a 1) */
 } Robo;
 
 #define ROBO_QUADRO (1.0 / AJ_ROBO_HZ_PADRAO)   /* o robô joga em quadros de 60 Hz, como o jogo */
 #define ROBO_REACAO_SOM 0.050         /* ao som se reage este tanto mais rápido que à imagem */
+#define ROBO_REACAO_MINIMA 0.150      /* o piso da reação de quem joga pela primeira vez (nenhum humano reage em menos) */
+/* Quem joga pela primeira vez: reage em média 260 ms à imagem e 210 ms ao som (a mesma conta do robo_reacao), com 45 ms de
+ * desvio de golpe a golpe, mão de 25 ms como a do casual e falha em 3% dos golpes (nem chega a apertar). Não decora padrão
+ * nenhum. Medido: a 300 ms à imagem ele perde até do daichi (a lâmina parte 220 ms antes do contato nos 4 primeiros mestres). */
+#define ROBO_PRIMEIRA_VEZ_REACAO 0.260f
+#define ROBO_PRIMEIRA_VEZ_REACAO_DP 0.045f
+#define ROBO_PRIMEIRA_VEZ_MAO 0.025f
+#define ROBO_PRIMEIRA_VEZ_FALHA 0.030f
 
 /* Os robôs do relatório. */
-extern const Robo ROBO_DO_DEMO, ROBO_SEM_DEFESA, ROBO_APERTA_SEM_PARAR, ROBO_HUMANO_CASUAL, ROBO_HUMANO_ESTREIA;
+extern const Robo ROBO_DO_DEMO, ROBO_SEM_DEFESA, ROBO_APERTA_SEM_PARAR, ROBO_HUMANO_CASUAL, ROBO_PRIMEIRA_VEZ_PADRAO;
 Robo robo_reacao(float segundos);
 Robo robo_deslocado(float segundos);   /* aperta `segundos` depois do contato (negativo: antes) */
 

@@ -63,6 +63,24 @@ QUADROS ?= 0
 robos: robos_relatorio
 	./robos_relatorio $(LUTAS) $(HZ) $(QUADROS)
 
+# A curva de dificuldade por mestre com os cinco robôs (primeira vez, casual que decora, reação 250, perfeito, spam),
+# a 60 e a 144 Hz (make curva LUTAS=10000). Só mede; o perfeito vence tudo e o spam perde de tudo.
+CURVA_LUTAS ?= 10000
+curva_relatorio: $(CORE) tests/curva.c src/core.h src/ajuste.h src/robo.h
+	$(CC) $(CFLAGS) $(CORE) tests/curva.c -o $@ -lm -lpthread
+
+curva: curva_relatorio
+	./curva_relatorio $(CURVA_LUTAS) $(QUADROS)
+
+# A mesma medição, reprovando se algo cair fora da curva alvo de docs/CURVA.md (faixa por mestre e robô, ordem e degrau do casual).
+# No make test, 10 mil lutas por mestre; no make teste, 100 mil (make curva-alvo CURVA_LUTAS=100000).
+curva-alvo: curva_relatorio
+	./curva_relatorio --alvo $(CURVA_LUTAS)
+
+# O robô da primeira vez só reage (sem variação é o robo_reacao), não muda com a taxa, e o perfeito e o spam valem sempre.
+test-curva: curva_relatorio
+	./curva_relatorio --teste
+
 # Todo caractere não ASCII das strings do jogo tem glifo na fonte da interface.
 fonte_test: src/fonte.c src/fonte.h tests/fonte_test.c
 	$(CC) $(CFLAGS) src/fonte.c tests/fonte_test.c -o $@
@@ -120,7 +138,7 @@ numeros:
 avisos:
 	RAYLIB_CFLAGS="$(RAYLIB_CFLAGS)" sh tests/avisos.sh
 
-test: core_test test-fonte test-save test-entrada test-desempenho
+test: core_test test-fonte test-save test-entrada test-desempenho test-curva curva-alvo
 	./core_test
 
 # Regressões de apresentação: seleciona sprites e acompanha armas sem abrir janela.
@@ -152,6 +170,7 @@ teste:
 	$(MAKE) fuzz-rapido
 	$(MAKE) robos-taxas
 	$(MAKE) curva-ordem
+	$(MAKE) curva-alvo CURVA_LUTAS=100000
 	$(MAKE) numeros
 	$(MAKE) avisos
 	$(MAKE) teste-jogo
@@ -162,9 +181,9 @@ run: apara
 	./apara
 
 clean:
-	rm -f apara core_test fonte_test save_test entrada_test desempenho_test fuzz_test presentation_test robos_relatorio personagens
+	rm -f apara core_test fonte_test save_test entrada_test desempenho_test fuzz_test presentation_test robos_relatorio curva_relatorio personagens
 
 teste-vitoria: apara
 	sh tests/teste_vitoria.sh
 
-.PHONY: all packs sprites run clean robos robos-taxas curva-ordem fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho test-visual test-assets teste teste-jogo teste-vitoria
+.PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva curva-ordem fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho test-visual test-assets teste teste-jogo teste-vitoria

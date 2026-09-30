@@ -139,8 +139,6 @@
 #define AJ_ROBO_CASUAL_RITMO       0.080f   /*   erro ao medir um intervalo: esta fração dele */
 #define AJ_ROBO_CASUAL_MAO         0.025f   /*   erro fixo da mão (desvio padrão, s) */
 #define AJ_ROBO_REACAO_MAO         0.020f   /* o que só reage: erro da mão (desvio padrão, s) */
-#define AJ_ROBO_ESTREIA_REACAO     0.250f   /* estreia: tempo para responder ao último sinal, sem decorar */
-#define AJ_ROBO_ESTREIA_MAO        0.070f   /* estreia: variação humana por golpe (desvio padrão, s) */
 #define AJ_ROBO_PLANOS                4     /* apertos planejados que ainda não chegaram (robo_aperto_em) */
 #define AJ_ROBO_LUTA_MAX          1800.0    /* uma luta de robô que passa disto é abandonada (s) */
 #define AJ_ROBO_HZ_PADRAO           60.0    /* taxa de quadros do robô quando ninguém escolhe */

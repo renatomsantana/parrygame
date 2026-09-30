@@ -41,7 +41,7 @@ static void colunas(Coluna *col) {
         {"Reação 200", {0}},
         {"Reação 250", {0}},
         {"Reação 300", {0}},
-        {"Estreia", ROBO_HUMANO_ESTREIA},
+        {"Primeira vez", ROBO_PRIMEIRA_VEZ_PADRAO},
         {"Humano casual", ROBO_HUMANO_CASUAL},
     };
     base[3].r = robo_reacao(0.200f);
