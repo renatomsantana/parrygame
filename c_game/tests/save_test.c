@@ -12,7 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
+
+#include "portavel.h"
 
 static int checks = 0, failures = 0;
 #define CHECK(cond, ...) do { \
@@ -210,7 +211,7 @@ static bool pasta_temporaria(const char *base) {
 }
 
 int main(void) {
-    const char *base = getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp";
+    const char *base = pasta_do_sistema();
     if (!pasta_temporaria(base)) { perror("mkdir"); return 2; }
     snprintf(caminho, sizeof caminho, "%s/apara_save.txt", dir);
     snprintf(bak, sizeof bak, "%s.bak", caminho);

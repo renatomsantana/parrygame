@@ -28,7 +28,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
-#include <unistd.h>
+
+#include "portavel.h"
 
 typedef struct { const char *nome; Robo r; } Coluna;
 
@@ -126,7 +127,7 @@ static void *ordem_trabalha(void *arg) {
 }
 
 static int ordem(int lutas) {
-    long nucleos = sysconf(_SC_NPROCESSORS_ONLN);
+    long nucleos = nucleos_online();
     if (nucleos < 1) nucleos = 1;
     if (nucleos > 16) nucleos = 16;
     ordem_estado.lutas = lutas;

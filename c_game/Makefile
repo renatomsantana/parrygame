@@ -141,6 +141,11 @@ avisos:
 test: core_test test-fonte test-save test-entrada test-desempenho test-curva curva-alvo
 	./core_test
 
+# O núcleo e as ferramentas de teste compilam para Windows (MinGW-w64) e dão o mesmo resultado que no Linux
+# (roda os .exe no Wine, se houver; sem o MinGW, pula).
+teste-windows:
+	sh tests/teste_windows.sh
+
 # O jogo de verdade sob xvfb (precisa do ./apara, do xvfb-run e da libX11; sem eles cada script pula):
 # as teclas de teste só existem com --teste e nada grava o progresso (teste_save), o rastro é só visual
 # (teste_rastro), a vitória é salva no golpe final e sobrevive a kill, ESC e Q e fechar (teste_vitoria), e o
@@ -163,6 +168,7 @@ teste:
 	$(MAKE) curva-alvo CURVA_LUTAS=100000
 	$(MAKE) numeros
 	$(MAKE) avisos
+	$(MAKE) teste-windows
 	$(MAKE) teste-jogo
 	@echo "teste: tudo certo"
 
@@ -172,4 +178,4 @@ run: apara
 clean:
 	rm -f apara core_test fonte_test save_test entrada_test desempenho_test fuzz_test robos_relatorio curva_relatorio personagens
 
-.PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva curva-ordem fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho teste teste-jogo
+.PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-entrada test-desempenho teste teste-jogo

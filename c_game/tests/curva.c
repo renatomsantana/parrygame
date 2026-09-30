@@ -10,7 +10,7 @@
  *   curva_relatorio --teste               make test-curva: o que o robô da primeira vez promete (abaixo) e o que vale sempre
  *
  * Os robôs:
- *   Primeira vez    só reage ao aviso e à lâmina, não decora nada, reação de 250 a 300 ms com variação de golpe a
+ *   Primeira vez    só reage ao aviso e à lâmina, não decora nada, reação de 260 ms à imagem (210 ao som) com variação de golpe a
  *                   golpe e 3% de apertos que falham (ROBO_PRIMEIRA_VEZ_PADRAO)
  *   Casual decora   o humano casual: decora o padrão e mede o ritmo com 8% de erro (ROBO_HUMANO_CASUAL)
  *   Reação 250      só reage ao último sinal, sempre em 250 ms (robo_reacao)
@@ -24,7 +24,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+
+#include "portavel.h"
 
 #define NROBOS 5
 #define NMESTRES 13
@@ -139,7 +140,7 @@ static void medir(int lutas, bool quadros) {
     E.lutas = lutas;
     E.quadros = quadros;
     E.proximo = 0;
-    long nucleos = sysconf(_SC_NPROCESSORS_ONLN);
+    long nucleos = nucleos_online();
     if (nucleos < 1) nucleos = 1;
     if (nucleos > MAX_THREADS) nucleos = MAX_THREADS;
     pthread_t th[MAX_THREADS];
