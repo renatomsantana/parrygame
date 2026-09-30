@@ -1736,6 +1736,7 @@ static void test_teste_a_mao(void) {
 
     /* o resultado de cada aperto e o erro em ms */
     bool cedo = true, perfeito = true, bomCedo = true, bomTarde = true, erroCedo = true, semAperto = true, tarde = true;
+    bool lado = true;   /* o F3 escreve "antes" ou "depois" do contato: duel_event_after_contact dá o lado de cada evento */
     int tardes = 0;
     for (int i = 0; i < roster_size(); i++) {
         Settings si;
@@ -1760,15 +1761,18 @@ static void test_teste_a_mao(void) {
                 if (!(k >= 1 && ev[k - 1].i == PRESS_CEDO && fabs(ev[k - 1].a - (t.strike - (c.clock - L))) < 1e-4 &&
                       fabs(ev[k - 1].b - (t.cue + L - c.clock)) < 1e-4))
                     cedo = false;
+                if (k >= 1 && duel_event_after_contact(&ev[k - 1])) lado = false;   /* cedo: antes do contato */
             }
             if (!aperta_e_ve(&d, t.strike - 0.010 + L, &ap, &im) || ap.i != PRESS_TENTATIVA || fabs(ap.a - 0.010) > 1e-4 ||
                 im.judgement != J_PERFEITO || im.b != 0)
                 perfeito = false;
+            if (duel_event_after_contact(&ap) || duel_event_after_contact(&im)) lado = false;   /* 10 ms antes do contato */
             double lb = (pw + gw) / 2;
             if (!aperta_e_ve(&d, t.strike - lb + L, &ap, &im) || im.judgement != J_BOM || fabs(im.b - (lb - pw)) > 1e-4) bomCedo = false;
             if (!aperta_e_ve(&d, t.strike + 0.015 + L, &ap, &im) || im.judgement != J_BOM || fabs(im.b + 0.015) > 1e-4 ||
                 fabs(im.a + 0.015) > 1e-4)
                 bomTarde = false;
+            if (!duel_event_after_contact(&im)) lado = false;   /* 15 ms depois do contato */
             if (t.strike - gw - 0.010 > t.cue + 0.001 &&
                 (!aperta_e_ve(&d, t.strike - gw - 0.010 + L, &ap, &im) || im.judgement != J_RUIM || fabs(im.b - (gw + 0.010 - pw)) > 1e-4))
                 erroCedo = false;
@@ -1785,6 +1789,7 @@ static void test_teste_a_mao(void) {
                 if (!(k >= 1 && ev[k - 1].i == PRESS_TARDE && fabs(ev[k - 1].a - (c.clock - L - c.lastStrikeAt)) < 1e-4 &&
                       ev[k - 1].a > 0.05 + si.lateGrace - 0.002))
                     tarde = false;
+                if (!duel_event_after_contact(&ev[k - 1])) lado = false;   /* tarde: a > 0 e é DEPOIS (o F3 dizia "antes") */
                 tardes++;
             }
         }
@@ -1796,6 +1801,7 @@ static void test_teste_a_mao(void) {
     CHECK(erroCedo, "erro cedo: o erro é a distância até a janela perfeita");
     CHECK(semAperto, "erro sem aperto: a = -1, sem erro em ms");
     CHECK(tarde && tardes > 20, "tarde: quanto depois do contato (%d casos)", tardes);
+    CHECK(lado, "o F3 diz se o aperto foi antes ou depois do contato: cedo e perfeito antes, tarde e bom tarde depois");
 }
 
 /* O overlay de debug: a linha do tempo bate com o julgamento, e o último aperto fica

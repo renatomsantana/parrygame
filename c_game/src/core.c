@@ -149,6 +149,11 @@ bool duel_strike_dual(const Duel *d) {
     return mv && d->comboStrike < (int)(CHAR_BIT * sizeof mv->dual) && (mv->dual >> d->comboStrike) & 1u;
 }
 
+bool duel_event_after_contact(const DuelEvent *e) {
+    if (e->kind == EV_PRESS && e->i == PRESS_TARDE) return true;
+    return e->a < 0;
+}
+
 float duel_strike_lead_base(const Duel *d) {
     const Move *mv = duel_move(d);
     if (mv && mv->look == LOOK_FAR && d->comboStrike == 0) return d->s.attackLead * AJ_LANCA_PARTE_X;

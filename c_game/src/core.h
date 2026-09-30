@@ -335,6 +335,9 @@ DuelTimeline duel_timeline(const Duel *d);
 float calibration_result(const float *offsets, int n);
 /* Copia e esvazia a fila de eventos. Devolve quantos. */
 int duel_drain(Duel *d, DuelEvent *out, int max);
+/* O aperto de um EV_PRESS ou o resultado de um EV_IMPACT veio DEPOIS do contato? O sinal de `a` não é o mesmo em todos:
+ * no EV_PRESS TARDE, a é o atraso (positivo = depois); nos demais, a é a antecedência (negativa = depois). */
+bool duel_event_after_contact(const DuelEvent *e);
 /* O hitstop congela o duelo por `*restante` segundos de tempo real. Gasta `dt` desse congelamento e
  * devolve quanto do quadro sobra para o duelo correr (o quadro inteiro se não há mais o que congelar).
  * O quadro em que o congelamento acaba corre a parte que sobra: o congelamento dura exatamente o que o

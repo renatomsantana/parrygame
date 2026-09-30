@@ -1624,7 +1624,7 @@ static void anota_aperto(const DuelEvent *e) {
     if (G.apertos < n) G.apertos++;
     Anotacao *l = &G.aperto[0];
     float a = fabsf(e->a) * 1000, b = e->b * 1000;
-    snprintf(l->quando, sizeof l->quando, "%.0f ms %s do contato", a, e->a >= 0 ? "antes" : "depois");
+    snprintf(l->quando, sizeof l->quando, "%.0f ms %s do contato", a, duel_event_after_contact(e) ? "depois" : "antes");
     if (e->kind == EV_PRESS && e->i == PRESS_CEDO) {
         snprintf(l->res, sizeof l->res, "CEDO");
         snprintf(l->erro, sizeof l->erro, "%.0f ms antes do aviso: este golpe não sai perfeito", b);
