@@ -72,10 +72,23 @@ APARA_PERF=30 ./apara --demo --master 13 --duel --fase 3   # joga 30 s com o rob
 tools/medir_desempenho.sh                                  # a tabela dos 13 mestres (SEGUNDOS=30 MESTRES="1 13" RASTRO=1)
 ```
 
-O relatório traz a carga até o primeiro quadro (janela, sprites, áudio...), o quadro médio, a mediana, o p95, o
-p99 e o máximo, quantos quadros passam de 16,7 ms (a meta a 60 Hz: nenhum), quanto do quadro vai no mundo, na
-interface, na composição e no swap, e os cinco piores quadros com o que o jogo fazia. Meça com a janela em foco e
-o vsync ligado (o jogo liga sozinho); sob xvfb o vídeo é por software e só a lógica e a carga valem.
+Meça no seu computador, com a janela em foco e o vsync ligado (o jogo liga sozinho); sob xvfb o vídeo é por software e só a lógica e
+a carga valem. Rode também com `RASTRO=1`, que compara o oboro na 3ª fase e o karasu com e sem o rastro fantasma.
+
+**Como ler a tabela** (uma linha por mestre, o robô do demo jogando `SEGUNDOS` s, sem os 30 primeiros quadros):
+
+| Coluna | O que é | Sinal de problema |
+|---|---|---|
+| médio, p50, p95, p99, máx (ms) | o quadro, de um poll ao seguinte | a 60 Hz o esperado é ~16,7 (o vsync manda); médio abaixo disso é vsync desligado ou tela mais rápida |
+| quadros > 16,7 ms | "A de N": quantos passaram do orçamento de 60 Hz | a meta é 0 (ou perto). Passar de 1% num mestre é o que interessa |
+| mundo, composição, swap (ms, média) | onde o quadro gasta: o cenário e os lutadores; a ampliação, o pós-processo e a interface; a espera do vsync | `mundo` de um mestre bem acima dos outros é o fundo do cenário dele. `swap` alto é espera, não trabalho |
+| CPU do processo | uso de CPU do jogo, com o driver de vídeo | perto de 100% de um núcleo com o vsync ligado indica que o jogo não sobra tempo |
+
+Trabalho do jogo por quadro = lógica + mundo + interface + composição (sem o swap): tem de caber em 16,7 ms com folga. Um máximo
+alto com p99 bom é um pico só: rode `APARA_PERF=30 ./apara --demo --master N --duel` e leia as linhas `PERF pico`, que dizem
+o estado do jogo e o tempo. Pico no começo de uma cena é a carga (paleta e sprites da primeira exibição); pico no meio da
+luta é o que se conserta. O relatório também traz a carga até o primeiro quadro (janela, áudio, sprites...) e avisa se
+o jogo esteve pausado durante a medida (então ela não vale). Mande a tabela inteira e a linha "carga até o primeiro quadro".
 
 ## Os robôs (curva de dificuldade)
 
