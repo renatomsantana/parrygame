@@ -3,10 +3,10 @@
 **A Trilha dos Sete Mestres · versão 0.5.0 · 11/09/2026 · Godot 4.6.3**
 
 Arquivo histórico do protótipo anterior; o jogo atual está em `c_game/`.
-As imagens antigas de personagens foram removidas. O texto antigo reúne: narrativa, direção
-visual, roupa, animações, regras, fintas, mestres, falas, sons, código,
-cenas, testes e o cenário PNG incorporado. O projeto é um protótipo 2D em
-Godot; roda, passa nos testes e ainda precisa ser jogado e refinado.
+As imagens antigas de personagens foram removidas. O texto antigo reúne
+narrativa, direção visual, roupa, animações, regras, fintas, mestres, falas,
+sons, código, cenas, testes e o cenário PNG incorporado. O protótipo Godot
+não é mais reconstruível como jogo completo a partir deste arquivo.
 
 ## O personagem e a direção visual
 
