@@ -167,6 +167,12 @@
 #define AJ_AUTO_ESCOLHA_ESCOLHE     3.0f    /* a escolha do final: o robô escolhe depois disto */
 #define AJ_AUTO_ESCOLHA_CONFIRMA    4.0f    /* ...e confirma depois disto */
 
+/* ---- Carimbo do aperto: o instante de hardware do clique (src/entrada.c) ---------------------- */
+/* Um carimbo até isto fora do quadro ainda vale (o clique chegou logo depois do poll anterior, ou o
+ * relógio do sistema e o do jogo diferem por poeira); fora disto é ruído e o aperto cai no meio do
+ * quadro, como sempre foi. */
+#define AJ_CARIMBO_MARGEM           0.005
+
 /* ---- Tolerâncias numéricas (não são regras: só impedem que o ruído do ponto flutuante decida) ---- */
 #define AJ_EPS_TEMPO                1e-9    /* dois instantes a menos disto de distância são o mesmo */
 #define AJ_EPS_JANELA               1e-6    /* um aperto no limite exato de uma janela ainda vale */

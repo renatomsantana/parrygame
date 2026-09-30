@@ -1,12 +1,12 @@
 #!/bin/sh
-# Nenhum número mágico nas regras: em src/core.c e src/robo.c, todo número que não seja 0, 1, 2 ou 0,5
+# Nenhum número mágico nas regras: em src/core.c, src/robo.c e src/entrada.c, todo número que não seja 0, 1, 2 ou 0,5
 # tem nome, e o nome mora no src/ajuste.h (as constantes globais) ou no src/roster.c (as de cada mestre).
 # Comentários e strings não contam. Uma linha com "num-ok" é de um algoritmo (o gerador de números
 # aleatórios, constantes matemáticas): o comentário diz por quê.
 #   tests/numeros.sh          (make numeros)
 cd "$(dirname "$0")/.." || exit 1
 ACHOU=0
-for F in src/core.c src/robo.c; do
+for F in src/core.c src/robo.c src/entrada.c; do
     SAIDA=$(awk '
         { linha = $0 }
         /num-ok/ { next }
@@ -34,5 +34,5 @@ for F in src/core.c src/robo.c; do
         }' "$F")
     if [ -n "$SAIDA" ]; then echo "$SAIDA"; ACHOU=1; fi
 done
-if [ "$ACHOU" -eq 0 ]; then echo "numeros: nenhum número mágico em src/core.c e src/robo.c"; else echo "numeros: dê nome ao número no src/ajuste.h (ou no src/roster.c)"; fi
+if [ "$ACHOU" -eq 0 ]; then echo "numeros: nenhum número mágico em src/core.c, src/robo.c e src/entrada.c"; else echo "numeros: dê nome ao número no src/ajuste.h (ou no src/roster.c)"; fi
 exit "$ACHOU"

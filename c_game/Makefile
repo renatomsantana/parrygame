@@ -18,7 +18,7 @@ ifeq ($(shell uname),Darwin)
 endif
 
 CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
-GAME := src/main.c src/fonte.c src/salvar.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
+GAME := src/main.c src/fonte.c src/salvar.c src/entrada.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
 all: apara
 
@@ -79,7 +79,14 @@ TAXAS_LUTAS ?= 100
 robos-taxas: robos_relatorio
 	./robos_relatorio --taxas $(TAXAS_LUTAS)
 
-# Nenhum número mágico nas regras (src/core.c e src/robo.c): os números têm nome no ajuste.h ou no roster.c.
+# O carimbo do clique: a conversão para o relógio do núcleo, os carimbos inválidos e as lutas dos robôs com ele.
+entrada_test: $(CORE) src/entrada.c src/entrada.h tests/entrada_test.c
+	$(CC) $(CFLAGS) $(CORE) src/entrada.c tests/entrada_test.c -o $@ -lm
+
+test-entrada: entrada_test
+	./entrada_test
+
+# Nenhum número mágico nas regras (src/core.c, src/robo.c e src/entrada.c): os números têm nome no ajuste.h ou no roster.c.
 numeros:
 	sh tests/numeros.sh
 
@@ -87,7 +94,7 @@ numeros:
 avisos:
 	RAYLIB_CFLAGS="$(RAYLIB_CFLAGS)" sh tests/avisos.sh
 
-test: core_test test-fonte test-save
+test: core_test test-fonte test-save test-entrada
 	./core_test
 
 # O jogo de verdade sob xvfb (precisa do ./apara, do xvfb-run e da libX11; sem eles cada script pula):
@@ -112,6 +119,6 @@ run: apara
 	./apara
 
 clean:
-	rm -f apara core_test fonte_test save_test fuzz_test robos_relatorio personagens
+	rm -f apara core_test fonte_test save_test entrada_test fuzz_test robos_relatorio personagens
 
-.PHONY: all packs sprites run clean robos robos-taxas fuzz fuzz-rapido numeros avisos test test-fonte test-save teste teste-jogo
+.PHONY: all packs sprites run clean robos robos-taxas fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada teste teste-jogo
