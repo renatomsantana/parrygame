@@ -62,7 +62,7 @@ void duel_reset(Duel *d) {
     d->special = false;
     d->lastPress = -100;
     d->pressBlockedUntil = -100;
-    d->attempted = d->attackLaunched = d->cuePlayed = false;
+    d->attempted = false;
     d->renPosture = d->s.renPosture;
     d->seal = 0;
     d->bossPosture = duel_posture_max(d);
@@ -187,14 +187,6 @@ double duel_cue_time(const Duel *d) {
     return t < start ? start : t;
 }
 
-bool duel_in_combo(const Duel *d) { return d->comboRemaining > 0 || d->comboStrike > 0; }
-
-double duel_time_to_impact(const Duel *d) {
-    if (d->phase != PH_WINDUP) return -1;
-    double t = d->strikeAt - d->clock;
-    return t > 0 ? t : 0;
-}
-
 DuelTimeline duel_timeline(const Duel *d) {
     DuelTimeline t;
     memset(&t, 0, sizeof t);
@@ -277,7 +269,7 @@ static void begin_attack(Duel *d) {
     const Settings *s = &d->s;
     const MasterProfile *m = d->m;
     d->phase = PH_WINDUP;
-    d->attempted = d->attackLaunched = d->cuePlayed = false;
+    d->attempted = false;
     /* Cada golpe novo zera a espera entre gestos: um gesto feito no intervalo
      * não pode roubar a defesa do golpe que está chegando. */
     d->lastPress = -100;
@@ -359,8 +351,8 @@ static void begin_attack(Duel *d) {
 
 static void fire(Duel *d, ScheduleKind kind) {
     switch (kind) {
-        case SCH_LAUNCH: d->attackLaunched = true; emit(d, EV_LAUNCH, J_NONE, 0, 0, false); break;
-        case SCH_CUE: d->cuePlayed = true; emit(d, EV_CUE, J_NONE, 0, d->comboStrike, false); break;
+        case SCH_LAUNCH: emit(d, EV_LAUNCH, J_NONE, 0, 0, false); break;
+        case SCH_CUE: emit(d, EV_CUE, J_NONE, 0, d->comboStrike, false); break;
         case SCH_CUE_SOUND: emit(d, EV_CUE, J_NONE, 0, d->comboStrike, true); break;
     }
 }

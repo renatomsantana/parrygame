@@ -1641,7 +1641,7 @@ static void handle_events(void) {
                 sprite_windup();
                 if (duel_strike_dual(&G.duel)) dual_tell();
                 G.blackoutTarget = G.duel.blackout ? 1 : 0;
-                if (m->arena == ARENA_PORTO) { audio_play(SND_DRUM, 0.9f, 1); G.ctx.beat = 1; }
+                if (m->arena == ARENA_PORTO) audio_play(SND_DRUM, 0.9f, 1);
                 break;
             case EV_LAUNCH:
                 G.bossWinding = false;
@@ -1859,13 +1859,7 @@ static void update_actors(float dt) {
         b->flash = 0.35f + 0.2f * sinf(G.time * 14);
         b->flashColor = VERMILION;
     }
-    /* Tensão no fim da preparação. */
-    if (G.bossWinding) {
-        G.windupTime += dt;
-        G.ctx.danger = clampf(G.windupTime / G.windupLen, 0, 1);
-    } else {
-        G.ctx.danger *= expf(-dt * 6);
-    }
+    if (G.bossWinding) G.windupTime += dt;
     /* BIG BOSS se recompõe depois de perder um selo. */
     if (G.staggerTime > 0) {
         G.staggerTime += dt;
@@ -1912,7 +1906,6 @@ static void update_actors(float dt) {
 
 static void update_ctx(float dt) {
     G.ctx.t += dt;
-    G.ctx.beat *= expf(-dt * 6);
     G.ctx.blackout += (G.blackoutTarget - G.ctx.blackout) * (1 - expf(-dt * (G.blackoutTarget > G.ctx.blackout ? 5 : 3)));
     G.ctx.lightning = fmaxf(0, G.ctx.lightning - dt * 3);
     /* tempestade: no dojo de oboro depois do primeiro selo, e a noite toda no castelo de arashi */

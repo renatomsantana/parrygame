@@ -95,23 +95,13 @@ typedef struct {
 } Rig;
 
 extern const Pose POSE_IDLE, POSE_WINDUP, POSE_CONTACT, POSE_FOLLOW, POSE_PARRY,
-    POSE_DEFLECT, POSE_HURT, POSE_STAGGER, POSE_FALLEN, POSE_DASH, POSE_SHEATHE,
+    POSE_DEFLECT, POSE_HURT, POSE_STAGGER, POSE_FALLEN,
     POSE_DISARMED, POSE_KNEEL, POSE_POINT, POSE_WINDUP_LOW, POSE_WINDUP_THRUST, POSE_CONTACT_LOW,
     POSE_CONTACT_THRUST, POSE_REARM_HIGH, POSE_REARM_LOW, POSE_PARRY_LOW, POSE_PARRY_THRUST;
 
-/* Esqueleto no mundo, sem arredondar: usado para desenhar o corpo em 3D. */
-typedef struct {
-    Vector2 footB, footF, hip, kneeB, kneeF, chest, head, shoulderB, shoulderF, hands, elbowB, elbowF;
-    Vector2 hemF, hemB;  /* barra do casaco, frente e trás */
-    float s;             /* escala do corpo */
-    float lean;          /* inclinação do tronco em graus (já espelhada) */
-} RigBones;
-
 void rig_init(Rig *r, const Look *look, float x, float y, bool faceLeft);
-void rig_bones(const Rig *r, RigBones *out);
 void rig_pose(Rig *r, Pose p, float dur, Ease e);        /* sai da pose atual */
 void rig_then(Rig *r, Pose p, float dur, Ease e);        /* encadeia depois da atual */
-bool rig_busy(const Rig *r);
 void rig_update(Rig *r, float dt);
 void rig_draw(const Rig *r, Color light);
 void rig_draw_flat(const Rig *r, Color c);               /* silhueta chapada */

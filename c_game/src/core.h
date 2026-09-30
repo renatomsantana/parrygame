@@ -144,7 +144,6 @@ typedef struct {
     Move moves[MAX_MOVES];
     int moveCount;
     uint32_t tint;                /* 0xRRGGBBAA aplicado ao sprite do mestre */
-    bool useHeroSheet;            /* Sombra usa a prancha de Ren espelhada */
     bool isBigBoss;
     Line intro[MAX_LINES];
     int introCount;
@@ -260,7 +259,7 @@ typedef struct {
     bool blackout, special;
     double lastPress;
     double pressBlockedUntil;     /* recarga: nenhum aperto aceito antes disto */
-    bool attempted, attackLaunched, cuePlayed;
+    bool attempted;
     bool earlyUsed;               /* apertou antes do aviso neste golpe: a defesa não sai perfeita */
 
     float renPosture;             /* vida de kojiro */
@@ -302,13 +301,11 @@ void duel_step(Duel *d, double dt, bool press);
 /* Um quadro com o aperto num instante conhecido (pressAt segundos depois do começo do quadro,
  * -1 = nenhum): os testes e os robôs, que decidem em ms. */
 void duel_step_at(Duel *d, double dt, double pressAt);
-double duel_time_to_impact(const Duel *d);        /* -1 fora da preparação */
 const Stance *duel_stance(const Duel *d);
 const SealRule *duel_seal_rule(const Duel *d);
 bool duel_under_pressure(const Duel *d);          /* mestre com metade da postura ou menos */
 float duel_posture_max(const Duel *d);            /* postura cheia do selo atual */
 bool duel_advantage(const Duel *d);               /* um perfeito agora quebra a postura */
-bool duel_in_combo(const Duel *d);
 const Move *duel_move(const Duel *d);             /* sequência em curso (NULL = golpe simples) */
 float duel_ren_damage(const Duel *d);     /* dano de um erro contra este mestre */
 bool duel_strike_dual(const Duel *d);     /* o golpe que vem é de duas lâminas */

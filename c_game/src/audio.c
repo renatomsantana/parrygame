@@ -606,4 +606,3 @@ void audio_play(SoundId id, float volume, float pitch) {
 void audio_music(int style) { M.target = style; }
 void audio_music_intensity(float x) { M.intensity = x; }
 void audio_music_duck(float x) { M.duck = x < 0 ? 0 : (x > 1 ? 1 : x); }
-void audio_set_master(float v) { master = v; }

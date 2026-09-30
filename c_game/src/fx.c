@@ -17,7 +17,6 @@ static Color lerp_color(Color a, Color b, float t) {
 
 void fx_init(Fx *fx) {
     memset(fx, 0, sizeof *fx);
-    fx->zoom = 1;
     fx->shakeEnabled = true;
 }
 
@@ -51,15 +50,9 @@ void fx_update(Fx *fx, float dt) {
         fx->popups[i].life -= dt;
         fx->popups[i].pos.y -= 7 * dt;
     }
-    for (int i = 0; i < MAX_ARCS; i++) if (fx->arcs[i].life > 0) fx->arcs[i].life -= dt;
     for (int i = 0; i < 4; i++) if (fx->stars[i].life > 0) fx->stars[i].life -= dt;
     fx->flash = fmaxf(0, fx->flash - dt * 3.5f);
     if (fx->shakeTime > 0) fx->shakeTime -= dt; else fx->shake = 0;
-    /* Mola crítica para o soco de câmera. */
-    float k = 180, c = 22;
-    float acc = -k * (fx->zoom - 1) - c * fx->zoomVel;
-    fx->zoomVel += acc * dt;
-    fx->zoom += fx->zoomVel * dt;
     fx->vignettePulse = fmaxf(0, fx->vignettePulse - dt * 2);
 }
 
@@ -127,14 +120,6 @@ static void star_shape(Vector2 c, float len, float wid, float rot, Color col) {
     }
 }
 
-void fx_arc(Fx *fx, Vector2 center, float radius, float start, float sweep, float life, float width, Color c) {
-    for (int i = 0; i < MAX_ARCS; i++) {
-        if (fx->arcs[i].life > 0) continue;
-        fx->arcs[i] = (Arc){center, radius, start, sweep, life, life, width, c};
-        return;
-    }
-}
-
 void fx_popup(Fx *fx, const char *text, Vector2 at, float scale, Color c) {
     int slot = 0;
     float oldest = 1e9f;
@@ -160,8 +145,6 @@ void fx_kick(Fx *fx, float amp, float time) {
     if (amp > fx->shake || fx->shakeTime <= 0) fx->shake = amp;
     fx->shakeTime = fmaxf(fx->shakeTime, time);
 }
-
-void fx_punch(Fx *fx, float amount) { fx->zoomVel += amount; }
 
 Vector2 fx_shake_offset(const Fx *fx) {
     if (!fx->shakeEnabled || fx->shakeTime <= 0) return (Vector2){0, 0};
@@ -190,16 +173,6 @@ void fx_draw_world(const Fx *fx) {
         Color c = r->color;
         c.a = (unsigned char)(c.a * t);
         DrawRing(r->pos, r->radius, r->radius + fmaxf(1, r->width * t), 0, 360, 32, c);
-    }
-    for (int i = 0; i < MAX_ARCS; i++) {
-        const Arc *a = &fx->arcs[i];
-        if (a->life <= 0) continue;
-        float t = a->life / a->maxLife;
-        Color c = a->color;
-        c.a = (unsigned char)(c.a * t);
-        /* O arco "cresce" nos primeiros quadros e depois afina. */
-        float grow = fminf(1, (1 - t) * 5 + 0.2f);
-        DrawRing(a->center, a->radius - a->width * t, a->radius, a->start, a->start + a->sweep * grow, 40, c);
     }
     for (int i = 0; i < MAX_PARTICLES; i++) {
         const Particle *p = &fx->p[i];

@@ -22,6 +22,5 @@ void audio_play(SoundId id, float volume, float pitch);
 void audio_music(int style);            /* troca com fade */
 void audio_music_intensity(float x);    /* 0..1: selos do BIG BOSS, tensão */
 void audio_music_duck(float x);         /* 0..1: abafa a trilha (hitstop, falas) */
-void audio_set_master(float v);
 
 #endif

@@ -61,7 +61,6 @@ typedef struct {
     bool vitoria;
     int perfeitos, bons, erros;
     double duracao;  /* s de duelo */
-    float vida;      /* vida que sobrou, fração da inicial */
 } RoboLuta;
 
 /* Uma luta inteira contra `m`, com kojiro depois de `vencidos` mestres. O robô decide em ms e

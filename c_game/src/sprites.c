@@ -20,8 +20,8 @@ static bool flatOk;
 static SprFx fxs[MAX_FX];     /* efeitos em folha, carregados na primeira vez */
 static bool fxTried[MAX_FX];
 static int nfx;
-static Texture2D keysTex[2], mouseTex;
-static bool uiTried, uiOk, mouseOk;
+static Texture2D keysTex[2];
+static bool uiTried, uiOk;
 
 /* Silhueta: a cor da tinta com o alfa da prancha. */
 static const char *FLAT_FS =
@@ -42,8 +42,7 @@ void spr_shutdown(void) {
         if (fxs[i].tex.id) UnloadTexture(fxs[i].tex);
     nfx = 0;
     if (uiOk) { UnloadTexture(keysTex[0]); UnloadTexture(keysTex[1]); }
-    if (mouseOk) UnloadTexture(mouseTex);
-    uiOk = mouseOk = false;
+    uiOk = false;
     if (flatOk) UnloadShader(flat);
     flatOk = false;
 }
@@ -198,10 +197,6 @@ const SprFx *spr_fx(const char *name) {
     return f->frames > 0 ? f : NULL;
 }
 
-void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint) {
-    spr_fx_draw_scaled(f, row, frame, center, flip, tint, 1);
-}
-
 void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale) {
     if (!f || frame < 0 || frame >= f->frames) return;
     if (row < 0) row = 0;
@@ -216,15 +211,10 @@ static void ui_load(void) {
     if (uiTried) return;
     uiTried = true;
     const char *k0 = "assets/sprites/_ui/buttons-spritesheet.png", *k1 = "assets/sprites/_ui/buttons-pressed-spritesheet.png";
-    const char *m = "assets/sprites/_ui/mouse-spritesheet.png";
     if (FileExists(k0) && FileExists(k1)) {
         keysTex[0] = LoadTexture(k0);
         keysTex[1] = LoadTexture(k1);
         uiOk = keysTex[0].id && keysTex[1].id;
-    }
-    if (FileExists(m)) {
-        mouseTex = LoadTexture(m);
-        mouseOk = mouseTex.id != 0;
     }
 }
 
@@ -254,15 +244,6 @@ float spr_key(const char *key, float x, float y, float unit, bool pressed, Color
     if (!uiOk || !key_rect(key, &r)) return 0;
     Rectangle dst = {floorf(x / unit + 0.5f) * unit, floorf(y / unit + 0.5f) * unit, r.width * unit, r.height * unit};
     DrawTexturePro(keysTex[pressed ? 1 : 0], r, dst, (Vector2){0, 0}, 0, tint);
-    return dst.width;
-}
-
-float spr_mouse(int button, float x, float y, float unit, Color tint) {
-    ui_load();
-    if (!mouseOk || button < 0 || button > 3) return 0;
-    Rectangle src = {button * 32.0f, 0, 32, 32};
-    Rectangle dst = {floorf(x / unit + 0.5f) * unit, floorf(y / unit + 0.5f) * unit, 32 * unit, 32 * unit};
-    DrawTexturePro(mouseTex, src, dst, (Vector2){0, 0}, 0, tint);
     return dst.width;
 }
 

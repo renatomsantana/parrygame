@@ -159,7 +159,6 @@ RoboLuta robo_lutar_hz(const Robo *r, const MasterProfile *m, int vencidos, uint
         }
     }
     out.duracao = d.clock;
-    out.vida = d.renPosture / s.renPosture;
     return out;
 }
 

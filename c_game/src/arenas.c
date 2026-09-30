@@ -1709,13 +1709,6 @@ float arena_reflection(ArenaId id) {
     }
 }
 
-const char *arena_name(ArenaId id) {
-    static const char *names[ARENA_COUNT] = {
-        "Dojo", "Serra", "Celeiro", "Telhados", "Porto", "Salão", "Ponte", "Cachoeira", "Bambuzal", "Forja", "Jardim", "Cidadela",
-        "Templo"};
-    return (id >= 0 && id < ARENA_COUNT) ? names[id] : "";
-}
-
 /* Para as ilustrações (a cabana do Hanzo): o pinheiro em camadas e a labareda daqui. */
 void arena_pine(float x, float base, float h, const Color tone[4], int seed) { tier_pine(x, base, h, tone, seed); }
 void arena_flame(float x, float base, float w, float h, float t, int seed) { flame(x, base, w, h, t, seed); }

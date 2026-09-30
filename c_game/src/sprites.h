@@ -82,7 +82,6 @@ typedef struct {
 } SprFx;
 
 const SprFx *spr_fx(const char *name);
-void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint);
 /* O mesmo, em outra escala (a poeira menor que a folha do pack). */
 void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale);
 
@@ -91,6 +90,5 @@ void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool
  * unidades da tela valem um pixel da folha. Devolvem a largura desenhada, 0 sem
  * a folha (quem chama escreve a tecla em texto). */
 float spr_key(const char *key, float x, float y, float unit, bool pressed, Color tint);
-float spr_mouse(int button, float x, float y, float unit, Color tint);
 
 #endif

@@ -19,8 +19,6 @@ const Pose POSE_DEFLECT = {2, 3, 7, -8, -110, 0, -2, -1};
 const Pose POSE_HURT    = {-18, 3, 3, 3, 35, -2, -4, -4};
 const Pose POSE_STAGGER = {18, 9, 6, 6, 60, 3, -3, 0};
 const Pose POSE_FALLEN  = {45, 14, 8, 10, 85, 6, -4, 2};
-const Pose POSE_DASH    = {28, 8, 12, 2, 5, 10, -6, 6};
-const Pose POSE_SHEATHE = {2, 1, 2, 6, 120, 0, 0, 0};
 const Pose POSE_DISARMED = {-22, 3, -2, -12, -120, -2, -5, -4};
 const Pose POSE_KNEEL   = {22, 12, 7, 9, 80, 5, -5, 1};
 const Pose POSE_POINT   = {8, 3, 11, -2, 2, 6, 0, 3};
@@ -93,8 +91,6 @@ void rig_then(Rig *r, Pose p, float dur, Ease e) {
     r->nextEase = e;
     r->hasNext = true;
 }
-
-bool rig_busy(const Rig *r) { return r->t < 1 || r->hasNext; }
 
 /* ------------------------------------------------------------------ */
 /* Geometria                                                           */
@@ -554,33 +550,6 @@ void rig_sword_line(const Rig *r, Vector2 *hilt, Vector2 *tip) {
     Skeleton k = build(r);
     *hilt = to_world(r, k.hiltEnd);
     *tip = to_world(r, k.tip);
-}
-
-static Vector2 to_world_f(const Rig *r, Vector2 l) {
-    float jit = r->shiver > 0 ? sinf(r->time * 70) * r->shiver : 0;
-    float ox = r->x + r->offsetX + jit, oy = r->y - r->hopY;
-    return v2(ox + (r->faceLeft ? -l.x : l.x), oy + l.y);
-}
-
-void rig_bones(const Rig *r, RigBones *o) {
-    Skeleton k = build(r);
-    float s = r->look.size;
-    o->footB = to_world_f(r, k.footB);
-    o->footF = to_world_f(r, k.footF);
-    o->hip = to_world_f(r, k.hip);
-    o->kneeB = to_world_f(r, k.kneeB);
-    o->kneeF = to_world_f(r, k.kneeF);
-    o->chest = to_world_f(r, k.chest);
-    o->head = to_world_f(r, k.head);
-    o->shoulderB = to_world_f(r, add(k.shoulder, v2(-2 * s, 0)));
-    o->shoulderF = to_world_f(r, add(k.shoulder, v2(1 * s, 0)));
-    o->hands = to_world_f(r, k.hands);
-    o->elbowB = to_world_f(r, k.elbowB);
-    o->elbowF = to_world_f(r, k.elbowF);
-    o->hemF = to_world_f(r, k.coat[2]);
-    o->hemB = to_world_f(r, k.coat[3]);
-    o->s = s;
-    o->lean = r->faceLeft ? -r->cur.lean : r->cur.lean;
 }
 
 bool rig_offhand_line(const Rig *r, Vector2 *hilt, Vector2 *tip) {

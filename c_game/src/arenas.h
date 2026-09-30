@@ -16,8 +16,6 @@
 typedef struct {
     float t;          /* relógio do cenário (segundos) */
     float blackout;   /* 0..1: Yoru apagou as luzes */
-    float beat;       /* 0..1: pulso que decai (batida, tambor) */
-    float danger;     /* 0..1: tensão da preparação */
     float impact;     /* 0..1: impacto recente */
     int seal;         /* selo atual do BIG BOSS */
     float lightning;  /* 0..1: relâmpago */
@@ -30,7 +28,6 @@ Color arena_light(ArenaId id, const ArenaCtx *c);      /* luz ambiente sobre os 
 float arena_reflection(ArenaId id);
 Color arena_dust(ArenaId id);                         /* a poeira do chão (os pés, o bote, a queda) */
 Color arena_rim(ArenaId id);                          /* luz de contorno (neon) do cenário */                    /* 0 = chão fosco */
-const char *arena_name(ArenaId id);
 /* O pinheiro em camadas de agulha (quatro tons, tone[0] a sombra) e a labareda dos
  * cenários, para as ilustrações. */
 void arena_pine(float x, float base, float h, const Color tone[4], int seed);
