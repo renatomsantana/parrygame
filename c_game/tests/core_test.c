@@ -1469,12 +1469,10 @@ static void test_ritmo(void) {
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
         double dn = 0, da = 0;
-        double tn[64], ta[64];
         for (uint32_t seed = 1; seed <= 12; seed++) {
             GolpeRitmo n[40], a[40];
             int kn = coleta_ritmo(&novo, m, seed, n, 40, &dn), ka = coleta_ritmo(&antigo, m, seed, a, 40, &da);
             int k = kn < ka ? kn : ka;
-            (void)tn; (void)ta;
             for (int j = 0; j < k; j++) {
                 golpes++;
                 if (n[j].move != a[j].move || n[j].strike != a[j].strike) mesmoGolpe = false;
@@ -2032,7 +2030,7 @@ static void test_hitstop_exato(void) {
                     const double dtReal = 1.0 / HZ[h];
                     float congelado = 0;                      /* o G.hitstop do jogo */
                     double real = 0, congeladoTotal = 0, nominalTotal = 0, somaAnteriores = 0;
-                    double contatoCore[400], esperado[400], hitstops[400];
+                    double contatoCore[400], esperado[400];
                     int nc = 0, nt = 0;
                     DuelEvent ev[MAX_EVENTS];
                     while (d.phase != PH_FINISHED && real < 300 && nt < 70000 && nc < 400) {
@@ -2050,7 +2048,6 @@ static void test_hitstop_exato(void) {
                             if (ev[i].kind != EV_IMPACT) continue;
                             contatoCore[nc] = d.lastStrikeAt;
                             esperado[nc] = d.lastStrikeAt + somaAnteriores;   /* o núcleo mais os congelamentos anteriores */
-                            hitstops[nc] = d.lastHitstop;
                             somaAnteriores += d.lastHitstop;
                             nominalTotal += d.lastHitstop;
                             congelado = d.lastHitstop;
@@ -2071,7 +2068,6 @@ static void test_hitstop_exato(void) {
                         if (erro > pior) pior = erro;
                         contatos++;
                     }
-                    (void)hitstops;
                     CHECK(fabs(congeladoTotal + congelado - nominalTotal) < 1e-3, "%s, %.0f Hz: o congelamento total (%.4f s + %.4f s pendentes) é o que o núcleo descontou (%.4f s)",
                           roster_get(mi)->name, HZ[h], congeladoTotal, congelado, nominalTotal);
                 }

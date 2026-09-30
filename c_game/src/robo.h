@@ -31,7 +31,7 @@ typedef struct {
     float periodo;   /* SPAM: s entre apertos */
 } Robo;
 
-#define ROBO_QUADRO (1.0 / 60.0)      /* o robô joga em quadros de 60 Hz, como o jogo */
+#define ROBO_QUADRO (1.0 / AJ_ROBO_HZ_PADRAO)   /* o robô joga em quadros de 60 Hz, como o jogo */
 #define ROBO_REACAO_SOM 0.050         /* ao som se reage este tanto mais rápido que à imagem */
 
 /* Os robôs do relatório. */

@@ -379,6 +379,15 @@ float duel_hitstop_for(const Settings *s, Judgement j, bool broke, bool secondBl
     return h;
 }
 
+/* O julgamento de um golpe, em tempo exato (o quadro do jogo não entra nesta conta):
+ *   antecedência = contato - (instante do aperto - latência de vídeo): o que o jogador viu chegou
+ *   atrasado, então o aperto conta a latência mais cedo;
+ *   perfeito: antecedência de 0 até a janela perfeita do mestre (perfectWindow) e nenhum aperto antes
+ *   do aviso neste golpe (earlyUsed);
+ *   bom: até a janela boa (goodWindow) antes do contato, ou até a tolerância tardia (lateGrace) depois
+ *   dele: nunca perfeito;
+ *   ruim: o resto, inclusive não apertar (o golpe só é julgado quando a tolerância acaba).
+ * Kojiro só tem uma tentativa por golpe, depois do aviso; antes dele o aperto não trava nada. */
 static void resolve(Duel *d) {
     const Settings *s = &d->s;
     /* Consumir o golpe antes dos eventos impede julgamento duplicado. */
@@ -534,6 +543,15 @@ void duel_step_at(Duel *d, double dt, double pressAt) {
 
 void duel_step(Duel *d, double dt, bool press) { duel_step_at(d, dt, press ? dt * 0.5 : -1); }
 
+/* Um aperto. Três casos, pela fase e pelo instante:
+ *   fora da preparação (gesto): vale só como gesto e trava os apertos por inputCooldown (a trava do
+ *   aperto); um gesto logo depois de um golpe que entrou sem defesa vira "tarde";
+ *   na preparação, antes do aviso (cedo): não gasta a tentativa, mas dá uma recarga que termina no
+ *   aviso e tira o perfeito deste golpe;
+ *   na preparação, depois do aviso: a tentativa do golpe (uma só); depois do contato, ainda dentro da
+ *   tolerância tardia, julga na hora.
+ * A trava se rearma a cada preparação nova (begin_attack): um gesto no intervalo nunca rouba a defesa
+ * do golpe que está chegando. */
 bool duel_press(Duel *d) {
     if (d->phase == PH_FINISHED) return false;
     /* O núcleo começa uma preparação por tick. Se ela já era devida quando o aperto chegou (o
