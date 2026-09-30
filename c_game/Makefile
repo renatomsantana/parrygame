@@ -65,12 +65,16 @@ robos: robos_relatorio
 
 # A curva de dificuldade por mestre com os cinco robôs (primeira vez, casual que decora, reação 250, perfeito, spam),
 # a 60 e a 144 Hz (make curva LUTAS=10000). Só mede; o perfeito vence tudo e o spam perde de tudo.
-CURVA_LUTAS ?= 2000
+CURVA_LUTAS ?= 10000
 curva_relatorio: $(CORE) tests/curva.c src/core.h src/ajuste.h src/robo.h
 	$(CC) $(CFLAGS) $(CORE) tests/curva.c -o $@ -lm -lpthread
 
 curva: curva_relatorio
 	./curva_relatorio $(CURVA_LUTAS) $(QUADROS)
+
+# A mesma medição, reprovando se algo cair fora da curva alvo de docs/CURVA.md (só depois de aprovada e aplicada).
+curva-alvo: curva_relatorio
+	./curva_relatorio --alvo $(CURVA_LUTAS)
 
 # O robô da primeira vez só reage (sem variação é o robo_reacao), não muda com a taxa, e o perfeito e o spam valem sempre.
 test-curva: curva_relatorio
@@ -166,4 +170,4 @@ run: apara
 clean:
 	rm -f apara core_test fonte_test save_test entrada_test desempenho_test fuzz_test robos_relatorio curva_relatorio personagens
 
-.PHONY: all packs sprites run clean robos robos-taxas curva test-curva curva-ordem fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho teste teste-jogo
+.PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva curva-ordem fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho teste teste-jogo

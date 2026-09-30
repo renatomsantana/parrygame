@@ -2,9 +2,11 @@
  * curva.c - a curva de dificuldade por mestre, com os cinco robôs que a definem, a 60 e a 144 Hz.
  * Rodar: make curva (ou make curva LUTAS=10000). Só mede: escreve as tabelas em Markdown e confere o que
  * tem de valer sempre (o perfeito vence tudo, o spam e o que nunca defende perdem de todos os mestres).
- * A faixa alvo de cada robô (docs/CURVA.md) aparece na tabela como informação; ela ainda não reprova nada.
+ * A faixa alvo de cada robô (docs/CURVA.md, proposta) marca com * a célula que cai fora dela e lista o que está fora, com a
+ * ordem pedida (sempre mais difícil, sem picos): é só informação, e só o --alvo reprova com ela.
  *
- *   curva_relatorio [lutas [quadros]]     lutas por mestre e robô (2000); quadros != 0: o aperto entra no meio do quadro
+ *   curva_relatorio [lutas [quadros]]     lutas por mestre e robô (10000); quadros != 0: o aperto entra no meio do quadro
+ *   curva_relatorio --alvo [lutas]        o mesmo, e sai com erro se algo cair fora da faixa alvo (ms exato)
  *   curva_relatorio --teste               make test-curva: o que o robô da primeira vez promete (abaixo) e o que vale sempre
  *
  * Os robôs:
@@ -65,6 +67,65 @@ static void *trabalha(void *arg) {
     }
 }
 
+/* ---- a curva alvo (docs/CURVA.md: proposta) ---- */
+typedef struct { double lo, hi; } Faixa;
+#define F(a, b) {a, b}
+#define F100 F(97, 100)
+#define F0 F(0, 0.5)
+#define FPOUCO F(0, 1.5)      /* "≤ 1%": o sorteio de 10 mil lutas dá ~0,3 ponto de sobra */
+static const Faixa ALVO[NROBOS][NMESTRES] = {
+    /* primeira vez: vence os quatro primeiros como hoje e perde quase sempre do garfiel em diante */
+    {F(85, 91), F(83, 89), F(72, 78), F(67, 73), FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, F0},
+    /* casual que decora: saturado na entrada, depois cai em degraus até o oboro */
+    {F100, F100, F(98, 100), F(98, 100), F(98, 100), F(88, 94), F(81, 87), F(76, 82), F(70, 76), F(62, 68), F(57, 63), F(52, 58), F(37, 43)},
+    /* reação 250: o precipício do garfiel, sempre descendo (sem os picos do karasu, do arashi e do jinshi) */
+    {F100, F100, F100, F100, F(7, 13), F(5, 11), F(3, 9), F(0.5, 6), FPOUCO, FPOUCO, FPOUCO, FPOUCO, F0},
+    /* perfeito e spam: sempre */
+    {F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100)},
+    {F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0)},
+};
+/* a coluna do casual e a do reação 250 saem na ordem das colunas (PRIMEIRA_VEZ, CASUAL, REACAO_250, PERFEITO, SPAM) */
+#define ORDEM_FOLGA 0.5       /* cada mestre tem de ser ao menos isto mais difícil que o anterior... */
+#define ORDEM_PISO 2.0        /* ...enquanto o anterior é vencido em mais que isto (abaixo, é ruído de 0%)... */
+#define ORDEM_TETO 98.0       /* ...e em menos que isto (acima, o robô vence quase tudo e a tabela está saturada) */
+#define CASUAL_DEGRAU 3.0     /* e o casual cai ao menos isto por degrau do garfiel ao oboro */
+
+static double pct(int h, int b, int i) { return 100.0 * (double)E.vit[h][b][i] / E.lutas; }
+static bool fora(int h, int b, int i) {
+    double v = pct(h, b, i);
+    return v < ALVO[b][i].lo || v > ALVO[b][i].hi;
+}
+
+/* Lista o que cai fora da faixa alvo e da ordem; devolve quantos itens. */
+static int confere_alvo(bool fala) {
+    int itens = 0;
+    for (int h = 0; h < NHZ; h++) {
+        for (int b = 0; b < NROBOS; b++)
+            for (int i = 0; i < NMESTRES; i++)
+                if (fora(h, b, i)) {
+                    if (fala) printf("fora da faixa: %s, %s, %.0f Hz: %.1f%% (alvo %.1f a %.1f)\n", roster_get(i)->name, NOMES[b], HZ[h], pct(h, b, i), ALVO[b][i].lo, ALVO[b][i].hi);
+                    itens++;
+                }
+        for (int i = 1; i < NMESTRES; i++) {
+            /* a ordem vale para o casual e para quem só reage; a primeira vez é 0 dos quatro primeiros ao garfiel por construção */
+            for (int b = CASUAL; b <= REACAO_250; b++) {
+                double ant = pct(h, b, i - 1), v = pct(h, b, i);
+                if (ant > ORDEM_PISO && ant < ORDEM_TETO && ant - v < ORDEM_FOLGA) {
+                    if (fala) printf("ordem: %s, %s, %.0f Hz: %.1f%% depois de %.1f%% (%s) não é ao menos %.1f ponto mais difícil\n", roster_get(i)->name, NOMES[b], HZ[h], v, ant, roster_get(i - 1)->name,
+                           ORDEM_FOLGA);
+                    itens++;
+                }
+            }
+            double ant = pct(h, CASUAL, i - 1), v = pct(h, CASUAL, i);
+            if (i >= 5 && ant - v < CASUAL_DEGRAU && ant - v >= ORDEM_FOLGA) {
+                if (fala) printf("degrau: %s, casual, %.0f Hz: cai só %.1f ponto de %s (o degrau mínimo é %.1f)\n", roster_get(i)->name, HZ[h], ant - v, roster_get(i - 1)->name, CASUAL_DEGRAU);
+                itens++;
+            }
+        }
+    }
+    return itens;
+}
+
 static void prepara_robos(void) {
     robos[PRIMEIRA_VEZ] = ROBO_PRIMEIRA_VEZ_PADRAO;
     robos[CASUAL] = ROBO_HUMANO_CASUAL;
@@ -106,7 +167,7 @@ static void imprime(void) {
         printf("\n");
         for (int i = 0; i < NMESTRES; i++) {
             printf("| %d | %s |", i + 1, roster_get(i)->name);
-            for (int b = 0; b < NROBOS; b++) printf(" %.1f |", 100.0 * (double)E.vit[h][b][i] / E.lutas);
+            for (int b = 0; b < NROBOS; b++) printf(" %.1f%s |", pct(h, b, i), !E.quadros && fora(h, b, i) ? " *" : "");
             printf("\n");
         }
         printf("\n");
@@ -265,18 +326,53 @@ static int testes(int lutas) {
     /* 6. o que vale sempre */
     medir(lutas, false);
     falhas_teste += invariantes();
+    /* 7. o verificador da curva alvo: a tabela no meio de cada faixa passa, e cada defeito é apontado */
+    {
+        E.lutas = 1000;
+        E.quadros = false;
+        for (int h = 0; h < NHZ; h++)
+            for (int b = 0; b < NROBOS; b++)
+                for (int i = 0; i < NMESTRES; i++) E.vit[h][b][i] = (long)((ALVO[b][i].lo + ALVO[b][i].hi) * 0.5 * 10 + 0.5);
+        int limpa = confere_alvo(false);
+        long guarda = E.vit[0][REACAO_250][5];      /* karasu */
+        E.vit[0][REACAO_250][5] = 170;              /* 17%: fora da faixa e mais fácil que o garfiel (10%) */
+        int pico = confere_alvo(false);
+        E.vit[0][REACAO_250][5] = guarda;
+        long guardaJ = E.vit[1][CASUAL][11];        /* jinshi */
+        E.vit[1][CASUAL][11] = 585;                 /* 58,5%: cai só 1,5 ponto do yoru (60%) e passa da faixa */
+        int degrau = confere_alvo(false);
+        E.vit[1][CASUAL][11] = guardaJ;
+        long guardaP = E.vit[0][PERFEITO][3];
+        E.vit[0][PERFEITO][3] = 990;
+        int perfeito = confere_alvo(false);
+        E.vit[0][PERFEITO][3] = guardaP;
+        CONFERE(limpa == 0, "a tabela no meio das faixas devia passar (%d itens fora)", limpa);
+        CONFERE(pico == 2, "um pico do reação 250 no karasu devia dar 2 itens (faixa e ordem), deu %d", pico);
+        CONFERE(degrau == 2, "o jinshi do casual caindo só 1,5 ponto devia dar 2 itens (faixa e degrau), deu %d", degrau);
+        CONFERE(perfeito == 1, "o perfeito perdendo 1%% devia dar 1 item, deu %d", perfeito);
+        CONFERE(confere_alvo(false) == 0, "desfeitos os defeitos, a tabela devia voltar a passar");
+    }
     printf("%s\n", falhas_teste ? "curva: FALHA" : "curva: o robô da primeira vez só reage (sem variação é o robo_reacao, com 100% de falha é o que nunca defende), não muda com a taxa, o teto da lâmina por mestre só pesa em quem reage à lâmina, e o perfeito e o spam valem sempre");
     return falhas_teste ? 1 : 0;
 }
 
 int main(int argc, char **argv) {
     if (argc > 1 && strcmp(argv[1], "--teste") == 0) return testes(argc > 2 && atoi(argv[2]) > 0 ? atoi(argv[2]) : 200);
-    int lutas = argc > 1 && atoi(argv[1]) > 0 ? atoi(argv[1]) : 2000;
+    bool rigido = argc > 1 && strcmp(argv[1], "--alvo") == 0;
+    if (rigido) { argc--; argv++; }
+    int lutas = argc > 1 && atoi(argv[1]) > 0 ? atoi(argv[1]) : 10000;
     if (roster_size() != NMESTRES) { printf("curva: o elenco mudou de tamanho (%d mestres): ajuste NMESTRES\n", roster_size()); return 1; }
     prepara_robos();
-    medir(lutas, argc > 2 && atoi(argv[2]) != 0);
+    bool quadros = !rigido && argc > 2 && atoi(argv[2]) != 0;
+    medir(lutas, quadros);
     imprime();
     int falhas = invariantes();
     printf("%s\n", falhas ? "curva: o que tem de valer sempre não vale (FALHA)" : "curva: o perfeito vence todos os mestres e o spam perde de todos");
-    return falhas ? 1 : 0;
+    if (quadros) {
+        printf("alvo: só vale com o clique em ms exato (o carimbo do M3); com o clique no meio do quadro a tabela é outra\n");
+        return falhas ? 1 : 0;
+    }
+    int fora_ = confere_alvo(true);
+    printf("alvo (docs/CURVA.md, proposta): %d item(ns) fora da faixa ou da ordem %s\n", fora_, rigido ? "(FALHA)" : "(só informação: make curva-alvo reprova)");
+    return falhas || (rigido && fora_) ? 1 : 0;
 }

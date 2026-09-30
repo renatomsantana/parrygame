@@ -132,6 +132,13 @@ Vitórias (%), ms exato, medidas com 100 mil lutas por mestre (±0,3 pt); a tole
 - **Reação 250:** os quatro primeiros em 100%, depois 10 / 8 / 6 / 3 e, do suiren em diante, ≤ 1%: o mesmo precipício do garfiel, mas sempre
   descendo, sem os picos do karasu, do arashi e do jinshi. Precisa tirar ~10 pontos do karasu, ~4 do arashi e ~8 do jinshi sem mexer no casual.
 
+`make curva` já marca com `*` a célula fora da faixa e lista o que está fora da faixa, da ordem (cada mestre ao menos 0,5 ponto mais difícil que
+o anterior, entre 2% e 98%) e do degrau mínimo de 3 pontos do casual. Hoje sai exatamente o que a seção acima aponta: karasu, arashi e jinshi
+do Reação 250 (faixa), o karasu depois do garfiel (ordem) e o jinshi depois do yoru no casual (degrau), a 60 e a 144 Hz. É só informação:
+`make curva-alvo` é o mesmo com erro de saída, e só entra no `make test` depois da aprovação e da aplicação no `roster.c`. O verificador
+em si é testado no `make test-curva` com tabelas sintéticas (a do meio das faixas passa; um pico, um degrau curto e um perfeito que perde
+são apontados), conferido por mutação.
+
 ### O que mexe em quê (alavancas, só `roster.c`; nada disso foi tocado)
 
 | Alavanca | Afeta o casual? | Afeta quem só reage? |
@@ -139,7 +146,7 @@ Vitórias (%), ms exato, medidas com 100 mil lutas por mestre (±0,3 pt); a tole
 | erros até cair (`hitsToFall`) | sim, muito | sim, muito |
 | postura do mestre (duração da luta: nº de golpes) | sim | sim |
 | peso dos padrões (mais sequências, mais golpes por luta) | sim | sim |
-| faixa da partida da lâmina por mestre (campo novo, hoje é igual para todos) | **não** (ele mede pelo aviso) | **sim**, é a que derruba o karasu, o arashi e o jinshi sem mexer no casual |
+| faixa da partida da lâmina por mestre (`MasterProfile.bladeMax`, já no código e sem uso: 0 é o global) | **não** (ele mede pelo aviso) | **sim**, é a que derruba o karasu, o arashi e o jinshi sem mexer no casual |
 
 Se aprovado, os valores exatos saem de varredura com 100 mil lutas por mestre, um mestre por vez, com a tabela antes e depois de cada um;
 o `test_curva` do `core_test.c` ganha as faixas por mestre e a regra de ordem do Reação 250 (vira teste do `make test-curva`).
