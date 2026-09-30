@@ -85,6 +85,7 @@ void fx_burst(Fx *fx, ParticleKind kind, Vector2 at, int count, float speed, flo
             case P_SHARD: p->gravity = 280; p->drag = 1; p->size = frand(1.5f, 3); p->maxLife = p->life = frand(0.6f, 1.1f); break;
             case P_PETAL: p->gravity = 10; p->drag = 1.5f; p->size = frand(1, 2); p->maxLife = p->life = frand(1.2f, 2.2f); break;
             case P_GEM: p->gravity = 0; p->drag = 2; p->size = frand(1, 2); p->maxLife = p->life = frand(0.6f, 1.2f); break;
+            case P_FEATHER: p->gravity = 12; p->drag = 3; p->size = frand(1, 2); p->maxLife = p->life = frand(0.20f, 0.38f); break;
         }
     }
 }
@@ -199,6 +200,7 @@ void fx_draw_world(const Fx *fx) {
         Color c = p->color;
         c.a = (unsigned char)(c.a * fminf(1, t * 1.5f));
         switch (p->kind) {
+            case P_FEATHER: break; /* pena escura usa mistura normal, abaixo */
             case P_SPARK: {
                 /* Risco na direção do movimento. */
                 Vector2 tail = {p->pos.x - p->vel.x * 0.025f, p->pos.y - p->vel.y * 0.025f};
@@ -220,6 +222,17 @@ void fx_draw_world(const Fx *fx) {
         }
     }
     EndBlendMode();
+    /* O modo aditivo tornaria as penas pretas transparentes. */
+    for (int i = 0; i < MAX_PARTICLES; i++) {
+        const Particle *p = &fx->p[i];
+        if (!p->alive || p->kind != P_FEATHER) continue;
+        float t = p->life / p->maxLife;
+        Color c = p->color;
+        c.a = (unsigned char)(c.a * t);
+        Vector2 tip = {p->pos.x + cosf(p->angle) * p->size * 2,
+                       p->pos.y + sinf(p->angle) * p->size * 2};
+        DrawLineEx(p->pos, tip, 1, c);
+    }
 }
 
 void fx_draw_popups(const Fx *fx, Font font, float unit) {

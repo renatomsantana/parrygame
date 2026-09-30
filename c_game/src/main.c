@@ -63,6 +63,9 @@
 #define SWORD_GRAVITY 380.0f
 #define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
 #define AFTER_MAX 8           /* silhuetas que o mestre deixa nos movimentos rápidos */
+#define KARASU_WARP_RECUO 28.0f       /* foge para a direita antes de virar penas */
+#define KARASU_WARP_ANTES_AVISO 0.04f /* reaparece antes do brilho/aviso existente */
+#define KARASU_WARP_PENAS 0.035f      /* espaçamento do rastro durante o recuo */
 enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP, LEAP_FEINT };
 #define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
 #define PIX_LORE 41
@@ -229,6 +232,7 @@ static struct {
     float bossStrikeStep;     /* onde ele precisa estar no contato */
     int leap, leapStage;      /* investida correndo ou salto em curso (LEAP_*) */
     float leapT, leapAt, leapAir; /* tempo na preparação; quando corre ou salta; tempo no ar */
+    float warpPenasT;          /* cadência visual das penas no recuo do Karasu */
     float feintFrom;           /* posição antes da ameaça de florete sem contato */
     float hopT, hopLen, hopH; /* arco do pulo do mestre (salto, recuo, ameaça) */
     float hopFrom, hopTo;
@@ -1275,12 +1279,19 @@ static void update_hop(float dt) {
     }
 }
 
+/* Penas escuras, opacas, no caminho do recuo; não encobrem o brilho da lâmina. */
+static void feather_blur(void) {
+    Vector2 at = {G.boss.x + G.boss.offsetX, GROUND_LOW - 26};
+    fx_burst(&G.fx, P_FEATHER, at, 4, 34, 0.6f, 3.14f,
+             (Color){22, 18, 31, 225}, (Color){77, 49, 70, 205});
+}
+
 /* Penas pretas e vermelhas: o corvo sumindo ou reaparecendo. */
 static void feathers(void) {
     Vector2 at = {G.boss.x + G.boss.offsetX, GROUND_LOW - 26};
-    fx_burst(&G.fx, P_PETAL, at, 26, 80, 3.14f, -1.57f, (Color){26, 20, 30, 255}, (Color){60, 44, 56, 255});
-    fx_burst(&G.fx, P_PETAL, at, 8, 60, 3.14f, -1.57f, (Color){170, 24, 36, 255}, (Color){110, 16, 26, 255});
-    vfx("64", 8, at, true, VFX_BACK, 26);
+    fx_burst(&G.fx, P_FEATHER, at, 22, 80, 3.14f, -1.57f, (Color){18, 14, 29, 255}, (Color){65, 42, 62, 245});
+    fx_burst(&G.fx, P_FEATHER, at, 6, 60, 3.14f, -1.57f, (Color){120, 22, 40, 240}, (Color){80, 14, 31, 230});
+    if (IsWindowReady()) vfx("64", 8, at, true, VFX_BACK, 26);
     audio_play(SND_SWING, 0.45f, 0.7f);
 }
 
@@ -1345,14 +1356,19 @@ static void sprite_windup(void) {
     /* a preparação anda devagar até o hold (cada quadro pelo menos 0,12 s) e segura */
     float antic = fmaxf((hold + 1) * a->frameTime * 1.8f, (hold + 1) * 0.12f);
     if (first && look == LOOK_WARP && w > 0.3f) {
-        /* o corvo prepara, vira penas e some; reaparece na frente de kojiro com a
-         * lâmina no alto, um instante antes de a lâmina partir */
+        /* O corvo recua para a direita, vira penas e reaparece na pose de corte.
+         * As duas marcas usam o relógio REAL da preparação; a lâmina variável
+         * só altera a pose, sem mover o aviso nem o contato do núcleo. */
         G.leap = LEAP_WARP;
-        G.leapAt = w * 0.4f;
-        G.leapAir = fmaxf(G.leapAt + 0.1f, w - 0.16f);
+        float cue = (float)(duel_cue_time(&G.duel) - (G.duel.strikeAt - G.duel.windupDuration));
+        G.leapAt = fmaxf(0.05f, fminf(G.windupLen * 0.38f, cue - 0.12f));
+        G.leapAir = fminf(G.windupLen - 0.02f,
+                          fmaxf(G.leapAt + 0.07f, cue - KARASU_WARP_ANTES_AVISO));
+        G.warpPenasT = 0;
         f_add(f, a, 0, hold, G.leapAt);
         f_add(f, a, hold, hold, w - G.leapAt);
-        G.bossStepTo = G.bossStep;
+        G.bossStepTo = G.bossStep + KARASU_WARP_RECUO;
+        G.bossStepSpeed = KARASU_WARP_RECUO / G.leapAt;
         return;
     }
     if (first && look == LOOK_FAR) {
@@ -1929,8 +1945,17 @@ static void fighters_update(float dt) {
     /* investida e salto: depois do recuo (ou de agachar) ele arranca */
     if (G.leap == LEAP_WARP && G.bossWinding) {
         G.leapT += dt;
+        if (G.leapStage == 0) {
+            G.warpPenasT -= dt;
+            if (G.warpPenasT <= 0) {
+                G.warpPenasT = KARASU_WARP_PENAS;
+                feather_blur();
+            }
+        }
         if (G.leapStage == 0 && G.leapT >= G.leapAt) {
             G.leapStage = 1;
+            G.bossStep = G.bossStepTo; /* as penas partem do fim do recuo, à direita */
+            G.boss.offsetX = G.bossKnock + G.bossStep;
             feathers();
             G.bossHidden = true;
             G.bossStep = G.bossStepTo = G.bossStrikeStep;     /* já está onde vai reaparecer */
@@ -2686,6 +2711,7 @@ static void draw_rigs(Color light) {
     if (G.rastro && G.bossS.set && G.m->id != 10 && !dark && !G.bossHidden) {
         /* As silhuetas da corrida usam a mesma cor que o golpe e somem com a chave. */
         Color c = cor_rastro();
+        if (G.m->id == 6 && G.leap == LEAP_WARP) c = (Color){50, 39, 64, 255};
         for (int n = 1; n <= AFTER_MAX; n++) {       /* da mais antiga para a mais nova */
             int i = (G.afterHead + n) % AFTER_MAX;
             if (G.after[i].life <= 0 || !G.after[i].a) continue;

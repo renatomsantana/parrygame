@@ -13,7 +13,7 @@
 #define MAX_POPUPS 8
 #define MAX_ARCS 8
 
-typedef enum { P_SPARK, P_EMBER, P_DUST, P_SHARD, P_PETAL, P_GEM } ParticleKind;
+typedef enum { P_SPARK, P_EMBER, P_DUST, P_SHARD, P_PETAL, P_GEM, P_FEATHER } ParticleKind;
 
 typedef struct {
     ParticleKind kind;

@@ -98,6 +98,53 @@ static void jump_and_frame_time(void) {
     REQUIRE(f.pl.anim == c && fabsf(f.pl.t - 0.05f) < 1e-5f, "a troca de trechos perdeu tempo de animação");
 }
 
+static void karasu_warp_reappears_before_cue(void) {
+    for (int k = 0; k < 3; k++) {
+        const float leads[] = {0.14f, 0.22f, 0.32f};
+        memset(&G, 0, sizeof G);
+        fx_init(&G.fx);
+        G.m = roster_get(5);
+        G.bossS.set = &fixture;
+        fighter_idle(&G.bossS);
+        G.boss.x = G.bossHome = BOSS_X;
+        G.boss.y = GROUND_LOW;
+        G.boss.faceLeft = true;
+        settings_default(&G.settings);
+        settings_for_level(&G.settings, 5);
+        duel_init(&G.duel, &G.settings, G.m, 100 + k);
+        G.duel.phase = PH_WINDUP;
+        G.duel.move = 2; /* sumiço */
+        G.duel.windupDuration = 0.87f;
+        G.duel.strikeAt = 0.87;
+        G.duel.strikeLead = leads[k];
+        G.windupLen = G.duel.windupDuration - leads[k];
+        G.windupSpr = G.duel.windupDuration - duel_strike_lead_base(&G.duel);
+        G.bossWinding = true;
+        Duel before = G.duel;
+        DuelTimeline timeline = duel_timeline(&G.duel);
+        sprite_windup();
+        REQUIRE(G.leap == LEAP_WARP, "sumiço do Karasu não começou");
+        REQUIRE(G.bossStepTo > G.bossStep, "Karasu não recua para a direita");
+        REQUIRE(G.leapAt < G.leapAir &&
+                G.leapAir <= timeline.cue - timeline.start - KARASU_WARP_ANTES_AVISO + 0.001f,
+                "Karasu reaparece depois do aviso");
+        for (int i = 0; i < 180 && G.leapStage == 0; i++) fighters_update(1.0f / 120);
+        REQUIRE(G.leapStage == 1 && G.bossHidden, "Karasu não virou penas no fim do recuo");
+        int darkFeathers = 0, rightFeathers = 0;
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            if (!G.fx.p[i].alive || G.fx.p[i].kind != P_FEATHER) continue;
+            darkFeathers++;
+            if (G.fx.p[i].pos.x > BOSS_X + 20) rightFeathers++;
+        }
+        REQUIRE(darkFeathers >= 20 && rightFeathers >= 20, "o rastro escuro não saiu à direita");
+        for (int i = 0; i < 180 && G.leapStage == 1; i++) fighters_update(1.0f / 120);
+        REQUIRE(G.leapStage == 2 && !G.bossHidden, "Karasu não reapareceu em pose de ataque");
+        REQUIRE(G.bossS.pl.anim == G.bossS.strike && G.bossS.pl.frame == anim_hold(G.bossS.strike),
+                "Karasu reapareceu sem a espada preparada");
+        REQUIRE(memcmp(&G.duel, &before, sizeof before) == 0, "core mudou durante o sumiço visual");
+    }
+}
+
 static void damage_has_no_burst(void) {
     memset(&G, 0, sizeof G);
     fx_init(&G.fx);
@@ -273,7 +320,8 @@ static void hanzo_uses_walk_when_available(void) {
 
 int main(int argc, char **argv) {
     fake_sprites();
-    flaming_actions(); sword_attachment(); jump_and_frame_time(); damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
+    flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
+    damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
     gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
