@@ -88,6 +88,9 @@ Esc enche um anel e pula; segurar o clique acelera).
   não mudam (`AJ_ESPERA_X`, `AJ_ESPERA_X_IRREGULAR` e `AJ_PAUSA_SEQUENCIA`, em `src/ajuste.h`; 1,0 e 0,8 voltam ao
   antigo). A pausa não pode cair abaixo do fim da recuperação do mestre (0,32 s) nem deixar de ter um tempo depois da
   janela de "tarde" (`test_aperto_cedo`, no `core_test`).
+  Nas cenas, do golpe final à fala do vencido passam 2,6 s (o hitstop, a câmera lenta do desarme, a espada que crava e
+  `AJ_ESPADA_CRAVADA_ESPERA`) e, do selo quebrado do oboro à cena de fala, 1,6 s (`AJ_QUEBRA_ATE_A_CENA`); a
+  câmera lenta e o grito de depois da cena (`AJ_PAUSA_APOS_CENA_SELO`, do tamanho da animação) ficam como estavam.
 - O **hitstop** congela o duelo no impacto, e o tempo dele sai do golpe seguinte da
   sequência: o ritmo é sempre o mesmo, qualquer que seja o resultado. O jogo congela o
   tempo real pelo mesmo número de segundos (`hitstop_passo`), e o que sobra do quadro

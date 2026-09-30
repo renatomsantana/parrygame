@@ -604,7 +604,7 @@ static Vector2 mouse_ui(void) {
 
 /* Testes do jogo real (APARA_AUTO): uma linha por marco, para o script saber onde o jogo está. */
 static void marco_de_teste(const char *nome) {
-    if (G.autoJogo) fprintf(stderr, "TESTE_MARCO %s\n", nome);
+    if (G.autoJogo) fprintf(stderr, "TESTE_MARCO %s t=%.3f\n", nome, G.time);
     if (G.autoJogo && !strcmp(nome, "vitoria_salva") && getenv("APARA_VITORIA_LENTA")) G.lento = true;
 }
 
@@ -1708,6 +1708,7 @@ static void handle_events(void) {
                 if (!G.m->isBigBoss) banner(duel_stance(&G.duel)->name, AGED_GOLD);
                 break;
             case EV_SEAL: {
+                marco_de_teste("selo_quebrado");
                 static const char *names[] = {"primeiro selo", "segundo selo", "terceiro selo"};
                 banner(names[e->i < 3 ? e->i : 2], VERMILION);
                 audio_play(SND_SEAL, 1, 1);
@@ -1891,6 +1892,7 @@ static void update_actors(float dt) {
         if (G.state == ST_DUEL && G.staggerTime > AJ_QUEBRA_ATE_A_CENA && G.m->isBigBoss && seal >= 1 && seal <= 2 && !G.sealTold[seal]) {
             /* oboro para de lutar e fala; o grito vem depois */
             G.sealTold[seal] = true;
+            marco_de_teste("cena_do_selo");
             start_scene(seal == 1 ? SCENE_SEAL_1 : SCENE_SEAL_2);
         } else if (G.state == ST_DUEL && G.staggerTime > AJ_QUEBRA_ATE_A_CENA) {
             rig_pose(b, POSE_IDLE, 0.5f, EASE_INOUT);
@@ -2019,6 +2021,7 @@ static void update_finisher(float dt) {
     f_update(&G.bossS, dt);
     update_sword(dt);
     if (G.sword.stuck && G.sword.stuckTime > AJ_ESPADA_CRAVADA_ESPERA) {
+        marco_de_teste("fala_do_vencido");
         if (G.m->isBigBoss) start_scene(SCENE_KNEEL);   /* de joelhos, ele tira a máscara */
         else start_lines(G.m->outro, G.m->outroCount, ST_OUTRO);
     }

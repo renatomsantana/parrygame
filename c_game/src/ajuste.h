@@ -145,10 +145,10 @@
 /* ---- Ritmo das cenas e das telas (tempo do jogo; nada disto entra no julgamento) ---------- */
 /* Depois de quebrar um selo do oboro: o mestre se recompõe, e no 1º e no 2º selo a cena de fala
  * começa este tempo depois da quebra (tempo de jogo, na câmera lenta da quebra). */
-#define AJ_QUEBRA_ATE_A_CENA        1.3f
+#define AJ_QUEBRA_ATE_A_CENA        1.0f
 /* De volta ao duelo depois da cena do selo, o próximo golpe só começa depois disto (o grito). */
 #define AJ_PAUSA_APOS_CENA_SELO     1.8
-#define AJ_ESPADA_CRAVADA_ESPERA    1.1f    /* a espada do mestre crava; depois disto vem a fala final ou a cena */
+#define AJ_ESPADA_CRAVADA_ESPERA    0.8f    /* a espada do mestre crava; depois disto vem a fala final ou a cena */
 #define AJ_SILENCIO_QUEBRA          0.5f    /* a música abaixa depois de quebrar a postura */
 #define AJ_SILENCIO_DESARME         1.0f    /* ...depois do desarme */
 #define AJ_SILENCIO_MORTE_OBORO     1.5f    /* ...e no golpe que mata o oboro */

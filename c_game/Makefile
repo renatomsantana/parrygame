@@ -122,13 +122,14 @@ test: core_test test-fonte test-save test-entrada test-desempenho
 # as teclas de teste só existem com --teste e nada grava o progresso (teste_save), o rastro é só visual
 # (teste_rastro), a vitória é salva no golpe final e sobrevive a kill, ESC e Q e fechar (teste_vitoria), e o
 # carimbo do clique chega ao duelo no instante certo (teste_carimbo, com libXtst), e o APARA_PERF mede e sai
-# (teste_desempenho).
+# (teste_desempenho), e os tempos parados das cenas do desarme e do selo do oboro (teste_cenas).
 teste-jogo: apara
 	sh tests/teste_save.sh
 	sh tests/teste_rastro.sh
 	sh tests/teste_vitoria.sh
 	sh tests/teste_carimbo.sh
 	sh tests/teste_desempenho.sh
+	sh tests/teste_cenas.sh
 
 # Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, números, avisos e o jogo real.
 teste:
