@@ -994,7 +994,8 @@ static void test_cura_em_porcentagem(void) {
 
 /* A curva de dificuldade, pelos robôs (make robos mostra a tabela). O humano casual que
  * decora o ritmo: nos quatro primeiros, 95% ou mais; depois a vitória só cai (com 4 pontos
- * de folga para o sorteio), chega a uns 65% no jinshi e a uns 40% no oboro. E apertar sem
+ * de folga para o sorteio de 300 lutas), chega a uns 60% no jinshi e a uns 40% no oboro. A ordem
+ * exata, com folga de 0,5 ponto, é o make curva-ordem (tests/robos.c --ordem). E apertar sem
  * olhar, em qualquer ritmo de 0,05 a 0,8 s, perde de todos. */
 static void test_curva(void) {
     double anterior = 101, vit[ROSTER_SIZE];
@@ -1008,7 +1009,8 @@ static void test_curva(void) {
     }
     for (int i = 0; i < 4; i++) CHECK(vit[i] >= 95, "o humano casual vence %s em 95%% ou mais (%.0f%%)", roster_get(i)->name, vit[i]);
     CHECK(crescente, "a dificuldade só cresce pela trilha");
-    CHECK(vit[9] <= vit[8] + 4 && vit[9] >= vit[10] - 4 && vit[9] >= vit[11] - 4, "arashi não é mais difícil que yoru e jinshi (%.0f, %.0f, %.0f)",
+    /* a ordem fina (yoru nunca mais fácil que o arashi, jinshi nunca mais fácil que o yoru) precisa de muitas lutas: make curva-ordem */
+    CHECK(vit[9] <= vit[8] + 4 && vit[10] <= vit[9] + 4 && vit[11] <= vit[9] + 4, "yoru e jinshi não são mais fáceis que o arashi (%.0f, %.0f, %.0f)",
           vit[9], vit[10], vit[11]);
     CHECK(vit[11] >= 55 && vit[11] <= 75, "uns 65%% no jinshi (%.0f%%)", vit[11]);
     CHECK(vit[12] >= 30 && vit[12] <= 55 && vit[12] <= vit[11], "uns 40%% no oboro (%.0f%%)", vit[12]);

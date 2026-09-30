@@ -130,14 +130,15 @@ duas derrotas seguidas, dá para **conversar com hanzo** (no Oboro, ele só diz
 | 9 | suiren | mar (acelerando) | lança | Porto | 840 | 46 / 125 ms | 346 ms | 6 |
 | 10 | arashi | tempestade (dano 1,2×) | duas katanas | Salão do castelo na tempestade | 550 | 46 / 121 ms | 333 ms | 10 |
 | 11 | yoru | noite (apagões) | duas adagas (ao contrário) | Bambuzal | 970 | 44 / 119 ms | 320 ms | 5 |
-| 12 | jinshi | lua (sem som) | katana bem branca, forjada com a lua | Encosta da serra | 610 | 44 / 119 ms | 350 ms (brilho) | 5 |
+| 12 | jinshi | lua (sem som) | katana bem branca, forjada com a lua | Encosta da serra | 610 | 43 / 119 ms | 350 ms (brilho) | 5 |
 | 13 | **oboro** | hanzo → devorador de posturas → oni (uma por selo) | katana de hanzo | Dojo de hanzo | 360 · 1800 · 450 | 62 → 51 → 42 ms | 380 → 350 → 320 ms | 5 · 10 · 4 |
 
 A curva foi afinada com os robôs (`make robos`, o núcleo exato, que não depende da
 taxa de quadros): o humano casual que decora o ritmo vence os cinco primeiros
 (garfiel com 6 erros já vai a uns 100%), e a vitória cai sem degraus até uns 60% no
-jinshi e uns 43% no oboro (100, 100, 100, 100, 100, 91, 84, 81, 73, 63, 62, 60, 43); apertar sem olhar, em qualquer ritmo, perde de
-todos (`test_curva`). As janelas apertam pela trilha; os erros até cair corrigem
+jinshi e uns 41% no oboro (100, 100, 100, 100, 100, 91, 84, 80, 72, 64, 59, 58, 41); apertar sem olhar, em qualquer ritmo, perde de
+todos (`test_curva`). Do karasu ao oboro a curva cai com folga de 0,5 ponto de um mestre para o seguinte, conferida com 100 mil
+lutas por mestre (`make curva-ordem`); a janela perfeita do jinshi, 43 ms (a do yoru é 44), é o que o põe abaixo do yoru. As janelas apertam pela trilha; os erros até cair corrigem
 o que é de cada um (o ritmo fácil do garfiel, os golpes duplos do arashi).
 
 **Oboro**, três selos: na **postura de hanzo**, abre sempre com a *lição

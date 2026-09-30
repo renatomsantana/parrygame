@@ -14,6 +14,10 @@
  *       As brasas são somadas por quadro antes de o quadro julgar o golpe que caiu dentro dele, então
  *       um parry perfeito que as apaga no meio de um quadro chega até um quadro de brasa tarde; isso
  *       muda ~0,4% das lutas dele entre as taxas, e o teste só exige que fique abaixo de 2%.
+ *   robos_relatorio --ordem [lutas]            make curva-ordem: o casual (ms exato, 60 Hz) do karasu ao oboro, com muitas
+ *       lutas (100000 por mestre, em todos os núcleos da máquina), tem de ser decrescente com folga de 0,5 ponto de um mestre
+ *       para o seguinte: o yoru nunca mais fácil que o arashi, nem o jinshi mais fácil que o yoru. Escreve a tabela com a
+ *       margem de erro (95%) e sai com erro se a ordem quebrar.
  *       Mostra também o casual com o clique no meio do quadro, que é o que o jogo faz hoje, ao lado
  *       da coluna em ms exato.
  */
@@ -22,7 +26,9 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <string.h>
+#include <unistd.h>
 
 typedef struct { const char *nome; Robo r; } Coluna;
 
@@ -95,7 +101,57 @@ static int taxas(int n) {
     return divergem || !brasasOk ? 1 : 0;
 }
 
+/* ---- a ordem da curva, do karasu ao oboro ---- */
+#define ORDEM_DE 5                 /* karasu, o 6º mestre */
+#define ORDEM_N (13 - ORDEM_DE)
+#define ORDEM_FOLGA 0.5            /* pontos de vitória: cada mestre tem de ser ao menos isto mais difícil que o anterior */
+
+static struct { int lutas; long vit[ORDEM_N]; long proximo; pthread_mutex_t trava; } ordem_estado = {0, {0}, 0, PTHREAD_MUTEX_INITIALIZER};
+
+/* Cada luta é uma tarefa (mestre, semente): as threads pegam a próxima, e o resultado não depende de quem a fez. */
+static void *ordem_trabalha(void *arg) {
+    (void)arg;
+    for (;;) {
+        pthread_mutex_lock(&ordem_estado.trava);
+        long t = ordem_estado.proximo++;
+        pthread_mutex_unlock(&ordem_estado.trava);
+        if (t >= (long)ORDEM_N * ordem_estado.lutas) return NULL;
+        int i = ORDEM_DE + (int)(t / ordem_estado.lutas);
+        uint32_t semente = 1000u + (uint32_t)(t % ordem_estado.lutas);
+        bool vitoria = robo_lutar_hz(&ROBO_HUMANO_CASUAL, roster_get(i), i, semente, AJ_ROBO_HZ_PADRAO, false).vitoria;
+        pthread_mutex_lock(&ordem_estado.trava);
+        ordem_estado.vit[i - ORDEM_DE] += vitoria;
+        pthread_mutex_unlock(&ordem_estado.trava);
+    }
+}
+
+static int ordem(int lutas) {
+    long nucleos = sysconf(_SC_NPROCESSORS_ONLN);
+    if (nucleos < 1) nucleos = 1;
+    if (nucleos > 16) nucleos = 16;
+    ordem_estado.lutas = lutas;
+    pthread_t th[16];
+    for (long i = 0; i < nucleos; i++) pthread_create(&th[i], NULL, ordem_trabalha, NULL);
+    for (long i = 0; i < nucleos; i++) pthread_join(th[i], NULL);
+    printf("Casual, ms exato, %d lutas por mestre: a curva do karasu ao oboro tem de cair, com folga de %.1f ponto\n\n| Mestre | vitórias (%%) | ± (95%%) | o anterior menos este |\n|---|---|---|---|\n", lutas, ORDEM_FOLGA);
+    int falhas = 0;
+    double anterior = 0;
+    for (int k = 0; k < ORDEM_N; k++) {
+        double p = (double)ordem_estado.vit[k] / lutas, v = 100 * p, ic = 196 * sqrt(p * (1 - p) / lutas);
+        if (k == 0) printf("| %s | %.2f | %.2f | |\n", roster_get(ORDEM_DE + k)->name, v, ic);
+        else {
+            bool ok = anterior - v >= ORDEM_FOLGA;
+            printf("| %s | %.2f | %.2f | %+.2f %s |\n", roster_get(ORDEM_DE + k)->name, v, ic, anterior - v, ok ? "" : "(FALHA: a ordem quebrou)");
+            falhas += !ok;
+        }
+        anterior = v;
+    }
+    printf("\n%s\n", falhas ? "ordem: a curva não cai com a folga de 0,5 ponto (FALHA)" : "ordem: a curva cai do karasu ao oboro");
+    return falhas ? 1 : 0;
+}
+
 int main(int argc, char **argv) {
+    if (argc > 1 && strcmp(argv[1], "--ordem") == 0) return ordem(argc > 2 && atoi(argv[2]) > 0 ? atoi(argv[2]) : 100000);
     if (argc > 1 && strcmp(argv[1], "--taxas") == 0) return taxas(argc > 2 && atoi(argv[2]) > 0 ? atoi(argv[2]) : 100);
     int n = argc > 1 ? atoi(argv[1]) : 300;
     double hz = argc > 2 ? atof(argv[2]) : 60;

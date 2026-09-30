@@ -56,7 +56,7 @@ core_test: $(CORE) tests/core_test.c src/core.h src/ajuste.h src/robo.h
 # Curva de dificuldade: os robôs contra cada aprendiz (make robos LUTAS=300).
 LUTAS ?= 300
 robos_relatorio: $(CORE) tests/robos.c src/core.h src/ajuste.h src/robo.h
-	$(CC) $(CFLAGS) $(CORE) tests/robos.c -o $@ -lm
+	$(CC) $(CFLAGS) $(CORE) tests/robos.c -o $@ -lm -lpthread
 
 HZ ?= 60
 QUADROS ?= 0
@@ -107,6 +107,11 @@ desempenho_test: src/desempenho.c src/desempenho.h tests/desempenho_test.c
 test-desempenho: desempenho_test
 	./desempenho_test
 
+# A curva do casual tem de cair do karasu ao oboro, com folga de 0,5 ponto (100 mil lutas por mestre, todos os núcleos).
+ORDEM_LUTAS ?= 100000
+curva-ordem: robos_relatorio
+	./robos_relatorio --ordem $(ORDEM_LUTAS)
+
 # Nenhum número mágico nas regras (src/core.c, src/robo.c e src/entrada.c): os números têm nome no ajuste.h ou no roster.c.
 numeros:
 	sh tests/numeros.sh
@@ -131,11 +136,12 @@ teste-jogo: apara
 	sh tests/teste_desempenho.sh
 	sh tests/teste_cenas.sh
 
-# Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, números, avisos e o jogo real.
+# Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, a ordem da curva, números, avisos e o jogo real.
 teste:
 	$(MAKE) test
 	$(MAKE) fuzz-rapido
 	$(MAKE) robos-taxas
+	$(MAKE) curva-ordem
 	$(MAKE) numeros
 	$(MAKE) avisos
 	$(MAKE) teste-jogo
@@ -147,4 +153,4 @@ run: apara
 clean:
 	rm -f apara core_test fonte_test save_test entrada_test desempenho_test fuzz_test robos_relatorio personagens
 
-.PHONY: all packs sprites run clean robos robos-taxas fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho teste teste-jogo
+.PHONY: all packs sprites run clean robos robos-taxas curva-ordem fuzz fuzz-rapido numeros avisos test test-fonte test-save test-entrada test-desempenho teste teste-jogo
