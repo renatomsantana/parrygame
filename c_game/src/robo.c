@@ -16,6 +16,11 @@ Robo robo_reacao(float segundos) {
     return r;
 }
 
+Robo robo_deslocado(float segundos) {
+    Robo r = {ROBO_DESLOCADO, 0, 0, 0, 0, segundos};
+    return r;
+}
+
 void robo_iniciar(RoboMente *m, const Robo *r, uint32_t semente) {
     memset(m, 0, sizeof *m);
     m->r = *r;
@@ -42,6 +47,8 @@ static double planejar(RoboMente *m, const Duel *d) {
     double aviso = duel_cue_time(d);
     bool avisoPercebido = d->m->cueAudio > 0 || d->m->cueVisual > 0;   /* o som ou o brilho */
     switch (r->tipo) {
+        case ROBO_DESLOCADO:
+            return contato + r->desloc;
         case ROBO_REACAO: {
             /* a lâmina partindo se vê e se ouve (o assobio do golpe) */
             double partida = contato - duel_strike_lead(d);
@@ -80,6 +87,17 @@ bool robo_quer_apertar(RoboMente *m, const Duel *d, double dt) {
             if (d->clock + dt * 0.5 < m->spam) return false;
             m->spam = d->clock + m->r.periodo;
             return true;
+        case ROBO_DESLOCADO:
+            /* o plano sobrevive ao julgamento do golpe: o aperto tarde vem depois dele */
+            if (d->phase == PH_WINDUP && d->attacks != m->ataque) {
+                m->ataque = d->attacks;
+                m->aperta = planejar(m, d);
+            }
+            if (m->aperta >= 0 && m->aperta < d->clock + dt) {
+                m->aperta = -1;
+                return true;
+            }
+            return false;
         default:
             break;
     }
@@ -125,7 +143,8 @@ double robo_aperto_em(RoboMente *m, const Duel *d, double dt) {
         m->ataque = d->attacks;
         double t = planejar(m, d);
         double limite = d->strikeAt + d->s.lateGrace + d->s.latency;
-        if (t >= 0 && t <= limite + AJ_EPS_TEMPO && m->npend < AJ_ROBO_PLANOS) m->pend[m->npend++] = t;
+        bool vale = t <= limite + AJ_EPS_TEMPO || m->r.tipo == ROBO_DESLOCADO;   /* o deslocado aperta tarde de propósito */
+        if (t >= 0 && vale && m->npend < AJ_ROBO_PLANOS) m->pend[m->npend++] = t;
     }
     int b = -1;
     for (int i = 0; i < m->npend; i++)

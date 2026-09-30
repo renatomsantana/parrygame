@@ -57,6 +57,19 @@ Com `--teste`, na luta ou na derrota: **R** recomeça, **V** enche a vida, **P**
 do mestre, **1 2 3** escolhem a fase do oboro, **N** / **B** vão ao próximo / anterior mestre.
 `--teste`, `--master`, `--duel`, `--state`, `--fase`, `--final` e `--demo` nunca gravam o progresso.
 
+## Gravar vídeos (sem tela, sem áudio)
+
+```sh
+tools/gravar_video.sh saida.mp4 T0 T1 "linha 1" "linha 2" APARA_DEBUG=1 APARA_SEMENTE=11 -- --demo --master 1 --duel
+```
+
+Roda o jogo sob xvfb com passo fixo (`--rec`), escreve cada quadro em RGB cru para o `ffmpeg` (`APARA_REC_RAW`) e faz um mp4 de 60
+quadros por segundo de tempo de jogo, por mais lento que o vídeo por software seja, com uma faixa de legenda em cima e o tempo de
+jogo no canto. `T0` e `T1` são segundos de jogo. Sem som: com `APARA_DEBUG=1` o F3 mostra o aviso, o contato e o resultado de cada
+parry. Precisa do `ffmpeg` (com o libass; `FFMPEG=/caminho`). Ganchos para os vídeos: `APARA_ROBO=cedo|tarde|casual|spam|nunca`
+(o robô do `--demo`: `cedo` aperta 0,6 s antes do contato, `tarde` 0,1 s depois), `APARA_CLIQUE_PERIODO=0,05` (fora do duelo o robô
+clica a cada 50 ms e um ponto vermelho no canto mostra cada clique), `APARA_REC_FPS`.
+
 ## Ajustar
 
 - `src/ajuste.h`: todas as constantes globais de equilíbrio e de sensação (vida, janelas, aviso,

@@ -358,9 +358,14 @@ static struct {
         bool pausado;
     } cal;
     RoboMente robo;           /* --demo: o robô perfeito dos testes */
+    Robo roboEscolhido;       /* o robô do demo: o perfeito, ou o de APARA_ROBO (cedo, tarde, casual, spam, nunca) */
+    float cliquePeriodo;      /* fora do duelo, o robô clica a cada isto (AJ_AUTO_CLIQUE_PERIODO; APARA_CLIQUE_PERIODO) */
+    float cliqueFlash;        /* s que faltam para apagar o ponto de "clique" (só com APARA_CLIQUE_PERIODO) */
+    double recDt;             /* --rec: o passo fixo de cada quadro (1/30; APARA_REC_FPS) */
+    FILE *recRaw;             /* APARA_REC_RAW: os quadros em RGB cru, para o ffmpeg ler */
     const char *shotFile;
     float shotTime;
-    const char *recDir;       /* --rec: quadros a 30 por segundo, para GIFs */
+    const char *recDir;       /* --rec: quadros com passo fixo (30 por segundo, ou APARA_REC_FPS), para GIFs e vídeos */
     float recStart, recEnd;
     int recFrame;
 } G;
@@ -377,7 +382,10 @@ static float smooth(float t) { t = clampf(t, 0, 1); return t * t * (3 - 2 * t); 
 
 static bool pressed(void) {
     /* No modo demonstração, o robô também avança falas e painéis. */
-    if ((G.demo || G.autoJogo) && G.state != ST_DUEL && fmodf(G.stateTime, AJ_AUTO_CLIQUE_PERIODO) < GetFrameTime()) return true;
+    if ((G.demo || G.autoJogo) && G.state != ST_DUEL && fmodf(G.stateTime, G.cliquePeriodo) < (G.recDir ? (float)G.recDt : GetFrameTime())) {
+        G.cliqueFlash = 0.05f;
+        return true;
+    }
     if (G.demo && (G.shotFile || G.recDir)) return false; /* capturas: só o robô joga */
     return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER);
 }
@@ -945,7 +953,7 @@ static void start_duel(void) {
     G.settings.audioLead = G.latAudio - G.latVideo;
     G.special = false;
     duel_init(&G.duel, &G.settings, G.m, getenv("APARA_SEMENTE") ? (uint32_t)atoi(getenv("APARA_SEMENTE")) : (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919));
-    robo_iniciar(&G.robo, &ROBO_DO_DEMO, 1);
+    robo_iniciar(&G.robo, &G.roboEscolhido, 1);
     setup_actors();
     ren_draw_sword();
     fx_clear(&G.fx);
@@ -3135,7 +3143,7 @@ static void ui_debug(Rectangle dst) {
     const Move *mv = duel_move(d);
     Color branco = {235, 235, 235, 255}, cinza = {160, 160, 170, 255};
     DBG_LINHA(YELLOW, "DEBUG (F3)  %s  %s", G.m->name, st->name && st->name[0] ? st->name : "");
-    DBG_LINHA(branco, "fase: %s   relógio %.2f s   quadro %.1f ms%s%s", FASE[d->phase], d->clock, GetFrameTime() * 1000,
+    DBG_LINHA(branco, "fase: %s   relógio %.2f s   quadro %.1f ms%s%s", FASE[d->phase], d->clock, (G.recDir ? G.recDt : GetFrameTime()) * 1000,
               d->earlyUsed && d->phase == PH_WINDUP ? "   apertou cedo: sem perfeito" : "",
               d->pressBlockedUntil > d->clock ? "   recarga" : "");
     DBG_LINHA(branco, "golpe: %s  %d de %d   preparação %.0f ms%s%s", mv ? mv->name : "-", d->comboStrike + 1,
@@ -3188,7 +3196,8 @@ static void ui_debug(Rectangle dst) {
     DrawText("azul: aviso  marrom: lâmina partindo  verde/ouro: janelas  vermelho: contato  branco: agora  rosa: seu aperto",
              (int)x, (int)(bar.y + bar.height + 30 * u), fp, cinza);
     if (G.teste)
-        DrawText(TextFormat("%s   |   modo de teste: o progresso não é salvo", G.teclas ? "teclas: R recomeça  V vida cheia  P postura cheia  1 2 3 fase do oboro  N B próximo e anterior" : "opções de teste: o progresso não é salvo"),
+        DrawText(G.teclas ? "teclas: R recomeça  V vida cheia  P postura cheia  1 2 3 fase do oboro  N B próximo e anterior   |   modo de teste: o progresso não é salvo"
+                          : "opções de teste: o progresso não é salvo",
                  (int)x, (int)(bar.y + bar.height + 50 * u), fp, (Color){255, 200, 120, 255});
 #undef DBG_LINHA
 }
@@ -3621,6 +3630,18 @@ int main(int argc, char **argv) {
     G.rastro = getenv("APARA_RASTRO") ? atoi(getenv("APARA_RASTRO")) != 0 : AJ_RASTRO_FANTASMA != 0;
     G.logImpactos = getenv("APARA_LOG_IMPACTOS") != NULL;
     G.logCarimbos = getenv("APARA_LOG_CARIMBOS") != NULL;
+    /* Ganchos dos vídeos e dos testes: o robô do demo, o clique fora do duelo e o passo do --rec */
+    G.roboEscolhido = ROBO_DO_DEMO;
+    if (getenv("APARA_ROBO")) {
+        const char *r = getenv("APARA_ROBO");
+        if (!strcmp(r, "cedo")) G.roboEscolhido = robo_deslocado(-0.60f);          /* antes do aviso de qualquer mestre */
+        else if (!strcmp(r, "tarde")) G.roboEscolhido = robo_deslocado(0.10f);     /* depois de o golpe entrar */
+        else if (!strcmp(r, "casual")) G.roboEscolhido = ROBO_HUMANO_CASUAL;
+        else if (!strcmp(r, "spam")) G.roboEscolhido = ROBO_APERTA_SEM_PARAR;
+        else if (!strcmp(r, "nunca")) G.roboEscolhido = ROBO_SEM_DEFESA;
+    }
+    G.cliquePeriodo = getenv("APARA_CLIQUE_PERIODO") && atof(getenv("APARA_CLIQUE_PERIODO")) > 0 ? (float)atof(getenv("APARA_CLIQUE_PERIODO")) : AJ_AUTO_CLIQUE_PERIODO;
+    G.recDt = getenv("APARA_REC_FPS") && atof(getenv("APARA_REC_FPS")) >= 1 ? 1.0 / atof(getenv("APARA_REC_FPS")) : 1.0 / 30;
     parse_args(argc, argv, &startMaster, &direct, &startState);
     entrada_preparar();
     if (getenv("APARA_PERF") && atof(getenv("APARA_PERF")) > 0) {
@@ -3712,7 +3733,7 @@ int main(int argc, char **argv) {
     while (!WindowShouldClose()) {
         G.poll = entrada_relogio();
         if (G.perf && G.perfInicio == 0) G.perfInicio = G.poll;
-        float dtReal = G.recDir ? 1.0f / 30 : GetFrameTime();
+        float dtReal = G.recDir ? (float)G.recDt : GetFrameTime();
         wall += dtReal;
         /* Travamento longo: pausa em vez de engolir o golpe. */
         if (dtReal > AJ_PAUSA_POR_TRAVAMENTO) {
@@ -3826,13 +3847,28 @@ int main(int argc, char **argv) {
         rlDrawRenderBatchActive();   /* as capturas leem a tela antes do EndDrawing */
         double pf4 = perf_agora();
 
+        if (G.cliqueFlash > 0) {
+            /* APARA_CLIQUE_PERIODO: um ponto no canto mostra cada clique do robô (só nos vídeos dos testes) */
+            if (getenv("APARA_CLIQUE_PERIODO")) DrawCircle(GetScreenWidth() - 40, 40, 14, (Color){255, 60, 60, 255});
+            G.cliqueFlash -= (float)G.recDt;
+        }
         if (G.recDir && wall >= G.recStart) {
-            char path[512];
-            snprintf(path, sizeof path, "%s/q%04d.png", G.recDir, G.recFrame++);
             Image img = LoadImageFromScreen();
             ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
-            ImageResize(&img, UI_W / 2, UI_H / 2);
-            ExportImage(img, path);
+            if (getenv("APARA_REC_RAW")) {
+                /* RGB cru, um quadro atrás do outro, na tela inteira: o ffmpeg lê e faz o vídeo (tools/gravar_video.sh) */
+                if (!G.recRaw) {
+                    G.recRaw = fopen(getenv("APARA_REC_RAW"), "wb");
+                    fprintf(stderr, "REC_RAW %d %d\n", img.width, img.height);
+                }
+                if (G.recRaw) { fwrite(img.data, 1, (size_t)img.width * (size_t)img.height * 3, G.recRaw); fflush(G.recRaw); }
+                G.recFrame++;
+            } else {
+                char path[512];
+                snprintf(path, sizeof path, "%s/q%04d.png", G.recDir, G.recFrame++);
+                ImageResize(&img, UI_W / 2, UI_H / 2);
+                ExportImage(img, path);
+            }
             UnloadImage(img);
             if (wall >= G.recEnd) { EndDrawing(); break; }
         }
@@ -3857,6 +3893,7 @@ int main(int argc, char **argv) {
         }
         if (G.lento) WaitTime(1.0 / 30);
     }
+    if (G.recRaw) fclose(G.recRaw);
     if (G.perf) perf_relatorio();
 
     audio_shutdown();

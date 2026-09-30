@@ -1025,6 +1025,39 @@ static void test_curva(void) {
     CHECK(spam == 0, "apertar sem olhar, em qualquer ritmo de 0,05 a 0,8 s, perde de todos (%d vitórias em 3120)", spam);
 }
 
+/* Os robôs do "cedo" e do "tarde" (nos vídeos: APARA_ROBO=cedo|tarde): um aperto sempre no mesmo deslocamento do contato. Antes do
+ * aviso, o golpe entra sem defesa e o jogo diz "cedo"; depois de o golpe entrar, diz "tarde"; nenhum dos dois defende (no
+ * segundo golpe de uma sequência o aviso é o contato anterior, e o mesmo aperto vira uma tentativa que erra a janela). */
+static void test_robos_deslocados(void) {
+    for (int quem = 0; quem < 2; quem++) {
+        Robo r = robo_deslocado(quem == 0 ? -0.60f : 0.10f);
+        const MasterProfile *m = roster_get(0);
+        Settings s;
+        settings_default(&s);
+        Duel d;
+        duel_init(&d, &s, m, 7);
+        RoboMente me;
+        robo_iniciar(&me, &r, 7);
+        DuelEvent ev[MAX_EVENTS];
+        int cedo = 0, tarde = 0, tentativas = 0, defendidos = 0, entradas = 0;
+        while (d.phase != PH_FINISHED && d.clock < 60) {
+            d.renPosture = s.renPosture;                       /* a luta não acaba: interessa o comportamento */
+            duel_step_at(&d, 1.0 / 60, robo_aperto_em(&me, &d, 1.0 / 60));
+            int n = duel_drain(&d, ev, MAX_EVENTS);
+            for (int i = 0; i < n; i++) {
+                if (ev[i].kind == EV_PRESS) { cedo += ev[i].i == PRESS_CEDO; tarde += ev[i].i == PRESS_TARDE; tentativas += ev[i].i == PRESS_TENTATIVA; }
+                if (ev[i].kind == EV_IMPACT) { entradas++; defendidos += ev[i].judgement != J_RUIM; }
+            }
+        }
+        CHECK(entradas > 10, "%s: o golpe chega (%d golpes)", quem == 0 ? "cedo" : "tarde", entradas);
+        /* nos golpes de uma sequência a preparação já começou depois do aviso (o contato anterior): o aperto vira uma tentativa fora da janela */
+        CHECK(defendidos == 0 && tentativas <= entradas / 2, "%s: nunca defende (%d defesas; %d tentativas fora da janela em %d golpes)", quem == 0 ? "cedo" : "tarde", defendidos,
+              tentativas, entradas);
+        if (quem == 0) CHECK(cedo >= entradas / 2 && tarde == 0, "cedo: o jogo diz \"cedo\" (%d em %d golpes) e nunca \"tarde\" (%d)", cedo, entradas, tarde);
+        else CHECK(tarde >= entradas / 2 && cedo == 0, "tarde: o jogo diz \"tarde\" (%d em %d golpes) e nunca \"cedo\" (%d)", tarde, entradas, cedo);
+    }
+}
+
 /* Oboro. Fase 1: abre com a lição completa, sete golpes. Fase 2: os doze padrões dos
  * aprendizes, cada um igual ao do aprendiz (intervalos, aparência, duplo e preparação),
  * na ordem da trilha na primeira volta e depois sorteados. Fase 3: os mesmos doze com a
@@ -2382,6 +2415,7 @@ int main(void) {
     test_calibracao_alta();
     test_traco_aleatorio();
     test_ritmo();
+    test_robos_deslocados();
     test_teste_a_mao();
     test_timeline();
     test_movesets();

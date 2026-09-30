@@ -18,6 +18,8 @@ typedef enum {
     ROBO_REACAO,     /* não decora nada: reage ao último sinal antes do contato (a lâmina
                         partindo, que se ouve no assobio do golpe, ou o aviso, o que vier
                         depois) depois de `reacao` s; ao som, 50 ms mais rápido */
+    ROBO_DESLOCADO,  /* aperta sempre `desloc` s em relação ao contato (negativo: cedo, antes do aviso; positivo: tarde, depois
+                        de o golpe entrar): mostra o "cedo" e o "tarde" do jogo, nos vídeos e nos testes */
     ROBO_HUMANO      /* decora o padrão: mede o tempo até o contato a partir do último sinal
                         que ainda dá tempo de usar (o começo da preparação ou o aviso) e
                         erra em proporção ao intervalo medido (`ritmo`) mais a mão (`mao`) */
@@ -29,6 +31,7 @@ typedef struct {
     float ritmo;     /* HUMANO: erro ao medir um intervalo, fração dele (0,08 = casual) */
     float mao;       /* REACAO, HUMANO: desvio-padrão da mão, s */
     float periodo;   /* SPAM: s entre apertos */
+    float desloc;    /* DESLOCADO: s depois do contato (negativo: antes) */
 } Robo;
 
 #define ROBO_QUADRO (1.0 / AJ_ROBO_HZ_PADRAO)   /* o robô joga em quadros de 60 Hz, como o jogo */
@@ -37,6 +40,7 @@ typedef struct {
 /* Os robôs do relatório. */
 extern const Robo ROBO_DO_DEMO, ROBO_SEM_DEFESA, ROBO_APERTA_SEM_PARAR, ROBO_HUMANO_CASUAL;
 Robo robo_reacao(float segundos);
+Robo robo_deslocado(float segundos);   /* aperta `segundos` depois do contato (negativo: antes) */
 
 /* O que o robô pensa durante uma luta. */
 typedef struct {
