@@ -6,6 +6,8 @@
 #define _POSIX_C_SOURCE 200809L
 #include "../src/salvar.h"
 
+#include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -196,10 +198,20 @@ static void teste_corrompidos(void) {
     limpa();
 }
 
+/* Uma pasta nova só deste processo. Não usa mkdtemp: com -std=c11 e _POSIX_C_SOURCE o macOS não o declara (o make teste
+ * parava aqui no Mac); mkdir com o pid no nome (e uma volta se a pasta já existir) funciona em qualquer POSIX. */
+static bool pasta_temporaria(const char *base) {
+    for (int n = 0; n < 1000; n++) {
+        snprintf(dir, sizeof dir, "%s/apara_save_test_%ld_%d", base, (long)getpid(), n);
+        if (mkdir(dir, 0700) == 0) return true;
+        if (errno != EEXIST) return false;
+    }
+    return false;
+}
+
 int main(void) {
     const char *base = getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp";
-    snprintf(dir, sizeof dir, "%s/apara_save_test_XXXXXX", base);
-    if (!mkdtemp(dir)) { perror("mkdtemp"); return 2; }
+    if (!pasta_temporaria(base)) { perror("mkdir"); return 2; }
     snprintf(caminho, sizeof caminho, "%s/apara_save.txt", dir);
     snprintf(bak, sizeof bak, "%s.bak", caminho);
     snprintf(tmp, sizeof tmp, "%s.tmp", caminho);
