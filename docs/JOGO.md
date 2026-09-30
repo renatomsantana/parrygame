@@ -121,7 +121,7 @@ duas derrotas seguidas, dá para **conversar com hanzo** (no Oboro, ele só diz
 |---:|---|---|---|---|---:|---:|---:|---:|
 | 1 | daichi | terra (bem devagar) | katana | Celeiro | 300 | 90 / 220 ms | 450 ms | 8 |
 | 2 | genbu | tartaruga | katana simples | Jardim de pedras do mosteiro | 330 | 82 / 203 ms | 437 ms | 8 |
-| 3 | raizo | touro | espadão | Pátio do dojo | 350 | 75 / 185 ms | 424 ms | 7 |
+| 3 | raizo | montanha | odachi | Pátio do dojo | 350 | 75 / 185 ms | 424 ms | 7 |
 | 4 | shizuku | gelo | florete de esgrima com geada | Cachoeira | 380 | 68 / 171 ms | 411 ms | 7 |
 | 5 | garfiel | tigre | garras nas duas mãos | Portão do tigre branco | 530 | 63 / 158 ms | 398 ms | 6 |
 | 6 | karasu | corvo | katana e wakizashi | Telhados da vila na chuva | 490 | 58 / 148 ms | 385 ms | 7 |
@@ -179,7 +179,7 @@ repertório mais variado e o ritmo irregular.
 |---|---|
 | daichi | rocha (1) · raiz (1) · sulco (1) · desabamento (2: 1,00) · arado (1) correndo · pedregulho (2: 1,10) saltando · **terremoto** (forte) |
 | genbu | casco (1) · mordida (2: 0,42) · carapaça (2: 0,60) · concha (1) · bote da tartaruga (1) correndo · maré lenta (2: 0,75) · casco fechado (2: 0,90) |
-| raizo | corte do touro (1) · investida dupla (2: 0,85) · coice (1) · marrada (2: 1,00) · estouro da boiada (1) correndo · pisada (2: 0,70) saltando · **chifrada** (forte) |
+| raizo | corte do cume (1) · fenda dupla (2: 0,85) · rasgo na laje (1) · ponta da serra (2: 1,00) · avalanche (1) correndo · queda de pedras (2: 0,70) saltando · **montanha partida** (forte). Todos com a odachi do pack e sinais cinza-pedra/ocre na lâmina. |
 | shizuku | floco (1) · geada (2: 0,45) · sincelo (2: 0,40) · estalactite (3: 0,45 0,40) · nevasca (4: 0,40 0,40 0,40) · gelo fino (1) · deslize (1) correndo · salto do cristal (2: 0,45) saltando · **glaciar** (forte) |
 | garfiel | patada (1) · garras cruzadas (2: 0,40) · rasgo (3: 0,40 0,40) · bote do tigre (3: 0,40 0,85) · fúria do tigre (6: 0,40 0,40 0,40 0,40 0,40) · caçada (7: 0,40 0,40 0,45 0,40 0,40 0,70) correndo · rugido (8: 0,40 0,40 0,40 0,40 0,40 0,40 0,80) · pulo do gato (2: 0,45) saltando · **salto do tigre** (forte) |
 | karasu | bicada (1) · garra (2: 0,55) · sumiço (1) sumindo · corvo fantasma (2: 0,55) sumindo · revoada (3: 0,50 0,90) ⚔ no 3º · bando (4: 0,45 0,45 0,45) ⚔ no 4º · duas penas (1) ⚔ · voo rasante (1) correndo · asa quebrada (2: 0,50) saltando · **mergulho** (forte) |
@@ -189,7 +189,7 @@ repertório mais variado e o ritmo irregular.
 | arashi | faísca (1) · duas tempestades (1) ⚔ · trovoada (2: 0,45) ⚔ no 2º · tormenta (3: 0,40 0,40) ⚔ no 3º · granizo (4: 0,40 0,40 0,40) · ventania (3: 0,40 0,70) · trovão (1) correndo ⚔ · raio duplo (2: 0,40) saltando ⚔ nos dois · céu partido (5: 0,40 0,40 0,40 0,80) ⚔ no 5º · **relâmpago** (forte) ⚔ |
 | yoru | sombra (1) · presas (2: 0,45) · lua nova (3: 0,45 0,80) · **eclipse** (forte) · vultos (3: 0,40 0,70) · breu (1) correndo · coruja (2: 0,45) saltando · meia-noite (4: 0,40 0,40 0,90) · nevoeiro (2: 0,70) |
 | jinshi | crescente (1) · minguante (3: 0,60 0,60) · fases da lua (4: 0,50 0,50 0,90) · luar (3: 0,45 1,00) · lua cheia (5: 0,50 0,50 0,50 0,90) · lua branca (6: 0,40 0,90 0,45 0,45 1,00) · noite branca (4: 1,00 0,40 0,40) · reflexo no lago (1) correndo · lua alta (2: 0,70) saltando · **halo** (forte) |
-| oboro | **postura de hanzo:** lição completa (7: 0,60 0,50 0,50 0,70 0,45 0,45), sempre a primeira · corte do mestre (1) · lição (2: 0,60) · estocada de hanzo (1) · três lições (3: 0,50 0,60) · passo de hanzo (1) correndo · salto do mestre (2: 0,55) saltando · **devorador de posturas** e **postura do oni:** os doze ecos, cada um igual ao golpe do aprendiz: eco da terra (desabamento) · da tartaruga (mordida) · do touro (investida dupla) · do gelo (nevasca) · do tigre (fúria do tigre) · do corvo (revoada ⚔) · do vento (foices gêmeas ⚔) · da chama (incêndio) · do mar (maré longa, de longe) · da tempestade (tormenta ⚔) · da noite (meia-noite) · da lua (lua cheia) |
+| oboro | **postura de hanzo:** lição completa (7: 0,60 0,50 0,50 0,70 0,45 0,45), sempre a primeira · corte do mestre (1) · lição (2: 0,60) · estocada de hanzo (1) · três lições (3: 0,50 0,60) · passo de hanzo (1) correndo · salto do mestre (2: 0,55) saltando · **devorador de posturas** e **postura do oni:** os doze ecos, cada um igual ao golpe do aprendiz: eco da terra (desabamento) · da tartaruga (mordida) · da montanha (fenda dupla) · do gelo (nevasca) · do tigre (fúria do tigre) · do corvo (revoada ⚔) · do vento (foices gêmeas ⚔) · da chama (incêndio) · do mar (maré longa, de longe) · da tempestade (tormenta ⚔) · da noite (meia-noite) · da lua (lua cheia) |
 
 ## Visual e som
 

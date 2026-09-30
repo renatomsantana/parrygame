@@ -1063,7 +1063,7 @@ static void test_robos_deslocados(void) {
  * na ordem da trilha na primeira volta e depois sorteados. Fase 3: os mesmos doze com a
  * espera antes do aviso x0,85, dano x1,25, aviso nunca abaixo de 320 ms e sem especial. */
 static const struct { int aprendiz; const char *golpe; } ECO[12] = {
-    {0, "desabamento"}, {1, "mordida"}, {2, "investida dupla"}, {3, "geada"}, {4, "fúria do tigre"}, {5, "revoada"},
+    {0, "desabamento"}, {1, "mordida"}, {2, "fenda dupla"}, {3, "geada"}, {4, "fúria do tigre"}, {5, "revoada"},
     {6, "foices gêmeas"}, {7, "incêndio"}, {8, "maré longa"}, {9, "tormenta"}, {10, "meia-noite"}, {11, "lua cheia"},
 };
 

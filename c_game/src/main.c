@@ -1568,7 +1568,7 @@ static void on_impact(const DuelEvent *e) {
 static const struct { const char *fx; int row; float y; int flags; float scale; } TELL[ROSTER_SIZE] = {
         {"70", 4, -8, VFX_FRONT, 0.6f},         /* daichi: poeira de terra (na cor do chão) */
         {"26", 3, -30, VFX_BACK | VFX_GLOW | VFX_BODY},    /* genbu: o casco acompanha o corpo */
-        {"14", 7, -30, VFX_BACK | VFX_GLOW},    /* raizo: rajada vermelha */
+        {"70", 4, -8, VFX_FRONT, 0.65f},        /* raizo: pó ocre aos pés */
         {"06", 2, -30, VFX_BACK},               /* shizuku: respingo */
         {"64", 0, -30, VFX_BACK | VFX_GLOW},    /* garfiel: garras */
         {"64", 8, -30, VFX_BACK},               /* karasu: asas escuras */
@@ -1587,6 +1587,40 @@ static void preload_runtime_art(void) {
     spr_ui_preload();
 }
 
+/* A odachi do Raizo avisa o peso de cada sequência: a posição e a direção das
+ * lascas mudam com o corte. Tudo parte da lâmina; só o avanço/salto levanta pó
+ * também dos pés. Não participa do relógio nem da colisão do golpe. */
+static void raizo_tell(Vector2 tip, Vector2 feet) {
+    const Move *mv = duel_move(&G.duel);
+    if (!mv) return;
+    Color stone = {188, 181, 166, 235}, ochre = {205, 160, 91, 225};
+    switch (mv->look) {
+        case LOOK_HIGH:   /* o cume: lascas sobem antes do corte vertical */
+            fx_burst(&G.fx, P_SHARD, tip, 8, 34, 0.55f, -1.57f, stone, ochre);
+            break;
+        case LOOK_LOW:    /* a fenda dupla denuncia dois cortes; a laje, só um */
+            fx_burst(&G.fx, P_SHARD, tip, mv->strikes > 1 ? 8 : 5, 32, 0.65f, 1.57f, stone, ochre);
+            if (mv->strikes > 1) fx_burst(&G.fx, P_DUST, feet, 5, 20, 0.55f, 3.14f, stone, ochre);
+            break;
+        case LOOK_THRUST: /* a ponta aponta para a guarda */
+            fx_burst(&G.fx, P_SHARD, tip, 7, 38, 0.45f, 3.14f, stone, ochre);
+            break;
+        case LOOK_DASH:   /* a avalanche desloca a base antes da lâmina */
+            fx_burst(&G.fx, P_SHARD, tip, 6, 36, 0.75f, 3.14f, stone, ochre);
+            fx_burst(&G.fx, P_DUST, feet, 8, 27, 0.65f, 3.14f, stone, ochre);
+            break;
+        case LOOK_JUMP:   /* pedras caem com o salto */
+            fx_burst(&G.fx, P_SHARD, tip, 9, 30, 0.70f, 1.57f, stone, ochre);
+            fx_burst(&G.fx, P_DUST, feet, 5, 20, 0.65f, -1.57f, stone, ochre);
+            break;
+        case LOOK_HEAVY:  /* a montanha se abre no golpe forte */
+            fx_burst(&G.fx, P_SHARD, tip, 12, 39, 0.85f, -1.57f, stone, ochre);
+            fx_ring(&G.fx, tip, 34, 0.23f, 1, stone);
+            break;
+        default: break;
+    }
+}
+
 /* Sinal próprio de cada vilão no começo de cada sequência: nunca dois iguais. */
 static void tell_fx(void) {
     Rig *b = &G.boss;
@@ -1594,12 +1628,13 @@ static void tell_fx(void) {
     boss_blade(&butt, &tip);
     Vector2 mid = {(butt.x + tip.x) / 2, (butt.y + tip.y) / 2};
     Vector2 feet = {b->x + b->offsetX - 9 * b->look.size, GROUND_LOW - 1};
+    int echo = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
     /* tom do gesto de cada mestre, na ordem da trilha */
     static const float pitch[ROSTER_SIZE] = {0.7f, 0.8f, 0.6f, 1.5f, 1.0f, 1.25f, 1.4f, 1.1f, 1.3f, 1.6f, 1.2f, 0.65f, 0.9f};
-    switch (G.m->id) {
+    if (G.m->id == 3 || echo == 2) raizo_tell(tip, feet);
+    else switch (G.m->id) {
         case 1: fx_burst(&G.fx, P_SPARK, feet, 10, 70, 0.6f, -1.2f, (Color){255, 190, 110, 255}, (Color){255, 140, 60, 255}); break;
         case 2: fx_burst(&G.fx, P_GEM, tip, 8, 40, 1.2f, 1.57f, (Color){200, 236, 255, 255}, (Color){120, 190, 240, 255}); break;
-        case 3: fx_burst(&G.fx, P_DUST, mid, 10, 20, 3.14f, 0, (Color){60, 40, 80, 170}, (Color){30, 20, 40, 150}); break;
         case 4: fx_burst(&G.fx, P_DUST, feet, 14, 50, 0.8f, -1.57f, (Color){170, 130, 90, 170}, (Color){110, 80, 50, 150}); break;
         case 5: fx_burst(&G.fx, P_PETAL, (Vector2){b->x + 20, GROUND_LOW - 40}, 10, 90, 0.4f, 3.14f, (Color){236, 240, 230, 220}, (Color){180, 220, 200, 200}); break;
         case 6: fx_burst(&G.fx, P_GEM, (Vector2){mid.x + 6, mid.y + 8}, 8, 30, 3.14f, 0, (Color){200, 230, 170, 255}, (Color){140, 170, 110, 255}); break;
@@ -1613,15 +1648,13 @@ static void tell_fx(void) {
     audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
     /* E o efeito do pack de cada um: onde nasce (no chão ou no corpo) e a cor. Oboro
      * usa o do aprendiz da postura em que está, em vermelho. */
-
     int ti = (G.m->id - 1) % ROSTER_SIZE, row = TELL[ti].row;
-    int echo = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
     if (G.m->isBigBoss && G.masked) { ti = 7; row = TELL[7].row; }   /* o oni: a lâmina acende */
-    else if (echo >= 0) { ti = echo; row = 7; }
+    else if (echo >= 0) { ti = echo; row = echo == 2 ? TELL[2].row : 7; }
     float sc = TELL[ti].scale > 0 ? TELL[ti].scale : 1;
     int flags = TELL[ti].flags;
     Vector2 pos = {b->x + b->offsetX, GROUND_LOW + TELL[ti].y * sc};
-    if (ti > 1) { flags |= VFX_SWORD; pos = tip; sc = fminf(sc, 0.5f); }
+    if (ti > 1 && ti != 2) { flags |= VFX_SWORD; pos = tip; sc = fminf(sc, 0.5f); }
     const SprFx *sheet = spr_fx(TELL[ti].fx);
     float fps = 22;
     if ((flags & VFX_SWORD) && sheet)
@@ -1639,8 +1672,9 @@ static void tell_fx(void) {
                 /* a fumaça branca do pack, menor e na paleta do cenário: a poeira na cor do
                    chão, o brilho da lua no lilás do céu da serra */
                 G.vfx[i].scale = sc;
-                G.vfx[i].tint = ti == 11 ? (Color){150, 120, 170, 255} :
-                    ti == 0 ? arena_dust(G.m->arena) : (Color){255, 255, 255, 210};
+                G.vfx[i].tint = ti == 2 ? (Color){228, 220, 204, 255}
+                               : ti == 11 ? (Color){150, 120, 170, 255}
+                               : ti == 0 ? arena_dust(G.m->arena) : (Color){255, 255, 255, 210};
             }
 }
 
@@ -1697,6 +1731,13 @@ static void aviso_brilho(bool primeiro) {
     Vector2 h, t;
     boss_blade(&h, &t);
     Vector2 at = {h.x + (t.x - h.x) * 0.75f, h.y + (t.y - h.y) * 0.75f};
+    if (G.m->id == 3 || (G.m->isBigBoss && echo_of(duel_move(&G.duel)) == 2)) {
+        /* Lascas cinza-pedra e ocre no instante do aviso, presas à odachi. */
+        fx_burst(&G.fx, P_SHARD, at, primeiro ? 7 : 4, 35, 0.70f, -1.57f,
+                 (Color){196, 192, 183, 255}, (Color){223, 177, 104, 255});
+        if (primeiro) fx_ring(&G.fx, at, 38, 0.18f, 1, (Color){219, 198, 158, 200});
+        return;
+    }
     bool lua = G.m->cueAudio <= 0;
     if (!primeiro) {
         fx_star(&G.fx, at, 8, 0.09f);
@@ -1811,6 +1852,9 @@ static void handle_events(void) {
                     fprintf(stderr, "IMPACTO contato %.5f julgamento %d antecedencia %.5f quadro %s %d\n", G.duel.lastStrikeAt, (int)e->judgement, e->a,
                             G.bossS.pl.anim ? G.bossS.pl.anim->name : "-", G.bossS.pl.frame);
                 on_impact(e);
+                if (m->id == 3 || (m->isBigBoss && echo_of(duel_move(&G.duel)) == 2))
+                    fx_burst(&G.fx, P_SHARD, clash_point(), 6, 43, 0.90f, 3.14f,
+                             (Color){185, 182, 174, 220}, (Color){203, 157, 92, 220});
                 sprite_impact(e);
                 G.special = false;
                 G.renParryTime = -1;
@@ -2769,7 +2813,7 @@ static void desenha_rastro_do_golpe(void) {
     float p = duel_launch_progress(&G.duel);
     if (p <= 0) return;
     static const Color TINT[ROSTER_SIZE] = {
-        {230, 150, 80, 255}, {130, 210, 150, 255}, {235, 90, 70, 255}, {110, 180, 255, 255},
+        {230, 150, 80, 255}, {130, 210, 150, 255}, {190, 172, 136, 255}, {110, 180, 255, 255},
         {250, 240, 210, 255}, {120, 110, 190, 255}, {140, 240, 200, 255}, {255, 140, 50, 255},
         {90, 150, 240, 255}, {190, 150, 255, 255}, {130, 110, 220, 255}, {225, 225, 235, 255},
         {235, 60, 70, 255},
