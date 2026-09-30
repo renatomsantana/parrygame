@@ -46,15 +46,33 @@ D=$(mede 13 selo_quebrado cena_do_selo)
 confere "$D s entre a quebra do selo e a cena (entre 1,35 e 1,75 s)" "$(awk -v d="$D" 'BEGIN { exit !(d != "faltou" && d >= 1.35 && d <= 1.75) }'; echo $?)"
 
 # aperta ESTADO NUMERO_DO_ESTADO: o jogo abre direto na tela (ela começa em t = 0), um clique atrás do outro cai em cima
-# dela; escreve o tempo de jogo entre o começo da tela e o primeiro marco de estado seguinte
+# dela; escreve o tempo de jogo entre o começo da tela e o primeiro marco de estado seguinte. Os cliques não param
+# até o jogo sair da tela (com a máquina ocupada o jogo pode levar segundos para abrir, e 100 cliques de 40 ms
+# acabavam antes dele: o teste dava "faltou" sem que nada estivesse errado); o teste espera até 60 s.
+PROG_ESTADO='$1 == "TESTE_MARCO" { if (ini == "" && $2 == e) { split($3, x, "="); ini = x[2] } else if (ini != "" && fim == "" && $2 ~ /^estado_/ && $2 != e) { split($3, x, "="); fim = x[2] } } END { if (ini != "" && fim != "") printf("%.3f\n", fim - ini); else print "faltou" }'
 aperta() {
-    APARA_AUTO=1 APARA_SEMENTE=11 timeout 120 xvfb-run -a -s '-screen 0 1280x720x24' sh -c '
+    TENTATIVA=1
+    while :; do
+        R=$(aperta_uma "$1" "$2")
+        [ "$R" != faltou ] || [ "$TENTATIVA" -ge 3 ] && break
+        TENTATIVA=$((TENTATIVA + 1))   # o jogo nem chegou a sair da tela (Xvfb ou janela que demorou): tenta de novo
+    done
+    [ "$R" = faltou ] && { echo "  (o log do jogo, sem marcos de estado:)" >&2; tail -5 "$TMP/$1.log" >&2; }
+    echo "$R"
+}
+aperta_uma() {
+    PROG_ESTADO="$PROG_ESTADO" APARA_AUTO=1 APARA_SEMENTE=11 timeout 120 xvfb-run -a -s '-screen 0 1280x720x24' sh -c '
         ./apara --master 1 --duel --state '"$1"' >"'"$TMP"'/'"$1"'.log" 2>&1 &
         PID=$!
+        (until "'"$TMP"'/xclique" 3000 40 >/dev/null 2>&1; do sleep 0.1; done) &
+        CLIQUES=$!
         N=0
-        until "'"$TMP"'/xclique" 100 40 >/dev/null 2>&1 || [ "$N" -ge 50 ]; do N=$((N + 1)); sleep 0.1; done
-        kill $PID 2>/dev/null; wait $PID 2>/dev/null'
-    awk -v e="estado_$2" '$1 == "TESTE_MARCO" { if (ini == "" && $2 == e) { split($3, x, "="); ini = x[2] } else if (ini != "" && fim == "" && $2 ~ /^estado_/ && $2 != e) { split($3, x, "="); fim = x[2] } } END { if (ini != "" && fim != "") printf("%.3f\n", fim - ini); else print "faltou" }' "$TMP/$1.log"
+        while [ "$N" -lt 600 ] && kill -0 $PID 2>/dev/null; do
+            [ "$(awk -v e="estado_'"$2"'" "$PROG_ESTADO" "'"$TMP"'/'"$1"'.log")" != faltou ] && break
+            sleep 0.1; N=$((N + 1))
+        done
+        kill $CLIQUES $PID 2>/dev/null; wait $PID 2>/dev/null'
+    awk -v e="estado_$2" "$PROG_ESTADO" "$TMP/$1.log"
 }
 
 if [ -n "$SEM_XTEST" ]; then
