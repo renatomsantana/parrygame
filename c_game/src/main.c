@@ -63,7 +63,7 @@
 #define SWORD_GRAVITY 380.0f
 #define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
 #define AFTER_MAX 8           /* silhuetas que o mestre deixa nos movimentos rápidos */
-enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP };
+enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP, LEAP_FEINT };
 #define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
 #define PIX_LORE 41
 #define PIX_TRAIL 42
@@ -229,6 +229,7 @@ static struct {
     float bossStrikeStep;     /* onde ele precisa estar no contato */
     int leap, leapStage;      /* investida correndo ou salto em curso (LEAP_*) */
     float leapT, leapAt, leapAir; /* tempo na preparação; quando corre ou salta; tempo no ar */
+    float feintFrom;           /* posição antes da ameaça de florete sem contato */
     float hopT, hopLen, hopH; /* arco do pulo do mestre (salto, recuo, ameaça) */
     float hopFrom, hopTo;
     bool hopTravel;           /* um caminho contínuo no ar, sem novo bote no lançamento */
@@ -1185,16 +1186,9 @@ static void boss_blade(Vector2 *butt, Vector2 *tip) {
         *tip = (Vector2){bx - 4 - fmaxf(10, G.boss.look.bladeLen * 0.9f), feet.y - h * 0.75f + G.bossS.squat};
 }
 
-/* Tipo do golpe k da sequência: o primeiro é o da sequência; os seguintes alternam. */
+/* Tipo visual do golpe k da sequência. Algumas armas mantêm sempre a mesma direção. */
 static MoveLook strike_look(void) {
-    const Move *mv = duel_move(&G.duel);
-    MoveLook look = mv ? mv->look : LOOK_HIGH;
-    int k = G.duel.comboStrike;
-    if (k == 0) return look;
-    if (look == LOOK_HEAVY || look == LOOK_JUMP || look == LOOK_WARP) return k % 2 ? LOOK_LOW : LOOK_HIGH;
-    if (look == LOOK_THRUST || look == LOOK_DASH || look == LOOK_FAR) return k % 2 ? LOOK_HIGH : LOOK_THRUST;
-    if (k % 2 == 0) return look;
-    return look == LOOK_HIGH ? LOOK_LOW : LOOK_HIGH;
+    return move_contact_look(duel_move(&G.duel), G.duel.comboStrike);
 }
 
 /* Nos bonecos, o golpe forte e o salto usam as poses do golpe alto; a investida, as da estocada. */
@@ -1368,6 +1362,20 @@ static void sprite_windup(void) {
         G.bossStepTo = fmaxf(G.bossStep, fminf(G.bossStrikeStep + 36, 48));
         G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.1f, w * 0.4f);
         boss_hop(fmaxf(0.1f, w * 0.3f), 3);
+        return;
+    }
+    if (first && duel_move(&G.duel) && duel_move(&G.duel)->feint) {
+        /* Um passo falso antes do aviso; recua e só então arma a estocada real.
+         * Não há quadro de contato nem mudança no relógio ou na hitbox. */
+        float beforeCue = fmaxf(0, w - (duel_aviso(&G.duel) - duel_strike_lead_base(&G.duel)));
+        G.leap = LEAP_FEINT;
+        G.leapT = 0;
+        G.leapAt = beforeCue * 0.35f;
+        G.leapAir = beforeCue * 0.75f;
+        G.feintFrom = G.bossStep;
+        G.bossStepTo = G.bossStep - 8;
+        G.bossStepSpeed = 8 / fmaxf(0.05f, G.leapAt);
+        f_add(f, a, 0, hold, fminf(w * 0.6f, antic));
         return;
     }
     f_add(f, a, 0, hold, first ? fminf(w * 0.6f, antic) : fminf(w, antic));
@@ -1904,6 +1912,18 @@ static void fighters_update(float dt) {
                 G.bossStepTo = G.hopTo;
                 G.hopTravel = true;
             }
+        }
+    }
+    if (G.leap == LEAP_FEINT && G.bossWinding) {
+        G.leapT += dt;
+        if (G.leapStage == 0 && G.leapT >= G.leapAt) {
+            G.leapStage = 1;
+            G.bossStepTo = G.feintFrom;
+            G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.leapAir - G.leapAt);
+        } else if (G.leapStage == 1 && G.leapT >= G.leapAir) {
+            G.leapStage = 2;
+            G.bossStepTo = G.bossStep + (G.bossStrikeStep - G.bossStep) * 0.4f;
+            G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.windupLen - G.leapAir);
         }
     }
     /* agacha antes do salto e firma o corpo no fim da preparação */

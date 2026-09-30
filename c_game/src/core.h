@@ -106,7 +106,12 @@ typedef struct {
     /* Golpes de duas lâminas (bit k = o golpe k da sequência). Um parry só apara
      * as duas se for perfeito; no bom, a segunda passa; no erro, entram as duas. */
     unsigned dual;
+    bool thrustOnly;             /* apresentação: todos os contatos seguem retos, sem alternar para corte */
+    bool feint;                  /* apresentação: ameaça sem contato antes da estocada real */
 } Move;
+
+/* Direção visual de cada contato. Não participa do julgamento do parry. */
+MoveLook move_contact_look(const Move *move, int strike);
 
 typedef enum {
     ARENA_DOJO, ARENA_SERRA, ARENA_CELEIRO, ARENA_TELHADOS, ARENA_PORTO, ARENA_SALAO,

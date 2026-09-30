@@ -100,21 +100,16 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     },
     {
         .id = 4, .name = "shizuku", .style = "postura do gelo", .title = "A que Observa", .venue = "Cachoeira do Trovão",
-        .special = "Florete com geada: estocadas curtas e rápidas, até quatro de uma vez, sem curva.",
+        .special = "Florete com geada: quatro leituras, sempre na linha central; a finta não toca.",
         .arena = ARENA_CACHOEIRA, .posture = 380, .hitsToFall = 7, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8E8FFFF,
         .stances = {STANCE("", 0.068f, 0.171f, 0.411f)}, .stanceCount = 1,
         .moves = {
-            {"floco", 1, {0}, 2.5f, -1, 0, LOOK_THRUST, 0.85f},
-            {"geada", 2, {0.45f}, 2.0f, -1, 0, LOOK_THRUST, 0.75f},
-            {"sincelo", 2, {0.40f}, 1.5f, -1, 0, LOOK_THRUST, 0.90f},
-            {"estalactite", 3, {0.45f, 0.40f}, 1.0f, -1, 0, LOOK_HIGH, 0.85f},
-            {"nevasca", 4, {0.40f, 0.40f, 0.40f}, 1.0f, -1, 0, LOOK_THRUST, 0.75f},
-            {"gelo fino", 1, {0}, 1.5f, -1, 0, LOOK_LOW, 0.90f},
-            {"deslize", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.85f},
-            {"salto do cristal", 2, {0.45f}, 1.0f, -1, 0, LOOK_JUMP, 0.75f},
-            {"glaciar", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.90f},
+            {"floco", 1, {0}, 2.5f, -1, 0, LOOK_THRUST, 0.85f, 0, true, false},
+            {"geada", 2, {0.40f}, 2.0f, -1, 0, LOOK_THRUST, 0.75f, 0, true, false},
+            {"deslize", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.85f, 0, true, false},
+            {"finta de gelo", 1, {0}, 1.0f, -1, 0, LOOK_THRUST, 0.90f, 0, true, true},
         },
-        .moveCount = 9,
+        .moveCount = 4,
         .intro = {{"shizuku", "Você segura a espada igual a ele. Os ombros também. Ele te fez no mesmo molde."},
                   {"shizuku", "O hanzo era um monstro, sabia? Treinava a gente até a última gota de sangue."},
                   {"kojiro", "Ele me salvou."},
@@ -406,7 +401,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"eco da terra", 2, {1.00f}, 1.0f, p, 0, LOOK_LOW, 1.55f},                          \
             {"eco da tartaruga", 2, {0.42f}, 1.0f, p, 0, LOOK_THRUST, 1.00f},                   \
             {"eco do touro", 2, {0.85f}, 1.0f, p, 0, LOOK_LOW, 1.05f},                          \
-            {"eco do gelo", 4, {0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.75f},          \
+            {"eco do gelo", 2, {0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.75f, 0, true, false},       \
             {"eco do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_HIGH, 0.90f}, \
             {"eco do corvo", 3, {0.50f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 1.13f, 0x4},              \
             {"eco do vento", 2, {0.45f}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x2},                    \

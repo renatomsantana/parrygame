@@ -1063,7 +1063,7 @@ static void test_robos_deslocados(void) {
  * na ordem da trilha na primeira volta e depois sorteados. Fase 3: os mesmos doze com a
  * espera antes do aviso x0,85, dano x1,25, aviso nunca abaixo de 320 ms e sem especial. */
 static const struct { int aprendiz; const char *golpe; } ECO[12] = {
-    {0, "desabamento"}, {1, "mordida"}, {2, "investida dupla"}, {3, "nevasca"}, {4, "fúria do tigre"}, {5, "revoada"},
+    {0, "desabamento"}, {1, "mordida"}, {2, "investida dupla"}, {3, "geada"}, {4, "fúria do tigre"}, {5, "revoada"},
     {6, "foices gêmeas"}, {7, "incêndio"}, {8, "maré longa"}, {9, "tormenta"}, {10, "meia-noite"}, {11, "lua cheia"},
 };
 
@@ -1222,14 +1222,15 @@ static double antecedencia_fps(int k, const Stance *st) {
     return L[k % 11];
 }
 
-static int roda_fps(const MasterProfile *m, int nivel, uint32_t seed, double latencia, double hz, double *aperta, int *np, bool gera,
-                    GolpeFps *g, int max) {
+static int roda_fps_selo(const MasterProfile *m, int nivel, int seal, uint32_t seed, double latencia, double hz, double *aperta, int *np, bool gera,
+                         GolpeFps *g, int max) {
     Settings s;
     settings_default(&s);
     settings_for_level(&s, nivel);
     s.latency = (float)latencia;
     Duel d;
     duel_init(&d, &s, m, seed);
+    if (seal > 0) duel_start_seal(&d, seal);
     const double dt = 1.0 / hz;
     int n = 0, ultimo = -1, ip = 0;
     if (gera) *np = 0;
@@ -1260,6 +1261,11 @@ static int roda_fps(const MasterProfile *m, int nivel, uint32_t seed, double lat
             }
     }
     return n;
+}
+
+static int roda_fps(const MasterProfile *m, int nivel, uint32_t seed, double latencia, double hz, double *aperta, int *np, bool gera,
+                    GolpeFps *g, int max) {
+    return roda_fps_selo(m, nivel, 0, seed, latencia, hz, aperta, np, gera, g, max);
 }
 
 static void test_taxa_de_quadros(void) {
@@ -1307,6 +1313,112 @@ static void test_taxa_de_quadros(void) {
             igual += a.vitoria == b.vitoria && a.perfeitos == b.perfeitos && a.bons == b.bons && a.erros == b.erros;
         }
     CHECK(igual == total, "o humano casual, decidindo em ms, luta igual a 60 e a 144 Hz (%d de %d lutas idênticas)", igual, total);
+}
+
+/* A Shizuku tem quatro leituras de florete. A finta é só um passo sem contato;
+ * o eco de gelo copia a dupla e também mantém o segundo contato na linha reta. */
+static void test_florete(void) {
+    const MasterProfile *m = roster_get(3), *o = roster_get(12);
+    static const char *NOMES[] = {"floco", "geada", "deslize", "finta de gelo"};
+    CHECK(m->moveCount == 4, "shizuku tem exatamente quatro padrões de florete");
+    int fintas = 0;
+    for (int k = 0; k < m->moveCount; k++) {
+        const Move *mv = &m->moves[k];
+        CHECK(!strcmp(mv->name, NOMES[k]), "florete %d: %s", k + 1, NOMES[k]);
+        CHECK(mv->look == LOOK_THRUST || mv->look == LOOK_DASH, "%s não corta alto ou baixo", mv->name);
+        CHECK(mv->thrustOnly && mv->dual == 0, "%s mantém uma lâmina na linha central", mv->name);
+        CHECK(mv->strikes == (k == 1 ? 2 : 1), "%s tem só os contatos anunciados", mv->name);
+        for (int hit = 0; hit < mv->strikes; hit++)
+            CHECK(move_contact_look(mv, hit) == (k == 2 ? LOOK_DASH : LOOK_THRUST), "%s contato %d é estocada", mv->name, hit + 1);
+        fintas += mv->feint;
+        if (mv->feint) CHECK(k == 3 && mv->strikes == 1, "a finta não cria contato extra");
+    }
+    CHECK(fintas == 1, "só a quarta sequência tem finta visual");
+    CHECK(fabsf(m->moves[1].gaps[0] - 0.40f) < 1e-6f, "a dupla deixa 400 ms para o segundo parry");
+    for (int seal = 1; seal <= 2; seal++) {
+        const Move *echo = move_named(o, "eco do gelo", seal);
+        const Move *src = &m->moves[1];
+        CHECK(echo && echo->stance == seal && echo->strikes == src->strikes &&
+              echo->look == src->look && echo->thrustOnly && !echo->feint && echo->dual == src->dual &&
+              fabsf(echo->windup - src->windup) < 1e-6f && fabsf(echo->gaps[0] - src->gaps[0]) < 1e-6f,
+              "eco de gelo do selo %d copia a dupla do florete", seal + 1);
+        if (echo) CHECK(move_contact_look(echo, 1) == LOOK_THRUST, "eco de gelo do selo %d não vira corte alto", seal + 1);
+    }
+    CHECK(o->moveCount == 31, "oboro preserva 31 padrões com os doze ecos em cada selo");
+
+    /* O campo feint só chega ao desenho: removê-lo de uma cópia do roster não
+     * pode mudar nenhum resultado ou duração do núcleo. */
+    MasterProfile semFinta = *m;
+    semFinta.moves[3].feint = false;
+    int iguais = 0;
+    for (uint32_t seed = 1; seed <= 60; seed++) {
+        RoboLuta a = robo_lutar_hz(&ROBO_HUMANO_CASUAL, m, 3, seed, 60, false);
+        RoboLuta b = robo_lutar_hz(&ROBO_HUMANO_CASUAL, &semFinta, 3, seed, 60, false);
+        iguais += a.vitoria == b.vitoria && a.perfeitos == b.perfeitos && a.bons == b.bons && a.erros == b.erros &&
+                  fabs(a.duracao - b.duracao) < 1e-9;
+    }
+    CHECK(iguais == 60, "finta é só apresentação: 60 lutas idênticas");
+
+    /* Cada padrão novo e os dois ecos: perfeita e boa ainda existem no atraso
+     * máximo; o mesmo roteiro produz os mesmos contatos a 60 e 144 Hz. */
+    int cobertos = 0, fpsIguais = 0;
+    for (int grupo = 0; grupo < 3; grupo++) {
+        const MasterProfile *base = grupo == 0 ? m : o;
+        int seal = grupo == 0 ? 0 : grupo;
+        int moves = grupo == 0 ? 4 : 1;
+        for (int k = 0; k < moves; k++) {
+            MasterProfile one = *base;
+            one.moves[0] = grupo == 0 ? m->moves[k] : *move_named(o, "eco do gelo", seal);
+            one.moves[0].stance = -1;
+            one.moveCount = 1;
+            Settings s;
+            settings_default(&s);
+            settings_for_level(&s, grupo == 0 ? 3 : 12);
+            s.latency = AJ_LATENCIA_MAX;
+            Duel d;
+            duel_init(&d, &s, &one, 33);
+            if (grupo > 0) duel_start_seal(&d, seal);
+            RoboMente r;
+            robo_iniciar(&r, &ROBO_DO_DEMO, 33);
+            int seen[MAX_CHAIN] = {0}, last = -1;
+            for (int steps = 0; steps < 20000; steps++) {
+                d.bossPosture = 1e6f;
+                d.renPosture = s.renPosture;
+                if (d.phase == PH_WINDUP && d.attacks != last) {
+                    last = d.attacks;
+                    int hit = d.comboStrike;
+                    if (hit < one.moves[0].strikes && !seen[hit]) {
+                        const Stance *st = duel_stance(&d);
+                        double pw = st->perfectWindow, gw = st->goodWindow;
+                        bool ok = probe(&d, d.strikeAt - pw * 0.5 + s.latency) == J_PERFEITO &&
+                                  probe(&d, d.strikeAt - (pw + gw) * 0.5 + s.latency) == J_BOM;
+                        CHECK(ok, "%s/selo %d contato %d: perfeita e boa viáveis com 120 ms de atraso", one.moves[0].name, seal + 1, hit + 1);
+                        seen[hit] = 1;
+                        cobertos++;
+                    }
+                }
+                duel_step_at(&d, 1.0 / 60, robo_aperto_em(&r, &d, 1.0 / 60));
+                duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+                bool complete = true;
+                for (int hit = 0; hit < one.moves[0].strikes; hit++) complete &= seen[hit] != 0;
+                if (complete) break;
+            }
+            for (int hit = 0; hit < one.moves[0].strikes; hit++) CHECK(seen[hit], "%s/selo %d contato %d foi observado", one.moves[0].name, seal + 1, hit + 1);
+            double aperta[128];
+            int np = 0;
+            GolpeFps a[60], b[60];
+            int na = roda_fps_selo(&one, grupo == 0 ? 3 : 12, seal, 33, AJ_LATENCIA_MAX, 60, aperta, &np, true, a, 60);
+            int nb = roda_fps_selo(&one, grupo == 0 ? 3 : 12, seal, 33, AJ_LATENCIA_MAX, 144, aperta, &np, false, b, 60);
+            CHECK(na >= 20 && nb >= 20, "%s/selo %d: pelo menos 20 contatos em cada taxa", one.moves[0].name, seal + 1);
+            bool igual = na == nb;
+            for (int hit = 0; igual && hit < na - 1; hit++)
+                igual = a[hit].move == b[hit].move && a[hit].strike == b[hit].strike && a[hit].julg == b[hit].julg &&
+                        fabs(a[hit].contato - b[hit].contato) < 0.001;
+            fpsIguais += igual;
+        }
+    }
+    CHECK(cobertos == 9, "nove contatos dos quatro padrões e dois ecos conferidos no atraso máximo (%d)", cobertos);
+    CHECK(fpsIguais == 6, "quatro padrões e dois ecos iguais a 60 e 144 Hz com atraso máximo (%d)", fpsIguais);
 }
 
 /* O traço aleatório do hayate (±120 ms) e do jinshi (±80 ms) só mexe na espera antes do
@@ -1955,7 +2067,8 @@ static void test_movesets(void) {
                     CHECK(strcmp(roster_get(a)->moves[i].name, roster_get(b)->moves[k].name) != 0, "golpe %s é só de %s", roster_get(a)->moves[i].name, roster_get(a)->name);
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
-        CHECK(m->moveCount >= 7 && (m->isBigBoss || m->moveCount <= 10), "%s tem de 7 a 10 sequências (%d)", m->name, m->moveCount);
+        CHECK(i == 3 ? m->moveCount == 4 : m->moveCount >= 7 && (m->isBigBoss || m->moveCount <= 10),
+              "%s tem o tamanho aprovado do repertório (%d)", m->name, m->moveCount);
         CHECK(m->moveCount <= MAX_MOVES, "%s cabe no repertório", m->name);
         bool chain = false;
         for (int k = 0; k < m->moveCount; k++) {
@@ -1970,7 +2083,7 @@ static void test_movesets(void) {
         /* do Daichi ao Jinshi, cada um tem o seu golpe forte (o salto com a pancada) */
         bool heavy = false;
         for (int k = 0; k < m->moveCount; k++) heavy |= m->moves[k].look == LOOK_HEAVY;
-        if (!m->isBigBoss && i != 1) CHECK(heavy, "%s tem um golpe forte", m->name);
+        if (!m->isBigBoss && i != 1 && i != 3) CHECK(heavy, "%s tem um golpe forte", m->name);
         /* e todos vêm correndo e saltando em alguma sequência */
         bool dash = false, jump = false;
         for (int k = 0; k < m->moveCount; k++) {
@@ -1978,7 +2091,7 @@ static void test_movesets(void) {
             jump |= m->moves[k].look == LOOK_JUMP;
         }
         CHECK(dash, "%s tem uma investida correndo", m->name);
-        if (i != 1) CHECK(jump, "%s tem um golpe saltando", m->name);
+        if (i != 1 && i != 3) CHECK(jump, "%s tem um golpe saltando", m->name);
     }
     /* O intervalo entre contatos de uma sequência é exatamente o do moveset. */
     const MasterProfile *tetsu = roster_get(0);
@@ -2417,6 +2530,7 @@ int main(void) {
     test_vantagem();
     test_lamina_variavel();
     test_taxa_de_quadros();
+    test_florete();
     test_rastro_fantasma();
     test_calibracao_alta();
     test_traco_aleatorio();
