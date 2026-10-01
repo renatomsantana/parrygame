@@ -82,6 +82,7 @@ confere_carimbos() {
         /^APERTO/ {
             ap++
             for (k = 2; k <= NF; k++) { split($k, kv, "="); v[kv[1]] = kv[2] }
+            quadro[ap] = v["passo_ms"]
             if (v["valido"] == 1) {
                 va++
                 esp = (v["corrido_ms"] - v["atraso_ms"]) * v["passo_ms"] / v["corrido_ms"]
@@ -100,26 +101,51 @@ confere_carimbos() {
             med = e[int((m + 1) / 2)]; p90 = e[int(m * 0.9)]
             printf("  %s: nenhum carimbo antes do clique (%d antes)\n", antesDoClique == 0 ? "ok" : "FALHA", antesDoClique); if (antesDoClique) f++
             printf("  %s: o carimbo vem %.3f ms depois do clique na mediana e %.3f ms no percentil 90 (limites 1 e 3 ms)\n", (med <= 1 && p90 <= 3) ? "ok" : "FALHA", med, p90); if (!(med <= 1 && p90 <= 3)) f++
-            printf("  %s: %d apertos no duelo, %d com carimbo (um clique lido no quadro antes do carimbo chegar cai no meio do quadro: até 20%%)\n", (ap >= n / 2 && va * 5 >= ap * 4) ? "ok" : "FALHA", ap, va); if (!(ap >= n / 2 && va * 5 >= ap * 4)) f++
+            apertosOk = (ap >= n / 2 && va * 5 >= ap * 4)
+            for (a1 = 2; a1 <= ap; a1++) { x = quadro[a1]; b1 = a1 - 1; while (b1 >= 1 && quadro[b1] > x) { quadro[b1 + 1] = quadro[b1]; b1-- } quadro[b1 + 1] = x }
+            mq = ap > 0 ? quadro[int((ap + 1) / 2)] : 0
+            printf("  %s: %d apertos no duelo, %d com carimbo (um clique lido no quadro antes do carimbo chegar cai no meio do quadro: até 20%%); quadro de %.1f ms na mediana\n", apertosOk ? "ok" : "FALHA", ap, va, mq); if (!apertosOk) f++
+            # a máquina ocupada alonga os quadros e o raylib perde o clique mais curto que um quadro: os carimbos chegam todos, mas o jogo não vê
+            # o clique. Isso é a máquina, e não o carimbo: o cenário se repete (exit 100). Medido aqui, sob o Xvfb (que desenha por software): em
+            # repouso a mediana do quadro é de 28 a 31 ms, e com um laço de CPU por núcleo é de 50 a 58 ms; o limiar de 40 ms fica entre os dois
+            # (e só vale para quem já reprovou a conta dos apertos: com quadro normal uma falha continua sendo falha)
+            if (!apertosOk && mq > 40) { printf("  (quadros de %.0f ms na mediana: a máquina está ocupada)\n", mq); exit 100 }
             printf("  %s: o duelo aplicou cada aperto onde o carimbo mandava (%d fora de 0,01 ms)\n", conta == 0 ? "ok" : "FALHA", conta + 0); if (conta) f++
             exit f
         }' "$TMP/$1.inj" "$TMP/$1.jogo")
     R=$?
     echo "$SAIDA"
-    FALHAS=$((FALHAS + R))
+    return "$R"
+}
+
+# cenario_carimbos NOME AMBIENTE COMO: joga e confere; com a máquina ocupada (confere_carimbos sai com 100) repete, até 3 vezes. Se a
+# máquina não deixar, só esse cenário vale como pulado, em voz alta (os outros continuam valendo).
+PULADOS=0
+cenario_carimbos() {
+    for TENTATIVA in 1 2 3; do
+        joga "$1" "$2" "$3"
+        SAIDA_CENARIO=$(confere_carimbos "$1")
+        R=$?
+        [ "$R" -ne 100 ] && break
+        echo "  (tentativa $TENTATIVA de 3: a máquina está ocupada e o jogo perde os cliques mais curtos que um quadro)"
+    done
+    echo "$SAIDA_CENARIO"
+    if [ "$R" -eq 100 ]; then
+        PULADOS=$((PULADOS + 1))
+        echo "  (cenário pulado: a máquina estava ocupada demais nas 3 tentativas; rode de novo com a máquina parada)"
+    else
+        FALHAS=$((FALHAS + R))
+    fi
 }
 
 echo "1. clique do mouse"
-joga mouse "" ""
-confere_carimbos mouse
+cenario_carimbos mouse "" ""
 
 echo "2. Espaço"
-joga espaco "" espaco
-confere_carimbos espaco
+cenario_carimbos espaco "" espaco
 
 echo "2b. Espaço segurado: a repetição da tecla não é um aperto novo"
-joga repete "" repete
-confere_carimbos repete
+cenario_carimbos repete "" repete
 
 echo "3. janela sem foco: cliques carimbados, nenhum vira aperto"
 joga semfoco "" semfoco
@@ -148,5 +174,7 @@ wait "$PID" 2>/dev/null
 confere "saiu sozinho depois do 20º clique" "$SAIU"
 confere "escreveu a média dos 20 cliques ($(grep '^carimbo:' "$TMP/modo.log" | head -1))" "$(grep -q '^carimbo: 20 cliques' "$TMP/modo.log"; echo $?)"
 
-if [ "$FALHAS" -eq 0 ]; then echo "teste_carimbo: tudo certo"; else echo "teste_carimbo: $FALHAS falha(s)"; fi
+if [ "$FALHAS" -eq 0 ]; then
+    if [ "$PULADOS" -eq 0 ]; then echo "teste_carimbo: tudo certo"; else echo "teste_carimbo: tudo certo nos cenários que a máquina deixou ($PULADOS pulado(s) por máquina ocupada)"; fi
+else echo "teste_carimbo: $FALHAS falha(s)"; fi
 exit "$FALHAS"
