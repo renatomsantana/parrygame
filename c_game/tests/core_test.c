@@ -1854,9 +1854,10 @@ static void test_teste_a_mao(void) {
         Settings si;
         settings_default(&si);
         settings_for_level(&si, i);
-        for (int lat = 0; lat < 2; lat++) {
-            si.latency = lat ? 0.050f : 0;
-            duel_init(&d, &si, roster_get(i), 11);
+        /* duas latências x três sementes: o primeiro golpe sorteado muda com o repertório, e o número de casos do "tarde" não pode depender disso */
+        for (int lat = 0; lat < 6; lat++) {
+            si.latency = lat % 2 ? 0.050f : 0;
+            duel_init(&d, &si, roster_get(i), 11 + (uint32_t)(lat / 2));
             while (d.phase != PH_WINDUP) duel_tick(&d, DT);
             DuelTimeline t = duel_timeline(&d);
             const Stance *st = duel_stance(&d);
@@ -2413,6 +2414,7 @@ static void test_dual(void) {
         bool seen = false;
         for (int n = 0; n < 400 && !seen && d.phase != PH_FINISHED; n++) {
             while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
+            d.renPosture = s.renPosture;     /* sem gesto, a vida acabaria antes do primeiro golpe duplo que o sorteio traz: o que se mede é cada golpe */
             bool dual = duel_strike_dual(&d);
             float before = d.renPosture, hit = duel_ren_damage(&d);
             while (d.phase == PH_WINDUP) {
