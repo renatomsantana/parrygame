@@ -2637,36 +2637,67 @@ static void begin_world(Vector2 offset) {
 }
 
 /* O mesmo contorno escuro e o filete de luz dos bonecos, em volta do sprite. */
-static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Color rim, bool dark) {
+/* Quanto o tronco desce (a respiração): quem não tem prancha parada respira, mais rápido cansado. */
+static int sprite_breath(const Rig *r, const Fighter *f) {
+    const SprAnim *a = f->pl.anim;
+    int breath = 0;
+    if (f->idle && !a->loop) {
+        float period = 1.8f - 0.8f * r->fatigue;
+        breath = fmodf(r->time, period) > period * 0.5f ? 1 : 0;
+    }
+    return f->squat > breath ? f->squat : breath;
+}
+
+/* `apagar`: 0 = sob a luz, 1 = no escuro (a silhueta de um mestre no apagão), e entre os dois a passagem, sem salto.
+ * `corpoApagado`: a opacidade que a silhueta guarda no escuro total (1 = a de sempre; o yoru some quase todo, e só as adagas ficam). */
+static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Color rim, float apagar, float corpoApagado) {
     const SprAnim *a = f->pl.anim;
     if (!a) return;
     int frame = f->pl.frame;
     Vector2 feet = {r->x + r->offsetX, r->y - r->hopY};
-    int breath = 0;
-    if (f->idle && !a->loop) {
-        /* quem não tem prancha parada respira: o tronco desce 1 px, mais rápido cansado */
-        float period = 1.8f - 0.8f * r->fatigue;
-        breath = fmodf(r->time, period) > period * 0.5f ? 1 : 0;
-    }
-    if (f->squat > breath) breath = f->squat;
-    SprDraw o = {r->faceLeft, breath, true, (Color){16, 12, 18, 255}};
+    int breath = sprite_breath(r, f);
+    const float aceso = 1 - clampf(apagar, 0, 1), escuro = clampf(apagar, 0, 1) * corpoApagado;
+    SprDraw o = {r->faceLeft, breath, true, fadec((Color){16, 12, 18, 255}, aceso + escuro)};
     static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     for (int k = 0; k < 4; k++) spr_draw(f->set, a, frame, (Vector2){feet.x + off[k][0], feet.y + off[k][1]}, o);
-    if (dark) {
-        o.color = (Color){24, 20, 36, 255};
+    if (escuro > 0.001f) {
+        o.color = fadec((Color){24, 20, 36, 255}, escuro);
         spr_draw(f->set, a, frame, feet, o);
-        return;
     }
-    o.color = rim;
+    if (aceso <= 0.001f) return;
+    o.color = fadec(rim, aceso);
     spr_draw(f->set, a, frame, (Vector2){feet.x + (r->faceLeft ? 1 : -1), feet.y - 1}, o);
     o.flat = false;
-    o.color = light;
+    o.color = fadec(light, aceso);
     spr_draw(f->set, a, frame, feet, o);
     if (r->flash > 0) {
         o.flat = true;
-        o.color = fadec(r->flashColor, fminf(1, r->flash) * 0.6f);
+        o.color = fadec(r->flashColor, fminf(1, r->flash) * 0.6f * aceso);
         spr_draw(f->set, a, frame, feet, o);
     }
+}
+
+/* O apagão do yoru: o corpo some e as duas adagas acendem, para só elas aparecerem no escuro. O aço (os pixels claros e frios da própria
+ * prancha, em spr_lamina) volta em branco e lilás por cima do corpo apagado, com um halo violeta que pulsa em volta; `k` é o apagão, de 0 a 1. */
+#define YORU_CORPO_NO_ESCURO 0.14f
+static void desenha_laminas_acesas(float k) {
+    const Fighter *f = &G.bossS;
+    const SprAnim *a = f->pl.anim;
+    if (!a || !f->set) return;
+    const SprAnim *nucleo = spr_lamina(f->set, a, false), *halo = spr_lamina(f->set, a, true);
+    if (!nucleo || !halo) return;
+    const Rig *r = &G.boss;
+    Vector2 feet = {r->x + r->offsetX, r->y - r->hopY};
+    int breath = sprite_breath(r, f), frame = f->pl.frame;
+    float pulso = 0.78f + 0.22f * sinf(r->time * 13.0f);
+    static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    SprDraw o = {r->faceLeft, breath, true, fadec((Color){150, 80, 255, 255}, 0.42f * k * pulso)};
+    for (int n = 0; n < 4; n++) spr_draw(f->set, halo, frame, (Vector2){feet.x + off[n][0], feet.y + off[n][1]}, o);   /* o halo largo, fraco */
+    o.color = fadec((Color){170, 110, 255, 255}, 0.92f * k * pulso);
+    spr_draw(f->set, halo, frame, feet, o);                                                                           /* o halo junto da lâmina */
+    o.flat = false;
+    o.color = fadec((Color){255, 255, 255, 255}, k);
+    spr_draw(f->set, nucleo, frame, feet, o);                                                                         /* o aço */
 }
 
 /* A máscara de oni que oboro tirou, caída do lado dele. */
@@ -2722,11 +2753,16 @@ static void draw_rigs(Color light) {
     if (rastroGolpe) desenha_rastro_do_golpe(dark, false);
     if (G.bossHidden) {
         /* sumiu em penas */
-    } else if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
+    } else if (G.bossS.set) {
+        const bool yoru = G.m->id == 11;
+        /* o yoru apaga com o apagão (sem o salto dos outros em 50%) e some quase todo; os outros mestres viram a silhueta de sempre */
+        draw_sprite_fighter(&G.boss, &G.bossS, light, rim, yoru ? G.ctx.blackout : (dark ? 1.0f : 0.0f), yoru ? YORU_CORPO_NO_ESCURO : 1.0f);
+        if (yoru && G.ctx.blackout > 0.02f) desenha_laminas_acesas(clampf(G.ctx.blackout, 0, 1));
+    }
     if (G.maskOnGround) draw_oni_mask(light);
     if (rastroGolpe) desenha_rastro_do_golpe(dark, true);
     draw_hanzo(light, rim);
-    if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, false);
+    if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, 0.0f, 1.0f);
     draw_pole_flying();
     if (G.crack > 0) {
         /* Rachadura branca atravessando o mestre de cima a baixo. */

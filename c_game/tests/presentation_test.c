@@ -198,6 +198,56 @@ static void sword_continuity_and_parry(void) {
     REQUIRE(p.x > 100, "efeito foi para o canto da tela quando a arma ficou encoberta");
 }
 
+/* As adagas do yoru acendem no apagão: só o aço (o pixel frio e claro, ou o violeta perto de um ponto de lâmina) abaixo da altura dos olhos. */
+static void yoru_blade_rule(void) {
+    const Color branco = {255, 255, 255, 255}, lilas = {232, 200, 255, 255}, violeta = {176, 112, 255, 255}, pele = {246, 202, 159, 255};
+    const Color amarelo = {255, 200, 37, 255}, corpo = {74, 62, 106, 255}, solto = {255, 255, 255, 120};
+    REQUIRE(spr_pixel_de_lamina(branco, 10, false), "o branco do aço fica aceso em qualquer lugar do corpo");
+    REQUIRE(spr_pixel_de_lamina(lilas, 10, false), "o lilás do aço fica aceso");
+    REQUIRE(!spr_pixel_de_lamina(violeta, 10, false), "o violeta longe de um ponto de lâmina fica apagado (é cabelo ou bota)");
+    REQUIRE(spr_pixel_de_lamina(violeta, 10, true), "o violeta perto de um ponto de lâmina acende");
+    REQUIRE(!spr_pixel_de_lamina(pele, 10, true), "a pele (quente) nunca acende, nem perto da lâmina");
+    REQUIRE(!spr_pixel_de_lamina(amarelo, 10, true), "a faísca amarela da defesa não é aço");
+    REQUIRE(!spr_pixel_de_lamina(corpo, 10, true), "o corpo escuro perto da lâmina continua apagado");
+    REQUIRE(!spr_pixel_de_lamina(solto, 10, true), "pixel transparente não acende");
+    REQUIRE(!spr_pixel_de_lamina(branco, 40, true), "acima da altura dos olhos nada acende (o olho e o brilho do cabelo)");
+}
+
+/* Com as pranchas reais do yoru: a tira da lâmina existe em toda animação de golpe, tem aço no quadro de contato, e não acende rosto nem pele. */
+static void yoru_blades_on_real_sheets(void) {
+    const SprSet *yoru = spr_get("yoru");
+    REQUIRE(yoru != NULL, "arte do yoru não carregou");
+    if (!yoru) return;
+    static const char *golpes[] = {"IDLE", "ATTACK_1", "ATTACK_2", "ATTACK_3", "ESPECIAL"};
+    for (size_t n = 0; n < sizeof golpes / sizeof golpes[0]; n++) {
+        const SprAnim *a = spr_anim(yoru, golpes[n]);
+        REQUIRE(a != NULL, "o yoru não tem a animação");
+        if (!a) continue;
+        const SprAnim *nucleo = spr_lamina(yoru, a, false), *halo = spr_lamina(yoru, a, true);
+        REQUIRE(nucleo && halo && nucleo->tex.id && halo->tex.id, "a tira da lâmina não foi feita");
+        if (!nucleo || !halo) continue;
+        REQUIRE(spr_lamina(yoru, a, false) == nucleo, "a tira da lâmina é feita uma vez só");
+        Image im = LoadImageFromTexture(nucleo->tex), ih = LoadImageFromTexture(halo->tex);
+        Color *px = (Color *)im.data, *ph = (Color *)ih.data;
+        int total = 0, haloTotal = 0, contato = 0, indevidos = 0;
+        const int c = a->contact >= 0 ? a->contact : a->frames / 2;
+        for (int y = 0; y < im.height; y++)
+            for (int x = 0; x < im.width; x++) {
+                Color q = px[y * im.width + x];
+                if (ph[y * ih.width + x].a > 0) haloTotal++;
+                if (q.a == 0) continue;
+                total++;
+                if (x / yoru->cw == c) contato++;
+                if (q.b < q.r || yoru->ay - y > 28) indevidos++;     /* pele, ou acima da altura dos olhos */
+            }
+        REQUIRE(total > 0 && indevidos == 0, "a lâmina acendeu pele ou o rosto");
+        if (strcmp(golpes[n], "IDLE")) REQUIRE(contato >= 8, "sem aço aceso no quadro de contato do golpe");
+        REQUIRE(haloTotal > total, "o halo tem de ser maior que o aço");
+        UnloadImage(im); UnloadImage(ih);
+    }
+    printf("adagas do yoru: tira da lâmina conferida em %zu animações\n", sizeof golpes / sizeof golpes[0]);
+}
+
 static void real_assets(void) {
     SetTraceLogLevel(LOG_WARNING);
     SetConfigFlags(FLAG_WINDOW_HIDDEN);
@@ -264,6 +314,7 @@ static void real_assets(void) {
             REQUIRE(spr_offhand_point(&p,(Vector2){200,100},true,0,&other), "Arashi sem ponto para a segunda espada");
         }
     }
+    yoru_blades_on_real_sheets();
     printf("assets reais: 13 mestres, %d animações carregadas\n", animations);
     spr_shutdown(); CloseWindow();
 }
@@ -322,7 +373,7 @@ int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available();
+    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;

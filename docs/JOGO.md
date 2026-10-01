@@ -172,7 +172,7 @@ duas. Todos têm de sete a doze sequências (a Shizuku, de sete a oito leituras 
 dois contatos; Garfiel chega a oito golpes seguidos; arashi bate 1,2 vez mais
 forte; enjin deixa kojiro **em brasas** a cada erro
 (ele perde mais 60% de um golpe ao longo de 3 s, e o parry perfeito apaga); yoru
-apaga as luzes em sete de cada dez sequências; jinshi tem o
+apaga as luzes em sete de cada dez sequências (no escuro o corpo dele some e só as duas adagas ficam acesas, em branco e violeta, com um halo que pulsa); jinshi tem o
 repertório mais variado e o ritmo irregular.
 
 | Aprendiz | Sequências (golpes: intervalos em s) |

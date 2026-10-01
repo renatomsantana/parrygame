@@ -34,7 +34,10 @@ void spr_init(void) {
     flatOk = flat.id != 0;
 }
 
+static void solta_laminas(void);
+
 void spr_shutdown(void) {
+    solta_laminas();
     for (int i = 0; i < nsets; i++)
         for (int k = 0; k < sets[i].count; k++) UnloadTexture(sets[i].anims[k].tex);
     nsets = 0;
@@ -163,6 +166,93 @@ const SprAnim *spr_anim(const SprSet *s, const char *name) {
     for (int i = 0; i < s->count; i++)
         if (!strcmp(s->anims[i].name, name)) return &s->anims[i];
     return NULL;
+}
+
+/* ------------------------------------------------------------------ */
+/* A lâmina sozinha (as adagas do yoru acesas no apagão)                */
+/* ------------------------------------------------------------------ */
+
+#define LAMINA_LUZ_BRANCA 190     /* o brilho do aço: luminância de 190 ou mais (0 a 255), em qualquer lugar do corpo abaixo dos olhos */
+#define LAMINA_LUZ_VIOLETA 75     /* o violeta da lâmina: de 100 ou mais, mas só perto de um ponto de lâmina */
+#define LAMINA_ACIMA_MAX 28       /* abaixo da altura dos olhos: nada acima disto, a partir dos pés */
+#define LAMINA_RAIO 10            /* px em volta de um ponto de lâmina */
+#define LAMINA_MAX 32
+
+bool spr_pixel_de_lamina(Color c, int acimaDosPes, bool pertoDoPonto) {
+    if (c.a < 200 || acimaDosPes > LAMINA_ACIMA_MAX || c.b < c.r) return false;
+    float luz = 0.30f * c.r + 0.59f * c.g + 0.11f * c.b;
+    return luz >= LAMINA_LUZ_BRANCA || (pertoDoPonto && luz >= LAMINA_LUZ_VIOLETA);
+}
+
+static struct { const SprAnim *src; SprAnim nucleo, halo; bool ok; } lam[LAMINA_MAX];
+static int nlam;
+
+static Texture2D tira_da_lamina(const SprSet *s, const SprAnim *a, bool halo) {
+    Texture2D vazia = {0};
+    char path[512];
+    snprintf(path, sizeof path, "assets/sprites/%s/%s.png", s->id, a->name);
+    if (!FileExists(path)) return vazia;
+    Image im = LoadImage(path);
+    if (!im.data) return vazia;
+    ImageFormat(&im, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    Color *px = (Color *)im.data;
+    int w = im.width, h = im.height;
+    bool *aco = calloc((size_t)w * (size_t)h, sizeof *aco);
+    if (!aco) { UnloadImage(im); return vazia; }
+    for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++) {
+            const int q = x / s->cw;                       /* o quadro, e os pontos de lâmina dele (relativos aos pés) */
+            bool perto = false;
+            for (int k = 0; k < 2 && q < SPR_MAX_FRAMES; k++) {
+                const bool tem = k ? a->hasOffhand[q] : a->hasWeapon[q];
+                if (!tem) continue;
+                const Vector2 ponto = k ? a->offhand[q] : a->weapon[q];
+                const float dx = (float)(x % s->cw) - (float)(s->ax + ponto.x), dy = (float)y - (float)(s->ay + ponto.y);
+                perto |= dx * dx + dy * dy <= (float)(LAMINA_RAIO * LAMINA_RAIO);
+            }
+            aco[y * w + x] = spr_pixel_de_lamina(px[y * w + x], s->ay - y, perto);
+        }
+    for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++) {
+            bool dentro = aco[y * w + x], tem = dentro;
+            if (halo && !dentro)        /* o halo é o aço mais um pixel em volta (sem sair da célula) */
+                for (int dy = -1; dy <= 1 && !tem; dy++)
+                    for (int dx = -1; dx <= 1 && !tem; dx++) {
+                        int xx = x + dx, yy = y + dy;
+                        if (xx < 0 || yy < 0 || xx >= w || yy >= h || xx / s->cw != x / s->cw) continue;
+                        tem = aco[yy * w + xx];
+                    }
+            if (!tem) px[y * w + x] = (Color){0, 0, 0, 0};
+            else if (halo) px[y * w + x] = (Color){255, 255, 255, 255};
+        }
+    free(aco);
+    Texture2D t = LoadTextureFromImage(im);
+    UnloadImage(im);
+    SetTextureFilter(t, TEXTURE_FILTER_POINT);
+    return t;
+}
+
+const SprAnim *spr_lamina(const SprSet *s, const SprAnim *a, bool halo) {
+    if (!s || !a) return NULL;
+    for (int i = 0; i < nlam; i++)
+        if (lam[i].src == a) return lam[i].ok ? (halo ? &lam[i].halo : &lam[i].nucleo) : NULL;
+    if (nlam >= LAMINA_MAX) return NULL;
+    int i = nlam++;
+    lam[i].src = a;
+    lam[i].nucleo = *a;
+    lam[i].halo = *a;
+    lam[i].nucleo.tex = tira_da_lamina(s, a, false);
+    lam[i].halo.tex = tira_da_lamina(s, a, true);
+    lam[i].ok = lam[i].nucleo.tex.id != 0 && lam[i].halo.tex.id != 0;
+    return lam[i].ok ? (halo ? &lam[i].halo : &lam[i].nucleo) : NULL;
+}
+
+static void solta_laminas(void) {
+    for (int i = 0; i < nlam; i++) {
+        if (lam[i].nucleo.tex.id) UnloadTexture(lam[i].nucleo.tex);
+        if (lam[i].halo.tex.id) UnloadTexture(lam[i].halo.tex);
+    }
+    nlam = 0;
 }
 
 static void blit(const SprAnim *a, Rectangle src, Rectangle dst, bool faceLeft, Color c) {
