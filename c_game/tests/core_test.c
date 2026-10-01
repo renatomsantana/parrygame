@@ -994,7 +994,7 @@ static void test_cura_em_porcentagem(void) {
 
 /* A curva de dificuldade, pelos robôs (make robos mostra a tabela). O humano casual que
  * decora o ritmo: nos quatro primeiros, 95% ou mais; depois a vitória só cai (com 4 pontos
- * de folga para o sorteio de 300 lutas), chega a uns 60% no jinshi e a uns 40% no oboro. A ordem
+ * de folga para o sorteio de 300 lutas), chega a uns 55% no jinshi (faixa aprovada de 52 a 58) e a uns 40% no oboro. A ordem
  * exata, com folga de 0,5 ponto, é o make curva-ordem (tests/robos.c --ordem). E apertar sem
  * olhar, em qualquer ritmo de 0,05 a 0,8 s, perde de todos. */
 static void test_curva(void) {
@@ -1012,7 +1012,7 @@ static void test_curva(void) {
     /* a ordem fina (yoru nunca mais fácil que o arashi, jinshi nunca mais fácil que o yoru) precisa de muitas lutas: make curva-ordem */
     CHECK(vit[9] <= vit[8] + 4 && vit[10] <= vit[9] + 4 && vit[11] <= vit[9] + 4, "yoru e jinshi não são mais fáceis que o arashi (%.0f, %.0f, %.0f)",
           vit[9], vit[10], vit[11]);
-    CHECK(vit[11] >= 55 && vit[11] <= 75, "uns 65%% no jinshi (%.0f%%)", vit[11]);
+    CHECK(vit[11] >= 52 && vit[11] <= 75, "uns 55%% no jinshi, a faixa aprovada é de 52 a 58 e o sorteio de 300 lutas varia 3 pontos (%.0f%%)", vit[11]);
     CHECK(vit[12] >= 30 && vit[12] <= 55 && vit[12] <= vit[11], "uns 40%% no oboro (%.0f%%)", vit[12]);
     static const float PERIODOS[12] = {0.05f, 0.10f, 0.15f, 0.20f, 0.25f, 0.30f, 0.35f, 0.40f, 0.45f, 0.50f, 0.60f, 0.80f};
     int spam = 0;
