@@ -1319,21 +1319,29 @@ static void test_taxa_de_quadros(void) {
  * o eco de gelo copia a dupla e também mantém o segundo contato na linha reta. */
 static void test_florete(void) {
     const MasterProfile *m = roster_get(3), *o = roster_get(12);
-    static const char *NOMES[] = {"floco", "geada", "deslize", "finta de gelo"};
-    CHECK(m->moveCount == 4, "shizuku tem exatamente quatro padrões de florete");
+    /* as oito leituras do florete, na ordem do roster: contatos, o olhar de cada contato e se tem a finta (o resto é sempre estocada reta, na linha central) */
+    static const struct { const char *nome; int contatos; MoveLook look; bool finta; } FLORETE[] = {
+        {"floco", 1, LOOK_THRUST, false}, {"geada", 2, LOOK_THRUST, false}, {"deslize", 1, LOOK_DASH, false}, {"finta de gelo", 1, LOOK_THRUST, true},
+        {"sincelo", 2, LOOK_THRUST, false}, {"agulha", 3, LOOK_THRUST, false}, {"nevasca", 4, LOOK_THRUST, false}, {"glaciar", 1, LOOK_THRUST, false},
+    };
+    const int nflorete = (int)(sizeof FLORETE / sizeof FLORETE[0]);
+    CHECK(m->moveCount == nflorete && nflorete >= 7 && nflorete <= 8, "shizuku tem sete ou oito padrões de florete (%d)", m->moveCount);
     int fintas = 0;
-    for (int k = 0; k < m->moveCount; k++) {
+    for (int k = 0; k < m->moveCount && k < nflorete; k++) {
         const Move *mv = &m->moves[k];
-        CHECK(!strcmp(mv->name, NOMES[k]), "florete %d: %s", k + 1, NOMES[k]);
+        CHECK(!strcmp(mv->name, FLORETE[k].nome), "florete %d: %s", k + 1, FLORETE[k].nome);
         CHECK(mv->look == LOOK_THRUST || mv->look == LOOK_DASH, "%s não corta alto ou baixo", mv->name);
         CHECK(mv->thrustOnly && mv->dual == 0, "%s mantém uma lâmina na linha central", mv->name);
-        CHECK(mv->strikes == (k == 1 ? 2 : 1), "%s tem só os contatos anunciados", mv->name);
-        for (int hit = 0; hit < mv->strikes; hit++)
-            CHECK(move_contact_look(mv, hit) == (k == 2 ? LOOK_DASH : LOOK_THRUST), "%s contato %d é estocada", mv->name, hit + 1);
+        CHECK(mv->strikes == FLORETE[k].contatos, "%s tem só os contatos anunciados (%d)", mv->name, mv->strikes);
+        for (int hit = 0; hit < mv->strikes; hit++) {
+            CHECK(move_contact_look(mv, hit) == (hit == 0 ? FLORETE[k].look : LOOK_THRUST), "%s contato %d é estocada", mv->name, hit + 1);
+            if (hit > 0) CHECK(mv->gaps[hit - 1] >= AJ_CADEIA_MIN - 1e-6f, "%s: o intervalo %d deixa 400 ms ou mais", mv->name, hit);
+        }
+        CHECK(mv->feint == FLORETE[k].finta, "%s: a finta só onde está no quadro de leituras", mv->name);
         fintas += mv->feint;
-        if (mv->feint) CHECK(k == 3 && mv->strikes == 1, "a finta não cria contato extra");
+        if (mv->feint) CHECK(mv->strikes == 1, "a finta não cria contato extra");
     }
-    CHECK(fintas == 1, "só a quarta sequência tem finta visual");
+    CHECK(fintas == 1, "só uma sequência tem finta visual");
     CHECK(fabsf(m->moves[1].gaps[0] - 0.40f) < 1e-6f, "a dupla deixa 400 ms para o segundo parry");
     for (int seal = 1; seal <= 2; seal++) {
         const Move *echo = move_named(o, "eco do gelo", seal);
@@ -1365,7 +1373,7 @@ static void test_florete(void) {
     for (int grupo = 0; grupo < 3; grupo++) {
         const MasterProfile *base = grupo == 0 ? m : o;
         int seal = grupo == 0 ? 0 : grupo;
-        int moves = grupo == 0 ? 4 : 1;
+        int moves = grupo == 0 ? m->moveCount : 1;
         for (int k = 0; k < moves; k++) {
             MasterProfile one = *base;
             one.moves[0] = grupo == 0 ? m->moves[k] : *move_named(o, "eco do gelo", seal);
@@ -1417,13 +1425,15 @@ static void test_florete(void) {
             fpsIguais += igual;
         }
     }
-    CHECK(cobertos == 9, "nove contatos dos quatro padrões e dois ecos conferidos no atraso máximo (%d)", cobertos);
-    CHECK(fpsIguais == 6, "quatro padrões e dois ecos iguais a 60 e 144 Hz com atraso máximo (%d)", fpsIguais);
+    int esperados = 2 * 2;      /* a dupla do eco, nos dois selos */
+    for (int k = 0; k < nflorete; k++) esperados += FLORETE[k].contatos;
+    CHECK(cobertos == esperados, "todos os contatos dos padrões de florete e dos dois ecos conferidos no atraso máximo (%d de %d)", cobertos, esperados);
+    CHECK(fpsIguais == m->moveCount + 2, "os padrões de florete e os dois ecos iguais a 60 e 144 Hz com atraso máximo (%d de %d)", fpsIguais, m->moveCount + 2);
 }
 
 /* Cada golpe de cada mestre comum, sozinho num repertório de um golpe só (assim o sorteio não esconde nenhum): com o atraso máximo de 120 ms, a perfeita e a boa
  * existem em todos os contatos da sequência, e o mesmo roteiro dá os mesmos contatos a 60 e a 144 Hz. É o que o test_florete faz com o florete, para o repertório
- * inteiro: um golpe novo entra no roster já coberto. (O oboro tem os seus ecos no test_florete e no test_oboro; a shizuku fica de fora porque é dele.) */
+ * inteiro: um golpe novo entra no roster já coberto. (O oboro tem os seus ecos no test_florete e no test_oboro; a shizuku entra, e o test_florete confere o que é só do florete.) */
 static void test_cada_golpe(void) {
     int golpes = 0, contatos = 0, iguais = 0;
     for (int i = 0; i < roster_size(); i++) {
@@ -2130,8 +2140,8 @@ static void test_movesets(void) {
                     CHECK(strcmp(roster_get(a)->moves[i].name, roster_get(b)->moves[k].name) != 0, "golpe %s é só de %s", roster_get(a)->moves[i].name, roster_get(a)->name);
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
-        /* a shizuku tem as quatro leituras do florete; os mestres comuns, de 7 a 12 (os três primeiros, sete: acima); o oboro, os doze ecos em cada selo */
-        CHECK(i == 3 ? m->moveCount == 4 : m->moveCount >= 7 && (m->isBigBoss || m->moveCount <= 12),
+        /* os mestres comuns, de 7 a 12 (os três primeiros, sete: acima; a shizuku, de 7 a 8 leituras de florete); o oboro, os doze ecos em cada selo */
+        CHECK(i == 3 ? m->moveCount >= 7 && m->moveCount <= 8 : m->moveCount >= 7 && (m->isBigBoss || m->moveCount <= 12),
               "%s tem o tamanho aprovado do repertório (%d)", m->name, m->moveCount);
         CHECK(m->moveCount <= MAX_MOVES, "%s cabe no repertório", m->name);
         bool chain = false;

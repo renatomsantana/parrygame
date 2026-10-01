@@ -168,7 +168,7 @@ da preparação ele vira penas e some, e reaparece na frente de kojiro com a lâ
 no alto, pouco antes de ela partir; é o reaparecer que avisa. **⚔** é o golpe de **duas lâminas**
 (o corte cruzado, anunciado por um brilho duplo e um tinido duplo): um parry só
 segura as duas se for perfeito; no bom, a segunda entra; no erro, entram as
-duas. Todos têm de sete a doze sequências (a Shizuku, as quatro leituras do florete). Daichi, Genbu e Raizo nunca passam de
+duas. Todos têm de sete a doze sequências (a Shizuku, de sete a oito leituras do florete). Daichi, Genbu e Raizo nunca passam de
 dois contatos; Garfiel chega a oito golpes seguidos; arashi bate 1,2 vez mais
 forte; enjin deixa kojiro **em brasas** a cada erro
 (ele perde mais 60% de um golpe ao longo de 3 s, e o parry perfeito apaga); yoru
@@ -180,7 +180,7 @@ repertório mais variado e o ritmo irregular.
 | daichi | rocha (1) · raiz (1) · sulco (1) · desabamento (2: 1,00) · arado (1) correndo · pedregulho (2: 1,10) saltando · **terremoto** (forte) |
 | genbu | casco (1) · mordida (2: 0,42) · carapaça (2: 0,60) · concha (1) · bote da tartaruga (1) correndo · maré lenta (2: 0,75) · casco fechado (2: 0,90) |
 | raizo | corte do cume (1) · fenda dupla (2: 0,85) · rasgo na laje (1) · ponta da serra (2: 1,00) · avalanche (1) correndo · queda de pedras (2: 0,70) saltando · **montanha partida** (forte). Todos com a odachi do pack e sinais cinza-pedra/ocre na lâmina. |
-| shizuku | floco (1) · geada (2: 0,45) · sincelo (2: 0,40) · estalactite (3: 0,45 0,40) · nevasca (4: 0,40 0,40 0,40) · gelo fino (1) · deslize (1) correndo · salto do cristal (2: 0,45) saltando · **glaciar** (forte) |
+| shizuku | floco (1) · geada (2: 0,40) · deslize (1) correndo · finta de gelo (1, com a finta: um passo sem contato antes da estocada) · sincelo (2: 0,50) · agulha (3: 0,40 0,40) · nevasca (4: 0,40 0,40 0,40) · glaciar (1, carregada). Tudo estocada reta, na linha central |
 | garfiel | patada (1) · garras cruzadas (2: 0,40) · rasgo (3: 0,40 0,40) · bote do tigre (3: 0,40 0,85) · fúria do tigre (6: 0,40 0,40 0,40 0,40 0,40) · caçada (7: 0,40 0,40 0,45 0,40 0,40 0,70) correndo · rugido (8: 0,40 0,40 0,40 0,40 0,40 0,40 0,80) · pulo do gato (2: 0,45) saltando · arranhão (4: 0,40 0,40 0,40) · duas patas (1) ⚔ · **salto do tigre** (forte) |
 | karasu | bicada (1) · garra (2: 0,55) · sumiço (1) sumindo · corvo fantasma (2: 0,55) sumindo · revoada (3: 0,50 0,90) ⚔ no 3º · bando (4: 0,45 0,45 0,45) ⚔ no 4º · duas penas (1) ⚔ · voo rasante (1) correndo · asa quebrada (2: 0,50) saltando · cruz de penas (1) ⚔ · corte curto (2: 0,40) · **mergulho** (forte) |
 | hayate | rajada (1) · redemoinho (2: 0,45) · vendaval (3: 0,50 0,90) · brisa cortante (2: 0,40) · tufão (5: 0,40 0,40 0,40 0,60) · foices gêmeas (2: 0,45) ⚔ no 2º · lufada (1) correndo · folha ao vento (2: 0,55) saltando · gancho duplo (2: 0,40) · ceifada em X (1) ⚔ · vento partido (3: 0,40 0,45) · **ciclone** (forte) |

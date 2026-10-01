@@ -100,7 +100,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     },
     {
         .id = 4, .name = "shizuku", .style = "postura do gelo", .title = "A que Observa", .venue = "Cachoeira do Trovão",
-        .special = "Florete com geada: quatro leituras, sempre na linha central; a finta não toca.",
+        .special = "Florete com geada: oito leituras, sempre na linha central; a finta não toca.",
         .arena = ARENA_CACHOEIRA, .posture = 380, .hitsToFall = 7, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8E8FFFF,
         .stances = {STANCE("", 0.068f, 0.171f, 0.411f)}, .stanceCount = 1,
         .moves = {
@@ -108,8 +108,12 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"geada", 2, {0.40f}, 2.0f, -1, 0, LOOK_THRUST, 0.75f, 0, true, false},
             {"deslize", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.85f, 0, true, false},
             {"finta de gelo", 1, {0}, 1.0f, -1, 0, LOOK_THRUST, 0.90f, 0, true, true},
+            {"sincelo", 2, {0.50f}, 1.5f, -1, 0, LOOK_THRUST, 0.90f, 0, true, false},
+            {"agulha", 3, {0.40f, 0.40f}, 1.0f, -1, 0, LOOK_THRUST, 0.80f, 0, true, false},
+            {"nevasca", 4, {0.40f, 0.40f, 0.40f}, 0.8f, -1, 0, LOOK_THRUST, 0.75f, 0, true, false},
+            {"glaciar", 1, {0}, 0.8f, -1, 0, LOOK_THRUST, 1.00f, 0, true, false},
         },
-        .moveCount = 4,
+        .moveCount = 8,
         .intro = {{"shizuku", "Você segura a espada igual a ele. Os ombros também. Ele te fez no mesmo molde."},
                   {"shizuku", "O hanzo era um monstro, sabia? Treinava a gente até a última gota de sangue."},
                   {"kojiro", "Ele me salvou."},
