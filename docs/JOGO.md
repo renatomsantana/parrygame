@@ -172,7 +172,10 @@ segura as duas se for perfeito; no bom, a segunda entra; no erro, entram as
 duas. Todos têm de sete a doze sequências (a Shizuku, de sete a oito leituras do florete). Daichi, Genbu e Raizo nunca passam de
 dois contatos; Garfiel chega a oito golpes seguidos; arashi bate 1,2 vez mais
 forte; enjin deixa kojiro **em brasas** a cada erro
-(ele perde mais 60% de um golpe ao longo de 3 s, e o parry perfeito apaga); yoru
+(ele perde mais 60% de um golpe ao longo de 3 s, e o parry perfeito apaga); arashi faz
+cair raios no relâmpago (o golpe forte), em volta de quem aparou ou, se pegou, de kojiro, que fica
+meio paralisado (treme, pisca em azul e cai devagar; um aperto larga o choque), só no desenho: o
+núcleo julga o relâmpago como qualquer golpe de duas lâminas; yoru
 apaga as luzes em sete de cada dez sequências (no escuro o corpo dele some por inteiro e só as duas adagas aparecem, nas cores delas, sem halo nem raio roxo em volta, e a preparação só faz o som e o brilho na lâmina); jinshi tem o
 repertório mais variado e o ritmo irregular.
 

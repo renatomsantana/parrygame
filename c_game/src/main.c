@@ -68,6 +68,12 @@
 #define KARASU_WARP_DISSOLVE 0.10f    /* o corpo apaga neste tempo (s) antes de virar penas: sem corte seco */
 #define KARASU_WARP_FORMA 0.04f       /* e se forma neste tempo ao reaparecer: ele reaparece 40 ms antes do aviso (KARASU_WARP_ANTES_AVISO), então está inteiro no aviso */
 #define KARASU_WARP_PENAS_S 240.0f    /* penas por segundo que se soltam do corpo, ou voltam para ele */
+#define ARASHI_ID 10                  /* o relâmpago (o golpe pesado dele): raios caem do céu e, quem leva, fica meio paralisado. Só desenho: o núcleo julga como qualquer outro golpe */
+#define RAIOS_MAX 6
+#define RAIO_VIDA 0.26f               /* s que cada raio fica na tela */
+#define PARALISIA_CHEIA 0.9f          /* s de choque no kojiro quando o golpe pega em cheio (erro: as duas lâminas entram) */
+#define PARALISIA_METADE 0.5f         /* s quando só uma lâmina entra (aparo bom): meio paralisado */
+#define PARALISIA_LENTIDAO 0.65f      /* quanto a queda do kojiro (o HURT) fica mais lenta com o choque cheio */
 enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP, LEAP_FEINT };
 #define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
 #define PIX_LORE 41
@@ -210,6 +216,9 @@ typedef struct {
     KatanaStyle style;
 } FlySword;
 
+/* Um raio do relâmpago do arashi: cai em x depois de `espera` s e fica `vida` s na tela. */
+typedef struct { float x, espera, vida; unsigned semente; bool principal; } Raio;
+
 /* F3: um aperto anotado (resultado, quando, erro em ms). */
 typedef struct {
     char res[12], quando[40], erro[80];
@@ -243,6 +252,8 @@ static struct {
     bool bossHidden;          /* karasu virou penas: some até reaparecer na frente de kojiro */
     float bossDissolve;       /* 0 = inteiro, 1 = só penas: o corpo apaga e volta aos poucos (zero é o normal) */
     float warpSolta;          /* penas por soltar ou juntar (acumulador, para a cadência não depender do quadro) */
+    Raio raios[RAIOS_MAX];    /* o relâmpago do arashi */
+    float paralisia, paralisiaTotal, paralisiaForca, paralisiaFaisca;   /* o choque no kojiro: o que falta (s), a duração, de 0 a 1, e a cadência das faíscas */
     struct { const SprAnim *a; int frame; Vector2 feet; float life; } after[AFTER_MAX];
     int afterHead;
     float afterTimer, lastStep;
@@ -969,6 +980,8 @@ static void setup_actors(void) {
     G.leap = LEAP_NONE;
     G.bossHidden = false;
     G.bossDissolve = 0;
+    memset(G.raios, 0, sizeof G.raios);
+    G.paralisia = G.paralisiaTotal = G.paralisiaForca = G.paralisiaFaisca = 0;
     G.hopT = G.hopLen = 0;
     G.hopTravel = false;
     memset(G.after, 0, sizeof G.after);
@@ -1429,6 +1442,7 @@ static void sprite_launch(void) {
 
 /* O gesto de kojiro: a guarda (DEFEND) ou um corte rápido de encontro ao golpe. */
 static void sprite_press(void) {
+    G.paralisia = 0;          /* meio paralisado: o aperto sempre vale, e com ele o choque larga */
     Fighter *f = &G.renS;
     if (!f->set) return;
     const SprAnim *a = fa(f, "DEFEND");
@@ -1585,6 +1599,72 @@ static void on_impact(const DuelEvent *e) {
         G.slowmo = AJ_LENTA_QUEBRA;
         G.slowmoTime = AJ_LENTA_QUEBRA_TEMPO;
     }
+}
+
+/* O relâmpago do arashi (o golpe pesado dele, LOOK_HEAVY): quando o golpe chega, raios caem do céu em volta de quem aparou ou, se pegou, de kojiro. Quem leva fica
+ * meio paralisado: treme, pisca em azul e cai devagar. É só o que se vê: o núcleo julga o relâmpago como qualquer outro golpe de duas lâminas, e o aperto seguinte vale igual. */
+static bool golpe_do_raio(void) {
+    if (!G.m || G.m->id != ARASHI_ID || G.duel.m != G.m) return false;
+    const Move *mv = duel_move(&G.duel);
+    return mv && mv->look == LOOK_HEAVY;
+}
+
+static void raio_acende(Raio *r) {
+    r->espera = 0;
+    r->vida = RAIO_VIDA;
+    const Color claro = {225, 238, 255, 255}, azul = {120, 170, 255, 255};
+    fx_burst(&G.fx, P_SPARK, (Vector2){r->x, GROUND_LOW - 1}, r->principal ? 7 : 4, 75, 1.5f, -1.57f, claro, azul);
+    if (r->principal) fx_burst(&G.fx, P_DUST, (Vector2){r->x, GROUND_LOW - 1}, 5, 35, 1.2f, -1.57f, (Color){170, 180, 200, 140}, (Color){100, 108, 130, 110});
+}
+
+static void raio_cai(float x, float espera, bool principal) {
+    for (int i = 0; i < RAIOS_MAX; i++) {
+        Raio *r = &G.raios[i];
+        if (r->espera > 0 || r->vida > 0) continue;
+        *r = (Raio){x, espera, 0, (unsigned)(x * 31.0f) * 2654435761u + (unsigned)i * 40503u, principal};
+        if (espera <= 0) raio_acende(r);
+        return;
+    }
+}
+
+/* O golpe chegou: os raios, o trovão e, para quem levou, o choque. */
+static void impacto_do_raio(const DuelEvent *e) {
+    if (!golpe_do_raio()) return;
+    const bool aparou = e->judgement == J_PERFEITO;
+    const float alvo = aparou ? clash_point().x : G.ren.x + G.ren.offsetX;
+    raio_cai(alvo, 0, true);
+    raio_cai(alvo - 30, 0.05f, false);
+    raio_cai(alvo + 38, 0.10f, false);
+    G.ctx.lightning = 1;
+    audio_play(SND_THUNDER, 0.9f, 1);
+    fx_flash(&G.fx, (Color){170, 200, 255, 255}, aparou ? 0.3f : 0.6f);
+    const float forca = e->judgement == J_RUIM ? 1.0f : (e->judgement == J_BOM && (e->i & 2)) ? 0.5f : 0.0f;
+    if (forca <= 0) return;
+    G.paralisiaForca = forca;
+    G.paralisia = G.paralisiaTotal = forca >= 1 ? PARALISIA_CHEIA : PARALISIA_METADE;
+    fx_popup(&G.fx, "paralisado", (Vector2){G.ren.x + G.ren.offsetX, GROUND_LOW - 58}, 0.9f, (Color){150, 205, 255, 255});
+}
+
+static void raios_update(float dt) {
+    for (int i = 0; i < RAIOS_MAX; i++) {
+        Raio *r = &G.raios[i];
+        if (r->espera > 0) { r->espera -= dt; if (r->espera <= 0) raio_acende(r); }
+        else if (r->vida > 0) r->vida -= dt;
+    }
+    if (G.paralisia <= 0) return;
+    G.paralisia = fmaxf(0, G.paralisia - dt);
+    G.paralisiaFaisca -= dt;
+    if (G.paralisiaFaisca <= 0 && G.paralisia > 0) {
+        G.paralisiaFaisca = 0.07f;
+        const Vector2 at = {G.ren.x + G.ren.offsetX + frand(-6, 6), GROUND_LOW - frand(8, 38)};
+        fx_burst(&G.fx, P_SPARK, at, 2, 40, 3.14f, 0, (Color){225, 238, 255, 255}, (Color){120, 170, 255, 255});
+    }
+}
+
+/* A velocidade da queda do kojiro: devagar com o choque (só a animação de dor; aparar e golpear seguem no ritmo de sempre). */
+static float paralisia_ritmo(void) {
+    if (G.paralisia <= 0 || !G.renS.pl.anim || strcmp(G.renS.pl.anim->name, "HURT") != 0) return 1;
+    return 1 - PARALISIA_LENTIDAO * G.paralisiaForca;
 }
 
 static const struct { const char *fx; int row; float y; int flags; float scale; } TELL[ROSTER_SIZE] = {
@@ -1882,6 +1962,7 @@ static void handle_events(void) {
                     fprintf(stderr, "IMPACTO contato %.5f julgamento %d antecedencia %.5f quadro %s %d\n", G.duel.lastStrikeAt, (int)e->judgement, e->a,
                             G.bossS.pl.anim ? G.bossS.pl.anim->name : "-", G.bossS.pl.frame);
                 on_impact(e);
+                impacto_do_raio(e);
                 if (m->id == 3 || (m->isBigBoss && echo_of(duel_move(&G.duel)) == 2))
                     fx_burst(&G.fx, P_SHARD, clash_point(), 6, 43, 0.90f, 3.14f,
                              (Color){185, 182, 174, 220}, (Color){203, 157, 92, 220});
@@ -1971,7 +2052,7 @@ static void karasu_penas(float dt, bool soltando) {
 
 /* Pranchas e o passo do mestre até o alcance do golpe (e de volta ao lugar). */
 static void fighters_update(float dt) {
-    f_update(&G.renS, dt);
+    f_update(&G.renS, dt * paralisia_ritmo());
     ren_draw_sounds();
     f_update(&G.bossS, dt);
     if (!G.bossS.set) return;
@@ -2738,6 +2819,41 @@ static void desenha_laminas_acesas(float k) {
     spr_draw(f->set, lamina, f->pl.frame, feet, o);
 }
 
+/* O choque do relâmpago no kojiro: a silhueta pisca em azul e branco por cima do corpo, e some nos últimos 0,25 s. */
+static void desenha_choque(const Rig *r, const Fighter *f) {
+    const SprAnim *a = f->pl.anim;
+    if (!a) return;
+    const float fim = clampf(G.paralisia / 0.25f, 0, 1);
+    const Color cor = ((int)(G.time * 30) & 1) ? (Color){235, 245, 255, 255} : (Color){110, 160, 255, 255};
+    SprDraw o = {r->faceLeft, sprite_breath(r, f), true, fadec(cor, 0.55f * G.paralisiaForca * fim)};
+    spr_draw(f->set, a, f->pl.frame, (Vector2){r->x + r->offsetX, r->y - r->hopY}, o);
+}
+
+/* Os raios do relâmpago: do alto da tela ao chão, em zigue-zague (a forma é fixa por raio, não muda de quadro a quadro), com um clarão onde caem. */
+static void desenha_raios(void) {
+    for (int i = 0; i < RAIOS_MAX; i++) {
+        const Raio *r = &G.raios[i];
+        if (r->espera > 0 || r->vida <= 0) continue;
+        const float k = r->vida / RAIO_VIDA;                                  /* 1 ao cair, 0 ao apagar */
+        if (k < 0.55f && ((int)(r->vida * 60) % 3) == 0) continue;            /* perto do fim ele falha, como o raio de verdade */
+        enum { N = 9 };
+        Vector2 pt[N + 1];
+        unsigned s = r->semente;
+        pt[0] = (Vector2){r->x + 5, -2};
+        for (int j = 1; j <= N; j++) {
+            s = s * 1664525u + 1013904223u;
+            pt[j] = (Vector2){r->x + (j == N ? 0 : (float)((int)((s >> 16) % 13) - 6)), floorf((float)j * GROUND_LOW / N)};
+        }
+        s = s * 1664525u + 1013904223u;
+        const float lado = (s >> 16) & 1 ? 1.0f : -1.0f;
+        const float corpo = r->principal ? 2.0f : 1.0f;                       /* o raio que cai em quem aparou ou apanhou é o mais grosso */
+        for (int j = 1; j <= N; j++) DrawLineEx(pt[j - 1], pt[j], corpo + 2, fadec((Color){110, 160, 255, 255}, 0.34f * k));  /* o brilho em volta */
+        if (r->principal) DrawLineEx(pt[4], (Vector2){pt[4].x + lado * 15, pt[4].y + 20}, 1, fadec((Color){170, 205, 255, 255}, 0.8f * k));   /* o ramo */
+        for (int j = 1; j <= N; j++) DrawLineEx(pt[j - 1], pt[j], corpo, fadec((Color){240, 247, 255, 255}, k));          /* o fio */
+        DrawEllipse((int)r->x, GROUND_LOW, 4 + 7 * k, 1.5f + k, fadec((Color){225, 238, 255, 255}, 0.7f * k));
+    }
+}
+
 /* A máscara de oni que oboro tirou, caída do lado dele. */
 static void draw_oni_mask(Color light) {
     static const char *M[] = {".a...a.", "aakkkaa", "akpkpka", "akkkkka", "arkkkra", ".akkka."};
@@ -2800,7 +2916,12 @@ static void draw_rigs(Color light) {
     if (G.maskOnGround) draw_oni_mask(light);
     if (rastroGolpe) desenha_rastro_do_golpe(dark, true);
     draw_hanzo(light, rim);
-    if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, 0.0f, 1.0f, 1.0f);
+    if (G.renS.set) {
+        Rig ren = G.ren;
+        if (G.paralisia > 0) ren.offsetX += ((int)(G.time * 28) & 1) ? 1.0f : -1.0f;       /* o choque faz tremer (1 px) */
+        draw_sprite_fighter(&ren, &G.renS, light, rim, 0.0f, 1.0f, 1.0f);
+        if (G.paralisia > 0) desenha_choque(&ren, &G.renS);
+    }
     draw_pole_flying();
     if (G.crack > 0) {
         /* Rachadura branca atravessando o mestre de cima a baixo. */
@@ -2880,6 +3001,7 @@ static void draw_arena(void) {
     DrawTexturePro(G.actors.texture, (Rectangle){0, 0, LOW_W, -LOW_H}, (Rectangle){0, 0, LOW_W, LOW_H}, (Vector2){0, 0}, 0, WHITE);
     fx_draw_world(&G.fx);
     vfx_draw(false);
+    desenha_raios();
     arena_draw_front(m->arena, &G.ctx);
     EndMode2D();
     /* Vida de kojiro no fim: a borda pulsa. */
@@ -3832,6 +3954,7 @@ static void step(float dtReal) {
         update_ctx(dtReal * (G.hitstop > 0 ? 0.1f : 1));
         fx_update(&G.fx, dtReal * (G.hitstop > 0 ? 0.25f : 1));
         vfx_update(dtReal * (G.hitstop > 0 ? 0.25f : 1));
+        raios_update(dtReal * (G.hitstop > 0 ? 0.25f : 1));
         update_hud_values(dtReal);
     }
 }

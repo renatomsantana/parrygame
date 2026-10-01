@@ -267,6 +267,78 @@ static void yoru_blades_on_real_sheets(void) {
     printf("adagas do yoru: tira da lâmina conferida em %zu animações\n", sizeof golpes / sizeof golpes[0]);
 }
 
+/* O relâmpago do arashi: raios caem em volta de quem aparou ou de kojiro, e quem leva fica meio paralisado (só desenho: o núcleo não muda). */
+static void arashi_raios_e_paralisia(void) {
+    const MasterProfile *arashi = roster_get(9);
+    REQUIRE(arashi->id == 10, "o mestre 9 do roster não é o arashi");
+    int relampago = -1, pesados = 0, outro = -1;
+    for (int i = 0; i < arashi->moveCount; i++) {
+        if (arashi->moves[i].look == LOOK_HEAVY) { pesados++; relampago = i; }
+        else if (outro < 0) outro = i;
+    }
+    REQUIRE(pesados == 1 && !strcmp(arashi->moves[relampago].name, "relâmpago"), "o arashi precisa de um só golpe pesado, o relâmpago");
+    static const struct { Judgement j; int i; float forca; float duracao; } CASOS[] = {
+        {J_PERFEITO, 1, 0.0f, 0}, {J_BOM, 3, 0.5f, PARALISIA_METADE}, {J_RUIM, 3, 1.0f, PARALISIA_CHEIA},
+    };
+    for (size_t c = 0; c < sizeof CASOS / sizeof CASOS[0]; c++) {
+        memset(&G, 0, sizeof G);
+        fx_init(&G.fx);
+        G.m = arashi;
+        settings_default(&G.settings);
+        duel_init(&G.duel, &G.settings, G.m, 1);
+        G.duel.move = relampago;
+        G.ren.x = 124; G.ren.y = GROUND_LOW;
+        const Duel antes = G.duel;
+        DuelEvent e = {.kind = EV_IMPACT, .judgement = CASOS[c].j, .i = CASOS[c].i};
+        impacto_do_raio(&e);
+        REQUIRE(memcmp(&G.duel, &antes, sizeof antes) == 0, "o relâmpago mudou o núcleo do duelo");
+        const float alvo = CASOS[c].j == J_PERFEITO ? clash_point().x : G.ren.x + G.ren.offsetX;
+        int ativos = 0, esperando = 0;
+        for (int k = 0; k < RAIOS_MAX; k++) { ativos += G.raios[k].vida > 0; esperando += G.raios[k].espera > 0; }
+        REQUIRE(ativos == 1 && esperando == 2, "o relâmpago deve soltar um raio na hora e dois logo depois");
+        REQUIRE(G.raios[0].principal && G.raios[0].x == alvo, "o raio principal não caiu em quem aparou ou apanhou");
+        REQUIRE(G.ctx.lightning == 1, "o relâmpago não acendeu o céu");
+        REQUIRE(G.paralisiaForca == CASOS[c].forca && G.paralisia == CASOS[c].duracao,
+                "a força ou a duração do choque não bate com o julgamento (perfeito nada, bom meio, erro inteiro)");
+        /* o tempo passa: os raios entram, caem e somem; o choque acaba */
+        for (float t = 0; t < RAIO_VIDA + 0.2f + PARALISIA_CHEIA; t += 1.0f / 60) raios_update(1.0f / 60);
+        for (int k = 0; k < RAIOS_MAX; k++) REQUIRE(G.raios[k].vida <= 0 && G.raios[k].espera <= 0, "um raio ficou na tela para sempre");
+        REQUIRE(G.paralisia == 0, "o choque não acabou");
+    }
+    /* meio paralisado: o choque só atrasa a animação de dor, e o aperto o larga */
+    memset(&G, 0, sizeof G);
+    SprAnim dor = {0}, guarda = {0};
+    snprintf(dor.name, sizeof dor.name, "HURT");
+    snprintf(guarda.name, sizeof guarda.name, "IDLE");
+    G.paralisia = PARALISIA_CHEIA; G.paralisiaTotal = PARALISIA_CHEIA; G.paralisiaForca = 1;
+    G.renS.pl.anim = &dor;
+    REQUIRE(fabsf(paralisia_ritmo() - (1 - PARALISIA_LENTIDAO)) < 1e-6f, "com o choque cheio a queda não ficou mais lenta");
+    G.paralisiaForca = 0.5f;
+    REQUIRE(fabsf(paralisia_ritmo() - (1 - PARALISIA_LENTIDAO * 0.5f)) < 1e-6f, "o meio choque não atrasa pela metade");
+    G.renS.pl.anim = &guarda;
+    REQUIRE(paralisia_ritmo() == 1, "o choque atrasou outra animação além da dor");
+    G.renS.pl.anim = &dor; G.paralisia = 0;
+    REQUIRE(paralisia_ritmo() == 1, "sem choque a dor deve correr no ritmo de sempre");
+    G.paralisia = PARALISIA_CHEIA; G.paralisiaForca = 1;
+    sprite_press();
+    REQUIRE(G.paralisia == 0, "o aperto não largou o choque");
+    /* nenhum outro golpe, nem outro mestre, solta raio */
+    for (int caso = 0; caso < 2; caso++) {
+        memset(&G, 0, sizeof G);
+        fx_init(&G.fx);
+        G.m = caso ? roster_get(0) : arashi;   /* o outro: o primeiro mestre, que também tem golpe pesado */
+        settings_default(&G.settings);
+        duel_init(&G.duel, &G.settings, G.m, 1);
+        int mv = outro;
+        if (caso) for (int i = 0; i < G.m->moveCount; i++) if (G.m->moves[i].look == LOOK_HEAVY) mv = i;
+        G.duel.move = mv;
+        DuelEvent e = {.kind = EV_IMPACT, .judgement = J_RUIM, .i = 3};
+        impacto_do_raio(&e);
+        for (int k = 0; k < RAIOS_MAX; k++) REQUIRE(G.raios[k].vida <= 0 && G.raios[k].espera <= 0, "outro golpe soltou raio");
+        REQUIRE(G.paralisia == 0 && G.ctx.lightning == 0, "outro golpe paralisou ou acendeu o céu");
+    }
+}
+
 /* No apagão do yoru só as adagas aparecem: o aviso (do golpe simples e do duplo) só faz som, sem faísca, estrela ou folha de efeito em volta. Com as luzes acesas, solta tudo. */
 static void yoru_dark_has_no_glow(void) {
     int particulas[2], estrelas[2], folhas[2];
@@ -415,7 +487,7 @@ int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow();
+    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
