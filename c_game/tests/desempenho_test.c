@@ -2,12 +2,13 @@
  * desempenho_test.c - a medida de quadros (src/desempenho.c), sem janela nem raylib. make test-desempenho
  * Cobre: média, mediana, p95, p99 e máximo com números que se conferem de cabeça (1 a 100 ms, fora de
  * ordem), o aquecimento que sai do resumo, a contagem de quadros acima de um limite, a capacidade cheia e
- * a série vazia.
+ * a série vazia, e o tempo de CPU do processo.
  */
 #include "../src/desempenho.h"
 
 #include <math.h>
 #include <stdio.h>
+#include <time.h>
 
 static int checks = 0, failures = 0;
 #define CHECK(cond, ...) do { \
@@ -72,6 +73,15 @@ int main(void) {
     perf_libera(&p);
     CHECK(!perf_iniciar(&p, 0), "capacidade 0 não inicia");
     CHECK(perf_nome(PERF_SWAP)[0] == 's' && perf_nome((PerfSecao)99)[0] == '?', "nomes");
+
+    /* o tempo de CPU do processo (getrusage no POSIX, GetProcessTimes no Windows): existe, não anda para trás, e cresce quando o processo trabalha */
+    double u0 = -1, s0 = -1, u1 = -1, s1 = -1;
+    CHECK(perf_cpu_do_processo(&u0, &s0) && u0 >= 0 && s0 >= 0, "o tempo de CPU do processo existe (%.3f, %.3f)", u0, s0);
+    volatile double sorvedouro = 1;
+    const clock_t inicio = clock();
+    while (clock() - inicio < CLOCKS_PER_SEC / 10) sorvedouro = sorvedouro * 1.0000001 + 1e-9;      /* 100 ms trabalhando */
+    CHECK(perf_cpu_do_processo(&u1, &s1) && u1 >= u0 && s1 >= s0, "o tempo de CPU não anda para trás");
+    CHECK((u1 + s1) - (u0 + s0) >= 0.05, "cem milissegundos trabalhando somam ao menos 50 ms de CPU (%.3f s)", (u1 + s1) - (u0 + s0));
 
     printf("desempenho: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;

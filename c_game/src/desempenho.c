@@ -4,6 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/resource.h>
+#endif
+
 bool perf_iniciar(Desempenho *p, int capacidade) {
     memset(p, 0, sizeof *p);
     if (capacidade < 1) return false;
@@ -70,4 +76,21 @@ int perf_acima(const Desempenho *p, PerfSecao secao, double limite, int pular) {
 const char *perf_nome(PerfSecao secao) {
     static const char *NOME[PERF_SECOES] = {"quadro", "lógica", "mundo", "interface", "composição", "swap"};
     return secao >= 0 && secao < PERF_SECOES ? NOME[secao] : "?";
+}
+
+bool perf_cpu_do_processo(double *usuario, double *sistema) {
+#ifdef _WIN32
+    FILETIME criado, saiu, kernel, user;
+    if (!GetProcessTimes(GetCurrentProcess(), &criado, &saiu, &kernel, &user)) return false;
+    const double cem_ns = 1e-7;       /* o FILETIME conta em intervalos de 100 ns */
+    *usuario = (double)(((unsigned long long)user.dwHighDateTime << 32) | user.dwLowDateTime) * cem_ns;
+    *sistema = (double)(((unsigned long long)kernel.dwHighDateTime << 32) | kernel.dwLowDateTime) * cem_ns;
+    return true;
+#else
+    struct rusage ru;
+    if (getrusage(RUSAGE_SELF, &ru) != 0) return false;
+    *usuario = (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec * 1e-6;
+    *sistema = (double)ru.ru_stime.tv_sec + (double)ru.ru_stime.tv_usec * 1e-6;
+    return true;
+#endif
 }

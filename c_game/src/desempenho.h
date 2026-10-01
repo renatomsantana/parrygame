@@ -38,4 +38,8 @@ int perf_acima(const Desempenho *p, PerfSecao secao, double limite, int pular);
 
 const char *perf_nome(PerfSecao secao);
 
+/* O tempo de CPU que o processo gastou até agora, em segundos (usuário e sistema; o Windows dá o do kernel como
+ * sistema). false se o sistema não disser. Fica aqui, e não no main.c, porque o windows.h não convive com o raylib. */
+bool perf_cpu_do_processo(double *usuario, double *sistema);
+
 #endif
