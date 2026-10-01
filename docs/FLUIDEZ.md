@@ -119,13 +119,20 @@ três mutações (piso do aviso mais alto, `AJ_CADEIA_MIN` mais alto, hitstop de
 O que já é exato: o clique é carimbado pelo sistema (Linux, macOS e agora Windows) e o núcleo o julga no instante dele, em qualquer taxa de quadros; o hitstop é gasto em
 tempo real. Ver `docs/CURVA.md` e `docs/WINDOWS.md`.
 
-O que sobra é **visual**, e fica no `main.c` (que não toquei): o jogo só **lê** o clique no começo do quadro seguinte (até 1 quadro depois: 16,7 ms a 60 Hz, 6,9 ms
-a 144 Hz); a pose de parry é posta no mesmo quadro (`EV_PRESS` → `rig_pose(..., 0.06f)` e `sprite_press()`), mas só aparece no vblank seguinte (até mais 1 quadro). No pior
-caso são 2 quadros entre o clique e o parry na tela: 33 ms a 60 Hz, 14 ms a 144 Hz. As saídas, que não mexem no julgamento:
+O que sobra é **visual**, e fica no `main.c` (que não toquei). Conferi o caminho que o jogo desenha de fato: o Kojiro sempre aparece pelos sprites (o rig só é desenhado quando
+o lutador não tem prancha; `rig_pose(..., 0.06f)` no `EV_PRESS` não aparece na tela), então o que vale é `sprite_press()`:
 
-1. monitor de 144 Hz ou mais (corta o pior caso para menos da metade), e, no Windows, janela sem borda ou tela cheia (o compositor do sistema soma um quadro);
-2. a pose de parry chega em 60 ms (`rig_pose(r, parry_pose, 0.06f)`): é a transição visual, não o julgamento. Encurtar para 30 a 40 ms faria o parry "estalar" mais
-   cedo. É uma decisão de arte (e fica no `main.c`), por isso só proponho.
+- o clique é lido no começo do quadro seguinte (até 1 quadro depois: 16,7 ms a 60 Hz, 6,9 ms a 144 Hz) e o `EV_PRESS` põe a defesa **nesse mesmo quadro**: o quadro 0 da `DEFEND`
+  já sai no vblank seguinte (até mais 1 quadro);
+- o quadro de contato da defesa (o quadro 1 do `DEFEND` do Kojiro, `contact 1`) vem **25 ms depois** (`f_add(f, a, 0, c, 0.05f)`: dois quadros em 50 ms), e fica 0,25 s parado.
+
+Do clique ao quadro 0 na tela: 7 a 14 ms a 144 Hz (média 10) e 17 a 33 ms a 60 Hz (média 25). Do quadro 0 ao de contato: 28 ms a 144 Hz (4 quadros) e 33 ms a 60 Hz (2 quadros: 25 ms não cabe
+em um). Ou seja, o parry "fecha" na tela, em média, 38 ms depois do clique a 144 Hz e 58 ms a 60 Hz. Nada disso toca o julgamento.
+
+Das duas saídas que eu tinha citado, só a 1 vale: **monitor de 144 Hz ou mais** (corta o pior caso para menos da metade) e, no Windows, janela sem borda ou tela cheia (o compositor do
+sistema soma um quadro). A de encurtar a pose do rig para 30 a 40 ms **não faz nada na tela** (o rig não é desenhado) e a retiro. Se você quiser o fechamento mais rápido a 60 Hz, é uma
+linha: `f_add(f, a, 0, c, 0.05f)` para `0.034f` (o quadro 0 dura um quadro de 60 Hz, o de contato chega no seguinte). É mexer na duração de um quadro da animação, então **não proponho
+por conta própria**: só se o parry parecer "responder devagar" jogando.
 
 Não dá para medir isso aqui (sem tela de verdade). Num Windows com câmera de celular a 240 fps, ou com o `apara --carimbo` (que mostra o atraso do poll), dá.
 
@@ -135,6 +142,8 @@ Não dá para medir isso aqui (sem tela de verdade). Num Windows com câmera de 
 
 ## 5. O que preciso de você
 
-1. A pré-carga de efeitos: aplico o patch inteiro, ou só o teste (se o `01eeb13` do Mac já cobre)? Em ambos os casos o `main.c` é da outra sessão: o patch segue como arquivo.
-2. Ritmo: aprova A (Daichi), B (hitstop em sequência), as duas ou nenhuma?
-3. Pose de parry: quer que eu proponha 30 a 40 ms (patch no `main.c`)?
+Três decisões, e o que eu assumo se você não disser nada (nada disso é aplicado sem o seu OK):
+
+1. **Pré-carga de efeitos.** Assumo: só o teste (`tests/teste_desempenho.sh`) entra no repositório depois que eu vir o `01eeb13` do Mac; o `main.c` fica com a outra sessão (o patch segue como arquivo).
+2. **Ritmo.** Assumo: **nenhuma** das duas mudanças. A B endurece o casual em até 1,3 ponto e mexe em duas regras aprovadas (piso do jinshi 55 e degrau 3,0); a A mexe na regra do `waitScale`.
+3. **Pose de parry.** Resolvido acima: não há o que mudar no rig; a linha do `sprite_press` só se você quiser.
