@@ -2,6 +2,8 @@
 #ifndef APARA_ENTRADA_FILA_H
 #define APARA_ENTRADA_FILA_H
 
+#include <stdbool.h>
+
 #define ENTRADA_FILA_MAX 32
 
 typedef struct {
@@ -26,6 +28,21 @@ static inline int fila_coleta(EntradaFila *f, double *saida, int max, double ate
     }
     f->n = resta;
     return dados;
+}
+
+/* As teclas de aparar que já estão apertadas: a repetição do teclado (o sistema manda o "apertou" de novo
+ * enquanto a tecla segue baixa) não é um aperto novo. */
+typedef struct {
+    bool baixa[256];
+} EntradaTeclas;
+
+/* true se a tecla `codigo` passou agora de solta a apertada (`solta`: o evento é de soltar). */
+static inline bool teclas_aperta(EntradaTeclas *t, unsigned codigo, bool solta) {
+    if (codigo >= 256) return false;
+    if (solta) { t->baixa[codigo] = false; return false; }
+    if (t->baixa[codigo]) return false;
+    t->baixa[codigo] = true;
+    return true;
 }
 
 #endif

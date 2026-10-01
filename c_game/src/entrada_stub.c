@@ -1,4 +1,4 @@
-/* entrada_stub.c - plataforma sem carimbo (Wayland puro, Windows): o jogo cai no meio do quadro, como sempre. */
+/* entrada_stub.c - plataforma sem carimbo (Wayland puro): o jogo cai no meio do quadro, como sempre. */
 #define _POSIX_C_SOURCE 200809L
 #include "entrada_plat.h"
 

@@ -27,8 +27,12 @@ compila desempenho_test src/desempenho.c tests/desempenho_test.c -lm
 compila fuzz_test $CORE tests/fuzz.c -lm
 compila curva $CORE tests/curva.c -lm -lpthread
 compila robos $CORE tests/robos.c -lm -lpthread
+# a camada de carimbo do Windows (Raw Input): só compila aqui; o jeito de conferir no Windows é `apara --carimbo`
+if ! SAIDA=$($CCW $FLAGS -c src/entrada_win.c -o "$T/entrada_win.o" 2>&1); then
+    echo "teste_windows: src/entrada_win.c não compila"; echo "$SAIDA" | head -8; FALHAS=$((FALHAS + 1))
+fi
 if [ "$FALHAS" -ne 0 ]; then echo "teste_windows: $FALHAS ferramenta(s) sem compilar para Windows"; exit 1; fi
-echo "teste_windows: 8 programas compilam para Windows, sem aviso"
+echo "teste_windows: 8 programas e a camada de carimbo (src/entrada_win.c) compilam para Windows, sem aviso"
 if [ -z "$WINE" ]; then echo "teste_windows: sem o Wine, não rodo os executáveis"; exit 0; fi
 # o prefixo do Wine (a "pasta C:") fica em cache: criá-lo leva uns 10 s, e a pasta temporária some ao fim
 export WINEPREFIX="${WINEPREFIX:-${XDG_CACHE_HOME:-$HOME/.cache}/apara-wine}" WINEDEBUG=-all

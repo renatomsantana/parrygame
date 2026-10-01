@@ -16,14 +16,21 @@ endif
 ifeq ($(shell uname),Darwin)
   RAYLIB_LIBS += -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL
 endif
+ifeq ($(OS),Windows_NT)
+  # MSYS2/MinGW (ou make OS=Windows_NT CC=x86_64-w64-mingw32-gcc): o raylib estático pede o OpenGL, o GDI e o multimídia
+  RAYLIB_LIBS += -lopengl32 -lgdi32 -lwinmm
+endif
 
 CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
 GAME := src/main.c src/fonte.c src/salvar.c src/entrada.c src/desempenho.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
-# O carimbo do clique (src/entrada_plat.h): um arquivo por plataforma. Sem XInput2 (Wayland puro, Windows),
+# O carimbo do clique (src/entrada_plat.h): um arquivo por plataforma. Sem XInput2 (Wayland puro),
 # o stub: o jogo funciona igual, com o aperto no meio do quadro.
 ifeq ($(shell uname),Darwin)
   ENTRADA_PLAT := src/entrada_mac.m
+else ifeq ($(OS),Windows_NT)
+  ENTRADA_PLAT := src/entrada_win.c
+  ENTRADA_LIBS := -luser32
 else
   ifeq ($(shell pkg-config --exists xi x11 2>/dev/null && echo sim),sim)
     ENTRADA_PLAT := src/entrada_linux.c
@@ -112,7 +119,7 @@ robos-taxas: robos_relatorio
 	./robos_relatorio --taxas $(TAXAS_LUTAS)
 
 # O carimbo do clique: a conversão para o relógio do núcleo, os carimbos inválidos e as lutas dos robôs com ele.
-entrada_test: $(CORE) src/entrada.c src/entrada.h tests/entrada_test.c
+entrada_test: $(CORE) src/entrada.c src/entrada.h src/entrada_fila.h tests/entrada_test.c
 	$(CC) $(CFLAGS) $(CORE) src/entrada.c tests/entrada_test.c -o $@ -lm
 
 test-entrada: entrada_test
@@ -145,6 +152,7 @@ test: core_test test-fonte test-save test-entrada test-desempenho test-curva cur
 # (roda os .exe no Wine, se houver; sem o MinGW, pula).
 teste-windows:
 	sh tests/teste_windows.sh
+	sh tests/teste_carimbo_windows.sh
 
 # O jogo de verdade sob xvfb (precisa do ./apara, do xvfb-run e da libX11; sem eles cada script pula):
 # as teclas de teste só existem com --teste e nada grava o progresso (teste_save), o rastro é só visual
@@ -176,6 +184,6 @@ run: apara
 	./apara
 
 clean:
-	rm -f apara core_test fonte_test save_test entrada_test desempenho_test fuzz_test robos_relatorio curva_relatorio personagens
+	rm -f apara apara.exe core_test fonte_test save_test entrada_test desempenho_test fuzz_test robos_relatorio curva_relatorio personagens
 
 .PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-entrada test-desempenho teste teste-jogo

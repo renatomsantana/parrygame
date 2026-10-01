@@ -4,7 +4,8 @@
  * plataforma, e o Makefile escolhe:
  *   entrada_mac.m     macOS: NSEvent.timestamp, num monitor local (só vê os eventos do próprio jogo)
  *   entrada_linux.c   X11: eventos brutos do XInput2, numa thread que marca a chegada
- *   entrada_stub.c    o resto (Wayland puro, Windows): sem carimbo, e todo aperto cai no meio do quadro
+ *   entrada_win.c     Windows: Raw Input (WM_INPUT) numa thread própria, carimbado com o QueryPerformanceCounter
+ *   entrada_stub.c    o resto (Wayland puro): sem carimbo, e todo aperto cai no meio do quadro
  * Quem lê os carimbos é o main.c, e quem os converte para o núcleo é o entrada.c.
  */
 #ifndef APARA_ENTRADA_PLAT_H

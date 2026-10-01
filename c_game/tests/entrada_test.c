@@ -10,6 +10,7 @@
  *     à coluna "ms exato" de make robos.
  */
 #include "../src/entrada.h"
+#include "../src/entrada_fila.h"
 
 #include "../src/ajuste.h"
 #include "../src/robo.h"
@@ -395,6 +396,32 @@ static void teste_clique_no_hitstop(int cenas) {
            noCongelado, noQuadroDoFim, depois, semSegundoGolpe);
 }
 
+/* A fila de carimbos e o filtro de repetição de tecla (src/entrada_fila.h), iguais em todas as plataformas. */
+static void teste_fila_e_teclas(void) {
+    EntradaFila f = {0};
+    for (int i = 0; i < 5; i++) fila_empilha(&f, 1.0 + i);
+    double c[8];
+    int n = fila_coleta(&f, c, 8, 3.0);
+    CHECK(n == 3 && c[0] == 1.0 && c[1] == 2.0 && c[2] == 3.0, "a fila devolve em ordem os carimbos até o instante pedido (%d)", n);
+    CHECK(f.n == 2, "os carimbos depois do instante ficam para o quadro seguinte (%d)", f.n);
+    n = fila_coleta(&f, c, 1, 10.0);
+    CHECK(n == 1 && c[0] == 4.0 && f.n == 1, "o máximo pedido é respeitado e o resto fica (%d, sobram %d)", n, f.n);
+    EntradaFila cheia = {0};
+    for (int i = 0; i < ENTRADA_FILA_MAX + 5; i++) fila_empilha(&cheia, (double)i);
+    n = fila_coleta(&cheia, c, 1, 1e9);
+    CHECK(cheia.n == ENTRADA_FILA_MAX - 1 && c[0] == 5.0, "cheia, a fila descarta o mais velho (primeiro que sobrou %.0f, %d na fila)", c[0], cheia.n);
+    /* uma tecla segurada: o sistema repete o "apertou" sem soltar, e só o primeiro é um aperto */
+    EntradaTeclas t = {{false}};
+    int apertos = 0;
+    apertos += teclas_aperta(&t, 0x20, false);
+    for (int r = 0; r < 5; r++) apertos += teclas_aperta(&t, 0x20, false);
+    CHECK(apertos == 1, "a repetição do teclado não é um aperto novo (%d apertos)", apertos);
+    CHECK(!teclas_aperta(&t, 0x20, true), "soltar a tecla não é um aperto");
+    CHECK(teclas_aperta(&t, 0x20, false), "soltou e apertou: é um aperto novo");
+    CHECK(teclas_aperta(&t, 0x4A, false), "outra tecla apertada com a primeira ainda baixa é um aperto");
+    CHECK(!teclas_aperta(&t, 300, false) && !teclas_aperta(&t, 256, true), "código fora da tabela nunca é aperto");
+}
+
 int main(int argc, char **argv) {
     int lutas = argc > 1 ? atoi(argv[1]) : 60;
     if (lutas < 1) lutas = 60;
@@ -404,6 +431,7 @@ int main(int argc, char **argv) {
     teste_lutas(lutas);
     teste_tabela(lutas);
     teste_clique_no_hitstop(lutas > 12 ? lutas / 3 : 4);
+    teste_fila_e_teclas();
     printf("entrada: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
 }
