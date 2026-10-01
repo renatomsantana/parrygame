@@ -1643,6 +1643,9 @@ static void raizo_tell(Vector2 tip, Vector2 feet) {
     }
 }
 
+/* O yoru apagou as luzes nesta sequência: só as adagas dele aparecem, então nada de brilho, faísca ou raio em volta. */
+static bool yoru_no_escuro(void) { return G.m && G.m->id == 11 && G.duel.blackout; }
+
 /* Sinal próprio de cada vilão no começo de cada sequência: nunca dois iguais. */
 static void tell_fx(void) {
     Rig *b = &G.boss;
@@ -1653,7 +1656,9 @@ static void tell_fx(void) {
     int echo = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
     /* tom do gesto de cada mestre, na ordem da trilha */
     static const float pitch[ROSTER_SIZE] = {0.7f, 0.8f, 0.6f, 1.5f, 1.0f, 1.25f, 1.4f, 1.1f, 1.3f, 1.6f, 1.2f, 0.65f, 0.9f};
-    if (G.m->id == 3 || echo == 2) raizo_tell(tip, feet);
+    const bool escuro = yoru_no_escuro();
+    if (escuro) { /* no apagão o aviso é só o som: nenhuma luz além das adagas */ }
+    else if (G.m->id == 3 || echo == 2) raizo_tell(tip, feet);
     else switch (G.m->id) {
         case 1: fx_burst(&G.fx, P_SPARK, feet, 10, 70, 0.6f, -1.2f, (Color){255, 190, 110, 255}, (Color){255, 140, 60, 255}); break;
         case 2: fx_burst(&G.fx, P_GEM, tip, 8, 40, 1.2f, 1.57f, (Color){200, 236, 255, 255}, (Color){120, 190, 240, 255}); break;
@@ -1668,6 +1673,7 @@ static void tell_fx(void) {
         default: fx_burst(&G.fx, P_DUST, mid, 18, 16, 3.14f, 0, (Color){150, 90, 200, 150}, (Color){90, 50, 130, 130}); break;
     }
     audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
+    if (escuro) return;
     /* E o efeito do pack de cada um: onde nasce (no chão ou no corpo) e a cor. Oboro
      * usa o do aprendiz da postura em que está, em vermelho. */
     int ti = (G.m->id - 1) % ROSTER_SIZE, row = TELL[ti].row;
@@ -1719,8 +1725,10 @@ static void ren_falls(void) {
 /* As duas lâminas vão vir juntas: brilham as duas e soa um tinido duplo. */
 static void dual_tell(void) {
     Vector2 c = {G.boss.x + G.boss.offsetX, GROUND_LOW - 30};
-    fx_star(&G.fx, (Vector2){c.x - 7, c.y - 5}, 11, 0.2f);
-    fx_star(&G.fx, (Vector2){c.x + 3, c.y + 3}, 9, 0.2f);
+    if (!yoru_no_escuro()) {
+        fx_star(&G.fx, (Vector2){c.x - 7, c.y - 5}, 11, 0.2f);
+        fx_star(&G.fx, (Vector2){c.x + 3, c.y + 3}, 9, 0.2f);
+    }
     audio_play(SND_SWING, 0.35f, 1.7f);
     audio_play(SND_SWING, 0.3f, 1.9f);
     G.boss.flash = 0.7f;
@@ -2716,27 +2724,18 @@ static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Col
     }
 }
 
-/* O apagão do yoru: o corpo some e as duas adagas acendem, para só elas aparecerem no escuro. O aço (os pixels claros e frios da própria
- * prancha, em spr_lamina) volta em branco e lilás por cima do corpo apagado, com um halo violeta que pulsa em volta; `k` é o apagão, de 0 a 1. */
-#define YORU_CORPO_NO_ESCURO 0.14f
+/* O apagão do yoru: o corpo some por inteiro e ficam só as duas adagas, nas cores delas (o aço da própria prancha, em spr_lamina), sem brilho nem raio em
+ * volta; `k` é o apagão, de 0 a 1. */
 static void desenha_laminas_acesas(float k) {
     const Fighter *f = &G.bossS;
     const SprAnim *a = f->pl.anim;
     if (!a || !f->set) return;
-    const SprAnim *nucleo = spr_lamina(f->set, a, false), *halo = spr_lamina(f->set, a, true);
-    if (!nucleo || !halo) return;
+    const SprAnim *lamina = spr_lamina(f->set, a);
+    if (!lamina) return;
     const Rig *r = &G.boss;
     Vector2 feet = {r->x + r->offsetX, r->y - r->hopY};
-    int breath = sprite_breath(r, f), frame = f->pl.frame;
-    float pulso = 0.78f + 0.22f * sinf(r->time * 13.0f);
-    static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-    SprDraw o = {r->faceLeft, breath, true, fadec((Color){150, 80, 255, 255}, 0.42f * k * pulso)};
-    for (int n = 0; n < 4; n++) spr_draw(f->set, halo, frame, (Vector2){feet.x + off[n][0], feet.y + off[n][1]}, o);   /* o halo largo, fraco */
-    o.color = fadec((Color){170, 110, 255, 255}, 0.92f * k * pulso);
-    spr_draw(f->set, halo, frame, feet, o);                                                                           /* o halo junto da lâmina */
-    o.flat = false;
-    o.color = fadec((Color){255, 255, 255, 255}, k);
-    spr_draw(f->set, nucleo, frame, feet, o);                                                                         /* o aço */
+    SprDraw o = {r->faceLeft, sprite_breath(r, f), false, fadec(WHITE, k)};
+    spr_draw(f->set, lamina, f->pl.frame, feet, o);
 }
 
 /* A máscara de oni que oboro tirou, caída do lado dele. */
@@ -2794,8 +2793,8 @@ static void draw_rigs(Color light) {
         /* sumiu em penas */
     } else if (G.bossS.set) {
         const bool yoru = G.m->id == 11;
-        /* o yoru apaga com o apagão (sem o salto dos outros em 50%) e some quase todo; os outros mestres viram a silhueta de sempre */
-        draw_sprite_fighter(&G.boss, &G.bossS, light, rim, yoru ? G.ctx.blackout : (dark ? 1.0f : 0.0f), yoru ? YORU_CORPO_NO_ESCURO : 1.0f, 1 - G.bossDissolve);
+        /* o yoru apaga com o apagão (sem o salto dos outros em 50%) e some por inteiro, só as adagas ficam; os outros mestres viram a silhueta de sempre */
+        draw_sprite_fighter(&G.boss, &G.bossS, light, rim, yoru ? G.ctx.blackout : (dark ? 1.0f : 0.0f), yoru ? 0.0f : 1.0f, 1 - G.bossDissolve);
         if (yoru && G.ctx.blackout > 0.02f) desenha_laminas_acesas(clampf(G.ctx.blackout, 0, 1));
     }
     if (G.maskOnGround) draw_oni_mask(light);
@@ -2952,11 +2951,12 @@ static void fio_do_golpe(Vector2 arma, MoveLook look, float progresso, float com
 }
 
 /* Silhueta do quadro que está na tela e fio da arma. Tudo some no contato, que
- * continua saindo no instante do núcleo. Durante o apagão de Yoru só o fio
- * aparece, discretamente: o corpo não revela a posição dele. */
+ * continua saindo no instante do núcleo. No apagão do Yoru não sai nada: só as
+ * adagas aparecem. */
 static void desenha_rastro_do_golpe(bool escuro, bool so_fio) {
     float p = duel_launch_progress(&G.duel);
     if (p <= 0) return;
+    if (escuro && G.m->id == 11) return;      /* no apagão do yoru só as adagas aparecem: nem o fio do golpe */
     int mestre = mestre_do_rastro();
     Color c = cor_rastro();
     Vector2 pes = {G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};

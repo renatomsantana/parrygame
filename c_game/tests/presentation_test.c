@@ -241,29 +241,53 @@ static void yoru_blades_on_real_sheets(void) {
         const SprAnim *a = spr_anim(yoru, golpes[n]);
         REQUIRE(a != NULL, "o yoru não tem a animação");
         if (!a) continue;
-        const SprAnim *nucleo = spr_lamina(yoru, a, false), *halo = spr_lamina(yoru, a, true);
-        REQUIRE(nucleo && halo && nucleo->tex.id && halo->tex.id, "a tira da lâmina não foi feita");
-        if (!nucleo || !halo) continue;
-        REQUIRE(spr_lamina(yoru, a, false) == nucleo, "a tira da lâmina é feita uma vez só");
-        Image im = LoadImageFromTexture(nucleo->tex), ih = LoadImageFromTexture(halo->tex);
-        Color *px = (Color *)im.data, *ph = (Color *)ih.data;
-        int total = 0, haloTotal = 0, contato = 0, indevidos = 0;
+        const SprAnim *lamina = spr_lamina(yoru, a);
+        REQUIRE(lamina && lamina->tex.id, "a tira da lâmina não foi feita");
+        if (!lamina) continue;
+        REQUIRE(spr_lamina(yoru, a) == lamina, "a tira da lâmina é feita uma vez só");
+        Image im = LoadImageFromTexture(lamina->tex), original = LoadImage(TextFormat("assets/sprites/yoru/%s.png", a->name));
+        ImageFormat(&original, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+        Color *px = (Color *)im.data, *po = (Color *)original.data;
+        int total = 0, contato = 0, indevidos = 0, trocados = 0;
         const int c = a->contact >= 0 ? a->contact : a->frames / 2;
         for (int y = 0; y < im.height; y++)
             for (int x = 0; x < im.width; x++) {
-                Color q = px[y * im.width + x];
-                if (ph[y * ih.width + x].a > 0) haloTotal++;
+                Color q = px[y * im.width + x], o = po[y * original.width + x];
                 if (q.a == 0) continue;
                 total++;
                 if (x / yoru->cw == c) contato++;
                 if (q.b < q.r || yoru->ay - y > 28) indevidos++;     /* pele, ou acima da altura dos olhos */
+                if (q.r != o.r || q.g != o.g || q.b != o.b || q.a != o.a) trocados++;   /* a lâmina sai na cor dela, sem tinta e sem brilho por cima */
             }
         REQUIRE(total > 0 && indevidos == 0, "a lâmina acendeu pele ou o rosto");
+        REQUIRE(trocados == 0, "a lâmina não está nas cores da própria prancha");
         if (strcmp(golpes[n], "IDLE")) REQUIRE(contato >= 8, "sem aço aceso no quadro de contato do golpe");
-        REQUIRE(haloTotal > total, "o halo tem de ser maior que o aço");
-        UnloadImage(im); UnloadImage(ih);
+        UnloadImage(im); UnloadImage(original);
     }
     printf("adagas do yoru: tira da lâmina conferida em %zu animações\n", sizeof golpes / sizeof golpes[0]);
+}
+
+/* No apagão do yoru só as adagas aparecem: o aviso (do golpe simples e do duplo) só faz som, sem faísca, estrela ou folha de efeito em volta. Com as luzes acesas, solta tudo. */
+static void yoru_dark_has_no_glow(void) {
+    int particulas[2], estrelas[2], folhas[2];
+    for (int escuro = 0; escuro < 2; escuro++) {
+        memset(&G, 0, sizeof G);
+        fx_init(&G.fx);
+        G.m = roster_get(10);
+        REQUIRE(G.m->id == 11, "o mestre 10 do roster não é o yoru");
+        settings_default(&G.settings);
+        duel_init(&G.duel, &G.settings, G.m, 1);
+        G.duel.blackout = escuro;
+        G.boss.x = 200; G.boss.y = GROUND_LOW;
+        tell_fx();
+        dual_tell();
+        particulas[escuro] = estrelas[escuro] = folhas[escuro] = 0;
+        for (int i = 0; i < MAX_PARTICLES; i++) particulas[escuro] += G.fx.p[i].alive;
+        for (int i = 0; i < 4; i++) estrelas[escuro] += G.fx.stars[i].life > 0;
+        for (int i = 0; i < VFX_MAX; i++) folhas[escuro] += G.vfx[i].fx != NULL;
+    }
+    REQUIRE(particulas[0] > 0 && estrelas[0] > 0, "com as luzes acesas o aviso do yoru deixou de soltar faísca e estrela");
+    REQUIRE(particulas[1] == 0 && estrelas[1] == 0 && folhas[1] == 0, "no apagão o aviso do yoru soltou luz além das adagas");
 }
 
 static void real_assets(void) {
@@ -391,7 +415,7 @@ int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule();
+    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;

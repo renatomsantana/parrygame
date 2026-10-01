@@ -76,11 +76,11 @@ void spr_loop(SprPlayer *p, const SprAnim *a);
 void spr_cycle(SprPlayer *p, const SprAnim *a, float time);  /* o laço por `time` segundos */
 void spr_update(SprPlayer *p, float dt);
 bool spr_done(const SprPlayer *p);
-/* A tira só com a lâmina, para acendê-la no escuro (as adagas do yoru no apagão). É aço o pixel frio (o azul igual ou maior que o vermelho, o que deixa
+/* A tira só com a lâmina, para o apagão do yoru: do corpo ficam só as adagas, nas cores delas. É aço o pixel frio (o azul igual ou maior que o vermelho, o que deixa
  * a pele de fora) que está abaixo da altura dos olhos e é bem claro (branco e lilás) em qualquer lugar, ou é violeta mas perto de um ponto de lâmina
- * (`arma` e `arma2` do sprite.txt: o violeta também é do cabelo e das botas, e longe da lâmina fica apagado). `halo`: a mesma tira alargada em um
- * pixel, para o brilho em volta. Cada tira é feita na primeira vez que se pede, e fica guardada. NULL se a tira não está lá. */
-const SprAnim *spr_lamina(const SprSet *s, const SprAnim *a, bool halo);
+ * (`arma` e `arma2` do sprite.txt: o violeta também é do cabelo e das botas, e longe da lâmina fica apagado). Cada tira é feita na primeira vez que se pede,
+ * e fica guardada. NULL se a tira não está lá. */
+const SprAnim *spr_lamina(const SprSet *s, const SprAnim *a);
 bool spr_pixel_de_lamina(Color c, int acimaDosPes, bool pertoDoPonto);   /* a regra de cor e altura, aberta para o teste */
 bool spr_weapon_point(const SprPlayer *p, Vector2 feet, bool faceLeft, int breath, Vector2 *point);
 bool spr_offhand_point(const SprPlayer *p, Vector2 feet, bool faceLeft, int breath, Vector2 *point);
