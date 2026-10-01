@@ -169,6 +169,32 @@ os degraus são 6,6 / 4,4 / 7,3 / 8,6 / 4,8 / 3,2 / 14,7).
 
 Os outros dez mestres não mudaram (nem uma lâmina, nem uma postura).
 
+## Depois da integração com a `mac-integracao` e dos golpes novos (medido, 100 mil lutas por mestre e robô)
+
+Duas coisas mexeram na curva depois da tabela acima, e as duas passam nas mesmas faixas (`make curva-alvo`, 0 itens fora da faixa ou da ordem, a 10 mil e a 100 mil lutas, a 60 e a 144 Hz):
+
+1. **A reformulação da Shizuku, da outra sessão** (9 golpes para 4): o `eco do gelo` do Oboro, que copia a dupla do florete, passou de 4 golpes para 2, e o casual do Oboro foi de 41,2 para 37,8 (faixa 37 a 43). Das 65 células da tabela, só essa mudou.
+2. **Os 19 golpes novos** em oito mestres (`docs/GOLPES_NOVOS.md`), com o peso de cada um calibrado para a curva ficar onde estava.
+
+| # | Mestre | Primeira vez | Casual decora | Reação 250 | Perfeito | Spam |
+|---|---|---|---|---|---|---|
+| 1 | daichi | 87,0 | 100,0 | 100,0 | 100,0 | 0,0 |
+| 2 | genbu | 84,9 | 100,0 | 100,0 | 100,0 | 0,0 |
+| 3 | raizo | 73,8 | 99,9 | 100,0 | 100,0 | 0,0 |
+| 4 | shizuku | 68,9 | 100,0 | 100,0 | 100,0 | 0,0 |
+| 5 | garfiel | 0,1 | 99,8 | 8,7 | 100,0 | 0,0 |
+| 6 | karasu | 0,0 | 91,1 | 7,6 | 100,0 | 0,0 |
+| 7 | hayate | 0,0 | 85,3 | 5,8 | 100,0 | 0,0 |
+| 8 | enjin | 0,0 | 79,5 | 2,7 | 100,0 | 0,0 |
+| 9 | suiren | 0,0 | 71,2 | 0,0 | 100,0 | 0,0 |
+| 10 | arashi | 0,0 | 63,6 | 0,4 | 100,0 | 0,0 |
+| 11 | yoru | 0,0 | 58,4 | 0,8 | 100,0 | 0,0 |
+| 12 | jinshi | 0,0 | 55,3 | 0,6 | 100,0 | 0,0 |
+| 13 | oboro | 0,0 | 37,8 | 0,0 | 100,0 | 0,0 |
+
+Os degraus do casual, do Karasu ao Oboro, são 5,8 / 5,8 / 8,3 / 7,6 / 5,2 / 3,1 / 17,5 (o mínimo, do Garfiel ao Oboro, é 3,0; o do Yoru ao Jinshi, 3,1, é o apertado). Daichi, Genbu, Raizo e Shizuku não mudam, e o Oboro só mudou pela Shizuku.
+O piso do Jinshi no `test_curva` do `core_test.c` passou de 55 para 52 (a faixa aprovada), porque o teste usa 300 lutas e varia 3 pontos.
+
 ## O que mudou no `roster.c`
 
 Três linhas de cabeçalho, nada de golpes:

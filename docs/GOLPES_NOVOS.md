@@ -1,7 +1,7 @@
-# Golpes novos por arma (item 2): proposta com números
+# Golpes novos por arma (item 2): a primeira etapa está aplicada
 
-Proposta **em texto**: nada foi aplicado no repositório. Os números vêm de um protótipo descartável (uma cópia da ponta da `mac-integracao`, `a11cdbc`, com os golpes novos no `roster.c`), medido com os mesmos
-robôs e testes do repositório. Para aprovar: os quatro pontos da seção 5.
+A **primeira etapa** (só o núcleo: `roster.c` e testes, sem tocar o `main.c`) foi aplicada, um mestre por commit, depois da sua aprovação. A **segunda etapa** (o desenho próprio de cada golpe, no `main.c`) segue como proposta (seção 4).
+Os números abaixo vêm do protótipo que precedeu os commits, e foram conferidos de novo a cada commit (`make test` com a `curva-alvo`) e no repertório final. Como ficou, em commits: seção 5.
 
 ## 1. O que entra, o que não entra
 
@@ -38,8 +38,6 @@ de cada golpe, e fica no `main.c`.
 | | esquerda e direita | 3 (0,40 · 0,45) | 0,90 | 0,5 | baixo | | 4,2% |
 | Jinshi (katana branca) | quarto crescente | 2 (0,55) | 0,90 | 0,4 | alto | | 3,3% |
 | | maré de luar | 3 (0,50 · 0,90) | 0,85 | 0,8 | baixo | | 6,7% |
-
-O diff exato do protótipo (as 27 linhas do `roster.c`: 19 golpes e 8 contagens) está em `docs/mac/golpes_novos_roster.patch`; aplica limpo na ponta da `mac-integracao` e **não foi aplicado**.
 
 **19 golpes novos**: o Garfiel vai de 9 para 11 golpes, o Enjin de 8 para 11, e os outros seis (Karasu, Hayate, Suiren, Arashi, Yoru, Jinshi) para 12. "Quanto aparece" é a fração das sequências do mestre. É pouco de propósito: ver o porquê na seção 3.
 
@@ -83,16 +81,15 @@ O que faria cada golpe parecer novo, e não só um ritmo novo: o arco de corte d
 família (brilho e som; o tempo do aviso não muda). Isso mexe no `main.c` (desenho do golpe, rastro, cores), que a outra sessão está mudando muito (701 linhas na `mac-integracao`). Proponho **só depois** de a outra sessão fechar o `main.c`,
 em commits pequenos por família, para não brigar com ela. Até lá, os 19 golpes já jogam com o que existe.
 
-## 5. O que preciso de você (quatro pontos)
+## 5. Como entrou
 
-1. **Aprova a primeira etapa** com esses 19 golpes e esses pesos? (Só `roster.c` e testes. Cada mestre num commit, com o teste.)
-2. **Regra do tamanho do repertório:** de "de 7 a 10 sequências" para **"de 7 a 12"** nos mestres comuns (Daichi, Genbu, Raizo e Shizuku não mudam), e o teste do Jinshi (`moveCount == 10`) para 12. São 9 verificações do `core_test`.
-3. **Piso do Jinshi no `test_curva`:** de 55 para **52** (a faixa que você aprovou é 52 a 58). O Jinshi está em 55,9% hoje (55,3% com os golpes novos) e o teste usa 300 lutas (±2,8 pontos de ruído): com o piso em 55 ele reprova por sorteio, mesmo sem mudança nenhuma
-   (reprovou com 53% no protótipo). Se preferir manter o 55, a alternativa é subir as lutas do teste.
-4. **Dois testes presos à semente** que mudam com qualquer golpe novo: `tarde: quanto depois do contato` (exige mais de 20 casos e passa a ter 20) e `um golpe duplo de arashi foi observado` (a semente 11 não alcança mais um golpe duplo antes de a vida acabar).
-   Eu os adapto sem mudar o que verificam (mais sementes no primeiro, uma semente que alcança no segundo).
+Aprovados os quatro pontos (e a primeira etapa), em cima da junção com a `mac-integracao`, em commits pequenos, nesta ordem:
 
-E, junto com a primeira etapa, um **teste novo** (sem pedir nada): cada um dos 19 golpes isolado, com a janela perfeita e a boa viáveis com o atraso máximo de 120 ms e o mesmo resultado a 60 e a 144 Hz, como o `test_florete` faz com o florete.
+1. **Testes presos à semente** (`026fafd`): o "tarde" passa a usar três sementes por mestre e o do golpe duplo do Arashi mantém a vida cheia; o que cada um verifica não mudou.
+2. **Piso do Jinshi** no `test_curva` de 55 para 52 (`3e0e3ea`), a faixa aprovada.
+3. **Regra do tamanho** do repertório de "7 a 10" para "7 a 12" nos mestres comuns (`c125708`).
+4. **Teste novo `test_cada_golpe`** (`6a1f7d1`): cada golpe de cada mestre comum, isolado, com a perfeita e a boa viáveis com 120 ms de atraso e igual a 60 e 144 Hz (hoje 119 golpes, 252 contatos).
+5. **Um commit por mestre**, com o `roster.c` e a linha do `docs/JOGO.md`: Karasu, Hayate, Enjin, Suiren, Arashi, Yoru, Jinshi e, por último, o Garfiel. A ordem não é arbitrária: aplicado antes do Karasu, o Garfiel (Reação 250 de 9,4 para 8,5) deixava só 0,3 ponto
+   até o Karasu de hoje (8,2), e a ordem da curva exige 0,5; com o Karasu antes (7,7), o degrau é 0,8. Cada commit passa o `make test` inteiro, com a `curva-alvo` em 0 itens.
 
-**Como entra, se aprovado:** em cima da `mac-integracao` (junção, não cópia), em commits pequenos: as regras de teste dos pontos 2 a 4, o teste novo, depois um commit por mestre (roster e `docs/JOGO.md`). O `roster.c` só ganha linhas nos blocos
-desses oito mestres; os blocos que a outra sessão mexeu (Raizo, Shizuku, os ecos do Oboro) ficam como estão, então o conflito esperado é nenhum.
+O que **não** entrou: golpes novos no Daichi e no Genbu (a regra dos sete), nada na Shizuku, no Raizo nem no sumiço do Karasu (da outra sessão), e o desenho próprio de cada golpe (segunda etapa).

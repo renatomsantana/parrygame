@@ -168,7 +168,7 @@ da preparação ele vira penas e some, e reaparece na frente de kojiro com a lâ
 no alto, pouco antes de ela partir; é o reaparecer que avisa. **⚔** é o golpe de **duas lâminas**
 (o corte cruzado, anunciado por um brilho duplo e um tinido duplo): um parry só
 segura as duas se for perfeito; no bom, a segunda entra; no erro, entram as
-duas. Todos têm de sete a dez sequências. Daichi, Genbu e Raizo nunca passam de
+duas. Todos têm de sete a doze sequências (a Shizuku, as quatro leituras do florete). Daichi, Genbu e Raizo nunca passam de
 dois contatos; Garfiel chega a oito golpes seguidos; arashi bate 1,2 vez mais
 forte; enjin deixa kojiro **em brasas** a cada erro
 (ele perde mais 60% de um golpe ao longo de 3 s, e o parry perfeito apaga); yoru

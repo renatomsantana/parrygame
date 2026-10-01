@@ -4,7 +4,7 @@ Só a luta: sem cenas, cutscenes nem mensagens. Quatro frentes, e o que já est�
 
 | Frente | Estado |
 |---|---|
-| Travadas e FPS | **causa achada e medida**; correção pronta em patch (`docs/fluidez/pre_carga_efeitos.patch`), com teste |
+| Travadas e FPS | **causa achada e medida**; a pré-carga já está no jogo (`01eeb13` da outra sessão) e o teste que a guarda está no repositório (`tests/teste_desempenho.sh`) |
 | Ritmo do duelo | ferramenta e teste no repositório (`make ritmo`, `make test-ritmo`); duas mudanças propostas, **nenhuma aplicada** |
 | Resposta do aperto | o julgamento já é exato (carimbo); o que sobra é visual e está no `main.c`: análise abaixo |
 | Fluxo visual dos golpes | é o item 2 (golpes novos por arma): espera a branch da outra sessão |
@@ -27,20 +27,14 @@ então só a seção **lógica** vale (mundo e composição não); a lógica de 
 O orçamento de um quadro é 16,7 ms a 60 Hz e 6,9 ms a 144 Hz. Não medi com placa de vídeo de verdade, mas 4 a 10 ms de CPU a mais no meio de um quadro arriscam
 perdê-lo a 60 Hz e perdem a 144 Hz, justamente no primeiro aviso e no primeiro parry perfeito.
 
-**A correção** (`docs/fluidez/pre_carga_efeitos.patch`, aplica limpo no `HEAD`): `precarrega_efeitos()` chama `spr_fx()` para as 15 folhas na abertura,
-depois de `spr_init()`. Custa **85 ms na abertura** (a carga até o primeiro quadro vai de 173 para 258 ms) e tira os travamentos:
+**A correção** é carregar as folhas de efeito na abertura, e **já está no jogo**: o commit `01eeb13` da outra sessão ("Carrega efeitos e ícones antes da luta", `preload_runtime_art()`) faz isso, então o patch que eu tinha preparado (que carregava 15 folhas) não foi
+aplicado. O que entrou foi o **teste** dele (`tests/teste_desempenho.sh`): a lógica de um quadro nunca passa de 3 ms na luta (mestres 1 e 13, até 3 tentativas cada, para a máquina ocupada não reprovar). Conferido nos dois sentidos: com a pré-carga dela, o pior quadro de lógica é
+0,04 ms (daichi) e 0,07 ms (oboro); desligando a chamada, o oboro chega a 11,2 ms e o teste reprova. Sem pré-carga, o que medi antes: 9,3 ms (daichi), 9,5 ms (oboro) e 11,1 ms (karasu).
 
 | | lógica máxima numa luta de 8 s |
 |---|---|
-| antes | daichi 9,3 ms, oboro 9,5 ms (karasu 11,1 ms) |
-| depois | daichi 0,05 ms, oboro 0,06 ms |
-
-O patch traz também o teste (`tests/teste_desempenho.sh`): a lógica de um quadro nunca passa de 3 ms na luta (daichi e oboro, até 3 tentativas cada, para a
-máquina ocupada não reprovar). Conferido nos dois sentidos: **reprova no `HEAD`** (9,3 e 9,5 ms) e **passa com o patch** (0,05 e 0,06 ms). A lista de 15 folhas
-acompanha os `vfx("...")` e a tabela `TELL` do `main.c`: ao criar um efeito novo, inclua a folha na lista, senão o teste acusa.
-
-**Atenção: a sessão do Mac tem o commit "Carrega efeitos e ícones antes da luta" (`01eeb13`), que provavelmente faz o mesmo.** Se for o caso, não
-aplique a pré-carga: aplique só o teste do patch, que é o que garante que a travada não volta.
+| sem a pré-carga | daichi 9,3 ms, oboro 9,5 ms (karasu 11,1 ms) |
+| com a pré-carga | daichi 0,04 ms, oboro 0,07 ms |
 
 **No Windows**, para medir de verdade (com a placa de vídeo real): `set APARA_PERF=20` e `apara.exe --demo --master 6 --duel`; o relatório vem
 no terminal. Olhe `PERF lógica` (o máximo tem de ficar abaixo de 3 ms) e os `PERF pico`.
@@ -140,10 +134,8 @@ Não dá para medir isso aqui (sem tela de verdade). Num Windows com câmera de 
 
 É o item 2 do plano (golpes novos por arma, o campo visual do golpe e o rastro): depende da branch da outra sessão e continua parado. Nada foi tocado.
 
-## 5. O que preciso de você
+## 5. Como as três decisões ficaram
 
-Três decisões, e o que eu assumo se você não disser nada (nada disso é aplicado sem o seu OK):
-
-1. **Pré-carga de efeitos.** Assumo: só o teste (`tests/teste_desempenho.sh`) entra no repositório depois que eu vir o `01eeb13` do Mac; o `main.c` fica com a outra sessão (o patch segue como arquivo).
-2. **Ritmo.** Assumo: **nenhuma** das duas mudanças. A B endurece o casual em até 1,3 ponto e mexe em duas regras aprovadas (piso do jinshi 55 e degrau 3,0); a A mexe na regra do `waitScale`.
-3. **Pose de parry.** Resolvido acima: não há o que mudar no rig; a linha do `sprite_press` só se você quiser.
+1. **Pré-carga de efeitos:** só o teste entrou (a pré-carga já estava no jogo, vinda da outra sessão).
+2. **Ritmo:** nenhuma das duas mudanças (B e A) foi aplicada: a B endurece o casual em até 1,3 ponto e mexe em duas regras aprovadas, e a A mexe na regra do `waitScale`.
+3. **Pose de parry:** resolvida na seção 3 (não há o que mudar no rig).

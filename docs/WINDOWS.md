@@ -10,7 +10,7 @@ MinGW-w64 (o compilador de Windows) e Wine (que roda os `.exe`): **não houve Wi
 | Núcleo (`core`, `roster`, `ajuste`, `robo`, `entrada`, `salvar`, `fonte`, `desempenho`) | compila para Windows com `-Wall -Wextra -Werror`, sem mudar nada |
 | Testes (`core_test`, `entrada_test`, `save_test`, `fonte_test`, `desempenho_test`, fuzz, `robos`, `curva`) | compilam e passam como programas Windows no Wine, com os **mesmos números do Linux**: 12066 verificações, 20280 golpes com janela viável, 7775 cliques no hitstop; a tabela da curva sai idêntica, número por número (`make teste-windows`) |
 | Carimbo do clique (`src/entrada_win.c`) | Raw Input numa thread própria. No Wine, com cliques e Espaço injetados pelo XTest: 12 de 12 cliques, 12 de 12 Espaços e 10 de 10 Espaços repetidos viram 12, 12 e 10 carimbos, com intervalo igual ao injetado (mediana 0,3 a 0,7 ms). No jogo inteiro (`apara.exe`), 30 cliques deram 30 carimbos. **Não conferido em Windows de verdade**: lá, o teste é `apara --carimbo` (o atraso do poll em relação ao clique tem de dar uns milissegundos, e não 0) |
-| O jogo inteiro (`apara.exe`) | compila, liga e abre no Wine (assets, duelo, relatório `APARA_PERF`), **mas só com as duas correções do patch abaixo**, que ainda não estão no `main.c` nem no `katana3d.c` |
+| O jogo inteiro (`apara.exe`) | compila e liga sem nenhum aviso (MinGW) com os arquivos da junção com a `mac-integracao`, e abre e luta no Wine (assets, duelo, relatório `APARA_PERF`: 195 quadros, lógica de no máximo 0,06 ms). As duas correções que ele pedia (abaixo) já estão no `main.c` e no `katana3d.c` |
 | Áudio, vsync, 144 Hz, gamepad, instalador | não conferidos (o Wine do teste não tinha placa de som nem GPU) |
 
 ## Por que o carimbo importa tanto
@@ -21,19 +21,14 @@ exato; sem o carimbo, a 60 Hz, o casual fica uns 6 pontos mais difícil (Oboro 3
 A 144 Hz a diferença é de menos de 1 ponto. Com o `entrada_win.c` o Windows volta a ter o carimbo, e qualquer falha dele (sem a thread,
 sem a janela, sem o Raw Input) cai de volta no meio do quadro, como antes.
 
-## O patch que falta: `docs/windows/main_katana3d.patch`
+## As duas correções que o jogo inteiro pedia (já aplicadas)
 
-Dois arquivos do jogo não compilam para Windows, e os dois são arquivos em que a sessão do Mac mexe, então a correção está num patch, e
-não aplicada. Aplica limpo no `HEAD` de `claude/ajustes-visuais-2` (`git apply docs/windows/main_katana3d.patch`):
+Dois arquivos do jogo não compilavam para Windows. Estavam num patch porque são arquivos em que a sessão do Mac mexe; depois da junção com a `mac-integracao` entraram no `main.c` e no `katana3d.c`:
 
-1. **`main.c`**: usa `sys/resource.h` e `getrusage` no relatório do `APARA_PERF`. Passa a usar `perf_cpu_do_processo()` (em `desempenho.c`,
-   já no repositório: `getrusage` no POSIX, `GetProcessTimes` no Windows).
-2. **`katana3d.c`**: o `<GL/gl.h>` do Windows puxa o `windows.h`, que choca com os nomes do raylib (`Rectangle`, `CloseWindow`, `ShowCursor`).
-   No Windows declara só o `glClear` e o `GL_DEPTH_BUFFER_BIT` que o arquivo usa (a `opengl32.dll` exporta `glClear`).
+1. **`main.c`**: usava `sys/resource.h` e `getrusage` no relatório do `APARA_PERF`. Usa `perf_cpu_do_processo()` (em `desempenho.c`: `getrusage` no POSIX, `GetProcessTimes` no Windows).
+2. **`katana3d.c`**: o `<GL/gl.h>` do Windows puxa o `windows.h`, que choca com os nomes do raylib (`Rectangle`, `CloseWindow`, `ShowCursor`). No Windows declara só o `glClear` e o `GL_DEPTH_BUFFER_BIT` que o arquivo usa (a `opengl32.dll` exporta `glClear`).
 
-Se o `main.c` da outra sessão já mudou e o patch não aplicar, são três trechos pequenos: o `#include`, o bloco do `getrusage` e o `#elif`
-do `katana3d.c`. **Regra daqui para frente: o `windows.h` só entra em arquivos que não incluem o `raylib.h`** (hoje: `entrada_win.c` e
-`desempenho.c`); o resto do jogo pede ao sistema por uma função desses arquivos.
+**Regra daqui para frente: o `windows.h` só entra em arquivos que não incluem o `raylib.h`** (hoje: `entrada_win.c` e `desempenho.c`); o resto do jogo pede ao sistema por uma função desses arquivos.
 
 ## Compilar no Windows
 
@@ -60,7 +55,7 @@ x86_64-w64-mingw32-gcc -std=c11 -O2 -Wall -Wextra -Wno-missing-field-initializer
   -o apara.exe -L<raylib-lib> -lraylib -lopengl32 -lgdi32 -lwinmm -luser32 -lm -static
 ```
 
-Com o patch aplicado, o `main.c` compila sem nenhum aviso para Windows.
+O `main.c` compila sem nenhum aviso para Windows.
 
 ## Os testes
 
