@@ -13,6 +13,11 @@
 #if defined(__APPLE__)
 #define GL_SILENCE_DEPRECATION
 #include <OpenGL/gl3.h>
+#elif defined(_WIN32)
+/* O <GL/gl.h> do Windows puxa o windows.h, que choca com os nomes do raylib (Rectangle, CloseWindow, ShowCursor):
+ * declara só o que este arquivo usa (a opengl32.dll exporta glClear). */
+#define GL_DEPTH_BUFFER_BIT 0x00000100
+__declspec(dllimport) void __stdcall glClear(unsigned int mask);
 #else
 #include <GL/gl.h>
 #endif
