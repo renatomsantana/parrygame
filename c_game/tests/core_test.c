@@ -1421,6 +1421,68 @@ static void test_florete(void) {
     CHECK(fpsIguais == 6, "quatro padrões e dois ecos iguais a 60 e 144 Hz com atraso máximo (%d)", fpsIguais);
 }
 
+/* Cada golpe de cada mestre comum, sozinho num repertório de um golpe só (assim o sorteio não esconde nenhum): com o atraso máximo de 120 ms, a perfeita e a boa
+ * existem em todos os contatos da sequência, e o mesmo roteiro dá os mesmos contatos a 60 e a 144 Hz. É o que o test_florete faz com o florete, para o repertório
+ * inteiro: um golpe novo entra no roster já coberto. (O oboro tem os seus ecos no test_florete e no test_oboro; a shizuku fica de fora porque é dele.) */
+static void test_cada_golpe(void) {
+    int golpes = 0, contatos = 0, iguais = 0;
+    for (int i = 0; i < roster_size(); i++) {
+        const MasterProfile *m = roster_get(i);
+        if (m->isBigBoss) continue;
+        for (int k = 0; k < m->moveCount; k++) {
+            MasterProfile one = *m;
+            one.moves[0] = m->moves[k];
+            one.moves[0].stance = -1;
+            one.moveCount = 1;
+            Settings s;
+            settings_default(&s);
+            settings_for_level(&s, i);
+            s.latency = AJ_LATENCIA_MAX;
+            Duel d;
+            duel_init(&d, &s, &one, 33);
+            RoboMente r;
+            robo_iniciar(&r, &ROBO_DO_DEMO, 33);
+            int seen[MAX_CHAIN] = {0}, last = -1;
+            for (int steps = 0; steps < 20000; steps++) {
+                d.bossPosture = 1e6f;
+                d.renPosture = s.renPosture;
+                if (d.phase == PH_WINDUP && d.attacks != last) {
+                    last = d.attacks;
+                    int hit = d.comboStrike;
+                    if (hit < one.moves[0].strikes && !seen[hit]) {
+                        const Stance *st = duel_stance(&d);
+                        double pw = st->perfectWindow, gw = st->goodWindow;
+                        bool ok = probe(&d, d.strikeAt - pw * 0.5 + s.latency) == J_PERFEITO &&
+                                  probe(&d, d.strikeAt - (pw + gw) * 0.5 + s.latency) == J_BOM;
+                        CHECK(ok, "%s/%s contato %d: perfeita e boa viáveis com %.0f ms de atraso", m->name, one.moves[0].name, hit + 1, s.latency * 1000);
+                        seen[hit] = 1;
+                        contatos++;
+                    }
+                }
+                duel_step_at(&d, 1.0 / 60, robo_aperto_em(&r, &d, 1.0 / 60));
+                duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+                bool complete = true;
+                for (int hit = 0; hit < one.moves[0].strikes; hit++) complete &= seen[hit] != 0;
+                if (complete) break;
+            }
+            for (int hit = 0; hit < one.moves[0].strikes; hit++) CHECK(seen[hit], "%s/%s contato %d foi observado", m->name, one.moves[0].name, hit + 1);
+            double aperta[128];
+            int np = 0;
+            GolpeFps a[60], b[60];
+            int na = roda_fps_selo(&one, i, 0, 33, AJ_LATENCIA_MAX, 60, aperta, &np, true, a, 60);
+            int nb = roda_fps_selo(&one, i, 0, 33, AJ_LATENCIA_MAX, 144, aperta, &np, false, b, 60);
+            bool igual = na >= 20 && nb >= 20 && na == nb;
+            for (int hit = 0; igual && hit < na - 1; hit++)
+                igual = a[hit].move == b[hit].move && a[hit].strike == b[hit].strike && a[hit].julg == b[hit].julg && fabs(a[hit].contato - b[hit].contato) < 0.001;
+            CHECK(igual, "%s/%s: pelo menos 20 contatos e os mesmos a 60 e a 144 Hz com atraso máximo (%d e %d)", m->name, one.moves[0].name, na, nb);
+            iguais += igual;
+            golpes++;
+        }
+    }
+    CHECK(iguais == golpes, "todo golpe dos mestres comuns igual a 60 e 144 Hz (%d de %d)", iguais, golpes);
+    printf("cada golpe: %d golpes dos mestres comuns, %d contatos conferidos no atraso máximo, iguais a 60 e 144 Hz\n", golpes, contatos);
+}
+
 /* O traço aleatório do hayate (±120 ms) e do jinshi (±80 ms) só mexe na espera antes do
  * aviso: ela nunca fica abaixo do piso de 100 ms (AJ_PREPARO_ANTES_DO_AVISO), o aviso fica
  * sempre no mesmo lugar (o tempo fixo antes do contato) e nunca sai antes de a preparação
@@ -2534,6 +2596,7 @@ int main(void) {
     test_lamina_variavel();
     test_taxa_de_quadros();
     test_florete();
+    test_cada_golpe();
     test_rastro_fantasma();
     test_calibracao_alta();
     test_traco_aleatorio();
