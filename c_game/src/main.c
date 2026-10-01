@@ -65,6 +65,9 @@
 #define KARASU_WARP_RECUO 28.0f       /* foge para a direita antes de virar penas */
 #define KARASU_WARP_ANTES_AVISO 0.04f /* reaparece antes do brilho/aviso existente */
 #define KARASU_WARP_PENAS 0.035f      /* espaçamento do rastro durante o recuo */
+#define KARASU_WARP_DISSOLVE 0.10f    /* o corpo apaga neste tempo (s) antes de virar penas: sem corte seco */
+#define KARASU_WARP_FORMA 0.04f       /* e se forma neste tempo ao reaparecer: ele reaparece 40 ms antes do aviso (KARASU_WARP_ANTES_AVISO), então está inteiro no aviso */
+#define KARASU_WARP_PENAS_S 240.0f    /* penas por segundo que se soltam do corpo, ou voltam para ele */
 enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP, LEAP_FEINT };
 #define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
 #define PIX_LORE 41
@@ -238,6 +241,8 @@ static struct {
     bool hopTravel;           /* um caminho contínuo no ar, sem novo bote no lançamento */
     float landT;              /* amortecendo a queda do salto */
     bool bossHidden;          /* karasu virou penas: some até reaparecer na frente de kojiro */
+    float bossDissolve;       /* 0 = inteiro, 1 = só penas: o corpo apaga e volta aos poucos (zero é o normal) */
+    float warpSolta;          /* penas por soltar ou juntar (acumulador, para a cadência não depender do quadro) */
     struct { const SprAnim *a; int frame; Vector2 feet; float life; } after[AFTER_MAX];
     int afterHead;
     float afterTimer, lastStep;
@@ -963,6 +968,7 @@ static void setup_actors(void) {
     G.bossStepSpeed = 0;
     G.leap = LEAP_NONE;
     G.bossHidden = false;
+    G.bossDissolve = 0;
     G.hopT = G.hopLen = 0;
     G.hopTravel = false;
     memset(G.after, 0, sizeof G.after);
@@ -1934,6 +1940,27 @@ static void handle_events(void) {
 /* Por quadro                                                          */
 /* ------------------------------------------------------------------ */
 
+/* O corvo se desfaz em penas e se refaz delas: o corpo apaga em vez de cortar, e as penas saem de pontos do corpo (ao sumir) ou voltam para ele
+ * (ao reaparecer). Só desenho: o núcleo e os tempos do golpe não são tocados. */
+static void karasu_penas(float dt, bool soltando) {
+    G.warpSolta += dt * KARASU_WARP_PENAS_S;
+    const Vector2 centro = {G.boss.x + G.boss.offsetX, GROUND_LOW - 22};
+    while (G.warpSolta >= 1) {
+        G.warpSolta -= 1;
+        const float r = (float)rand() / (float)RAND_MAX, q = (float)rand() / (float)RAND_MAX;
+        if (soltando) {
+            /* de um ponto qualquer do corpo, para trás (a direita) e para cima */
+            Vector2 at = {centro.x + (r - 0.5f) * 14, centro.y + (q - 0.5f) * 36};
+            fx_burst(&G.fx, P_FEATHER, at, 1, 70, 0.8f, -0.5f, (Color){18, 14, 29, 255}, (Color){100, 26, 44, 245});
+        } else {
+            /* de um anel em volta, para o corpo */
+            const float ang = r * 6.2832f, raio = 14 + q * 12;
+            Vector2 at = {centro.x + cosf(ang) * raio, centro.y + sinf(ang) * raio * 1.3f};
+            fx_burst(&G.fx, P_FEATHER, at, 1, 120, 0.15f, ang + 3.1416f, (Color){18, 14, 29, 255}, (Color){100, 26, 44, 245});
+        }
+    }
+}
+
 /* Pranchas e o passo do mestre até o alcance do golpe (e de volta ao lugar). */
 static void fighters_update(float dt) {
     f_update(&G.renS, dt);
@@ -1964,6 +1991,18 @@ static void fighters_update(float dt) {
             G.boss.offsetX = G.bossKnock + G.bossStep;
             feathers();
         }
+    }
+    {
+        /* a dissolução: apaga nos últimos instantes do recuo e some; ao reaparecer, se forma. O que vem do núcleo (relógio, aviso, contato) é o mesmo. */
+        const float dis = G.leap == LEAP_WARP ? fminf(KARASU_WARP_DISSOLVE, G.leapAt * 0.5f) : KARASU_WARP_DISSOLVE;
+        bool apagando = false;
+        if (G.leap == LEAP_WARP && G.bossWinding)
+            apagando = G.leapStage == 1 || (G.leapStage == 0 && G.leapT >= G.leapAt - dis);
+        const float antes = G.bossDissolve;
+        G.bossDissolve = clampf(antes + (apagando ? dt / dis : -dt / KARASU_WARP_FORMA), 0, 1);
+        if (apagando && G.bossDissolve < 1) karasu_penas(dt, true);
+        else if (!apagando && G.bossDissolve > 0) karasu_penas(dt, false);
+        else G.warpSolta = 0;
     }
     if ((G.leap == LEAP_DASH || G.leap == LEAP_JUMP) && G.bossWinding) {
         G.leapT += dt;
@@ -2649,14 +2688,14 @@ static int sprite_breath(const Rig *r, const Fighter *f) {
 }
 
 /* `apagar`: 0 = sob a luz, 1 = no escuro (a silhueta de um mestre no apagão), e entre os dois a passagem, sem salto.
- * `corpoApagado`: a opacidade que a silhueta guarda no escuro total (1 = a de sempre; o yoru some quase todo, e só as adagas ficam). */
-static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Color rim, float apagar, float corpoApagado) {
+ * `corpoApagado`: a opacidade que a silhueta guarda no escuro total (1 = a de sempre; o yoru some quase todo, e só as adagas ficam). `opac`: 1 = inteiro. */
+static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Color rim, float apagar, float corpoApagado, float opac) {
     const SprAnim *a = f->pl.anim;
     if (!a) return;
     int frame = f->pl.frame;
     Vector2 feet = {r->x + r->offsetX, r->y - r->hopY};
     int breath = sprite_breath(r, f);
-    const float aceso = 1 - clampf(apagar, 0, 1), escuro = clampf(apagar, 0, 1) * corpoApagado;
+    const float aceso = (1 - clampf(apagar, 0, 1)) * opac, escuro = clampf(apagar, 0, 1) * corpoApagado * opac;   /* `opac`: o corvo se desfazendo em penas */
     SprDraw o = {r->faceLeft, breath, true, fadec((Color){16, 12, 18, 255}, aceso + escuro)};
     static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     for (int k = 0; k < 4; k++) spr_draw(f->set, a, frame, (Vector2){feet.x + off[k][0], feet.y + off[k][1]}, o);
@@ -2756,13 +2795,13 @@ static void draw_rigs(Color light) {
     } else if (G.bossS.set) {
         const bool yoru = G.m->id == 11;
         /* o yoru apaga com o apagão (sem o salto dos outros em 50%) e some quase todo; os outros mestres viram a silhueta de sempre */
-        draw_sprite_fighter(&G.boss, &G.bossS, light, rim, yoru ? G.ctx.blackout : (dark ? 1.0f : 0.0f), yoru ? YORU_CORPO_NO_ESCURO : 1.0f);
+        draw_sprite_fighter(&G.boss, &G.bossS, light, rim, yoru ? G.ctx.blackout : (dark ? 1.0f : 0.0f), yoru ? YORU_CORPO_NO_ESCURO : 1.0f, 1 - G.bossDissolve);
         if (yoru && G.ctx.blackout > 0.02f) desenha_laminas_acesas(clampf(G.ctx.blackout, 0, 1));
     }
     if (G.maskOnGround) draw_oni_mask(light);
     if (rastroGolpe) desenha_rastro_do_golpe(dark, true);
     draw_hanzo(light, rim);
-    if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, 0.0f, 1.0f);
+    if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, 0.0f, 1.0f, 1.0f);
     draw_pole_flying();
     if (G.crack > 0) {
         /* Rachadura branca atravessando o mestre de cima a baixo. */
@@ -2807,7 +2846,7 @@ static void draw_rigs(Color light) {
 
 static void draw_shadow(const Rig *r) {
     float w = 11 * r->look.size * (1 - clampf(r->hopY / 20, 0, 0.6f));
-    DrawEllipse((int)(r->x + r->offsetX), GROUND_LOW, w, 2, (Color){0, 0, 0, 80});
+    DrawEllipse((int)(r->x + r->offsetX), GROUND_LOW, w, 2, (Color){0, 0, 0, (unsigned char)(80 * (r == &G.boss ? 1 - G.bossDissolve : 1))});
 }
 
 static void draw_arena(void) {

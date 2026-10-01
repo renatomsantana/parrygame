@@ -165,7 +165,8 @@ só com a lança da suiren, **de longe** (ela se afasta e a ponta viaja: entre a
 lâmina partir e chegar passa 1,75 vez o tempo dos outros golpes, então quem
 aparar no susto da partida chega cedo). O karasu tem ainda o **sumiço**: no meio
 da preparação ele vira penas e some, e reaparece na frente de kojiro com a lâmina
-no alto, pouco antes de ela partir; é o reaparecer que avisa. **⚔** é o golpe de **duas lâminas**
+no alto, pouco antes de ela partir; é o reaparecer que avisa. O corpo se desfaz em penas em vez de
+cortar: apaga em 0,10 s soltando penas, e se refaz em 0,04 s com as penas voltando para ele (só desenho: os tempos do núcleo não mudam). **⚔** é o golpe de **duas lâminas**
 (o corte cruzado, anunciado por um brilho duplo e um tinido duplo): um parry só
 segura as duas se for perfeito; no bom, a segunda entra; no erro, entram as
 duas. Todos têm de sete a doze sequências (a Shizuku, de sete a oito leituras do florete). Daichi, Genbu e Raizo nunca passam de

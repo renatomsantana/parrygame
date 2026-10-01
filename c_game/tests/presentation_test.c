@@ -128,8 +128,22 @@ static void karasu_warp_reappears_before_cue(void) {
         REQUIRE(G.leapAt < G.leapAir &&
                 G.leapAir <= timeline.cue - timeline.start - KARASU_WARP_ANTES_AVISO + 0.001f,
                 "Karasu reaparece depois do aviso");
-        for (int i = 0; i < 180 && G.leapStage == 0; i++) fighters_update(1.0f / 120);
+        /* o corpo apaga aos poucos (sem corte seco): inteiro no começo, só aumenta a dissolução até sumir, e some por inteiro quando vira penas */
+        float anterior = 0, maisCedo = 1;
+        bool sobe = true;
+        int passos = 0;       /* quadros (a 120 Hz) em que o corpo está entre inteiro e sumido: a passagem é gradual */
+        for (int i = 0; i < 180 && G.leapStage == 0; i++) {
+            fighters_update(1.0f / 120);
+            if (G.leapT < G.leapAt - KARASU_WARP_DISSOLVE - 0.011f) maisCedo = fmaxf(maisCedo - 1, G.bossDissolve);    /* ainda inteiro bem antes do fim do recuo */
+            if (G.bossDissolve < anterior - 1e-6f) sobe = false;
+            if (G.bossDissolve > 0.001f && G.bossDissolve < 0.999f) passos++;
+            anterior = G.bossDissolve;
+        }
+        REQUIRE(passos >= 6, "o Karasu sumiu num corte, sem passar por meio sumido");
+        REQUIRE(maisCedo <= 0.0001f, "o corpo do Karasu apagou antes da hora");
+        REQUIRE(sobe, "a dissolução do Karasu recuou durante o recuo");
         REQUIRE(G.leapStage == 1 && G.bossHidden, "Karasu não virou penas no fim do recuo");
+        REQUIRE(G.bossDissolve >= 0.999f, "o Karasu sumiu de uma vez (cortou em vez de dissolver)");
         int darkFeathers = 0, rightFeathers = 0;
         for (int i = 0; i < MAX_PARTICLES; i++) {
             if (!G.fx.p[i].alive || G.fx.p[i].kind != P_FEATHER) continue;
@@ -139,6 +153,10 @@ static void karasu_warp_reappears_before_cue(void) {
         REQUIRE(darkFeathers >= 20 && rightFeathers >= 20, "o rastro escuro não saiu à direita");
         for (int i = 0; i < 180 && G.leapStage == 1; i++) fighters_update(1.0f / 120);
         REQUIRE(G.leapStage == 2 && !G.bossHidden, "Karasu não reapareceu em pose de ataque");
+        REQUIRE(G.bossDissolve >= 0.5f && G.bossDissolve < 1, "o Karasu reapareceu de uma vez (devia se formar aos poucos, e ainda estar quase todo em penas no primeiro quadro)");
+        const float noAviso = (float)(timeline.cue - timeline.start);
+        for (int i = 0; i < 240 && G.leapT < noAviso; i++) fighters_update(1.0f / 120);
+        REQUIRE(G.bossDissolve <= 0.0001f, "o Karasu não estava inteiro no instante do aviso");
         REQUIRE(G.bossS.pl.anim == G.bossS.strike && G.bossS.pl.frame == anim_hold(G.bossS.strike),
                 "Karasu reapareceu sem a espada preparada");
         REQUIRE(memcmp(&G.duel, &before, sizeof before) == 0, "core mudou durante o sumiço visual");
