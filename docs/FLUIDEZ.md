@@ -7,7 +7,7 @@ Só a luta: sem cenas, cutscenes nem mensagens. Quatro frentes, e o que já est�
 | Travadas e FPS | **causa achada e medida**; a pré-carga já está no jogo (`01eeb13` da outra sessão) e o teste que a guarda está no repositório (`tests/teste_desempenho.sh`) |
 | Ritmo do duelo | ferramenta e teste no repositório (`make ritmo`, `make test-ritmo`); duas mudanças propostas, **nenhuma aplicada** |
 | Resposta do aperto | o julgamento já é exato (carimbo); o que sobra é visual e está no `main.c`: análise abaixo |
-| Fluxo visual dos golpes | é o item 2 (golpes novos por arma): espera a branch da outra sessão |
+| Fluxo visual dos golpes | o corpo agora desliza até o contato em vez de saltar (seção 4) |
 
 ## 1. Travadas: o jogo carrega cada folha de efeito na primeira vez que a usa
 
@@ -132,7 +132,20 @@ Não dá para medir isso aqui (sem tela de verdade). Num Windows com câmera de 
 
 ## 4. Fluxo visual dos golpes
 
-É o item 2 do plano (golpes novos por arma, o campo visual do golpe e o rastro): depende da branch da outra sessão e continua parado. Nada foi tocado.
+**O que se via.** O golpe chega ao contato num quadro só: a prancha traz o avanço do corpo pronto no quadro de contato (sem quadro no meio), então o mestre ficava parado
+na pose de preparação e **saltava** para a pose do golpe no instante do choque. Medi o meio do corpo (da cintura para baixo) em todos os quadros de golpe das pranchas: do quadro
+anterior ao de contato o corpo salta **12 px de mediana**, e em 63 dos 78 golpes `ATTACK_*` o salto passa de 6 px (o `DASH_ATTACK` dos mestres de investida chega a **37 px**, o `ESPECIAL`
+do Enjin e do Daichi a 25 px). O jogo parava o corpo no lugar e deixava o resto para o rastro fantasma.
+
+**O que mudou (só desenho, `AJ_DESLIZE_GOLPE` em `ajuste.h`, 0 desliga).** Na partida da lâmina o mestre passa a avançar esse salto, acelerando (o passo cresce com o quadrado da
+partida), e **no contato está exatamente onde a prancha o põe**: o quadro de contato entra com o deslize zerado, na mesma conta que já alinhava a ponta da lâmina com a guarda do Kojiro.
+O núcleo, as janelas, o contato, as âncoras, as caixas e a duração dos quadros não mudam. Saltos menores que `AJ_DESLIZE_MIN` (6 px) ficam como a prancha tem, e o avanço passa de
+`AJ_DESLIZE_MAX` (40 px) nunca. Quem olha para a esquerda avança para a esquerda; se o corpo recua no contato (o Jinshi no `ATTACK_2`), o deslize recua. A sombra, o rastro e os efeitos
+presos à lâmina acompanham, porque o deslize entra no mesmo deslocamento do mestre.
+
+O maior passo de um quadro (a 60 Hz, na partida de um `DASH_ATTACK`) cai de 38 px para uns 5 px. Comparei antes e depois quadro a quadro (Daichi, Genbu, Jinshi) e o golpe agora chega
+deslizando em vez de aparecer colado no Kojiro. Não deslizei o que vem **depois** do contato (o corpo volta uns 17 px no `DASH_ATTACK`), porque ali o hitstop já segura o quadro: fica
+como proposta se parecer duro jogando.
 
 ## 5. Como as três decisões ficaram
 

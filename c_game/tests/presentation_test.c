@@ -267,6 +267,56 @@ static void yoru_blades_on_real_sheets(void) {
     printf("adagas do yoru: tira da lâmina conferida em %zu animações\n", sizeof golpes / sizeof golpes[0]);
 }
 
+/* O golpe chega ao contato num quadro só, com o avanço do corpo pronto na prancha: na partida o mestre desliza esse avanço e no contato está onde a prancha o põe. */
+static void golpe_desliza_ate_o_contato(void) {
+    SprAnim a = {0};
+    a.frames = 4; a.contact = 3; a.hold = 2;         /* o quadro de contato é o 3 */
+    const float corpo[4] = {0, 3, 3, 33};            /* x do corpo por quadro: o salto de 30 px é do quadro 2 para o 3 */
+    for (int i = 0; i < 4; i++) { a.body[i] = corpo[i]; a.hasBody[i] = true; }
+    REQUIRE(spr_salto_do_corpo(&a, 2, 3) == 30, "o salto do corpo do quadro 2 para o contato não foi medido");
+    REQUIRE(spr_salto_do_corpo(&a, 2, 9) == 0 && spr_salto_do_corpo(NULL, 0, 1) == 0, "quadro sem corpo ou prancha nula deve dar 0");
+    REQUIRE(deslize_do_golpe(&a, 0, false) == 0, "antes da partida o corpo não anda");
+    REQUIRE(fabsf(deslize_do_golpe(&a, 1, false) - 30) < 1e-4f, "no fim da partida o corpo tem de ter andado todo o salto (o contato entra onde a prancha o põe)");
+    REQUIRE(fabsf(deslize_do_golpe(&a, 1, true) + 30) < 1e-4f, "quem olha para a esquerda anda para -x");
+    float antes = 0;
+    for (int k = 1; k <= 20; k++) {
+        const float v = deslize_do_golpe(&a, k / 20.0f, false);
+        REQUIRE(v > antes, "o deslize tem de crescer sempre, sem voltar");
+        REQUIRE(v - antes <= 30 * (2.0f * k / 20.0f) / 20.0f + 1e-3f, "o deslize aceleraria mais que o p ao quadrado");
+        antes = v;
+    }
+    /* o maior passo de um quadro (a 60 Hz a partida tem uns 15 quadros) fica bem abaixo do salto de uma vez só */
+    REQUIRE(deslize_do_golpe(&a, 1, false) - deslize_do_golpe(&a, 1 - 1.0f / 15, false) < 30.0f / 5, "o último passo do deslize ainda é um salto");
+    a.body[3] = 3 + 4;                               /* salto de 4 px: menor que AJ_DESLIZE_MIN, fica como a prancha tem */
+    REQUIRE(deslize_do_golpe(&a, 1, false) == 0, "um salto pequeno não precisa de deslize");
+    a.body[3] = 3 + 90;                              /* salto enorme: o deslize respeita o máximo */
+    REQUIRE(fabsf(deslize_do_golpe(&a, 1, false) - AJ_DESLIZE_MAX) < 1e-4f, "o deslize passou do máximo");
+    a.body[3] = 3 - 25;                              /* o corpo recua no contato (jinshi): o deslize recua */
+    REQUIRE(fabsf(deslize_do_golpe(&a, 1, false) + 25) < 1e-4f, "o recuo do corpo no contato deveria deslizar para trás");
+    a.contact = 0;
+    REQUIRE(deslize_do_golpe(&a, 1, false) == 0, "sem quadro antes do contato não há de onde deslizar");
+}
+
+/* Com as pranchas reais: todo golpe de todo mestre com quadro de contato tem o corpo medido nos dois quadros (o de antes e o do contato). */
+static void body_measured_on_real_sheets(void) {
+    int golpes = 0, grandes = 0;
+    for (int master = 0; master < roster_size(); master++) {
+        const SprSet *set = spr_get(roster_get(master)->name);
+        REQUIRE(set != NULL, "arte do mestre não carregou");
+        if (!set) continue;
+        for (int i = 0; i < set->count; i++) {
+            const SprAnim *a = &set->anims[i];
+            if (a->contact < 1 || strncmp(a->name, "ATTACK", 6)) continue;
+            golpes++;
+            REQUIRE(a->hasBody[a->contact - 1] && a->hasBody[a->contact], "golpe sem o corpo medido no quadro de contato");
+            const float d = spr_salto_do_corpo(a, a->contact - 1, a->contact);
+            REQUIRE(fabsf(d) < (float)set->cw, "o salto do corpo saiu da célula");
+            grandes += fabsf(d) >= AJ_DESLIZE_MIN;
+        }
+    }
+    printf("deslize do golpe: %d golpes com corpo medido, %d com salto de %.0f px ou mais no contato\n", golpes, grandes, AJ_DESLIZE_MIN);
+}
+
 /* O relâmpago do arashi: raios caem em volta de quem aparou ou de kojiro, e quem leva fica meio paralisado (só desenho: o núcleo não muda). */
 static void arashi_raios_e_paralisia(void) {
     const MasterProfile *arashi = roster_get(9);
@@ -429,6 +479,7 @@ static void real_assets(void) {
         }
     }
     yoru_blades_on_real_sheets();
+    body_measured_on_real_sheets();
     printf("assets reais: 13 mestres, %d animações carregadas\n", animations);
     spr_shutdown(); CloseWindow();
 }
@@ -487,7 +538,7 @@ int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia();
+    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;

@@ -126,6 +126,9 @@
  * o de contato: esse só aparece no impacto, no instante do julgamento), esticados para
  * trás, que crescem até o contato e somem nele. É só desenho: não toca em tempo de
  * julgamento, âncora, hitbox nem duração de quadro. */
+#define AJ_DESLIZE_GOLPE             1      /* 0 = desligado (o corpo salta de uma vez no contato, como antes). A prancha traz o avanço do golpe pronto, no quadro de contato, sem quadro no meio: na partida da lâmina o mestre desliza esse avanço (só desenho; no contato ele está exatamente onde a prancha põe) */
+#define AJ_DESLIZE_MIN            6.0f      /* px: um salto menor que isto fica como a prancha tem */
+#define AJ_DESLIZE_MAX           40.0f      /* px: o maior avanço que se espalha */
 #define AJ_RASTRO_FANTASMA           1      /* 0 = desligado (o golpe como antes) */
 #define AJ_RASTRO_FANTASMAS          3      /* quantos, atrás do mestre */
 #define AJ_RASTRO_ESPACO          5.0f      /* px de um para o outro, no fim da partida */

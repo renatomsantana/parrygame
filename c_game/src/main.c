@@ -2203,6 +2203,19 @@ static void update_posture_aura(float dt) {
     }
 }
 
+/* O golpe chega ao contato num quadro só: a prancha traz o avanço do corpo pronto no quadro de contato (até 38 px, sem quadro no meio), e sem ajuda ele salta
+ * no instante do choque. Na partida da lâmina o mestre passa a avançar esse tanto, devagar e acelerando (p ao quadrado), e no contato (o quadro de contato
+ * entra com a partida zerada) o corpo está exatamente onde a prancha o põe. `p`: a partida de 0 a 1 (duel_launch_progress). Devolve o deslocamento em x
+ * na tela, em px: quem olha para a esquerda avança para -x. */
+static float deslize_do_golpe(const SprAnim *a, float p, bool faceLeft) {
+    if (!AJ_DESLIZE_GOLPE || !a || p <= 0) return 0;
+    const int c = anim_contact(a);
+    if (c < 1) return 0;
+    const float d = spr_salto_do_corpo(a, c - 1, c);
+    if (fabsf(d) < AJ_DESLIZE_MIN) return 0;
+    return (faceLeft ? -1.0f : 1.0f) * clampf(d, -AJ_DESLIZE_MAX, AJ_DESLIZE_MAX) * p * p;
+}
+
 static void update_actors(float dt) {
     Rig *b = &G.boss, *r = &G.ren;
     fighters_update(dt);
@@ -2260,7 +2273,7 @@ static void update_actors(float dt) {
     G.renKnock *= expf(-dt * 9);
     G.bossKnock *= expf(-dt * 7);
     r->offsetX = -G.renKnock;
-    b->offsetX = G.bossKnock + (G.bossS.set ? G.bossStep : 0);
+    b->offsetX = G.bossKnock + (G.bossS.set ? G.bossStep + (G.state == ST_DUEL ? deslize_do_golpe(G.bossS.strike, duel_launch_progress(&G.duel), b->faceLeft) : 0) : 0);
     update_after(dt);
 }
 

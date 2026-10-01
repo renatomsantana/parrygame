@@ -31,6 +31,8 @@ typedef struct {
     bool hasWeapon[SPR_MAX_FRAMES];
     Vector2 offhand[SPR_MAX_FRAMES];
     bool hasOffhand[SPR_MAX_FRAMES];
+    float body[SPR_MAX_FRAMES];     /* o meio do corpo (da cintura para baixo) neste quadro, em x, relativo aos pés: de onde se mede o avanço de um quadro para o outro */
+    bool hasBody[SPR_MAX_FRAMES];
 } SprAnim;
 
 typedef struct {
@@ -82,6 +84,8 @@ bool spr_done(const SprPlayer *p);
  * e fica guardada. NULL se a tira não está lá. */
 const SprAnim *spr_lamina(const SprSet *s, const SprAnim *a);
 bool spr_pixel_de_lamina(Color c, int acimaDosPes, bool pertoDoPonto);   /* a regra de cor e altura, aberta para o teste */
+/* Quanto o corpo avança (px, + para onde o lutador olha) do quadro `de` para o quadro `para`; 0 se algum dos dois não tem corpo. */
+float spr_salto_do_corpo(const SprAnim *a, int de, int para);
 bool spr_weapon_point(const SprPlayer *p, Vector2 feet, bool faceLeft, int breath, Vector2 *point);
 bool spr_offhand_point(const SprPlayer *p, Vector2 feet, bool faceLeft, int breath, Vector2 *point);
 

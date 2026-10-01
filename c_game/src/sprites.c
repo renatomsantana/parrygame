@@ -59,6 +59,24 @@ static int body_height(const Image *im, int cw, int ax, int ay) {
     return 40;
 }
 
+/* O meio do corpo, da cintura para baixo (as pernas e a roupa): o que anda quando o lutador avança, sem o balanço da arma. */
+static void body_centers(SprAnim *a, const Image *im, const SprSet *s) {
+    const Color *px = (const Color *)im->data;
+    const int top = s->ay - 28 > 0 ? s->ay - 28 : 0;
+    for (int f = 0; f < a->frames && f < SPR_MAX_FRAMES; f++) {
+        long sum = 0, n = 0;
+        for (int y = top; y < im->height && y < s->ch; y++)
+            for (int x = f * s->cw; x < (f + 1) * s->cw && x < im->width; x++)
+                if (px[y * im->width + x].a > 128) { sum += x - f * s->cw; n++; }
+        if (n > 0) { a->body[f] = (float)sum / (float)n - (float)s->ax; a->hasBody[f] = true; }
+    }
+}
+
+float spr_salto_do_corpo(const SprAnim *a, int de, int para) {
+    if (!a || de < 0 || para < 0 || de >= SPR_MAX_FRAMES || para >= SPR_MAX_FRAMES || !a->hasBody[de] || !a->hasBody[para]) return 0;
+    return a->body[para] - a->body[de];
+}
+
 static void parse_anim(SprSet *s, char *line, const char *dir) {
     if (s->count >= SPR_MAX_ANIMS) return;
     SprAnim a = {0};
@@ -96,6 +114,7 @@ static void parse_anim(SprSet *s, char *line, const char *dir) {
     ImageFormat(&im, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
     a.frames = s->cw > 0 ? im.width / s->cw : 0;
     if (a.frames <= 0) { UnloadImage(im); return; }
+    body_centers(&a, &im, s);
     bool stance = !strcmp(a.name, "IDLE") || !strcmp(a.name, "PARADO") || (!s->height && !strcmp(a.name, "ATTACK_1"));
     if (stance) s->height = body_height(&im, s->cw, s->ax, s->ay);
     a.tex = LoadTextureFromImage(im);
