@@ -2068,7 +2068,8 @@ static void test_movesets(void) {
                     CHECK(strcmp(roster_get(a)->moves[i].name, roster_get(b)->moves[k].name) != 0, "golpe %s é só de %s", roster_get(a)->moves[i].name, roster_get(a)->name);
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
-        CHECK(i == 3 ? m->moveCount == 4 : m->moveCount >= 7 && (m->isBigBoss || m->moveCount <= 10),
+        /* a shizuku tem as quatro leituras do florete; os mestres comuns, de 7 a 12 (os três primeiros, sete: acima); o oboro, os doze ecos em cada selo */
+        CHECK(i == 3 ? m->moveCount == 4 : m->moveCount >= 7 && (m->isBigBoss || m->moveCount <= 12),
               "%s tem o tamanho aprovado do repertório (%d)", m->name, m->moveCount);
         CHECK(m->moveCount <= MAX_MOVES, "%s cabe no repertório", m->name);
         bool chain = false;
