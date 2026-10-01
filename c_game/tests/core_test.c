@@ -2462,7 +2462,7 @@ static void test_traits(void) {
         for (int k = 0; k < roster_get(11)->moveCount; k++) has |= roster_get(11)->moves[k].look == (MoveLook)l;
         looks += has;
     }
-    CHECK(looks >= 6 && roster_get(11)->moveCount == 10, "jinshi tem o repertório mais variado (%d preparações)", looks);
+    CHECK(looks >= 6 && roster_get(11)->moveCount == 12, "jinshi tem o repertório mais variado (%d preparações)", looks);
 }
 
 /* Golpe de duas lâminas: perfeito apara as duas, bom deixa passar a segunda, erro leva as duas. */
