@@ -4,7 +4,8 @@
  * raylib: jogam um quadro por vez, como o jogo.
  *
  * Os robôs são estimativa, não verdade: o humano deles não vê a arte, não sofre
- * com a escuridão do Yoru e não se distrai.
+ * com a escuridão do Yoru e não se distrai. O de primeira vez reage ao último
+ * sinal sem saber o ritmo nem mirar a janela perfeita.
  */
 #ifndef APARA_ROBO_H
 #define APARA_ROBO_H
@@ -32,7 +33,7 @@ typedef struct {
     RoboTipo tipo;
     float reacao;    /* s até reagir a um sinal (REACAO, HUMANO) */
     float ritmo;     /* HUMANO: erro ao medir um intervalo, fração dele (0,08 = casual) */
-    float mao;       /* REACAO, HUMANO: desvio-padrão da mão, s */
+    float mao;       /* REACAO, PRIMEIRA_VEZ, HUMANO: desvio-padrão da mão, s */
     float periodo;   /* SPAM: s entre apertos */
     float desloc;    /* DESLOCADO: s depois do contato (negativo: antes) */
     float reacaoDp;  /* PRIMEIRA_VEZ: desvio-padrão da reação, s (0 = sempre a mesma) */

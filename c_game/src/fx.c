@@ -51,6 +51,7 @@ void fx_update(Fx *fx, float dt) {
         fx->popups[i].pos.y -= 7 * dt;
     }
     for (int i = 0; i < 4; i++) if (fx->stars[i].life > 0) fx->stars[i].life -= dt;
+    for (int i = 0; i < MAX_ARCS; i++) if (fx->arcs[i].life > 0) fx->arcs[i].life -= dt;
     fx->flash = fmaxf(0, fx->flash - dt * 3.5f);
     if (fx->shakeTime > 0) fx->shakeTime -= dt; else fx->shake = 0;
     fx->vignettePulse = fmaxf(0, fx->vignettePulse - dt * 2);
@@ -84,6 +85,7 @@ void fx_burst(Fx *fx, ParticleKind kind, Vector2 at, int count, float speed, flo
             case P_SHARD: p->gravity = 280; p->drag = 1; p->size = frand(1.5f, 3); p->maxLife = p->life = frand(0.6f, 1.1f); break;
             case P_PETAL: p->gravity = 10; p->drag = 1.5f; p->size = frand(1, 2); p->maxLife = p->life = frand(1.2f, 2.2f); break;
             case P_GEM: p->gravity = 0; p->drag = 2; p->size = frand(1, 2); p->maxLife = p->life = frand(0.6f, 1.2f); break;
+            case P_FEATHER: p->gravity = 12; p->drag = 3; p->size = frand(1, 2); p->maxLife = p->life = frand(0.20f, 0.38f); break;
         }
     }
 }
@@ -117,6 +119,14 @@ static void star_shape(Vector2 c, float len, float wid, float rot, Color col) {
         Vector2 r = {c.x - cosf(a + 1.5708f) * wid, c.y - sinf(a + 1.5708f) * wid};
         DrawTriangle(l, r, tip, col);
         DrawTriangle(r, l, tip, col);
+    }
+}
+
+void fx_arc(Fx *fx, Vector2 center, float radius, float start, float sweep, float life, float width, Color c) {
+    for (int i = 0; i < MAX_ARCS; i++) {
+        if (fx->arcs[i].life > 0) continue;
+        fx->arcs[i] = (Arc){center, radius, start, sweep, life, life, width, c};
+        return;
     }
 }
 
@@ -174,6 +184,15 @@ void fx_draw_world(const Fx *fx) {
         c.a = (unsigned char)(c.a * t);
         DrawRing(r->pos, r->radius, r->radius + fmaxf(1, r->width * t), 0, 360, 32, c);
     }
+    for (int i = 0; i < MAX_ARCS; i++) {
+        const Arc *a = &fx->arcs[i];
+        if (a->life <= 0) continue;
+        float t = a->life / a->maxLife;
+        Color c = a->color;
+        c.a = (unsigned char)(c.a * t);
+        float grow = fminf(1, (1 - t) * 5 + 0.2f);
+        DrawRing(a->center, a->radius - a->width * t, a->radius, a->start, a->start + a->sweep * grow, 40, c);
+    }
     for (int i = 0; i < MAX_PARTICLES; i++) {
         const Particle *p = &fx->p[i];
         if (!p->alive) continue;
@@ -181,6 +200,7 @@ void fx_draw_world(const Fx *fx) {
         Color c = p->color;
         c.a = (unsigned char)(c.a * fminf(1, t * 1.5f));
         switch (p->kind) {
+            case P_FEATHER: break; /* pena escura usa mistura normal, abaixo */
             case P_SPARK: {
                 /* Risco na direção do movimento. */
                 Vector2 tail = {p->pos.x - p->vel.x * 0.025f, p->pos.y - p->vel.y * 0.025f};
@@ -202,6 +222,17 @@ void fx_draw_world(const Fx *fx) {
         }
     }
     EndBlendMode();
+    /* O modo aditivo tornaria as penas pretas transparentes. */
+    for (int i = 0; i < MAX_PARTICLES; i++) {
+        const Particle *p = &fx->p[i];
+        if (!p->alive || p->kind != P_FEATHER) continue;
+        float t = p->life / p->maxLife;
+        Color c = p->color;
+        c.a = (unsigned char)(c.a * t);
+        Vector2 tip = {p->pos.x + cosf(p->angle) * p->size * 2,
+                       p->pos.y + sinf(p->angle) * p->size * 2};
+        DrawLineEx(p->pos, tip, 1, c);
+    }
 }
 
 void fx_draw_popups(const Fx *fx, Font font, float unit) {

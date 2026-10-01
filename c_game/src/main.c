@@ -61,10 +61,12 @@
 #define RW (LOW_W * RS)
 #define RH (LOW_H * RS)
 #define SWORD_GRAVITY 380.0f
-#define GHOST_MAX 10
 #define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
 #define AFTER_MAX 8           /* silhuetas que o mestre deixa nos movimentos rápidos */
-enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP };
+#define KARASU_WARP_RECUO 28.0f       /* foge para a direita antes de virar penas */
+#define KARASU_WARP_ANTES_AVISO 0.04f /* reaparece antes do brilho/aviso existente */
+#define KARASU_WARP_PENAS 0.035f      /* espaçamento do rastro durante o recuo */
+enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP, LEAP_FEINT };
 #define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
 #define PIX_LORE 41
 #define PIX_TRAIL 42
@@ -224,23 +226,26 @@ static struct {
     float slash;              /* execução: o traço de corte atravessando a tela */
     float crack;              /* rachadura branca no mestre */
     float silence;            /* a trilha some por um instante */
-    struct { Rig rig; float life; Color color; } ghosts[GHOST_MAX];
-    int ghostHead;
-    float ghostTimer;
     Rig ren, boss;
     Fighter renS, bossS;
     float bossStep, bossStepTo, bossStepSpeed; /* passo do mestre até o alcance do golpe */
     float bossStrikeStep;     /* onde ele precisa estar no contato */
     int leap, leapStage;      /* investida correndo ou salto em curso (LEAP_*) */
     float leapT, leapAt, leapAir; /* tempo na preparação; quando corre ou salta; tempo no ar */
+    float warpPenasT;          /* cadência visual das penas no recuo do Karasu */
+    float feintFrom;           /* posição antes da ameaça de florete sem contato */
     float hopT, hopLen, hopH; /* arco do pulo do mestre (salto, recuo, ameaça) */
+    float hopFrom, hopTo;
+    bool hopTravel;           /* um caminho contínuo no ar, sem novo bote no lançamento */
     float landT;              /* amortecendo a queda do salto */
     bool bossHidden;          /* karasu virou penas: some até reaparecer na frente de kojiro */
     struct { const SprAnim *a; int frame; Vector2 feet; float life; } after[AFTER_MAX];
     int afterHead;
     float afterTimer, lastStep;
+    float auraLeft, auraTick;
+    int auraEcho;
     bool gritoPending;
-    struct { const SprFx *fx; int row; Vector2 pos; float t, fps, scale; bool flip, back, glow; Color tint; } vfx[VFX_MAX];
+    struct { const SprFx *fx; int row; Vector2 pos; float t, fps, scale; bool flip, back, glow, sword, body, offhand; Color tint; } vfx[VFX_MAX];
     Fx fx;
     FlySword sword;
 
@@ -380,6 +385,10 @@ static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi 
 static Color fadec(Color c, float a) { c.a = (unsigned char)(c.a * clampf(a, 0, 1)); return c; }
 static float smooth(float t) { t = clampf(t, 0, 1); return t * t * (3 - 2 * t); }
 
+static bool pressed_key_mouse(void) {
+    return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER);
+}
+
 static bool pressed(void) {
     /* No modo demonstração, o robô também avança falas e painéis. */
     if ((G.demo || G.autoJogo) && G.state != ST_DUEL && fmodf(G.stateTime, G.cliquePeriodo) < (G.recDir ? (float)G.recDt : GetFrameTime())) {
@@ -387,7 +396,7 @@ static bool pressed(void) {
         return true;
     }
     if (G.demo && (G.shotFile || G.recDir)) return false; /* capturas: só o robô joga */
-    return IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER);
+    return pressed_key_mouse() || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN));
 }
 
 /* Não corta um caractere UTF-8 ao meio. */
@@ -714,6 +723,15 @@ static int echo_of(const Move *mv) {
     return -1;
 }
 
+static Color posture_color(int echo) {
+    static const Color colors[MASTER_COUNT] = {
+        {235,165,75,255}, {110,220,140,255}, {245,85,65,255}, {100,205,255,255},
+        {255,225,135,255}, {155,110,240,255}, {100,245,180,255}, {255,125,35,255},
+        {65,145,255,255}, {100,205,255,255}, {165,85,250,255}, {205,180,255,255}
+    };
+    return echo >= 0 && echo < MASTER_COUNT ? colors[echo] : (Color){235,60,70,255};
+}
+
 static int anim_contact(const SprAnim *a) {
     if (!a) return 0;
     return a->contact >= 0 ? a->contact : a->frames / 2;
@@ -770,15 +788,20 @@ static void f_add_cycle(Fighter *f, const SprAnim *a, float dur) { f_seg(f, (FSe
 static void f_update(Fighter *f, float dt) {
     if (!f->set) return;
     spr_update(&f->pl, dt);
-    if (f->idle || !spr_done(&f->pl)) return;
-    if (f->qn > 0) {
-        FSeg sg = f->q[0];
-        memmove(f->q, f->q + 1, sizeof(FSeg) * (size_t)(f->qn - 1));
-        f->qn--;
-        if (sg.cycle) spr_cycle(&f->pl, sg.a, sg.dur);
-        else spr_play(&f->pl, sg.a, sg.from, sg.to, sg.dur);
-    } else if (f->autoIdle) {
-        fighter_idle(f);
+    while (!f->idle && spr_done(&f->pl)) {
+        float end = f->pl.loop ? f->pl.limit : f->pl.dur;
+        float carry = fmaxf(0, f->pl.t - end);
+        if (f->qn > 0) {
+            FSeg sg = f->q[0];
+            memmove(f->q, f->q + 1, sizeof(FSeg) * (size_t)(f->qn - 1));
+            f->qn--;
+            if (sg.cycle) spr_cycle(&f->pl, sg.a, sg.dur);
+            else spr_play(&f->pl, sg.a, sg.from, sg.to, sg.dur);
+            spr_update(&f->pl, carry);
+        } else {
+            if (f->autoIdle) { fighter_idle(f); spr_update(&f->pl, carry); }
+            break;
+        }
     }
 }
 
@@ -834,7 +857,23 @@ static void ren_draw_sounds(void) {
 /* Efeitos das folhas do pack (assets/sprites/_fx): tocam uma vez. Os de energia
  * (brilho, raios, fogo) vão atrás dos lutadores e somam luz; poeira e sangue vão
  * na frente. Sem a folha, ficam só as partículas. */
-enum { VFX_FRONT = 0, VFX_BACK = 1, VFX_GLOW = 2 };
+enum { VFX_FRONT = 0, VFX_BACK = 1, VFX_GLOW = 2, VFX_SWORD = 4, VFX_BODY = 8, VFX_OFFHAND = 16 };
+
+static void boss_blade(Vector2 *butt, Vector2 *tip);
+
+static Vector2 vfx_origin(bool sword, bool body) {
+    if (sword) { Vector2 h, t; boss_blade(&h, &t); return t; }
+    if (body) return (Vector2){G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};
+    return (Vector2){0, 0};
+}
+
+static Vector2 vfx_position(int i) {
+    Vector2 o = vfx_origin(G.vfx[i].sword || G.vfx[i].offhand, G.vfx[i].body);
+    if (G.vfx[i].offhand) spr_offhand_point(&G.bossS.pl,
+        (Vector2){G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY},
+        G.boss.faceLeft, (int)G.bossS.squat, &o);
+    return (Vector2){G.vfx[i].pos.x + o.x, G.vfx[i].pos.y + o.y};
+}
 
 static void vfx(const char *name, int row, Vector2 pos, bool flip, int flags, float fps) {
     const SprFx *f = spr_fx(name);
@@ -846,7 +885,14 @@ static void vfx(const char *name, int row, Vector2 pos, bool flip, int flags, fl
     }
     G.vfx[slot].fx = f;
     G.vfx[slot].row = row;
-    G.vfx[slot].pos = pos;
+    G.vfx[slot].sword = (flags & VFX_SWORD) != 0;
+    G.vfx[slot].body = (flags & VFX_BODY) != 0;
+    G.vfx[slot].offhand = (flags & VFX_OFFHAND) != 0;
+    Vector2 origin = vfx_origin(G.vfx[slot].sword || G.vfx[slot].offhand, G.vfx[slot].body);
+    if (G.vfx[slot].offhand) spr_offhand_point(&G.bossS.pl,
+        (Vector2){G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY},
+        G.boss.faceLeft, (int)G.bossS.squat, &origin);
+    G.vfx[slot].pos = (Vector2){pos.x - origin.x, pos.y - origin.y};
     G.vfx[slot].t = 0;
     G.vfx[slot].fps = fps;
     G.vfx[slot].flip = flip;
@@ -885,7 +931,7 @@ static void vfx_draw(bool back) {
     for (int i = 0; i < VFX_MAX; i++) {
         if (!G.vfx[i].fx || G.vfx[i].back != back) continue;
         if (G.vfx[i].glow) BeginBlendMode(BLEND_ADDITIVE);
-        spr_fx_draw_scaled(G.vfx[i].fx, G.vfx[i].row, (int)(G.vfx[i].t * G.vfx[i].fps), G.vfx[i].pos, G.vfx[i].flip,
+        spr_fx_draw_scaled(G.vfx[i].fx, G.vfx[i].row, (int)(G.vfx[i].t * G.vfx[i].fps), vfx_position(i), G.vfx[i].flip,
                            G.vfx[i].tint, G.vfx[i].scale);
         if (G.vfx[i].glow) EndBlendMode();
     }
@@ -919,8 +965,10 @@ static void setup_actors(void) {
     G.leap = LEAP_NONE;
     G.bossHidden = false;
     G.hopT = G.hopLen = 0;
+    G.hopTravel = false;
     memset(G.after, 0, sizeof G.after);
     G.gritoPending = false;
+    G.auraLeft = G.auraTick = 0;
 }
 
 static void start_master(int index) {
@@ -944,7 +992,8 @@ static void start_lines(const Line *lines, int count, State s) {
 }
 
 static void teste_selo(int selo);
-static void desenha_rastro_do_golpe(void);
+static void desenha_rastro_do_golpe(bool escuro, bool fio);
+static Color cor_rastro(void);
 
 static void start_duel(void) {
     settings_default(&G.settings);
@@ -1132,24 +1181,19 @@ static Vector2 clash_point(void) {
     return (Vector2){G.ren.x + G.ren.offsetX + ren_guard_x(), y};
 }
 
-/* Empunhadura e ponta da arma do mestre (no sprite, uma estimativa pela altura). */
+/* Origem dos efeitos: os pixels da lâmina do quadro atual, incluindo salto e recuo. */
 static void boss_blade(Vector2 *butt, Vector2 *tip) {
     if (!G.bossS.set) { rig_sword_line(&G.boss, butt, tip); return; }
     float bx = G.boss.x + G.boss.offsetX, h = (float)G.bossS.set->height;
-    *butt = (Vector2){bx - 4, GROUND_LOW - h * 0.5f};
-    *tip = (Vector2){bx - 4 - fmaxf(10, G.boss.look.bladeLen * 0.9f), GROUND_LOW - h * 0.75f};
+    Vector2 feet = {bx, G.boss.y - G.boss.hopY};
+    *butt = (Vector2){bx - 4, feet.y - h * 0.5f + G.bossS.squat};
+    if (!spr_weapon_point(&G.bossS.pl, feet, G.boss.faceLeft, G.bossS.squat, tip))
+        *tip = (Vector2){bx - 4 - fmaxf(10, G.boss.look.bladeLen * 0.9f), feet.y - h * 0.75f + G.bossS.squat};
 }
 
-/* Tipo do golpe k da sequência: o primeiro é o da sequência; os seguintes alternam. */
+/* Tipo visual do golpe k da sequência. Algumas armas mantêm sempre a mesma direção. */
 static MoveLook strike_look(void) {
-    const Move *mv = duel_move(&G.duel);
-    MoveLook look = mv ? mv->look : LOOK_HIGH;
-    int k = G.duel.comboStrike;
-    if (k == 0) return look;
-    if (look == LOOK_HEAVY || look == LOOK_JUMP || look == LOOK_WARP) return k % 2 ? LOOK_LOW : LOOK_HIGH;
-    if (look == LOOK_THRUST || look == LOOK_DASH || look == LOOK_FAR) return k % 2 ? LOOK_HIGH : LOOK_THRUST;
-    if (k % 2 == 0) return look;
-    return look == LOOK_HIGH ? LOOK_LOW : LOOK_HIGH;
+    return move_contact_look(duel_move(&G.duel), G.duel.comboStrike);
 }
 
 /* Nos bonecos, o golpe forte e o salto usam as poses do golpe alto; a investida, as da estocada. */
@@ -1182,6 +1226,17 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
         if (a) return a;
         look = LOOK_HIGH;
     }
+    /* No terceiro selo, os padrões continuam sendo os ecos, mas todas as ações
+     * visuais vêm do pack FLAMING SWORD, inclusive duplos e finais de sequência. */
+    if (G.m->isBigBoss && f->furia) {
+        MoveLook fireLook = look;
+        if (fireLook == LOOK_DASH || fireLook == LOOK_FAR) fireLook = LOOK_THRUST;
+        if (fireLook == LOOK_JUMP || fireLook == LOOK_WARP) fireLook = LOOK_HIGH;
+        const char *fireBase = duel_strike_dual(&G.duel) ? "ATTACK_3" :
+            fireLook == LOOK_LOW ? "ATTACK_2" : fireLook == LOOK_THRUST ? "ATTACK_1" : "ATTACK_3";
+        snprintf(name, sizeof name, "%s_FURIA", fireBase);
+        if ((a = fa(f, name))) return a;
+    }
     /* as duas lâminas de uma vez: o corte cruzado */
     if (duel_strike_dual(&G.duel) && (a = fa(f, "ATTACK_3"))) return a;
     if (mv && mv->strikes >= 3 && G.duel.comboStrike == mv->strikes - 1 && (a = fa(f, "ESPECIAL"))) return a;
@@ -1209,14 +1264,34 @@ static void boss_hop(float len, float h) {
     G.hopT = 0;
     G.hopLen = len;
     G.hopH = h;
+    G.hopTravel = false;
+}
+
+static void update_hop(float dt) {
+    if (G.hopT < G.hopLen) {
+        G.hopT = fminf(G.hopLen, G.hopT + dt);
+        float u = G.hopT / G.hopLen;
+        G.boss.hopY = 4 * u * (1 - u) * G.hopH;
+        if (G.hopTravel) G.bossStep = G.hopFrom + (G.hopTo - G.hopFrom) * smooth(u);
+    } else {
+        G.boss.hopY = 0;
+        G.hopTravel = false;
+    }
+}
+
+/* Penas escuras, opacas, no caminho do recuo; não encobrem o brilho da lâmina. */
+static void feather_blur(void) {
+    Vector2 at = {G.boss.x + G.boss.offsetX, GROUND_LOW - 26};
+    fx_burst(&G.fx, P_FEATHER, at, 4, 34, 0.6f, 3.14f,
+             (Color){22, 18, 31, 225}, (Color){77, 49, 70, 205});
 }
 
 /* Penas pretas e vermelhas: o corvo sumindo ou reaparecendo. */
 static void feathers(void) {
     Vector2 at = {G.boss.x + G.boss.offsetX, GROUND_LOW - 26};
-    fx_burst(&G.fx, P_PETAL, at, 26, 80, 3.14f, -1.57f, (Color){26, 20, 30, 255}, (Color){60, 44, 56, 255});
-    fx_burst(&G.fx, P_PETAL, at, 8, 60, 3.14f, -1.57f, (Color){170, 24, 36, 255}, (Color){110, 16, 26, 255});
-    vfx("64", 8, at, true, VFX_BACK, 26);
+    fx_burst(&G.fx, P_FEATHER, at, 22, 80, 3.14f, -1.57f, (Color){18, 14, 29, 255}, (Color){65, 42, 62, 245});
+    fx_burst(&G.fx, P_FEATHER, at, 6, 60, 3.14f, -1.57f, (Color){120, 22, 40, 240}, (Color){80, 14, 31, 230});
+    if (IsWindowReady()) vfx("64", 8, at, true, VFX_BACK, 26);
     audio_play(SND_SWING, 0.45f, 0.7f);
 }
 
@@ -1239,7 +1314,15 @@ static void sprite_windup(void) {
     int hold = anim_hold(a);
     float w = G.windupSpr;
     bool first = G.duel.comboStrike == 0;
+    const SprAnim *previous = f->pl.anim;
+    int resume = f->pl.frame + 1;
+    bool follow = !first && previous && strstr(previous->name, "ATTACK") && resume < previous->frames;
     f_clear(f, false);
+    if (follow) {
+        float tail = fminf((previous->frames - resume) * previous->frameTime, w * 0.45f);
+        f_add(f, previous, resume, previous->frames - 1, tail);
+        w -= tail;
+    }
     f->strike = a;
     float reach = a->hasReach ? (float)a->reachX : 36;
     G.bossStrikeStep = clampf(REN_X + ren_guard_x() + reach - G.bossHome, -70, 16);
@@ -1273,14 +1356,19 @@ static void sprite_windup(void) {
     /* a preparação anda devagar até o hold (cada quadro pelo menos 0,12 s) e segura */
     float antic = fmaxf((hold + 1) * a->frameTime * 1.8f, (hold + 1) * 0.12f);
     if (first && look == LOOK_WARP && w > 0.3f) {
-        /* o corvo prepara, vira penas e some; reaparece na frente de kojiro com a
-         * lâmina no alto, um instante antes de a lâmina partir */
+        /* O corvo recua para a direita, vira penas e reaparece na pose de corte.
+         * As duas marcas usam o relógio REAL da preparação; a lâmina variável
+         * só altera a pose, sem mover o aviso nem o contato do núcleo. */
         G.leap = LEAP_WARP;
-        G.leapAt = w * 0.4f;
-        G.leapAir = fmaxf(G.leapAt + 0.1f, w - 0.16f);
+        float cue = (float)(duel_cue_time(&G.duel) - (G.duel.strikeAt - G.duel.windupDuration));
+        G.leapAt = fmaxf(0.05f, fminf(G.windupLen * 0.38f, cue - 0.12f));
+        G.leapAir = fminf(G.windupLen - 0.02f,
+                          fmaxf(G.leapAt + 0.07f, cue - KARASU_WARP_ANTES_AVISO));
+        G.warpPenasT = 0;
         f_add(f, a, 0, hold, G.leapAt);
         f_add(f, a, hold, hold, w - G.leapAt);
-        G.bossStepTo = G.bossStep;
+        G.bossStepTo = G.bossStep + KARASU_WARP_RECUO;
+        G.bossStepSpeed = KARASU_WARP_RECUO / G.leapAt;
         return;
     }
     if (first && look == LOOK_FAR) {
@@ -1293,6 +1381,20 @@ static void sprite_windup(void) {
         boss_hop(fmaxf(0.1f, w * 0.3f), 3);
         return;
     }
+    if (first && duel_move(&G.duel) && duel_move(&G.duel)->feint) {
+        /* Um passo falso antes do aviso; recua e só então arma a estocada real.
+         * Não há quadro de contato nem mudança no relógio ou na hitbox. */
+        float beforeCue = fmaxf(0, w - (duel_aviso(&G.duel) - duel_strike_lead_base(&G.duel)));
+        G.leap = LEAP_FEINT;
+        G.leapT = 0;
+        G.leapAt = beforeCue * 0.35f;
+        G.leapAir = beforeCue * 0.75f;
+        G.feintFrom = G.bossStep;
+        G.bossStepTo = G.bossStep - 8;
+        G.bossStepSpeed = 8 / fmaxf(0.05f, G.leapAt);
+        f_add(f, a, 0, hold, fminf(w * 0.6f, antic));
+        return;
+    }
     f_add(f, a, 0, hold, first ? fminf(w * 0.6f, antic) : fminf(w, antic));
     G.bossStepTo = G.bossStep + (G.bossStrikeStep - G.bossStep) * 0.4f;
     float stepTime = first ? fminf(0.2f, w * 0.5f) : w * 0.8f;
@@ -1300,25 +1402,23 @@ static void sprite_windup(void) {
     if (first && fabsf(G.bossStepTo - G.bossStep) > 4) boss_hop(stepTime, 2);
 }
 
-/* A lâmina parte: o bote (o passo até a guarda de kojiro) leva o tempo da partida
- * deste golpe; os quadros entre o hold e o contato, se houver, tocam no tempo fixo
- * (duel_strike_lead_base), e o contato sai no impacto. Nos golpes das pranchas o
- * contato vem logo depois do hold: ele fica no hold até o contato, e a preparação que
- * ainda estiver tocando termina nele (a lâmina variável não corta nenhum quadro). */
+/* O gesto avança até o contato no tempo de viagem já decidido pelo núcleo.
+ * Nenhuma janela ou instante de impacto é alterado. */
 static void sprite_launch(void) {
     Fighter *f = &G.bossS;
     if (!f->set || !f->strike) return;
     const SprAnim *a = f->strike;
-    int hold = anim_hold(a), c = anim_contact(a);
+    int c = anim_contact(a);
     float lead = duel_strike_lead(&G.duel);
     if (G.bossHidden) { G.bossHidden = false; feathers(); }
-    G.bossStepTo = G.bossStrikeStep;
-    G.bossStepSpeed = fabsf(G.bossStrikeStep - G.bossStep) / fmaxf(0.05f, lead - 0.02f);
-    int from = hold + 1;
-    if (G.leap == LEAP_DASH) from = hold > 2 ? hold - 2 : 0;   /* da corrida direto para o golpe */
-    if (c - 1 >= from) {
+    if (!(G.leap == LEAP_JUMP && G.hopTravel)) {
+        G.bossStepTo = G.bossStrikeStep;
+        G.bossStepSpeed = fabsf(G.bossStrikeStep - G.bossStep) / fmaxf(0.05f, lead - 0.02f);
+    }
+    /* Repassar a antecipação evita congelar os packs cujo hold é c - 1. */
+    if (c > 0) {
         f_clear(f, false);
-        f_add(f, a, from, c - 1, duel_strike_lead_base(&G.duel));
+        f_add(f, a, 0, c - 1, lead);
     }
 }
 
@@ -1354,14 +1454,13 @@ static void sprite_impact(const DuelEvent *e) {
         if (!hurt) hurt = fa(b, "HURT");
         int c = anim_contact(a);
         f_clear(b, true);
-        f_add(b, a, c, c, 0.06f);
+        f_add(b, a, c, c, a->frameTime);
         if (e->flag) {
             /* postura quebrada: cambaleia e fica curvado até se recompor */
             if (hurt) f_add(b, hurt, 0, hurt->frames - 1, 0);
             else if (c + 1 < a->frames) f_add(b, a, c + 1, a->frames - 1, 0);
             b->autoIdle = false;
-        } else if (e->judgement == J_PERFEITO && hurt) {
-            f_add(b, hurt, 0, hurt->frames - 1, 0);
+
         } else if (c + 1 < a->frames) {
             f_add(b, a, c + 1, a->frames - 1, 0);
         }
@@ -1374,6 +1473,7 @@ static void sprite_impact(const DuelEvent *e) {
         G.bossStepTo = G.duel.comboRemaining > 0 ? G.bossStep : 0;
         G.bossStepSpeed = 40;
         G.hopT = G.hopLen;
+        G.hopTravel = false;
         G.leap = LEAP_NONE;
         G.bossHidden = false;
     }
@@ -1417,29 +1517,20 @@ static void on_impact(const DuelEvent *e) {
     b->trail = false;
     switch (e->judgement) {
         case J_PERFEITO:
-            G.aberr = 1.5f;
             audio_play(SND_PERFECT, 1, 1 + (rand() % 5) * 0.02f);
-            fx_burst(&G.fx, P_SPARK, at, 26, 170, 1.2f, -0.5f, (Color){255, 255, 230, 255}, (Color){255, 200, 90, 255});
-            fx_burst(&G.fx, P_SPARK, at, 12, 130, 0.9f, 3.14f + 0.5f, (Color){255, 240, 200, 255}, (Color){255, 180, 60, 255});
-            fx_ring(&G.fx, at, 180, 0.3f, 2, (Color){255, 245, 210, 230});
-            fx_star(&G.fx, at, 16, 0.12f);
-            vfx("652", 5, at, false, VFX_BACK | VFX_GLOW, 32);   /* raios de luz atrás do choque */
-            fx_flash(&G.fx, (Color){255, 250, 235, 90}, 1);
+            fx_burst(&G.fx, P_SPARK, at, 4, 55, 1.2f, -0.5f, (Color){220, 205, 175, 255}, (Color){155, 135, 105, 255});
             fx_kick(&G.fx, AJ_TREMOR_PERFEITO, AJ_TREMOR_PERFEITO_TEMPO);
             rig_pose(r, POSE_DEFLECT, 0.05f, EASE_OUT);
             rig_then(r, POSE_IDLE, 0.4f, EASE_INOUT);
             rig_pose(b, POSE_HURT, 0.07f, EASE_OUT);
             rig_then(b, POSE_IDLE, 0.5f, EASE_INOUT);
-            b->flash = 1;
-            b->flashColor = WHITE;
+
             G.bossKnock = AJ_RECUO_PERFEITO_MESTRE;
             G.renKnock = AJ_RECUO_PERFEITO_KOJIRO;
             break;
         case J_BOM:
             audio_play(SND_GOOD, 0.9f, 1);
-            fx_burst(&G.fx, P_SPARK, at, 10, 110, 1.0f, -0.6f, (Color){255, 230, 120, 255}, (Color){255, 170, 50, 255});
-            fx_flash(&G.fx, (Color){255, 230, 120, 40}, 1);
-            vfx("63", 0, at, false, VFX_GLOW, 24);                /* faíscas douradas */
+            fx_burst(&G.fx, P_SPARK, at, 3, 45, 1.0f, -0.6f, (Color){205, 190, 160, 255}, (Color){145, 125, 100, 255});
             rig_pose(r, POSE_DEFLECT, 0.06f, EASE_OUT);
             rig_then(r, POSE_IDLE, 0.4f, EASE_INOUT);
             rig_pose(b, POSE_FOLLOW, 0.08f, EASE_OUT);
@@ -1451,10 +1542,9 @@ static void on_impact(const DuelEvent *e) {
             G.aberr = 2.5f;
             audio_play(SND_BAD, 1, 1);
             Vector2 hit = {r->x + 4, GROUND_LOW - 28};
-            fx_burst(&G.fx, P_SPARK, hit, 14, 140, 1.1f, 3.14f, (Color){255, 80, 60, 255}, (Color){255, 160, 90, 255});
+            fx_arc(&G.fx, hit, 8, -1.1f, 1.8f, 0.09f, 1, (Color){255, 228, 210, 220});
             fx_burst(&G.fx, P_DUST, (Vector2){r->x, GROUND_LOW - 1}, 6, 40, 0.6f, 3.14f, (Color){200, 180, 160, 140}, (Color){120, 100, 90, 110});
             fx_flash(&G.fx, (Color){255, 40, 30, 80}, 1);
-            vfx("71", 7, hit, false, VFX_FRONT, 28);              /* estouro vermelho em kojiro */
             fx_kick(&G.fx, AJ_TREMOR_ERRO, AJ_TREMOR_ERRO_TEMPO);
             rig_pose(r, POSE_HURT, 0.06f, EASE_OUT);
             rig_then(r, POSE_IDLE, 0.45f, EASE_INOUT);
@@ -1470,8 +1560,8 @@ static void on_impact(const DuelEvent *e) {
     if ((e->i & 1) && e->judgement == J_PERFEITO) {
         /* as duas lâminas aparadas: o segundo tinido e o X de faíscas */
         audio_play(SND_PERFECT, 0.7f, 1.25f);
-        fx_burst(&G.fx, P_SPARK, at, 12, 150, 0.5f, -2.3f, (Color){230, 240, 255, 255}, (Color){160, 190, 255, 255});
-        fx_burst(&G.fx, P_SPARK, at, 12, 150, 0.5f, 2.3f, (Color){230, 240, 255, 255}, (Color){160, 190, 255, 255});
+        fx_burst(&G.fx, P_SPARK, at, 2, 55, 0.5f, -2.3f, (Color){230, 240, 255, 255}, (Color){160, 190, 255, 255});
+        fx_burst(&G.fx, P_SPARK, at, 2, 55, 0.5f, 2.3f, (Color){230, 240, 255, 255}, (Color){160, 190, 255, 255});
     }
     if ((e->i & 2) && e->judgement != J_RUIM) second_blade();
     if (e->flag) {
@@ -1482,15 +1572,69 @@ static void on_impact(const DuelEvent *e) {
         audio_play(SND_BREAK, 0.9f, 1); /* cerâmica rachando e taiko; depois, meio segundo de silêncio */
         Vector2 c = {b->x, GROUND_LOW - 30};
         fx_burst(&G.fx, P_SHARD, c, 20, 160, 1.4f, -1.57f, (Color){230, 230, 255, 255}, (Color){180, 140, 255, 255});
-        fx_ring(&G.fx, c, 320, 0.5f, 3, WHITE);
-        vfx("184", 5, c, false, VFX_BACK | VFX_GLOW, 24);        /* onda de choque */
-        fx_flash(&G.fx, WHITE, 1);
+
         fx_kick(&G.fx, AJ_TREMOR_QUEBRA, AJ_TREMOR_QUEBRA_TEMPO);
         rig_pose(b, POSE_STAGGER, 0.15f, EASE_OUT);
         G.staggerTime = 0.01f;
         G.bossKnock = AJ_RECUO_QUEBRA_MESTRE;
         G.slowmo = AJ_LENTA_QUEBRA;
         G.slowmoTime = AJ_LENTA_QUEBRA_TEMPO;
+    }
+}
+
+static const struct { const char *fx; int row; float y; int flags; float scale; } TELL[ROSTER_SIZE] = {
+        {"70", 4, -8, VFX_FRONT, 0.6f},         /* daichi: poeira de terra (na cor do chão) */
+        {"26", 3, -30, VFX_BACK | VFX_GLOW | VFX_BODY},    /* genbu: o casco acompanha o corpo */
+        {"70", 4, -8, VFX_FRONT, 0.65f},        /* raizo: pó ocre aos pés */
+        {"06", 2, -30, VFX_BACK},               /* shizuku: respingo */
+        {"64", 0, -30, VFX_BACK | VFX_GLOW},    /* garfiel: garras */
+        {"64", 8, -30, VFX_BACK},               /* karasu: asas escuras */
+        {"03", 3, -30, VFX_BACK | VFX_GLOW},    /* hayate: redemoinho */
+        {"69", 0, -27, VFX_BACK | VFX_GLOW},    /* enjin: labareda */
+        {"04", 2, -24, VFX_BACK},               /* suiren: onda */
+        {"195", 2, -30, VFX_BACK | VFX_GLOW | VFX_SWORD, 0.45f}, /* arashi: raios na lâmina */
+        {"197", 1, -30, VFX_BACK | VFX_GLOW},   /* yoru: estrela da noite */
+        {"665", 5, -21, VFX_BACK | VFX_GLOW, 0.5f}, /* jinshi: o brilho da lua (pequeno, lilás, luz somada) */
+        {"197", 7, -30, VFX_BACK | VFX_GLOW},   /* oboro */
+    };
+
+/* Consulta todas as folhas usadas por um aviso antes de entrar no jogo. */
+static void preload_runtime_art(void) {
+    for (int i = 0; i < ROSTER_SIZE; i++) spr_fx(TELL[i].fx);
+    spr_ui_preload();
+}
+
+/* A odachi do Raizo avisa o peso de cada sequência: a posição e a direção das
+ * lascas mudam com o corte. Tudo parte da lâmina; só o avanço/salto levanta pó
+ * também dos pés. Não participa do relógio nem da colisão do golpe. */
+static void raizo_tell(Vector2 tip, Vector2 feet) {
+    const Move *mv = duel_move(&G.duel);
+    if (!mv) return;
+    Color stone = {188, 181, 166, 235}, ochre = {205, 160, 91, 225};
+    switch (mv->look) {
+        case LOOK_HIGH:   /* o cume: lascas sobem antes do corte vertical */
+            fx_burst(&G.fx, P_SHARD, tip, 8, 34, 0.55f, -1.57f, stone, ochre);
+            break;
+        case LOOK_LOW:    /* a fenda dupla denuncia dois cortes; a laje, só um */
+            fx_burst(&G.fx, P_SHARD, tip, mv->strikes > 1 ? 8 : 5, 32, 0.65f, 1.57f, stone, ochre);
+            if (mv->strikes > 1) fx_burst(&G.fx, P_DUST, feet, 5, 20, 0.55f, 3.14f, stone, ochre);
+            break;
+        case LOOK_THRUST: /* a ponta aponta para a guarda */
+            fx_burst(&G.fx, P_SHARD, tip, 7, 38, 0.45f, 3.14f, stone, ochre);
+            break;
+        case LOOK_DASH:   /* a avalanche desloca a base antes da lâmina */
+            fx_burst(&G.fx, P_SHARD, tip, 6, 36, 0.75f, 3.14f, stone, ochre);
+            fx_burst(&G.fx, P_DUST, feet, 8, 27, 0.65f, 3.14f, stone, ochre);
+            break;
+        case LOOK_JUMP:   /* pedras caem com o salto */
+            fx_burst(&G.fx, P_SHARD, tip, 9, 30, 0.70f, 1.57f, stone, ochre);
+            fx_burst(&G.fx, P_DUST, feet, 5, 20, 0.65f, -1.57f, stone, ochre);
+            break;
+        case LOOK_HEAVY:  /* a montanha se abre no golpe forte */
+            fx_burst(&G.fx, P_SHARD, tip, 12, 39, 0.85f, -1.57f, stone, ochre);
+            fx_ring(&G.fx, tip, 34, 0.23f, 1, stone);
+            break;
+        default: break;
     }
 }
 
@@ -1501,12 +1645,13 @@ static void tell_fx(void) {
     boss_blade(&butt, &tip);
     Vector2 mid = {(butt.x + tip.x) / 2, (butt.y + tip.y) / 2};
     Vector2 feet = {b->x + b->offsetX - 9 * b->look.size, GROUND_LOW - 1};
+    int echo = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
     /* tom do gesto de cada mestre, na ordem da trilha */
     static const float pitch[ROSTER_SIZE] = {0.7f, 0.8f, 0.6f, 1.5f, 1.0f, 1.25f, 1.4f, 1.1f, 1.3f, 1.6f, 1.2f, 0.65f, 0.9f};
-    switch (G.m->id) {
+    if (G.m->id == 3 || echo == 2) raizo_tell(tip, feet);
+    else switch (G.m->id) {
         case 1: fx_burst(&G.fx, P_SPARK, feet, 10, 70, 0.6f, -1.2f, (Color){255, 190, 110, 255}, (Color){255, 140, 60, 255}); break;
         case 2: fx_burst(&G.fx, P_GEM, tip, 8, 40, 1.2f, 1.57f, (Color){200, 236, 255, 255}, (Color){120, 190, 240, 255}); break;
-        case 3: fx_burst(&G.fx, P_DUST, mid, 10, 20, 3.14f, 0, (Color){60, 40, 80, 170}, (Color){30, 20, 40, 150}); break;
         case 4: fx_burst(&G.fx, P_DUST, feet, 14, 50, 0.8f, -1.57f, (Color){170, 130, 90, 170}, (Color){110, 80, 50, 150}); break;
         case 5: fx_burst(&G.fx, P_PETAL, (Vector2){b->x + 20, GROUND_LOW - 40}, 10, 90, 0.4f, 3.14f, (Color){236, 240, 230, 220}, (Color){180, 220, 200, 200}); break;
         case 6: fx_burst(&G.fx, P_GEM, (Vector2){mid.x + 6, mid.y + 8}, 8, 30, 3.14f, 0, (Color){200, 230, 170, 255}, (Color){140, 170, 110, 255}); break;
@@ -1520,34 +1665,33 @@ static void tell_fx(void) {
     audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
     /* E o efeito do pack de cada um: onde nasce (no chão ou no corpo) e a cor. Oboro
      * usa o do aprendiz da postura em que está, em vermelho. */
-    static const struct { const char *fx; int row; float y; int flags; float scale; } TELL[ROSTER_SIZE] = {
-        {"70", 4, -8, VFX_FRONT, 0.6f},         /* daichi: poeira de terra (na cor do chão) */
-        {"26", 3, -30, VFX_BACK | VFX_GLOW},    /* genbu: o casco, anel verde */
-        {"14", 7, -30, VFX_BACK | VFX_GLOW},    /* raizo: rajada vermelha */
-        {"06", 2, -30, VFX_BACK},               /* shizuku: respingo */
-        {"64", 0, -30, VFX_BACK | VFX_GLOW},    /* garfiel: garras */
-        {"64", 8, -30, VFX_BACK},               /* karasu: asas escuras */
-        {"03", 3, -30, VFX_BACK | VFX_GLOW},    /* hayate: redemoinho */
-        {"69", 0, -27, VFX_BACK | VFX_GLOW},    /* enjin: labareda */
-        {"04", 2, -24, VFX_BACK},               /* suiren: onda */
-        {"195", 2, -30, VFX_BACK | VFX_GLOW},   /* arashi: raios */
-        {"197", 1, -30, VFX_BACK | VFX_GLOW},   /* yoru: estrela da noite */
-        {"665", 5, -21, VFX_BACK | VFX_GLOW, 0.5f}, /* jinshi: o brilho da lua (pequeno, lilás, luz somada) */
-        {"197", 7, -30, VFX_BACK | VFX_GLOW},   /* oboro */
-    };
     int ti = (G.m->id - 1) % ROSTER_SIZE, row = TELL[ti].row;
-    int echo = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
-    if (echo >= 0) { ti = echo; row = 7; }
-    else if (G.m->isBigBoss && G.masked) { ti = 7; row = TELL[7].row; }   /* o oni: a lâmina acende */
+    if (G.m->isBigBoss && G.masked) { ti = 7; row = TELL[7].row; }   /* o oni: a lâmina acende */
+    else if (echo >= 0) { ti = echo; row = echo == 2 ? TELL[2].row : 7; }
     float sc = TELL[ti].scale > 0 ? TELL[ti].scale : 1;
-    vfx(TELL[ti].fx, row, (Vector2){b->x + b->offsetX, GROUND_LOW + TELL[ti].y * sc}, true, TELL[ti].flags, 22);
+    int flags = TELL[ti].flags;
+    Vector2 pos = {b->x + b->offsetX, GROUND_LOW + TELL[ti].y * sc};
+    if (ti > 1 && ti != 2) { flags |= VFX_SWORD; pos = tip; sc = fminf(sc, 0.5f); }
+    const SprFx *sheet = spr_fx(TELL[ti].fx);
+    float fps = 22;
+    if ((flags & VFX_SWORD) && sheet)
+        fps = sheet->frames / fmaxf(0.15f, (float)(duel_timeline(&G.duel).strike - G.duel.clock) + 0.08f);
+    vfx(TELL[ti].fx, row, pos, true, flags, fps);
+    if (ti == 9) {
+        Vector2 other;
+        if (spr_offhand_point(&G.bossS.pl,
+                (Vector2){b->x + b->offsetX, b->y - b->hopY}, b->faceLeft, (int)G.bossS.squat, &other))
+            vfx(TELL[ti].fx, row, other, true, VFX_BACK | VFX_GLOW | VFX_OFFHAND, fps);
+    }
     if (sc < 1)
         for (int i = 0; i < VFX_MAX; i++)
             if (G.vfx[i].fx == spr_fx(TELL[ti].fx) && G.vfx[i].t == 0) {
                 /* a fumaça branca do pack, menor e na paleta do cenário: a poeira na cor do
                    chão, o brilho da lua no lilás do céu da serra */
                 G.vfx[i].scale = sc;
-                G.vfx[i].tint = TELL[ti].flags & VFX_GLOW ? (Color){150, 120, 170, 255} : arena_dust(G.m->arena);
+                G.vfx[i].tint = ti == 2 ? (Color){228, 220, 204, 255}
+                               : ti == 11 ? (Color){150, 120, 170, 255}
+                               : ti == 0 ? arena_dust(G.m->arena) : (Color){255, 255, 255, 210};
             }
 }
 
@@ -1583,16 +1727,15 @@ static void second_blade(void) {
     Rig *r = &G.ren;
     Vector2 hit = {r->x + r->offsetX + 4, GROUND_LOW - 24};
     audio_play(SND_BAD, 0.9f, 1.1f);
-    fx_burst(&G.fx, P_SPARK, hit, 12, 130, 1.1f, 3.14f, (Color){255, 80, 60, 255}, (Color){255, 160, 90, 255});
+    fx_arc(&G.fx, hit, 7, -1.1f, 1.8f, 0.09f, 1, (Color){255, 228, 210, 220});
     fx_flash(&G.fx, (Color){255, 40, 30, 70}, 1);
-    vfx("71", 7, hit, false, VFX_FRONT, 28);
     fx_kick(&G.fx, AJ_TREMOR_SEGUNDA_LAMINA, AJ_TREMOR_SEGUNDA_TEMPO);
     r->flash = 1;
     r->flashColor = (Color){255, 80, 60, 255};
     G.renKnock = fmaxf(G.renKnock, AJ_RECUO_SEGUNDA_LAMINA);
 }
 
-/* "cedo" ou "tarde" em cima de kojiro: por que a defesa não pegou. */
+/* Mensagem de aperto tarde; os detalhes de tempo ficam no F3. */
 static void cedo_tarde(const char *quando) {
     Vector2 at = {G.ren.x + G.ren.offsetX, GROUND_LOW - 58};
     Color c = quando[0] == 'c' ? (Color){150, 205, 255, 255} : (Color){255, 170, 90, 255};
@@ -1605,6 +1748,13 @@ static void aviso_brilho(bool primeiro) {
     Vector2 h, t;
     boss_blade(&h, &t);
     Vector2 at = {h.x + (t.x - h.x) * 0.75f, h.y + (t.y - h.y) * 0.75f};
+    if (G.m->id == 3 || (G.m->isBigBoss && echo_of(duel_move(&G.duel)) == 2)) {
+        /* Lascas cinza-pedra e ocre no instante do aviso, presas à odachi. */
+        fx_burst(&G.fx, P_SHARD, at, primeiro ? 7 : 4, 35, 0.70f, -1.57f,
+                 (Color){196, 192, 183, 255}, (Color){223, 177, 104, 255});
+        if (primeiro) fx_ring(&G.fx, at, 38, 0.18f, 1, (Color){219, 198, 158, 200});
+        return;
+    }
     bool lua = G.m->cueAudio <= 0;
     if (!primeiro) {
         fx_star(&G.fx, at, 8, 0.09f);
@@ -1652,6 +1802,8 @@ static void anota_aperto(const DuelEvent *e) {
     if (e->i & 2) strncat(l->erro, "  (a 2ª lâmina entrou)", sizeof l->erro - strlen(l->erro) - 1);
 }
 
+static void begin_posture_aura(int echo);
+
 static void handle_events(void) {
     DuelEvent ev[MAX_EVENTS];
     int n = duel_drain(&G.duel, ev, MAX_EVENTS);
@@ -1674,6 +1826,11 @@ static void handle_events(void) {
                 }
                 else rig_pose(b, rearm_pose(strike_look()), G.windupLen, EASE_OUT);
                 sprite_windup();
+                if (m->isBigBoss) {
+                    int echo = echo_of(duel_move(&G.duel));
+                    if (G.duel.comboStrike == 0) begin_posture_aura(echo);
+                    else if (echo >= 0) G.auraLeft = fmaxf(G.auraLeft, G.duel.windupDuration + 0.65f);
+                }
                 if (duel_strike_dual(&G.duel)) dual_tell();
                 G.blackoutTarget = G.duel.blackout ? 1 : 0;
                 if (m->arena == ARENA_PORTO) audio_play(SND_DRUM, 0.9f, 1);
@@ -1693,7 +1850,6 @@ static void handle_events(void) {
                 else aviso_brilho(e->i == 0);
                 break;
             case EV_PRESS:
-                if (e->i == PRESS_CEDO) cedo_tarde("cedo");
                 if (e->i == PRESS_TARDE) cedo_tarde("tarde");
                 anota_aperto(e);
                 rig_pose(r, G.duel.phase == PH_WINDUP ? parry_pose(strike_look()) : POSE_PARRY, 0.06f, EASE_OUT);
@@ -1702,13 +1858,20 @@ static void handle_events(void) {
                 audio_play(SND_GESTURE, 0.8f, 1 + (rand() % 7) * 0.02f);
                 break;
             case EV_IMPACT:
+                if (G.leap == LEAP_JUMP && G.hopTravel) {
+                    G.bossStep = G.bossStrikeStep;
+                    G.hopT = G.hopLen;
+                    G.boss.hopY = 0;
+                    G.boss.offsetX = G.bossKnock + G.bossStep;
+                }
                 anota_aperto(e);
                 if (G.logImpactos)
                     fprintf(stderr, "IMPACTO contato %.5f julgamento %d antecedencia %.5f quadro %s %d\n", G.duel.lastStrikeAt, (int)e->judgement, e->a,
                             G.bossS.pl.anim ? G.bossS.pl.anim->name : "-", G.bossS.pl.frame);
-                /* defendeu cedo demais (depois do aviso vale uma tentativa só) */
-                if (e->judgement == J_RUIM && e->a > duel_stance(&G.duel)->goodWindow) cedo_tarde("cedo");
                 on_impact(e);
+                if (m->id == 3 || (m->isBigBoss && echo_of(duel_move(&G.duel)) == 2))
+                    fx_burst(&G.fx, P_SHARD, clash_point(), 6, 43, 0.90f, 3.14f,
+                             (Color){185, 182, 174, 220}, (Color){203, 157, 92, 220});
                 sprite_impact(e);
                 G.special = false;
                 G.renParryTime = -1;
@@ -1748,8 +1911,6 @@ static void handle_events(void) {
                 Vector2 at = {r->x + r->offsetX, GROUND_LOW - 22};
                 if (e->flag) {
                     /* a lâmina de fogo acendeu kojiro */
-                    vfx("69", 0, at, false, VFX_BACK | VFX_GLOW, 24);
-                    fx_burst(&G.fx, P_EMBER, at, 18, 60, 3.14f, -1.57f, (Color){255, 190, 80, 255}, (Color){255, 90, 30, 255});
                     audio_play(SND_SWING, 0.5f, 0.55f);
                 } else {
                     /* apagou: um fio de fumaça */
@@ -1774,22 +1935,6 @@ static void handle_events(void) {
 /* Por quadro                                                          */
 /* ------------------------------------------------------------------ */
 
-/* Guarda uma silhueta de quem está em movimento rápido. */
-static void update_ghosts(float dt) {
-    for (int i = 0; i < GHOST_MAX; i++) G.ghosts[i].life = fmaxf(0, G.ghosts[i].life - dt * 4);
-    Rig *src = G.boss.trail ? &G.boss : ((G.ren.trail || (G.renParryTime >= 0 && G.renParryTime < 0.12f)) ? &G.ren : NULL);
-    /* nas pranchas o rastro do golpe já vem desenhado */
-    if (!src || (src == &G.boss && G.bossS.set) || (src == &G.ren && G.renS.set)) return;
-    G.ghostTimer -= dt;
-    if (G.ghostTimer > 0) return;
-    G.ghostTimer = 0.03f;
-    G.ghostHead = (G.ghostHead + 1) % GHOST_MAX;
-    G.ghosts[G.ghostHead].rig = *src;
-    G.ghosts[G.ghostHead].rig.flash = 0;
-    G.ghosts[G.ghostHead].life = 1;
-    G.ghosts[G.ghostHead].color = (G.ghostHead % 2) ? (Color){80, 220, 255, 255} : (Color){255, 70, 200, 255};
-}
-
 /* Pranchas e o passo do mestre até o alcance do golpe (e de volta ao lugar). */
 static void fighters_update(float dt) {
     f_update(&G.renS, dt);
@@ -1800,8 +1945,17 @@ static void fighters_update(float dt) {
     /* investida e salto: depois do recuo (ou de agachar) ele arranca */
     if (G.leap == LEAP_WARP && G.bossWinding) {
         G.leapT += dt;
+        if (G.leapStage == 0) {
+            G.warpPenasT -= dt;
+            if (G.warpPenasT <= 0) {
+                G.warpPenasT = KARASU_WARP_PENAS;
+                feather_blur();
+            }
+        }
         if (G.leapStage == 0 && G.leapT >= G.leapAt) {
             G.leapStage = 1;
+            G.bossStep = G.bossStepTo; /* as penas partem do fim do recuo, à direita */
+            G.boss.offsetX = G.bossKnock + G.bossStep;
             feathers();
             G.bossHidden = true;
             G.bossStep = G.bossStepTo = G.bossStrikeStep;     /* já está onde vai reaparecer */
@@ -1821,17 +1975,32 @@ static void fighters_update(float dt) {
                 G.bossStepTo = G.bossStrikeStep + 10;
                 G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.windupLen - G.leapAt);
             } else {
-                G.bossStepTo = G.bossStrikeStep;
-                G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.leapAir);
+                G.leapAir = fmaxf(0.05f, (float)(duel_timeline(&G.duel).strike - G.duel.clock));
                 boss_hop(G.leapAir, 24);
+                G.hopFrom = G.bossStep;
+                G.hopTo = G.bossStrikeStep;
+                G.bossStepTo = G.hopTo;
+                G.hopTravel = true;
             }
+        }
+    }
+    if (G.leap == LEAP_FEINT && G.bossWinding) {
+        G.leapT += dt;
+        if (G.leapStage == 0 && G.leapT >= G.leapAt) {
+            G.leapStage = 1;
+            G.bossStepTo = G.feintFrom;
+            G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.leapAir - G.leapAt);
+        } else if (G.leapStage == 1 && G.leapT >= G.leapAir) {
+            G.leapStage = 2;
+            G.bossStepTo = G.bossStep + (G.bossStrikeStep - G.bossStep) * 0.4f;
+            G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.windupLen - G.leapAir);
         }
     }
     /* agacha antes do salto e firma o corpo no fim da preparação */
     G.landT = fmaxf(0, G.landT - dt);
     int squat = 0;
     if (G.leap == LEAP_JUMP && G.leapStage == 0) squat = 1 + (int)(2.99f * clampf(G.leapT / G.leapAt, 0, 1));
-    else if (G.landT > 0) squat = G.landT > 0.1f ? 3 : 1;
+    else if (G.landT > 0) squat = (int)roundf(3 * smooth(G.landT / 0.2f));
     else if (G.bossWinding && (!G.leap || G.leap == LEAP_FAR) && G.windupTime > G.windupLen * 0.5f) squat = 1;
     G.bossS.squat = squat;
     if (G.bossS.idle && !G.bossWinding && landed) {
@@ -1842,9 +2011,12 @@ static void fighters_update(float dt) {
             G.bossStepTo = 0;
             G.bossStepSpeed = -G.bossStep / t;
             boss_hop(t, 6);
+            G.hopFrom = G.bossStep;
+            G.hopTo = 0;
+            G.hopTravel = true;
             if (j) {
                 f_clear(&G.bossS, true);
-                f_add(&G.bossS, j, j->frames - 1, j->frames - 1, t);
+                f_add(&G.bossS, j, 0, j->frames - 1, t);
             }
         } else {
             G.bossStepTo = 0;
@@ -1852,11 +2024,17 @@ static void fighters_update(float dt) {
         }
     }
     float d = G.bossStepTo - G.bossStep, mv = G.bossStepSpeed * dt;
-    G.bossStep = fabsf(d) <= mv ? G.bossStepTo : G.bossStep + (d > 0 ? mv : -mv);
+    if (!G.hopTravel || G.hopT >= G.hopLen)
+        G.bossStep = fabsf(d) <= mv ? G.bossStepTo : G.bossStep + (d > 0 ? mv : -mv);
 }
 
 /* Silhuetas que o mestre deixa para trás no bote, na corrida e no salto. */
 static void update_after(float dt) {
+    if (G.m && G.m->id == 10) {
+        memset(G.after, 0, sizeof G.after);
+        G.lastStep = G.bossStep;
+        return;
+    }
     for (int i = 0; i < AFTER_MAX; i++) G.after[i].life = fmaxf(0, G.after[i].life - dt * 5);
     float v = dt > 0 ? fabsf(G.bossStep - G.lastStep) / dt : 0;
     G.lastStep = G.bossStep;
@@ -1871,9 +2049,37 @@ static void update_after(float dt) {
     G.after[G.afterHead].life = 1;
 }
 
+static void begin_posture_aura(int echo) {
+    if (echo < 0) return;
+    G.auraEcho = echo;
+    G.auraLeft = G.duel.windupDuration + 0.65f;
+    G.auraTick = 0;
+    banner(roster_get(echo)->style, posture_color(echo));
+}
+
+static void update_posture_aura(float dt) {
+    if (!G.m || !G.m->isBigBoss || G.state != ST_DUEL || G.auraLeft <= 0) return;
+    G.auraLeft = fmaxf(0, G.auraLeft - dt);
+    G.auraTick -= dt;
+    if (G.auraTick > 0) return;
+    G.auraTick = 0.12f;
+    Color c = posture_color(G.auraEcho);
+    Vector2 body = {G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY - 20};
+    fx_burst(&G.fx, P_EMBER, body, 5, 26, 2.6f, -1.57f, c, fadec(c,0.45f));
+    if (G.auraLeft > 0.45f && ((int)(G.auraLeft*8) % 3 == 0)) {
+        vfx("70", 4, body, true, VFX_BACK | VFX_BODY | VFX_GLOW, 18);
+        for (int i = 0; i < VFX_MAX; i++)
+            if (G.vfx[i].fx == spr_fx("70") && G.vfx[i].body && G.vfx[i].t == 0) {
+                G.vfx[i].scale = 0.65f;
+                G.vfx[i].tint = fadec(c,0.55f);
+            }
+    }
+}
+
 static void update_actors(float dt) {
     Rig *b = &G.boss, *r = &G.ren;
     fighters_update(dt);
+    update_posture_aura(dt);
     rig_update(r, dt);
     rig_update(b, dt);
     /* Gesto sem golpe: Ren volta à guarda sozinho. */
@@ -1885,10 +2091,6 @@ static void update_actors(float dt) {
     if (G.duel.burnLeft > 0 && G.state == ST_DUEL) {
         r->flash = fmaxf(r->flash, 0.22f + 0.12f * sinf(G.time * 18));
         r->flashColor = (Color){255, 120, 40, 255};
-        if (fmodf(G.time, 0.07f) < dt) {
-            Vector2 at = {r->x + r->offsetX + frand(-6, 6), GROUND_LOW - frand(6, 34)};
-            fx_burst(&G.fx, P_EMBER, at, 2, 22, 0.6f, -1.57f, (Color){255, 200, 90, 255}, (Color){255, 100, 30, 255});
-        }
     }
     /* Golpe especial: o mestre arde em vermelhão enquanto arma. */
     if (G.special && G.state == ST_DUEL) {
@@ -1922,13 +2124,7 @@ static void update_actors(float dt) {
             G.gritoPending = false;
         }
     }
-    if (G.hopT < G.hopLen) {
-        G.hopT = fminf(G.hopLen, G.hopT + dt);
-        b->hopY = sinf(G.hopT / G.hopLen * PI) * G.hopH;
-    } else {
-        b->hopY = 0;
-    }
-    update_ghosts(dt);
+    update_hop(dt);
     /* O cansaço segue a vida de kojiro e a postura do mestre. */
     if (G.state == ST_DUEL || G.state == ST_INTRO) {
         r->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.renPosture / G.settings.renPosture, 0, 1) : 0;
@@ -1971,8 +2167,11 @@ static void update_hud_values(float dt) {
  * o do carimbo do clique, ou o meio do quadro (o de sempre) quando não há carimbo, ele não é confiável
  * (entrada_no_quadro) ou o jogo está em demonstração. `corrido` é a parte do quadro real em que o tempo
  * correu (o quadro todo, ou o que sobrou dele depois de um hitstop). */
-static double instante_do_aperto(double corrido, double dt) {
+static double instante_do_aperto(double corrido, double dt, bool podeCarimbar) {
     if (!G.usaCarimbo) return dt * 0.5;
+    /* O monitor nativo carimba teclado e mouse, não o botão do controle.
+     * Um evento de teclado no mesmo quadro não pode emprestar seu horário ao gamepad. */
+    if (!podeCarimbar) { G.semCarimbo++; return dt * 0.5; }
     bool valido;
     double t = entrada_no_quadro(G.carimbo, G.poll, G.quadro, corrido, dt, &valido);
     if (valido) G.carimbados++; else G.semCarimbo++;
@@ -2005,7 +2204,7 @@ static void update_duel(float dtReal) {
     }
     audio_music_duck(G.silence > 0 ? 1 : 0);
     /* O clique chegou em algum ponto do último quadro: onde o carimbo diz, ou no meio dele. */
-    duel_step_at(&G.duel, dt, press ? instante_do_aperto(corrido, dt) : -1);
+    duel_step_at(&G.duel, dt, press ? instante_do_aperto(corrido, dt, pressed_key_mouse()) : -1);
     handle_events();
     if (G.state == ST_DUEL || G.state == ST_DEFEAT) update_actors(dt);
 }
@@ -2135,7 +2334,10 @@ static void hanzo_walk(float to, float len) {
     G.hz.to = to;
     G.hz.t = 0;
     G.hz.len = len;
-    const SprAnim *a = spr_anim(G.hz.f.set, "RUN");
+    /* A caminhada própria, quando o pack trouxer a tira WALK. Até lá, manter
+     * exatamente o RUN lento que as cenas já usam. */
+    const SprAnim *a = spr_anim(G.hz.f.set, "WALK");
+    if (!a) a = spr_anim(G.hz.f.set, "RUN");
     if (!a || len <= 0) return;
     f_clear(&G.hz.f, true);
     float lap = a->frames * a->frameTime * 2;   /* um velho: passos lentos */
@@ -2435,27 +2637,6 @@ static void begin_world(Vector2 offset) {
     BeginMode2D(cam);
 }
 
-/* Lutador no estilo de ação 2D: contorno escuro de 1 px e um filete de neon do lado de trás. */
-static void draw_fighter(const Rig *r, Color light, Color rim, bool dark) {
-    static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-    Color ink = {16, 12, 18, 255};
-    Rig t = *r;
-    for (int k = 0; k < 4; k++) {
-        t.x = r->x + off[k][0];
-        t.y = r->y + off[k][1];
-        rig_draw_flat(&t, ink);
-    }
-    if (dark) {
-        rig_draw_flat(r, (Color){24, 20, 36, 255});
-        return;
-    }
-    t = *r;
-    t.x = r->x + (r->faceLeft ? 1 : -1);
-    t.y = r->y - 1;
-    rig_draw_flat(&t, rim);
-    rig_draw(r, light);
-}
-
 /* O mesmo contorno escuro e o filete de luz dos bonecos, em volta do sprite. */
 static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Color rim, bool dark) {
     const SprAnim *a = f->pl.anim;
@@ -2525,25 +2706,12 @@ static void draw_rigs(Color light) {
     BeginTextureMode(G.actors);
     ClearBackground(BLANK);
     bool dark = G.ctx.blackout > 0.5f;
-    Color rim = arena_rim(G.m->arena);
+    Color rim = G.m->isBigBoss && G.auraLeft > 0 ? posture_color(G.auraEcho) : arena_rim(G.m->arena);
     begin_actors();
-    /* Rastros: silhuetas que ficam para trás, alternando ciano e magenta. */
-    for (int n = GHOST_MAX; n >= 1; n--) {
-        int i = (G.ghostHead - n + GHOST_MAX * 2) % GHOST_MAX;
-        if (G.ghosts[i].life <= 0) continue;
-        Color c = G.ghosts[i].color;
-        c.a = (unsigned char)(150 * G.ghosts[i].life);
-        rig_draw_flat(&G.ghosts[i].rig, c);
-    }
-    if (G.bossS.set && !dark && !G.bossHidden) {
-        /* as silhuetas do movimento, na cor do elemento de cada mestre */
-        static const Color AFTER_TINT[ROSTER_SIZE] = {
-            {230, 150, 80, 255}, {130, 210, 150, 255}, {235, 90, 70, 255}, {110, 180, 255, 255},
-            {250, 240, 210, 255}, {120, 110, 190, 255}, {140, 240, 200, 255}, {255, 140, 50, 255},
-            {90, 150, 240, 255}, {190, 150, 255, 255}, {130, 110, 220, 255}, {225, 225, 235, 255},
-            {235, 60, 70, 255},
-        };
-        Color c = AFTER_TINT[(G.m->id - 1) % ROSTER_SIZE];
+    if (G.rastro && G.bossS.set && G.m->id != 10 && !dark && !G.bossHidden) {
+        /* As silhuetas da corrida usam a mesma cor que o golpe e somem com a chave. */
+        Color c = cor_rastro();
+        if (G.m->id == 6 && G.leap == LEAP_WARP) c = (Color){50, 39, 64, 255};
         for (int n = 1; n <= AFTER_MAX; n++) {       /* da mais antiga para a mais nova */
             int i = (G.afterHead + n) % AFTER_MAX;
             if (G.after[i].life <= 0 || !G.after[i].a) continue;
@@ -2551,15 +2719,15 @@ static void draw_rigs(Color light) {
             spr_draw(G.bossS.set, G.after[i].a, G.after[i].frame, G.after[i].feet, o);
         }
     }
-    if (G.rastro && G.bossS.set && G.bossS.pl.anim && !dark && !G.bossHidden && G.state == ST_DUEL) desenha_rastro_do_golpe();
+    bool rastroGolpe = G.rastro && G.bossS.set && G.bossS.pl.anim && !G.bossHidden && G.state == ST_DUEL;
+    if (rastroGolpe) desenha_rastro_do_golpe(dark, false);
     if (G.bossHidden) {
         /* sumiu em penas */
     } else if (G.bossS.set) draw_sprite_fighter(&G.boss, &G.bossS, light, rim, dark);
-    else draw_fighter(&G.boss, light, rim, dark);
     if (G.maskOnGround) draw_oni_mask(light);
+    if (rastroGolpe) desenha_rastro_do_golpe(dark, true);
     draw_hanzo(light, rim);
     if (G.renS.set) draw_sprite_fighter(&G.ren, &G.renS, light, rim, false);
-    else draw_fighter(&G.ren, light, rim, false);
     draw_pole_flying();
     if (G.crack > 0) {
         /* Rachadura branca atravessando o mestre de cima a baixo. */
@@ -2663,28 +2831,101 @@ static void draw_illustration(void (*fn)(int, float), int page, float t, float l
 
 static void cabin_scene(int page, float t) { (void)page; lore_draw_cabin(t); }
 
-/* O rastro fantasma do golpe (AJ_RASTRO_*): na partida da lâmina, silhuetas do quadro que o mestre
- * JÁ está mostrando, esticadas para trás (para longe de kojiro), que crescem com o caminho da
- * lâmina (duel_launch_progress) e somem no contato. Só desenha: lê o duelo e o quadro atual, e
- * não mostra o quadro de contato, que sai no impacto, no instante do julgamento. */
-static void desenha_rastro_do_golpe(void) {
+/* Uma paleta para a silhueta e a lâmina. Oboro toma a cor do eco que está usando. */
+static int mestre_do_rastro(void) {
+    int eco = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
+    return eco >= 0 ? eco : G.m->id - 1;
+}
+
+static Color cor_rastro(void) {
+    static const Color COR[ROSTER_SIZE] = {
+        {218, 178, 116, 255}, /* daichi: areia */
+        {64, 122, 83, 255},   /* genbu: verde escuro */
+        {207, 175, 93, 255},  /* raizo: pedra ocre */
+        {170, 229, 252, 255}, /* shizuku: gelo */
+        {249, 139, 62, 255},  /* garfiel: laranja */
+        {91, 94, 105, 255},   /* karasu: preto com fio cinza */
+        {136, 230, 167, 255}, /* hayate: verde claro */
+        {237, 77, 52, 255},   /* enjin: brasa */
+        {51, 106, 191, 255},  /* suiren: azul escuro */
+        {89, 160, 251, 255},  /* arashi: raio azul */
+        {164, 99, 203, 255},  /* yoru: roxo */
+        {238, 239, 249, 255}, /* jinshi: branco */
+        {181, 83, 211, 255},  /* oboro sem eco */
+    };
+    return COR[mestre_do_rastro()];
+}
+
+/* O traço acompanha o ponto da arma anotado para cada quadro do PNG Mattz.
+ * Uma estocada fica longa e fina; um corte faz uma curva curta; garras viram
+ * três riscos. É apenas desenho, sem criar contato nem mudar o sprite. */
+static void fio_do_golpe(Vector2 arma, MoveLook look, float progresso, float comprimento, float largura, Color cor) {
+    float direcao = G.boss.faceLeft ? -1.0f : 1.0f;
+    Vector2 inicio, fim;
+    if (look == LOOK_THRUST || look == LOOK_DASH || look == LOOK_FAR) {
+        inicio = (Vector2){arma.x - direcao * comprimento * progresso, arma.y};
+        fim = (Vector2){arma.x + direcao * comprimento * 0.25f * progresso, arma.y};
+    } else {
+        float altura = look == LOOK_LOW ? 1.0f : -1.0f;
+        inicio = (Vector2){arma.x - direcao * comprimento * 0.62f * progresso,
+                           arma.y + altura * comprimento * 0.38f * progresso};
+        fim = (Vector2){arma.x + direcao * comprimento * 0.28f * progresso,
+                        arma.y - altura * comprimento * 0.50f * progresso};
+    }
+    DrawLineEx(inicio, arma, largura, cor);
+    DrawLineEx(arma, fim, fmaxf(1.0f, largura * 0.65f), fadec(cor, 0.72f));
+}
+
+/* Silhueta do quadro que está na tela e fio da arma. Tudo some no contato, que
+ * continua saindo no instante do núcleo. Durante o apagão de Yoru só o fio
+ * aparece, discretamente: o corpo não revela a posição dele. */
+static void desenha_rastro_do_golpe(bool escuro, bool so_fio) {
     float p = duel_launch_progress(&G.duel);
     if (p <= 0) return;
-    static const Color TINT[ROSTER_SIZE] = {
-        {230, 150, 80, 255}, {130, 210, 150, 255}, {235, 90, 70, 255}, {110, 180, 255, 255},
-        {250, 240, 210, 255}, {120, 110, 190, 255}, {140, 240, 200, 255}, {255, 140, 50, 255},
-        {90, 150, 240, 255}, {190, 150, 255, 255}, {130, 110, 220, 255}, {225, 225, 235, 255},
-        {235, 60, 70, 255},
-    };
-    Color c = TINT[(G.m->id - 1) % ROSTER_SIZE];
+    int mestre = mestre_do_rastro();
+    Color c = cor_rastro();
     Vector2 pes = {G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};
-    float para_tras = G.boss.faceLeft ? 1.0f : -1.0f;   /* o mestre olha para kojiro: o rastro fica do outro lado */
-    for (int k = AJ_RASTRO_FANTASMAS; k >= 1; k--) {
-        float fim = 1.0f - (float)(k - 1) / (float)AJ_RASTRO_FANTASMAS;   /* o mais longe é o mais fraco */
-        SprDraw o = {G.boss.faceLeft, 0, true, fadec(c, AJ_RASTRO_ALFA * fim * p)};
-        Vector2 at = {pes.x + para_tras * AJ_RASTRO_ESPACO * (float)k * p, pes.y};
-        spr_draw(G.bossS.set, G.bossS.pl.anim, G.bossS.pl.frame, at, o);
-        G.fantasmasDesenhados++;
+    float para_tras = G.boss.faceLeft ? 1.0f : -1.0f;
+    if (!so_fio && !escuro) {
+        for (int k = AJ_RASTRO_FANTASMAS; k >= 1; k--) {
+            float fim = 1.0f - (float)(k - 1) / (float)AJ_RASTRO_FANTASMAS;
+            SprDraw o = {G.boss.faceLeft, 0, true, fadec(c, AJ_RASTRO_ALFA * fim * p)};
+            Vector2 at = {pes.x + para_tras * AJ_RASTRO_ESPACO * (float)k * p, pes.y};
+            spr_draw(G.bossS.set, G.bossS.pl.anim, G.bossS.pl.frame, at, o);
+            G.fantasmasDesenhados++;
+        }
+    }
+    if (!so_fio) return;
+    Vector2 empunhadura, lamina;
+    boss_blade(&empunhadura, &lamina);
+    (void)empunhadura;
+    static const struct { float comprimento, largura; int riscos; bool duas; } ESTILO[ROSTER_SIZE] = {
+        {15, 2, 1, false}, {14, 2, 1, false}, {22, 3, 1, false},
+        {21, 1, 1, false}, {9, 1, 3, true}, {15, 2, 1, true},
+        {11, 2, 1, true}, {17, 3, 1, false}, {23, 1, 1, false},
+        {17, 2, 1, true}, {10, 2, 1, true}, {19, 2, 1, false},
+        {17, 2, 1, false},
+    };
+    Color fio = fadec(c, AJ_RASTRO_FIO_ALFA * p * (escuro ? 0.38f : 1.0f));
+    MoveLook look = strike_look();
+    int riscos = ESTILO[mestre].riscos;
+    for (int k = 0; k < riscos; k++) {
+        Vector2 centro = {lamina.x, lamina.y + (k - (riscos - 1) * 0.5f) * 3.0f};
+        fio_do_golpe(centro, look, p, ESTILO[mestre].comprimento, ESTILO[mestre].largura, fio);
+    }
+    if (ESTILO[mestre].duas || duel_strike_dual(&G.duel)) {
+        Vector2 outra = {lamina.x + para_tras * 7, lamina.y - 5};
+        spr_offhand_point(&G.bossS.pl, pes, G.boss.faceLeft, G.bossS.squat, &outra);
+        fio_do_golpe(outra, look, p, ESTILO[mestre].comprimento * 0.78f,
+                     ESTILO[mestre].largura, fio);
+    }
+    if (mestre == 5) { /* o fio escuro do karasu precisa aparecer sobre o telhado */
+        fio_do_golpe(lamina, look, p, ESTILO[mestre].comprimento, 1,
+                     fadec((Color){193, 197, 209, 255}, 0.48f * p));
+    }
+    if (mestre == 9) { /* a descarga segue ambas as lâminas */
+        Vector2 raio = {lamina.x + para_tras * 5, lamina.y - 4};
+        DrawLineEx(lamina, raio, 1, fadec((Color){193, 232, 255, 255}, 0.72f * p));
     }
 }
 
@@ -2739,31 +2980,20 @@ static void draw_world(void) {
 /* Interface (coordenadas de 1280 x 720, pixels de 320 x 180)         */
 /* ------------------------------------------------------------------ */
 
-/* Selo de oboro: losango de pixel, vermelho enquanto está de pé, apagado quando cai.
- * (x, y) é o canto de cima à esquerda do desenho de 5 x 5. */
-static void ui_seal(float x, float y, bool broken) {
-    static const char *SHAPE[5] = {"..#..", ".#o#.", "#ooo#", ".#o#.", "..#.."};
-    Color fill = broken ? (Color){150, 128, 100, 255} : SEAL_RED;
-    x = snap(x); y = snap(y);
-    for (int j = 0; j < 5; j++)
-        for (int i = 0; i < 5; i++)
-            if (SHAPE[j][i] != '.') px_rect(x + i * PX, y + j * PX, PX, PX, SHAPE[j][i] == '#' ? INK_LINE : fill);
-    if (!broken) px_rect(x + 2 * PX, y + PX, PX, PX, (Color){236, 130, 100, 255});   /* brilho */
-}
-
-#define SEAL_STEP 24.0f   /* distância entre os selos, em unidades da interface */
-
-/* Placa de status no jeito RPG Maker: pergaminho pequeno com nome, selos e o medidor
- * (postura dos mestres, vida de kojiro). */
-static void ui_status(Rectangle r, const char *name, const char *note, const char *gauge, int seals, int broken, float value, float ghost, float max, Color a, Color b) {
+/* Nome, descrição e medidor têm linhas próprias. As fases de Oboro não são anunciadas. */
+static void ui_status(Rectangle r, const char *name, const char *note, const char *gauge, float value, float ghost, float max, Color a, Color b) {
     parchment(r, 0.96f);
-    ink_bold(name, r.x + 18, r.y + 12, 24, INK_TEXT);
-    for (int i = 0; i < seals; i++)
-        ui_seal(r.x + 18 + ui_width_f(G.uiBold, name, 24) + 12 + i * SEAL_STEP, r.y + 14, i < broken);
-    if (note && note[0]) ink_right(note, r.x + r.width - 18, r.y + 12, 18, INK_SOFT);
-    ink(gauge, r.x + 18, r.y + 46, 16, INK_SOFT);
-    float gx = r.x + 18 + ui_width(gauge, 16) + 16;   /* o medidor começa depois da palavra */
-    ui_gauge(gx, r.y + 50, r.x + r.width - 20 - gx, value, ghost, max, a, b);
+    bool life = !strcmp(gauge, "vida");
+    const float pad = 36;
+    ink_bold(name, r.x + pad, r.y + 24, 28, INK_TEXT);
+    if (note && note[0]) {
+        if (life) ink_right(note, r.x + r.width - pad, r.y + 28, 18, INK_SOFT);
+        else ink(note, r.x + pad, r.y + 60, 20, INK_SOFT);
+    }
+    float gy = r.y + (life ? 68 : 100);
+    ink(gauge, r.x + pad, gy - 4, 18, INK_SOFT);
+    float gx = r.x + pad + ui_width(gauge, 18) + 20;
+    ui_gauge(gx, gy, r.x + r.width - pad - gx, value, ghost, max, a, b);
 }
 
 static void ui_hud(void) {
@@ -2774,30 +3004,28 @@ static void ui_hud(void) {
     bool vantagem = G.duel.advantage && G.state == ST_DUEL;
     if (vantagem) note = "vantagem: um perfeito quebra";
     float brilho = vantagem ? 0.5f + 0.5f * sinf(G.time * 10) : 0;
-    int seals = m->sealCount > 1 ? m->sealCount : 0;
-    /* A placa cresce para caber nome, selos e postura na mesma linha. */
-    float need = 18 + ui_width_f(G.uiBold, name, 24) + (seals ? 16 + seals * SEAL_STEP : 0) + 32 + ui_width(note, 18) + 18;
-    float tw = snap(fmaxf(460, need));
-    Rectangle top = {snap(UI_W / 2 - tw / 2), 16, tw, 76};
+    float need = fmaxf(ui_width_f(G.uiBold, name, 28), ui_width(note, 20)) + 80;
+    float tw = snap(fmaxf(600, need));
+    Rectangle top = {snap(UI_W / 2 - tw / 2), 16, tw, 132};
     Color barA = pressure ? (Color){150, 40, 30, 255} : (Color){78, 62, 104, 255};
     Color barB = pressure ? (Color){200, 80, 50, 255} : (Color){134, 108, 160, 255};
     if (vantagem) {
         barA = (Color){(unsigned char)(170 + 60 * brilho), 130, 30, 255};
         barB = (Color){(unsigned char)(220 + 35 * brilho), 190, 70, 255};
     }
-    ui_status(top, name, note, "postura", seals, G.duel.seal, G.shownBoss, G.ghostBoss, duel_posture_max(&G.duel), barA, barB);
-    Rectangle bot = {UI_W / 2 - 230, UI_H - 92, 460, 76};
+    ui_status(top, name, note, "postura", G.shownBoss, G.ghostBoss, duel_posture_max(&G.duel), barA, barB);
+    Rectangle bot = {UI_W / 2 - 300, UI_H - 124, 600, 108};
     bool low = G.shownRen <= G.settings.renPosture * 0.25f;
     /* kojiro não tem postura: tem vida, em vermelho, que pulsa quando está no fim */
     float pulse = low ? 0.5f + 0.5f * sinf(G.time * 8) : 0;
-    ui_status(bot, "kojiro", G.duel.burnLeft > 0 ? "em brasas" : NULL, "vida", 0, 0, G.shownRen, G.ghostRen, G.settings.renPosture,
+    ui_status(bot, "kojiro", G.duel.burnLeft > 0 ? "em brasas" : NULL, "vida", G.shownRen, G.ghostRen, G.settings.renPosture,
               (Color){(unsigned char)(140 + 40 * pulse), 26, 30, 255}, (Color){(unsigned char)(212 + 30 * pulse), 62, 56, 255});
 
     if (G.bannerTime > 0) {
         float a = clampf(G.bannerTime * 2, 0, 1);
         const char *t = lower(G.banner);
         float w = ui_width_f(G.uiBold, t, 34) + 100;
-        Rectangle r = {UI_W / 2 - w / 2, 116, w, 64};      /* abaixo da placa do mestre, acima dos saltos */
+        Rectangle r = {UI_W / 2 - w / 2, 164, w, 64};      /* abaixo da placa do mestre, acima dos saltos */
         parchment(r, a);
         scroll_rods(r, a);
         ink_bold_center(t, UI_W / 2.0f, r.y + 14, 34, fadec(INK_TEXT, a));
@@ -3304,7 +3532,7 @@ static void update_calibra(float dt) {
         G.cal.proxima++;
     }
     if (!pressed()) return;
-    double tp = (G.cal.t - dt) + instante_do_aperto(dt, dt);   /* o aperto chegou em algum ponto do quadro */
+    double tp = (G.cal.t - dt) + instante_do_aperto(dt, dt, pressed_key_mouse());   /* o aperto chegou em algum ponto do quadro */
     int k = (int)lround((tp - 1.0) / AJ_CALIBRA_BATIDA);
     if (k < 2) return;                               /* as duas primeiras batidas são para pegar o ritmo */
     G.cal.ultimo = (float)(tp - calibra_batida(k));
@@ -3657,6 +3885,10 @@ int main(int argc, char **argv) {
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(UI_W, UI_H, "aparar - a trilha dos doze aprendizes");
+    if (!IsWindowReady()) {
+        fprintf(stderr, "Não foi possível abrir a janela gráfica.\n");
+        return 1;
+    }
     perf_carga("janela");
     SetExitKey(KEY_NULL);
     if (getenv("APARA_FPS")) SetTargetFPS(atoi(getenv("APARA_FPS")));   /* só para os testes e as medidas */
@@ -3683,6 +3915,7 @@ int main(int argc, char **argv) {
     katana3d_load("assets/katana");
     perf_carga("katana 3D");
     spr_init();
+    preload_runtime_art();
     perf_carga("sprites");
     pix_init(RW, RH);
     perf_carga("pixelize");

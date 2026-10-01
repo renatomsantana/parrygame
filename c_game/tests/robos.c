@@ -33,7 +33,7 @@
 
 typedef struct { const char *nome; Robo r; } Coluna;
 
-#define NCOL 7
+#define NCOL 8
 static void colunas(Coluna *col) {
     Coluna base[NCOL] = {
         {"Perfeito", ROBO_DO_DEMO},
@@ -42,6 +42,7 @@ static void colunas(Coluna *col) {
         {"Reação 200", {0}},
         {"Reação 250", {0}},
         {"Reação 300", {0}},
+        {"Primeira vez", ROBO_PRIMEIRA_VEZ_PADRAO},
         {"Humano casual", ROBO_HUMANO_CASUAL},
     };
     base[3].r = robo_reacao(0.200f);

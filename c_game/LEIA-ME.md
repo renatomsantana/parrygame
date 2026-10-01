@@ -8,18 +8,20 @@ o moveset e o visual estão em `../docs/JOGO.md`; a história, em `../aparar_lor
 ```sh
 brew install raylib                     # uma vez (Linux: o pacote raylib do sistema)
 make packs ZIP=all_the_animations.zip   # uma vez: põe as tiras dos packs pagos nas pastas
-make sprites                            # gera os lutadores em pixel art
 make run                                # compila e abre o jogo
 ```
 
-Os packs (Mattz Art) não vão para o git. Sem eles o jogo roda com os bonecos de `src/rig.c`.
+Os packs pagos não entram no Git. `tools/instalar_packs.sh` organiza as tiras em
+`assets/sprites/_original/`, `_packs/`, `_fx/` e `_ui/`. Os personagens são
+desenhados apenas pelos PNGs de animação; sem os packs, eles não aparecem.
+Os cenários e as partículas embutidas continuam disponíveis.
 O progresso fica em `apara_save.txt` e a calibração em `apara_opcoes.txt`, ao lado do executável.
 Se o save estiver estragado, o jogo avisa, guarda o arquivo em `apara_save.txt.bak` e começa de novo.
 
 ## No macOS: o carimbo do clique
 
 O jogo usa o instante em que o macOS recebeu o clique (`NSEvent.timestamp`, em `src/entrada_mac.m`) e não o meio do
-quadro. Esse arquivo foi escrito sem um Mac à mão: **nunca foi compilado nem rodado**. Confira nesta ordem:
+quadro. O módulo compila no macOS e os testes de conversão passam; confira o comportamento com entradas físicas:
 
 1. `make` (precisa das Command Line Tools). Compila o `src/entrada_mac.m` junto com o resto.
 2. `./apara --carimbo` e clique 20 vezes (depois, 20 vezes com Espaço). A 60 Hz o mínimo sai perto de 0, a média perto de
@@ -38,6 +40,7 @@ XInput2 (Wayland puro) o Makefile já usa esse mesmo `src/entrada_stub.c`: lá o
 | Tecla | O que faz |
 |---|---|
 | clique, **Espaço**, **J**, **Enter** | apara e avança as falas |
+| botão inferior da face do controle | apara e avança as falas; sem carimbo nativo, usa o meio do quadro |
 | **Esc** | pausa (**T** trilha, **L** calibra o atraso, **M** menu, **Q** sai) |
 | **F3** (ou `APARA_DEBUG=1`) | overlay de debug: janelas, linha do tempo do golpe, os seis últimos apertos (perfeito, bom, cedo, tarde, e o erro em ms), fase, posturas, vida, e quantos apertos usaram o instante de hardware do clique |
 | **F** / **F11** | liga e desliga o tremor / tela cheia |
@@ -57,7 +60,7 @@ Com `--teste`, na luta ou na derrota: **R** recomeça, **V** enche a vida, **P**
 do mestre, **1 2 3** escolhem a fase do oboro, **N** / **B** vão ao próximo / anterior mestre.
 `--teste`, `--master`, `--duel`, `--state`, `--fase`, `--final` e `--demo` nunca gravam o progresso.
 
-## Gravar vídeos (sem tela, sem áudio)
+## Gravar vídeos sem áudio
 
 ```sh
 tools/gravar_video.sh saida.mp4 T0 T1 "linha 1" "linha 2" APARA_DEBUG=1 APARA_SEMENTE=11 -- --demo --master 1 --duel
@@ -109,7 +112,7 @@ o jogo esteve pausado durante a medida (então ela não vale). Mande a tabela in
 ## Os robôs (curva de dificuldade)
 
 ```sh
-make robos                          # tabela por mestre: perfeito, nunca defende, spam, reação 200/250/300, humano casual
+make robos                          # tabela por mestre: perfeito, nunca defende, spam, reação 200/250/300, estreia, casual
 make robos LUTAS=1000 HZ=144        # mais lutas, outra taxa de quadros (a tabela não muda: os robôs apertam em ms)
 make robos QUADROS=1                # o aperto no meio do quadro, como o clique do jogo (depende da taxa)
 make robos-taxas                    # a mesma luta a 30, 60, 120, 144 e 240 Hz tem de dar o mesmo resultado
@@ -135,3 +138,10 @@ os quadros por segundo), `APARA_LOG_CARIMBOS` (escreve cada carimbo e cada apert
 
 Mapa do código: tabela em `../docs/JOGO.md`. O núcleo (`core`, `roster`, `ajuste`, `robo`, `salvar`,
 `fonte`, `entrada`, `desempenho`) não usa raylib.
+
+## Clipes das lutas com impactos
+
+`python3 tools/gravar_lutas.py --seconds 6` gera amostras MP4 dos treze mestres
+em `videos-lutas/`, sem alterar o save. Os clipes usam os quadros do jogo a
+60 fps e os efeitos de impacto sintetizados pelo próprio áudio; não incluem a
+trilha ou a mixagem completa da partida. Requer `ffmpeg`.

@@ -11,8 +11,9 @@
 #define MAX_PARTICLES 900
 #define MAX_RINGS 16
 #define MAX_POPUPS 8
+#define MAX_ARCS 8
 
-typedef enum { P_SPARK, P_EMBER, P_DUST, P_SHARD, P_PETAL, P_GEM } ParticleKind;
+typedef enum { P_SPARK, P_EMBER, P_DUST, P_SHARD, P_PETAL, P_GEM, P_FEATHER } ParticleKind;
 
 typedef struct {
     ParticleKind kind;
@@ -24,12 +25,14 @@ typedef struct {
 
 typedef struct { Vector2 pos; float radius, speed, life, maxLife, width; Color color; } Ring;
 typedef struct { char text[32]; Vector2 pos; float life, maxLife, scale; Color color; } Popup;
+typedef struct { Vector2 center; float radius, start, sweep, life, maxLife, width; Color color; } Arc;
 typedef struct { Vector2 pos; float size, life, maxLife; Color outer, inner; } Star;
 
 typedef struct {
     Particle p[MAX_PARTICLES];
     Ring rings[MAX_RINGS];
     Popup popups[MAX_POPUPS];
+    Arc arcs[MAX_ARCS];
     Star stars[4];
     float flash;               /* 0..1 */
     Color flashColor;
@@ -49,6 +52,7 @@ void fx_burst(Fx *fx, ParticleKind kind, Vector2 at, int count, float speed, flo
 void fx_ring(Fx *fx, Vector2 at, float speed, float life, float width, Color c);
 void fx_star(Fx *fx, Vector2 at, float size, float life);
 void fx_star_tint(Fx *fx, Vector2 at, float size, float life, Color outer, Color inner);   /* estrela de outra cor */
+void fx_arc(Fx *fx, Vector2 center, float radius, float start, float sweep, float life, float width, Color c);
 void fx_popup(Fx *fx, const char *text, Vector2 at, float scale, Color c);
 void fx_flash(Fx *fx, Color c, float strength);
 void fx_kick(Fx *fx, float amp, float time);

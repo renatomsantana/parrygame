@@ -128,8 +128,9 @@
  * julgamento, âncora, hitbox nem duração de quadro. */
 #define AJ_RASTRO_FANTASMA           1      /* 0 = desligado (o golpe como antes) */
 #define AJ_RASTRO_FANTASMAS          3      /* quantos, atrás do mestre */
-#define AJ_RASTRO_ESPACO          4.0f      /* px de um para o outro, no fim da partida */
-#define AJ_RASTRO_ALFA           0.60f      /* opacidade do primeiro, no fim da partida */
+#define AJ_RASTRO_ESPACO          5.0f      /* px de um para o outro, no fim da partida */
+#define AJ_RASTRO_ALFA           0.72f      /* opacidade do primeiro, no fim da partida */
+#define AJ_RASTRO_FIO_ALFA       0.84f      /* brilho do traço preso à arma, no fim da partida */
 
 /* ---- Robô do demo (--demo) e dos testes -------------------------------- */
 #define AJ_ROBO_ANTECEDENCIA       0.030f   /* aperta no máximo este tempo antes do contato (menos que a menor janela perfeita) */

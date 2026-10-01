@@ -1,5 +1,8 @@
 # APARA — A Trilha dos Sete Mestres (Unity 6)
 
+**Arquivo histórico.** As pranchas antigas de personagens foram removidas.
+Este protótipo não abre uma luta completa; o jogo atual está em `../c_game/`.
+
 Duelo de katana de um botão, pixel art, sete mestres, cada um no seu cenário.
 Versão 0.5.0. Este repositório é só o projeto Unity: a raiz é a pasta do
 projeto (`Assets/`, `Packages/`, `ProjectSettings/`).

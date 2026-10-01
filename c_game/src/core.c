@@ -149,6 +149,16 @@ bool duel_strike_dual(const Duel *d) {
     return mv && d->comboStrike < (int)(CHAR_BIT * sizeof mv->dual) && (mv->dual >> d->comboStrike) & 1u;
 }
 
+MoveLook move_contact_look(const Move *mv, int strike) {
+    MoveLook look = mv ? mv->look : LOOK_HIGH;
+    if (strike <= 0) return look;
+    if (mv && mv->thrustOnly) return LOOK_THRUST;
+    if (look == LOOK_HEAVY || look == LOOK_JUMP || look == LOOK_WARP) return strike % 2 ? LOOK_LOW : LOOK_HIGH;
+    if (look == LOOK_THRUST || look == LOOK_DASH || look == LOOK_FAR) return strike % 2 ? LOOK_HIGH : LOOK_THRUST;
+    if (strike % 2 == 0) return look;
+    return look == LOOK_HIGH ? LOOK_LOW : LOOK_HIGH;
+}
+
 bool duel_event_after_contact(const DuelEvent *e) {
     if (e->kind == EV_PRESS && e->i == PRESS_TARDE) return true;
     return e->a < 0;

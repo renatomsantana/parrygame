@@ -5994,7 +5994,55 @@ static const Color BG = {40, 38, 52, 255};
 static const Color INK = {235, 235, 245, 255};
 static const Color INK2 = {150, 150, 170, 255};
 
-typedef struct { const char *name; int n; Frame *frames; } Rendered;
+typedef struct {
+    const char *name; int n; Frame *frames;
+    Vector2 weapon[64];
+    bool hasWeapon[64];
+    Vector2 offhand[64];
+    bool hasOffhand[64];
+} Rendered;
+
+/* Só os pixels da lâmina, sem a aura: os VFX acompanham a arma desenhada.
+ * A metade da frente evita centrar o efeito entre as duas mãos dos espadachins. */
+static void weapon_point(Rendered *r, int frame, const Canvas *cv, int ax, int ay) {
+    if (frame >= 64) return;
+    int lo = CW, hi = -1;
+    for (int y = 0; y < CH; y++) for (int x = 0; x < CW; x++)
+        if (cv->wpx[y][x] && cv->a[y][x].a) { if (x < lo) lo = x; if (x > hi) hi = x; }
+    if (hi < 0) return;
+    double sx = 0, sy = 0; int n = 0;
+    for (int y = 0; y < CH; y++) for (int x = (lo + hi) / 2; x <= hi; x++)
+        if (cv->wpx[y][x] && cv->a[y][x].a) { sx += x; sy += y; n++; }
+    if (!n) return;
+    r->weapon[frame] = (Vector2){(float)pyround(sx / n) - ax, (float)pyround(sy / n) - ay};
+    r->hasWeapon[frame] = true;
+    /* Cada lâmina visível do pack duplo tem seu próprio eixo. Agrupar os
+     * pixels da arma por esse eixo mantém o raio nas duas espadas. */
+    if (!cv->seg || cv->seg->nblades < 2) return;
+    const Blade *bl[2] = {0};
+    for (int i = 0; i < cv->seg->nblades; i++) {
+        const Blade *b = &cv->seg->blades[i];
+        if (b->loose || b->farthest < 5) continue;
+        if (!bl[0]) bl[0] = b;
+        else { bl[1] = b; break; }
+    }
+    if (!bl[1]) return;
+    double px[2] = {0}, py[2] = {0}; int count[2] = {0};
+    for (int y = 0; y < CH; y++) for (int x = 0; x < CW; x++) {
+        if (!cv->wpx[y][x] || !cv->a[y][x].a) continue;
+        double d[2];
+        for (int k = 0; k < 2; k++) {
+            double dx = x - bl[k]->hilt[0], dy = y - bl[k]->hilt[1];
+            double t = fmax(bl[k]->nearest, fmin(bl[k]->farthest, dx * bl[k]->u[0] + dy * bl[k]->u[1]));
+            dx -= t * bl[k]->u[0]; dy -= t * bl[k]->u[1]; d[k] = dx * dx + dy * dy;
+        }
+        int k = d[1] < d[0]; px[k] += x; py[k] += y; count[k]++;
+    }
+    if (!count[0] || !count[1]) return;
+    r->weapon[frame] = (Vector2){(float)pyround(px[0]/count[0]) - ax, (float)pyround(py[0]/count[0]) - ay};
+    r->offhand[frame] = (Vector2){(float)pyround(px[1]/count[1]) - ax, (float)pyround(py[1]/count[1]) - ay};
+    r->hasOffhand[frame] = true;
+}
 
 /* Todas as pranchas do personagem, quadro a quadro, com o número embaixo. */
 static void sheet_character(const char *title, const Rendered *r, int nr, const char *path) {
@@ -7014,6 +7062,7 @@ int main(int argc, char **argv) {
                     source_frame(sc, ch, st, j, &sf, &sg);
                     render(sf, sg, ch, &cx, &cv);
                 }
+                weapon_point(r, j, &cv, ax, ay);
                 memcpy(r->frames[j].p, cv.a, sizeof cv.a);
                 if (pose && (j / 2) % 2) {
                     int top = CH, bot = 0;
@@ -7399,6 +7448,7 @@ int main(int argc, char **argv) {
                     for (int j = 0; j < st->nframes; j++) {
                         Ctx cx = make_ctx(st->name, j, st->nframes, info, k);
                         render(&st->frames[j], &st->segs[j], &tmp, &cx, &cv);
+                        weapon_point(r, j, &cv, ax, ay);
                         memcpy(r->frames[j].p, cv.a, sizeof cv.a);
                         if (j == k) hr = reach(&cv, ax, ay, &rx, &ry);
                     }
@@ -7433,7 +7483,15 @@ int main(int argc, char **argv) {
                 nr++;
             }
         }
-        if (mf) fclose(mf);
+        if (mf) {
+            for (int i = 0; i < nr; i++) for (int j = 0; j < rend[si][i].n && j < 64; j++)
+                if (rend[si][i].hasWeapon[j]) fprintf(mf, "arma %s %d %.0f %.0f\n", rend[si][i].name, j,
+                    rend[si][i].weapon[j].x, rend[si][i].weapon[j].y);
+            for (int i = 0; i < nr; i++) for (int j = 0; j < rend[si][i].n && j < 64; j++)
+                if (rend[si][i].hasOffhand[j]) fprintf(mf, "arma2 %s %d %.0f %.0f\n", rend[si][i].name, j,
+                    rend[si][i].offhand[j].x, rend[si][i].offhand[j].y);
+            fclose(mf);
+        }
         nrend[si] = nr;
         if (grade) grid_char_dir(saida, ch->id);
 

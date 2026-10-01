@@ -87,8 +87,8 @@ typedef struct {
  * contato no instante em que os pés tocam o chão. LOOK_FAR é a estocada de longe
  * (a lança): o mestre fica afastado e a ponta viaja mais, então entre a lâmina
  * partir e chegar passa mais tempo que nos outros golpes (AJ_LANCA_PARTE_X). LOOK_WARP é o
- * sumiço do corvo: ele vira penas no meio da preparação e reaparece na frente de
- * kojiro para terminar o golpe; o reaparecer é o aviso. */
+ * sumiço do corvo: ele recua para a direita, vira penas e reaparece na frente de
+ * kojiro antes do aviso existente, sem alterar o contato. */
 typedef enum { LOOK_HIGH, LOOK_LOW, LOOK_THRUST, LOOK_HEAVY, LOOK_DASH, LOOK_JUMP, LOOK_FAR, LOOK_WARP } MoveLook;
 
 typedef struct {
@@ -106,7 +106,12 @@ typedef struct {
     /* Golpes de duas lâminas (bit k = o golpe k da sequência). Um parry só apara
      * as duas se for perfeito; no bom, a segunda passa; no erro, entram as duas. */
     unsigned dual;
+    bool thrustOnly;             /* apresentação: todos os contatos seguem retos, sem alternar para corte */
+    bool feint;                  /* apresentação: ameaça sem contato antes da estocada real */
 } Move;
+
+/* Direção visual de cada contato. Não participa do julgamento do parry. */
+MoveLook move_contact_look(const Move *move, int strike);
 
 typedef enum {
     ARENA_DOJO, ARENA_SERRA, ARENA_CELEIRO, ARENA_TELHADOS, ARENA_PORTO, ARENA_SALAO,

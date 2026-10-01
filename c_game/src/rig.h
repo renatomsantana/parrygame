@@ -1,5 +1,5 @@
 /*
- * rig.h - personagens provisórios montados por articulações.
+ * rig.h - poses e pontos de referência para golpes e efeitos.
  * Cada pose é um punhado de números; o movimento é a interpolação entre elas,
  * então nunca pula quadro e chega no instante exato pedido.
  * Tudo em pixels de 320 x 180, olhando para a direita (faceLeft espelha).
@@ -103,8 +103,6 @@ void rig_init(Rig *r, const Look *look, float x, float y, bool faceLeft);
 void rig_pose(Rig *r, Pose p, float dur, Ease e);        /* sai da pose atual */
 void rig_then(Rig *r, Pose p, float dur, Ease e);        /* encadeia depois da atual */
 void rig_update(Rig *r, float dt);
-void rig_draw(const Rig *r, Color light);
-void rig_draw_flat(const Rig *r, Color c);               /* silhueta chapada */
 Vector2 rig_sword_mid(const Rig *r);                     /* meio da lâmina, para faíscas */
 void rig_sword_line(const Rig *r, Vector2 *hilt, Vector2 *tip); /* empunhadura e ponta, no mundo */
 bool rig_offhand_line(const Rig *r, Vector2 *hilt, Vector2 *tip); /* lâmina da outra mão; false sem ela */

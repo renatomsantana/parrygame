@@ -70,18 +70,18 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                   {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 6,
     },
     {
-        .id = 3, .name = "raizo", .style = "postura do touro", .title = "O Honrado", .venue = "Pátio do dojo",
-        .special = "Odachi pesada: golpes lentos, diretos, que avisam antes de chegar.",
+        .id = 3, .name = "raizo", .style = "postura da montanha", .title = "O Honrado", .venue = "Pátio do dojo",
+        .special = "Odachi pesada: cortes como pedra caindo, lentos e diretos, que avisam antes de chegar.",
         .arena = ARENA_DOJO, .posture = 350, .hitsToFall = 7, .cueVisual = 1, .cueAudio = 1, .tint = 0xE8D8C8FF,
         .stances = {STANCE("", 0.075f, 0.185f, 0.424f)}, .stanceCount = 1,
         .moves = {
-            {"corte do touro", 1, {0}, 3.0f, -1, 0, LOOK_HIGH, 1.20f},
-            {"investida dupla", 2, {0.85f}, 1.5f, -1, 0, LOOK_LOW, 1.05f},
-            {"coice", 1, {0}, 1.2f, -1, 0, LOOK_LOW, 1.15f},
-            {"marrada", 2, {1.00f}, 1.2f, -1, 0, LOOK_THRUST, 1.20f},
-            {"estouro da boiada", 1, {0}, 1.5f, -1, 0, LOOK_DASH, 1.05f},
-            {"pisada", 2, {0.70f}, 1.0f, -1, 0, LOOK_JUMP, 1.15f},
-            {"chifrada", 1, {0}, 1.0f, -1, 0, LOOK_HEAVY, 1.20f},
+            {"corte do cume", 1, {0}, 3.0f, -1, 0, LOOK_HIGH, 1.20f},
+            {"fenda dupla", 2, {0.85f}, 1.5f, -1, 0, LOOK_LOW, 1.05f},
+            {"rasgo na laje", 1, {0}, 1.2f, -1, 0, LOOK_LOW, 1.15f},
+            {"ponta da serra", 2, {1.00f}, 1.2f, -1, 0, LOOK_THRUST, 1.20f},
+            {"avalanche", 1, {0}, 1.5f, -1, 0, LOOK_DASH, 1.05f},
+            {"queda de pedras", 2, {0.70f}, 1.0f, -1, 0, LOOK_JUMP, 1.15f},
+            {"montanha partida", 1, {0}, 1.0f, -1, 0, LOOK_HEAVY, 1.20f},
         },
         .moveCount = 7,
         .intro = {{"raizo", "Quinze invernos treinando neste pátio com o hanzo. Nunca vi mestre igual."},
@@ -90,31 +90,26 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                   {"raizo", "Então me mostra o que é. Com a espada."}}, .introCount = 4,
         .outro = {{"raizo", "Direto, sem desperdício. Ele te ensinou bem."},
                   {"raizo", "Vou sentir falta do velho."}}, .outroCount = 2,
-        .sensei = {{"hanzo", "O touro não esconde nada. O que ele mostra é o que ele faz."},
+        .sensei = {{"hanzo", "A montanha não esconde nada. Veja de onde a lâmina vai cair."},
                    {"hanzo", "Força demais sempre avisa antes de chegar. Escute o peso."}}, .senseiCount = 2,
         .visit = {{"kojiro", "Raizo também."},
-                  {"hanzo", "Forte como um touro, e com o mesmo tanto de juízo."},
+                  {"hanzo", "Firme como uma montanha. Nunca aprendeu a ceder."},
                   {"hanzo", "Shizuku espera na cachoeira do trovão. Florete e gelo: estocadas curtas, rápidas, sem curva."},
                   {"hanzo", "Ela observa muito. Não deixe que ela te leia primeiro."},
                   {"hanzo", "Não lute contra ela. Entenda ela. Depois, devore."}}, .visitCount = 5,
     },
     {
         .id = 4, .name = "shizuku", .style = "postura do gelo", .title = "A que Observa", .venue = "Cachoeira do Trovão",
-        .special = "Florete com geada: estocadas curtas e rápidas, até quatro de uma vez, sem curva.",
+        .special = "Florete com geada: quatro leituras, sempre na linha central; a finta não toca.",
         .arena = ARENA_CACHOEIRA, .posture = 380, .hitsToFall = 7, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8E8FFFF,
         .stances = {STANCE("", 0.068f, 0.171f, 0.411f)}, .stanceCount = 1,
         .moves = {
-            {"floco", 1, {0}, 2.5f, -1, 0, LOOK_THRUST, 0.85f},
-            {"geada", 2, {0.45f}, 2.0f, -1, 0, LOOK_THRUST, 0.75f},
-            {"sincelo", 2, {0.40f}, 1.5f, -1, 0, LOOK_THRUST, 0.90f},
-            {"estalactite", 3, {0.45f, 0.40f}, 1.0f, -1, 0, LOOK_HIGH, 0.85f},
-            {"nevasca", 4, {0.40f, 0.40f, 0.40f}, 1.0f, -1, 0, LOOK_THRUST, 0.75f},
-            {"gelo fino", 1, {0}, 1.5f, -1, 0, LOOK_LOW, 0.90f},
-            {"deslize", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.85f},
-            {"salto do cristal", 2, {0.45f}, 1.0f, -1, 0, LOOK_JUMP, 0.75f},
-            {"glaciar", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.90f},
+            {"floco", 1, {0}, 2.5f, -1, 0, LOOK_THRUST, 0.85f, 0, true, false},
+            {"geada", 2, {0.40f}, 2.0f, -1, 0, LOOK_THRUST, 0.75f, 0, true, false},
+            {"deslize", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.85f, 0, true, false},
+            {"finta de gelo", 1, {0}, 1.0f, -1, 0, LOOK_THRUST, 0.90f, 0, true, true},
         },
-        .moveCount = 9,
+        .moveCount = 4,
         .intro = {{"shizuku", "Você segura a espada igual a ele. Os ombros também. Ele te fez no mesmo molde."},
                   {"shizuku", "O hanzo era um monstro, sabia? Treinava a gente até a última gota de sangue."},
                   {"kojiro", "Ele me salvou."},
@@ -405,8 +400,8 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
 #define ECOS(p)                                                                               \
             {"eco da terra", 2, {1.00f}, 1.0f, p, 0, LOOK_LOW, 1.55f},                          \
             {"eco da tartaruga", 2, {0.42f}, 1.0f, p, 0, LOOK_THRUST, 1.00f},                   \
-            {"eco do touro", 2, {0.85f}, 1.0f, p, 0, LOOK_LOW, 1.05f},                          \
-            {"eco do gelo", 4, {0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.75f},          \
+            {"eco da montanha", 2, {0.85f}, 1.0f, p, 0, LOOK_LOW, 1.05f},                      \
+            {"eco do gelo", 2, {0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.75f, 0, true, false},       \
             {"eco do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_HIGH, 0.90f}, \
             {"eco do corvo", 3, {0.50f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 1.13f, 0x4},              \
             {"eco do vento", 2, {0.45f}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x2},                    \

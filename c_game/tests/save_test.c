@@ -4,6 +4,10 @@
  * gravação atômica (.tmp + rename) e os jeitos de a gravação falhar sem estragar o save antigo.
  */
 #define _POSIX_C_SOURCE 200809L
+#ifdef __APPLE__
+/* No macOS, mkdtemp fica nas extensões Darwin, fora do nível POSIX estrito. */
+#define _DARWIN_C_SOURCE 1
+#endif
 #include "../src/salvar.h"
 
 #include <errno.h>

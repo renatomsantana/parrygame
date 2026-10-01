@@ -5,7 +5,7 @@
  * uma tira PNG por animação, virada para a direita.
  *
  * As tiras saem de packs pagos e ficam fora do git: sem elas (make sprites com
- * os packs em assets/sprites/), o jogo volta para os bonecos de rig.c.
+ * os packs em assets/sprites/), os personagens não são desenhados.
  */
 #ifndef APARA_SPRITES_H
 #define APARA_SPRITES_H
@@ -15,6 +15,7 @@
 #include "raylib.h"
 
 #define SPR_MAX_ANIMS 72
+#define SPR_MAX_FRAMES 64
 
 typedef struct {
     char name[40];
@@ -26,6 +27,10 @@ typedef struct {
     float frameTime;             /* segundos por quadro */
     float times[16];             /* `tempos`: a duração de cada quadro (s), quando varia */
     int ntimes;
+    Vector2 weapon[SPR_MAX_FRAMES]; /* centro da lâmina neste quadro, relativo aos pés */
+    bool hasWeapon[SPR_MAX_FRAMES];
+    Vector2 offhand[SPR_MAX_FRAMES];
+    bool hasOffhand[SPR_MAX_FRAMES];
 } SprAnim;
 
 typedef struct {
@@ -71,6 +76,8 @@ void spr_loop(SprPlayer *p, const SprAnim *a);
 void spr_cycle(SprPlayer *p, const SprAnim *a, float time);  /* o laço por `time` segundos */
 void spr_update(SprPlayer *p, float dt);
 bool spr_done(const SprPlayer *p);
+bool spr_weapon_point(const SprPlayer *p, Vector2 feet, bool faceLeft, int breath, Vector2 *point);
+bool spr_offhand_point(const SprPlayer *p, Vector2 feet, bool faceLeft, int breath, Vector2 *point);
 
 /* Efeitos em folha (assets/sprites/_fx/<número do pack>.png): quadros de 64 x 64
  * lado a lado, uma cor por linha: 0 laranja, 1 roxo, 2 azul, 3 verde, 4 terra,
@@ -82,6 +89,9 @@ typedef struct {
 } SprFx;
 
 const SprFx *spr_fx(const char *name);
+int spr_fx_cache_count(void);    /* diagnóstico: quantas folhas já foram consultadas */
+void spr_ui_preload(void);       /* ícones carregados antes do primeiro quadro */
+void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint);
 /* O mesmo, em outra escala (a poeira menor que a folha do pack). */
 void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale);
 
