@@ -27,12 +27,13 @@ compila desempenho_test src/desempenho.c tests/desempenho_test.c -lm
 compila fuzz_test $CORE tests/fuzz.c -lm
 compila curva $CORE tests/curva.c -lm -lpthread
 compila robos $CORE tests/robos.c -lm -lpthread
+compila ritmo $CORE tests/ritmo.c -lm
 # a camada de carimbo do Windows (Raw Input): só compila aqui; o jeito de conferir no Windows é `apara --carimbo`
 if ! SAIDA=$($CCW $FLAGS -c src/entrada_win.c -o "$T/entrada_win.o" 2>&1); then
     echo "teste_windows: src/entrada_win.c não compila"; echo "$SAIDA" | head -8; FALHAS=$((FALHAS + 1))
 fi
 if [ "$FALHAS" -ne 0 ]; then echo "teste_windows: $FALHAS ferramenta(s) sem compilar para Windows"; exit 1; fi
-echo "teste_windows: 8 programas e a camada de carimbo (src/entrada_win.c) compilam para Windows, sem aviso"
+echo "teste_windows: 9 programas e a camada de carimbo (src/entrada_win.c) compilam para Windows, sem aviso"
 if [ -z "$WINE" ]; then echo "teste_windows: sem o Wine, não rodo os executáveis"; exit 0; fi
 # o prefixo do Wine (a "pasta C:") fica em cache: criá-lo leva uns 10 s, e a pasta temporária some ao fim
 export WINEPREFIX="${WINEPREFIX:-${XDG_CACHE_HOME:-$HOME/.cache}/apara-wine}" WINEDEBUG=-all
@@ -53,6 +54,7 @@ roda desempenho_test
 roda fuzz_test 100 1
 roda robos --taxas 20
 roda curva --teste 100
+roda ritmo --teste 20
 # a mesma tabela, número por número, no Linux e no Windows (1000 lutas por mestre e robô)
 cc -std=c11 -O2 $CORE tests/curva.c -o "$T/curva_linux" -lm -lpthread || exit 1
 "$T/curva_linux" 1000 0 > "$T/tabela_linux.txt"

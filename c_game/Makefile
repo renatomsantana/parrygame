@@ -84,6 +84,19 @@ curva: curva_relatorio
 curva-alvo: curva_relatorio
 	./curva_relatorio --alvo $(CURVA_LUTAS)
 
+# O ritmo do duelo mestre a mestre, em tempo real (núcleo + hitstop): abertura, tempo sem aviso, aviso, intervalo da sequência, tempo congelado.
+RITMO_LUTAS ?= 200
+ritmo_relatorio: $(CORE) tests/ritmo.c src/core.h src/ajuste.h src/robo.h
+	$(CC) $(CFLAGS) $(CORE) tests/ritmo.c -o $@ -lm
+
+ritmo: ritmo_relatorio
+	./ritmo_relatorio $(RITMO_LUTAS)
+
+# O aviso do primeiro golpe nunca baixa de 300 ms, a sequência nunca aperta mais que AJ_CADEIA_MIN, nunca há mais de 3 s sem aviso e o hitstop
+# nunca passa de 20% de uma luta.
+test-ritmo: ritmo_relatorio
+	./ritmo_relatorio --teste
+
 # O robô da primeira vez só reage (sem variação é o robo_reacao), não muda com a taxa, e o perfeito e o spam valem sempre.
 test-curva: curva_relatorio
 	./curva_relatorio --teste
@@ -145,7 +158,7 @@ numeros:
 avisos:
 	RAYLIB_CFLAGS="$(RAYLIB_CFLAGS)" sh tests/avisos.sh
 
-test: core_test test-fonte test-save test-entrada test-desempenho test-curva curva-alvo
+test: core_test test-fonte test-save test-entrada test-desempenho test-curva curva-alvo test-ritmo
 	./core_test
 
 # O núcleo e as ferramentas de teste compilam para Windows (MinGW-w64) e dão o mesmo resultado que no Linux
@@ -184,6 +197,6 @@ run: apara
 	./apara
 
 clean:
-	rm -f apara apara.exe core_test fonte_test save_test entrada_test desempenho_test fuzz_test robos_relatorio curva_relatorio personagens
+	rm -f apara apara.exe core_test fonte_test save_test entrada_test desempenho_test fuzz_test robos_relatorio curva_relatorio ritmo_relatorio personagens
 
-.PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-entrada test-desempenho teste teste-jogo
+.PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva ritmo test-ritmo curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-entrada test-desempenho teste teste-jogo
