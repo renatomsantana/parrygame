@@ -38,16 +38,36 @@ confere() { # descrição, condição (0 = ok)
 # janelas ninguém dá foco à janela, e o jogo pausa o duelo sem foco), injeta e fecha. Deixa $TMP/NOME.jogo
 # (o que o jogo escreveu) e $TMP/NOME.inj (o que o injetor mediu).
 N=40
+# espera_log ARQUIVO PADRÃO SEGUNDOS: espera o jogo escrever a linha (ele leva de 1 a 6 s para abrir, conforme a carga da máquina)
+espera_log() {
+    for _ in $(seq 1 $(($3 * 10))); do grep -q "$2" "$1" 2>/dev/null && return 0; sleep 0.1; done
+    return 1
+}
+# joga NOME AMBIENTE COMO: o jogo só pode receber os apertos com a janela com foco e o duelo andando, e nenhuma dessas duas coisas é
+# dada: sem gerenciador de janelas o foco depende de onde o ponteiro está quando a janela abre, e o duelo pausa sem foco. Por isso o
+# teste não confia em esperas fixas: ele espera a janela existir, dá (ou tira, no cenário semfoco) o foco, e só aperta Esc quando o log
+# do jogo diz "PAUSA 1", até dizer "PAUSA 0". (Um Esc que chega com o duelo andando o PAUSA, e foi isso que fez este teste falhar de
+# vez em quando com a máquina ocupada.)
 joga() {
     NOME=$1; AMBIENTE=$2; COMO=$3
-    env $AMBIENTE APARA_FPS=60 APARA_LOG_CARIMBOS=1 ./apara --teste --master 1 --duel >"$TMP/$NOME.jogo" 2>&1 &
+    LOG="$TMP/$NOME.jogo"
+    env $AMBIENTE APARA_FPS=60 APARA_LOG_CARIMBOS=1 ./apara --teste --master 1 --duel >"$LOG" 2>&1 &
     PID=$!
-    sleep 4
-    if [ "$COMO" != semfoco ]; then
-        "$TMP/xclique" 0 0
-        "$TMP/xtecla" esc
-        sleep 0.5
+    FOCO=""; [ "$COMO" = semfoco ] && FOCO=semfoco
+    for _ in $(seq 1 300); do "$TMP/xclique" 0 0 $FOCO >/dev/null 2>&1 && break; sleep 0.1; done
+    if [ "$COMO" = semfoco ]; then
+        espera_log "$LOG" "^PAUSA 1" 20     # o laço do jogo viu que está sem foco e pausou
+    else
+        sleep 1
+        if espera_log "$LOG" "^PAUSA 1" 3; then
+            for _ in 1 2 3 4 5; do
+                [ "$(grep '^PAUSA' "$LOG" | tail -1)" = "PAUSA 0" ] && break
+                "$TMP/xtecla" esc
+                sleep 0.4
+            done
+        fi
     fi
+    sleep 0.3
     "$TMP/xclique" "$N" 150 $COMO >"$TMP/$NOME.inj"
     sleep 0.5
     if kill -0 "$PID" 2>/dev/null; then VIVO=0; kill "$PID"; else VIVO=1; fi

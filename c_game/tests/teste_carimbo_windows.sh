@@ -41,10 +41,15 @@ confere() { # descrição, condição (0 = ok)
 cenario() {
     NOME=$1; N=$2; COMO=$3
     [ "$COMO" = clique ] && ARG="" || ARG="$COMO"
-    "$WINE" "$TMP/carimbo_win.exe" $((N / 2 + 6)) >"$TMP/$NOME.win" 2>&1 &
+    "$WINE" "$TMP/carimbo_win.exe" $((N / 2 + 30)) >"$TMP/$NOME.win" 2>&1 &
     PID=$!
-    sleep 4     # o Wine demora a abrir a janela
+    # o Wine leva de 2 a 15 s para abrir (mais, com a máquina ocupada): o programa escreve "iniciar=true" quando a janela e a
+    # entrada bruta estão de pé
+    for _ in $(seq 1 600); do grep -q "iniciar=" "$TMP/$NOME.win" 2>/dev/null && break; sleep 0.1; done
+    sleep 0.5
     "$TMP/xclique" "$N" 250 $ARG >"$TMP/$NOME.inj" 2>"$TMP/$NOME.err"
+    sleep 1
+    kill "$PID" 2>/dev/null     # o programa ainda esperaria os 30 s de folga
     wait "$PID" 2>/dev/null
     grep -q "iniciar=true" "$TMP/$NOME.win"; confere "$NOME: a entrada bruta ligou (iniciar=true)" $?
     CARIMBOS=$(grep -c '^carimbo ' "$TMP/$NOME.win")
