@@ -45,6 +45,10 @@ aplique a pré-carga: aplique só o teste do patch, que é o que garante que a t
 **No Windows**, para medir de verdade (com a placa de vídeo real): `set APARA_PERF=20` e `apara.exe --demo --master 6 --duel`; o relatório vem
 no terminal. Olhe `PERF lógica` (o máximo tem de ficar abaixo de 3 ms) e os `PERF pico`.
 
+**Teste de longa duração** (Oboro, demo de 60 s, o jogo no Linux): a memória do `malloc` fica **plana durante a luta** (85,3 → 86,2 MB em 40 s: sem vazamento). O crescimento
+de memória que apareceu no primeiro teste (155 → 178 MB) eram as folhas de efeito sendo carregadas aos poucos, uma a cada primeiro uso; com a pré-carga ele some. A mesma pré-carga
+tira um travamento de 27,9 ms que aconteceu no meio da luta do oboro (aos 39,7 s, num efeito de fase). Sobra um pico de 80 a 140 ms **na cena depois da luta** (o desarme), que está fora do escopo.
+
 ## 2. Ritmo do duelo
 
 `make ritmo` mede, em **tempo real** (núcleo mais o que o hitstop congela) e com o robô perfeito:
@@ -81,8 +85,30 @@ Leitura:
 | A. Daichi mais ágil | só a espera dele antes do aviso (`waitScale`, `roster.c`): ×0,50 → ×0,30 | 42,9 → 48,7 golpes/min; abertura 1,20 → 0,98 s; contato→aviso 1,01 → 0,80 s. Não mexe no aviso nem nas janelas |
 | B. Hitstop menor dentro da sequência | ×0,6 nos golpes que ainda têm outro depois (o último da sequência e a quebra de postura ficam inteiros); `duel_hitstop_for` ganha o argumento "em sequência" | tempo congelado: garfiel 14,0 → 10,4%, enjin 12,8 → 10,0%, jinshi 11,0 → 8,5%, oboro 11,7 → 8,6%; daichi 6,8 → 6,3% (quase não muda) |
 
-Nenhuma das duas toca o aviso, as janelas perfeita e boa nem a menor partida da lâmina. A B mexe no núcleo (e precisa do teste de hitstop em tempo real ajustado),
-e as duas mudam um pouco a curva do casual (o intervalo medido por ele encurta): se aprovadas, passo o `make curva-alvo` e reajusto o que sair da faixa.
+Nenhuma das duas toca o aviso, as janelas perfeita e boa nem a menor partida da lâmina.
+
+**B foi implementada no núcleo para medir e revertida** (nada ficou no repositório). O tempo real entre os contatos não muda: o que o hitstop deixa de congelar volta para a
+preparação do golpe seguinte. Mas essa preparação mais longa endurece o casual, que mede o intervalo a partir do começo dela. Com 100 mil lutas por mestre:
+
+| casual (%) | sem a B | com a B (×0,6) |
+|---|---|---|
+| garfiel | 99,8 | 99,6 |
+| hayate | 84,1 | 83,6 |
+| enjin | 79,7 | 78,9 |
+| suiren | 72,4 | 71,8 |
+| arashi | 63,8 | 63,2 |
+| yoru | 59,0 | 57,8 |
+| jinshi | 55,9 | 55,0 |
+| oboro | 41,2 | 39,9 |
+
+O efeito satura logo: ×0,95 já desloca o casual (oboro 41,4 → 40,7 em 20 mil lutas) e ×0,8 dá o mesmo que ×0,6, então **não existe uma versão branda que deixe a curva
+intacta**. Consequência: o `test_curva` do `core_test.c` (jinshi do casual ≥ 55%) reprova e o degrau yoru → jinshi cai de 3,1 para 2,8 (o mínimo que eu mesmo coloquei é 3,0).
+Pela regra de parar quando algo quebra a curva sem pedido, revertei. Para a B valer, é preciso decidir entre (i) aceitar a curva 1 ponto mais dura nos mestres do fim e baixar o
+piso do jinshi no `test_curva` de 55 para 52 (a faixa alvo que você aprovou é 52 a 58) e o degrau mínimo para 2,5, ou (ii) compensar com a postura do jinshi e do yoru, o que são
+mais duas mudanças.
+
+**A também esbarra numa regra:** o `core_test.c` exige que só o hayate e o jinshi tenham `waitScale` próprio (a exceção aprovada na rodada de ritmo). Dar um ao daichi muda esse
+teste. A curva não sente (o casual do daichi já é 100%), mas é mudar uma regra aprovada, e por isso também espera o seu OK.
 
 **O que o teste garante agora** (`make test-ritmo`, dentro do `make test`): o aviso do primeiro golpe nunca baixa de 300 ms; dois contatos de uma sequência nunca
 ficam mais perto que `AJ_CADEIA_MIN`; nunca há mais de 3 s sem aviso (fora a pausa do selo do oboro); o hitstop nunca passa de 20% de uma luta. Conferido por
