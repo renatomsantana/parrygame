@@ -14,13 +14,13 @@ static void fake_sprites(void) {
     static const char *names[] = {
         "IDLE", "IDLE_FURIA", "ATTACK_1", "ATTACK_2", "ATTACK_3",
         "ATTACK_1_FURIA", "ATTACK_2_FURIA", "ATTACK_3_FURIA",
-        "STRONG_ATTACK", "STRONG_ATTACK_FURIA", "ESPECIAL", "DASH_ATTACK", "JUMP", "HURT", "HURT_FURIA"
+        "STRONG_ATTACK", "STRONG_ATTACK_FURIA", "ESPECIAL", "DASH_ATTACK", "JUMP", "HURT", "HURT_FURIA", "DEATH"
     };
     fixture.height = 40;
     for (size_t i = 0; i < sizeof names / sizeof names[0]; i++) {
         SprAnim *a = &fixture.anims[fixture.count++];
         snprintf(a->name, sizeof a->name, "%s", names[i]);
-        a->frames = 5; a->frameTime = 0.08f; a->hold = 1; a->contact = 2;
+        a->frames = 5; a->frameTime = 0.08f; a->hold = 1; a->contact = 2; a->stop = -1;
     }
 }
 
@@ -176,6 +176,29 @@ static void damage_has_no_burst(void) {
     second_blade();
     for (int i = 0; i < VFX_MAX; i++) REQUIRE(!G.vfx[i].fx, "segunda lâmina criou explosão");
     REQUIRE(G.fx.arcs[0].life > 0, "dano ficou sem sinal de contato");
+}
+
+static void fatal_hit_finishes_hitstop_before_fall(void) {
+    memset(&G, 0, sizeof G);
+    G.m = roster_get(0);
+    G.state = ST_DEFEAT;
+    G.renS.set = &fixture;
+    G.ren.x = REN_X; G.ren.y = GROUND_LOW;
+    G.boss.x = BOSS_X; G.boss.y = GROUND_LOW;
+    G.hitstop = 0.08f;
+    G.slowmo = 1;
+    sprite_fall();
+    const SprAnim *death = fa(&G.renS, "DEATH");
+    REQUIRE(death && G.renS.pl.anim == death, "golpe fatal não iniciou a animação de morte");
+    update_defeat(0.05f);
+    REQUIRE(fabsf(G.hitstop - 0.03f) < 1e-5f && G.renS.pl.t == 0,
+            "queda avançou durante o hitstop do golpe fatal");
+    update_defeat(0.05f);
+    REQUIRE(G.hitstop == 0 && fabsf(G.renS.pl.t - 0.02f) < 1e-5f,
+            "o tempo restante do quadro não avançou a queda após o hitstop");
+    update_defeat(0.5f);
+    REQUIRE(G.renS.pl.anim == death && G.renS.pl.frame == death->frames - 1 && !G.renS.autoIdle,
+            "Kojiro levantou ou trocou de animação depois de morrer");
 }
 
 static void sword_continuity_and_parry(void) {
@@ -607,7 +630,7 @@ static void hanzo_uses_walk_when_available(void) {
 int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
-    damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
+    damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); sword_continuity_and_parry(); visual_feedback_regressions();
     gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);

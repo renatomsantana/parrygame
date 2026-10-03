@@ -3937,7 +3937,10 @@ static void sensei_done(void) {
 
 static void update_defeat(float dt) {
     if (G.slowmoTime > 0) { G.slowmoTime -= dt; if (G.slowmoTime <= 0) G.slowmo = 1; }
-    update_actors(dt * G.slowmo);
+    /* O golpe fatal ainda tem hitstop. Sem consumi-lo aqui, a animação da queda
+     * avança durante o choque e os efeitos ficam lentos para sempre na derrota. */
+    float livre = hitstop_passo(&G.hitstop, dt);
+    update_actors(livre * G.slowmo);
     if (G.stateTime < AJ_DERROTA_OPCOES) return;
     const char *labels[3];
     int n = defeat_options(labels);
