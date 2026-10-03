@@ -231,6 +231,36 @@ static void yoru_blade_rule(void) {
     REQUIRE(!spr_pixel_de_lamina(branco, 40, true), "acima da altura dos olhos nada acende (o olho e o brilho do cabelo)");
 }
 
+/* Cada mestre deve avisar com a matéria da sua postura, na posição certa.
+ * Os IDs mudaram quando o roster cresceu; isso já fez fogo sair como água e
+ * vento sair como brasa sem afetar os testes do duelo. */
+static void tell_particles_match_master(void) {
+    static const ParticleKind expected[ROSTER_SIZE] = {
+        P_DUST, P_SHARD, P_SHARD, P_SHARD, P_SPARK, P_FEATHER, P_PETAL,
+        P_EMBER, P_GEM, P_SPARK, P_SHARD, P_GEM, P_DUST
+    };
+    const Vector2 tip = {10, 20}, mid = {30, 40}, feet = {50, 60};
+    for (int id = 1; id <= ROSTER_SIZE; id++) {
+        if (id == 3) continue; /* a odachi usa raizo_tell, testada à parte */
+        fx_init(&G.fx);
+        tell_particles(id, tip, mid, feet);
+        int count = 0;
+        for (int k = 0; k < MAX_PARTICLES; k++) {
+            const Particle *p = &G.fx.p[k];
+            if (!p->alive) continue;
+            count++;
+            REQUIRE(p->kind == expected[id - 1], "aviso do mestre usa partículas de outra postura");
+            Vector2 at = id == 1 || id == 2 || id == 11 ? feet :
+                         id == 6 || id == 7 || id == 13 ? mid : tip;
+            REQUIRE(p->pos.x == at.x && p->pos.y == at.y, "aviso se soltou do chão ou da arma errada");
+            if (id == 7) REQUIRE(p->color.g > p->color.r, "vento do Hayate parece brasa");
+            if (id == 8) REQUIRE(p->color.r >= 250 && p->color.b < 90, "fogo do Enjin parece água");
+            if (id == 9) REQUIRE(p->color.b >= 200 && p->color.r <= 170, "mar da Suiren parece sombra");
+        }
+        REQUIRE(count >= 7, "aviso do mestre perdeu as partículas");
+    }
+}
+
 /* Com as pranchas reais do yoru: a tira da lâmina existe em toda animação de golpe, tem aço no quadro de contato, e não acende rosto nem pele. */
 static void yoru_blades_on_real_sheets(void) {
     const SprSet *yoru = spr_get("yoru");
@@ -538,7 +568,7 @@ int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato();
+    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;

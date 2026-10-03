@@ -1726,6 +1726,38 @@ static void raizo_tell(Vector2 tip, Vector2 feet) {
 /* O yoru apagou as luzes nesta sequência: só as adagas dele aparecem, então nada de brilho, faísca ou raio em volta. */
 static bool yoru_no_escuro(void) { return G.m && G.m->id == 11 && G.duel.blackout; }
 
+/* Partículas do aviso ligadas ao mestre atual. O roster mudou de ordem ao longo
+ * do projeto: manter esta escolha por nome/ID impede que vento solte brasas ou
+ * que a katana de fogo solte água. São só desenho; o aviso do core é o mesmo. */
+static void tell_particles(int id, Vector2 tip, Vector2 mid, Vector2 feet) {
+    switch (id) {
+        case 1: /* Daichi: terra */
+            fx_burst(&G.fx, P_DUST, feet, 10, 35, 0.65f, -1.57f, (Color){206, 172, 122, 210}, (Color){130, 95, 62, 190}); break;
+        case 2: /* Genbu: casco de pedra */
+            fx_burst(&G.fx, P_SHARD, feet, 7, 24, 0.70f, -1.57f, (Color){165, 176, 150, 210}, (Color){108, 123, 106, 190}); break;
+        case 4: /* Shizuku: gelo */
+            fx_burst(&G.fx, P_SHARD, tip, 8, 32, 0.55f, -1.57f, (Color){218, 245, 255, 230}, (Color){132, 196, 230, 210}); break;
+        case 5: /* Garfiel: garras */
+            fx_burst(&G.fx, P_SPARK, tip, 8, 46, 0.55f, 3.14f, (Color){247, 224, 178, 225}, (Color){205, 176, 116, 200}); break;
+        case 6: /* Karasu: penas */
+            fx_burst(&G.fx, P_FEATHER, mid, 8, 30, 0.8f, -1.57f, (Color){40, 31, 49, 230}, (Color){112, 37, 55, 210}); break;
+        case 7: /* Hayate: folhas levadas pelo vento */
+            fx_burst(&G.fx, P_PETAL, mid, 9, 46, 0.45f, 3.14f, (Color){190, 224, 160, 210}, (Color){105, 166, 111, 190}); break;
+        case 8: /* Enjin: brasas */
+            fx_burst(&G.fx, P_EMBER, tip, 13, 32, 0.8f, -1.57f, (Color){255, 190, 80, 240}, (Color){255, 90, 30, 220}); break;
+        case 9: /* Suiren: gotas do mar */
+            fx_burst(&G.fx, P_GEM, tip, 9, 36, 0.7f, -1.57f, (Color){170, 230, 240, 220}, (Color){90, 170, 220, 200}); break;
+        case 10: /* Arashi: faíscas elétricas */
+            fx_burst(&G.fx, P_SPARK, tip, 11, 65, 0.7f, 3.14f, (Color){222, 238, 255, 240}, (Color){117, 170, 255, 220}); break;
+        case 11: /* Yoru: lascas discretas fora do apagão */
+            fx_burst(&G.fx, P_SHARD, feet, 7, 27, 0.65f, -1.57f, (Color){112, 106, 128, 170}, (Color){62, 58, 83, 150}); break;
+        case 12: /* Jinshi: luar */
+            fx_burst(&G.fx, P_GEM, tip, 8, 26, 0.6f, -1.57f, (Color){219, 220, 245, 210}, (Color){157, 143, 201, 190}); break;
+        default: /* Oboro sem eco: sombra da própria postura */
+            fx_burst(&G.fx, P_DUST, mid, 12, 16, 0.9f, 0, (Color){150, 90, 200, 150}, (Color){90, 50, 130, 130}); break;
+    }
+}
+
 /* Sinal próprio de cada vilão no começo de cada sequência: nunca dois iguais. */
 static void tell_fx(void) {
     Rig *b = &G.boss;
@@ -1739,19 +1771,7 @@ static void tell_fx(void) {
     const bool escuro = yoru_no_escuro();
     if (escuro) { /* no apagão o aviso é só o som: nenhuma luz além das adagas */ }
     else if (G.m->id == 3 || echo == 2) raizo_tell(tip, feet);
-    else switch (G.m->id) {
-        case 1: fx_burst(&G.fx, P_SPARK, feet, 10, 70, 0.6f, -1.2f, (Color){255, 190, 110, 255}, (Color){255, 140, 60, 255}); break;
-        case 2: fx_burst(&G.fx, P_GEM, tip, 8, 40, 1.2f, 1.57f, (Color){200, 236, 255, 255}, (Color){120, 190, 240, 255}); break;
-        case 4: fx_burst(&G.fx, P_DUST, feet, 14, 50, 0.8f, -1.57f, (Color){170, 130, 90, 170}, (Color){110, 80, 50, 150}); break;
-        case 5: fx_burst(&G.fx, P_PETAL, (Vector2){b->x + 20, GROUND_LOW - 40}, 10, 90, 0.4f, 3.14f, (Color){236, 240, 230, 220}, (Color){180, 220, 200, 200}); break;
-        case 6: fx_burst(&G.fx, P_GEM, (Vector2){mid.x + 6, mid.y + 8}, 8, 30, 3.14f, 0, (Color){200, 230, 170, 255}, (Color){140, 170, 110, 255}); break;
-        case 7: fx_burst(&G.fx, P_EMBER, mid, 16, 30, 3.14f, -1.57f, (Color){255, 190, 80, 255}, (Color){255, 90, 30, 255}); break;
-        case 8: fx_burst(&G.fx, P_GEM, tip, 10, 50, 0.9f, -1.57f, (Color){170, 230, 240, 255}, (Color){90, 170, 220, 255}); break;
-        case 9: fx_burst(&G.fx, P_PETAL, (Vector2){b->x, GROUND_LOW - 44}, 8, 50, 3.14f, -1.57f, (Color){30, 30, 40, 230}, (Color){60, 60, 80, 230}); break;
-        case 10: fx_burst(&G.fx, P_SPARK, tip, 12, 90, 3.14f, 0, (Color){210, 190, 255, 255}, (Color){140, 110, 255, 255}); break;
-        case 11: fx_burst(&G.fx, P_SHARD, feet, 10, 60, 0.7f, -1.57f, (Color){150, 146, 140, 255}, (Color){100, 96, 90, 255}); break;
-        default: fx_burst(&G.fx, P_DUST, mid, 18, 16, 3.14f, 0, (Color){150, 90, 200, 150}, (Color){90, 50, 130, 130}); break;
-    }
+    else tell_particles(G.m->id, tip, mid, feet);
     audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
     if (escuro) return;
     /* E o efeito do pack de cada um: onde nasce (no chão ou no corpo) e a cor. Oboro
