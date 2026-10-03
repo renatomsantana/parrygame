@@ -261,6 +261,46 @@ static void tell_particles_match_master(void) {
     }
 }
 
+/* Todo golpe adicionado no roster tem um fio próprio, e os cruzados usam as
+ * duas armas no mesmo contato. A geometria é validada sem janela gráfica. */
+static void new_move_trails(void) {
+    static const struct { int id; const char *name; } novos[] = {
+        {5, "arranhão"}, {5, "duas patas"}, {6, "cruz de penas"}, {6, "corte curto"},
+        {7, "gancho duplo"}, {7, "ceifada em X"}, {7, "vento partido"},
+        {8, "labareda larga"}, {8, "ferro em brasa"}, {8, "chicote de chamas"},
+        {9, "arpão duplo"}, {9, "varredura de maré"},
+        {10, "descarga"}, {10, "cruz elétrica"},
+        {11, "picada"}, {11, "tesoura"}, {11, "esquerda e direita"},
+        {12, "quarto crescente"}, {12, "maré de luar"},
+    };
+    for (int id = 1; id <= ROSTER_SIZE; id++) {
+        const MasterProfile *master = roster_get(id - 1);
+        const TrailStyle base = trail_style(id - 1, id, NULL);
+        for (int i = 0; i < master->moveCount; i++) {
+            const Move *mv = &master->moves[i];
+            const TrailStyle st = trail_style(id - 1, id, mv);
+            REQUIRE(st.comprimento > 0 && st.comprimento <= 32 && st.largura >= 1 && st.largura <= 4 && st.riscos >= 1 && st.riscos <= 4,
+                    "fio do golpe fora da escala dos sprites");
+            if (st.cruz) REQUIRE((mv->dual & 1u) != 0, "fio cruzado sem golpe de duas lâminas");
+        }
+        REQUIRE(base.comprimento > 0, "mestre sem estilo base");
+    }
+    for (size_t n = 0; n < sizeof novos / sizeof novos[0]; n++) {
+        int id = novos[n].id, found = 0;
+        const MasterProfile *master = roster_get(id - 1);
+        TrailStyle base = trail_style(id - 1, id, NULL);
+        for (int i = 0; i < master->moveCount; i++) {
+            const Move *mv = &master->moves[i];
+            if (strcmp(mv->name, novos[n].name)) continue;
+            found++;
+            TrailStyle st = trail_style(id - 1, id, mv);
+            REQUIRE(st.comprimento != base.comprimento || st.largura != base.largura || st.riscos != base.riscos ||
+                    st.cruz || st.gancho || st.crescente, "golpe novo ainda usa o fio genérico");
+        }
+        REQUIRE(found == 1, "golpe novo ausente ou repetido no roster");
+    }
+}
+
 /* Com as pranchas reais do yoru: a tira da lâmina existe em toda animação de golpe, tem aço no quadro de contato, e não acende rosto nem pele. */
 static void yoru_blades_on_real_sheets(void) {
     const SprSet *yoru = spr_get("yoru");
@@ -568,7 +608,7 @@ int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master();
+    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;

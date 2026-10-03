@@ -3105,6 +3105,64 @@ static void fio_do_golpe(Vector2 arma, MoveLook look, float progresso, float com
     DrawLineEx(arma, fim, fmaxf(1.0f, largura * 0.65f), fadec(cor, 0.72f));
 }
 
+typedef struct {
+    float comprimento, largura;
+    int riscos;
+    bool cruz, gancho, crescente;
+} TrailStyle;
+
+/* As sequências novas já tinham ritmo próprio no núcleo, mas compartilhavam o
+ * mesmo fio de arma do mestre. A geometria é só visual e acompanha a ponta do
+ * PNG durante a partida; não cria contato, projétil ou hitbox. */
+static TrailStyle trail_style(int mestre, int id, const Move *mv) {
+    static const TrailStyle BASE[ROSTER_SIZE] = {
+        {15, 2, 1}, {14, 2, 1}, {22, 3, 1}, {21, 1, 1}, {9, 1, 3},
+        {15, 2, 1}, {11, 2, 1}, {17, 3, 1}, {23, 1, 1}, {17, 2, 1},
+        {10, 2, 1}, {19, 2, 1}, {17, 2, 1},
+    };
+    static const struct { int id; const char *name; TrailStyle style; } NOVOS[] = {
+        {5, "arranhão",          {12, 1, 4}},
+        {5, "duas patas",        {12, 2, 3}},
+        {6, "cruz de penas",     {17, 2, 1, true}},
+        {6, "corte curto",       {9,  1, 1}},
+        {7, "gancho duplo",      {13, 2, 1, false, true}},
+        {7, "ceifada em X",      {15, 2, 1, true}},
+        {7, "vento partido",     {18, 1, 1}},
+        {8, "labareda larga",    {24, 4, 1}},
+        {8, "ferro em brasa",    {15, 3, 1}},
+        {8, "chicote de chamas", {28, 2, 1}},
+        {9, "arpão duplo",       {30, 1, 1}},
+        {9, "varredura de maré", {30, 2, 1}},
+        {10, "descarga",         {24, 2, 1}},
+        {10, "cruz elétrica",    {19, 2, 1, true}},
+        {11, "picada",           {12, 1, 1}},
+        {11, "tesoura",          {13, 2, 1, true}},
+        {11, "esquerda e direita", {13, 1, 1}},
+        {12, "quarto crescente", {23, 1, 1, false, false, true}},
+        {12, "maré de luar",     {27, 1, 1, false, false, true}},
+    };
+    if (mestre < 0 || mestre >= ROSTER_SIZE) return (TrailStyle){0};
+    TrailStyle style = BASE[mestre];
+    if (!mv || !mv->name) return style;
+    for (size_t k = 0; k < sizeof NOVOS / sizeof NOVOS[0]; k++)
+        if (NOVOS[k].id == id && strcmp(NOVOS[k].name, mv->name) == 0) return NOVOS[k].style;
+    return style;
+}
+
+/* Quarto de lua preso à espada: três segmentos curtos, sem efeito estacionário
+ * no mundo. O sentido acompanha a direção do corte do contato atual. */
+static void fio_crescente(Vector2 arma, MoveLook look, float p, TrailStyle s, Color cor) {
+    const float frente = G.boss.faceLeft ? -1.0f : 1.0f;
+    const float alto = look == LOOK_LOW ? 1.0f : -1.0f;
+    const float l = s.comprimento * p;
+    Vector2 a = {arma.x - frente * l * 0.55f, arma.y + alto * l * 0.40f};
+    Vector2 b = {arma.x - frente * l * 0.17f, arma.y + alto * l * 0.06f};
+    Vector2 c = {arma.x + frente * l * 0.38f, arma.y - alto * l * 0.22f};
+    DrawLineEx(a, b, s.largura, cor);
+    DrawLineEx(b, arma, s.largura, cor);
+    DrawLineEx(arma, c, s.largura, fadec(cor, 0.70f));
+}
+
 /* Silhueta do quadro que está na tela e fio da arma. Tudo some no contato, que
  * continua saindo no instante do núcleo. No apagão do Yoru não sai nada: só as
  * adagas aparecem. */
@@ -3129,28 +3187,33 @@ static void desenha_rastro_do_golpe(bool escuro, bool so_fio) {
     Vector2 empunhadura, lamina;
     boss_blade(&empunhadura, &lamina);
     (void)empunhadura;
-    static const struct { float comprimento, largura; int riscos; bool duas; } ESTILO[ROSTER_SIZE] = {
-        {15, 2, 1, false}, {14, 2, 1, false}, {22, 3, 1, false},
-        {21, 1, 1, false}, {9, 1, 3, true}, {15, 2, 1, true},
-        {11, 2, 1, true}, {17, 3, 1, false}, {23, 1, 1, false},
-        {17, 2, 1, true}, {10, 2, 1, true}, {19, 2, 1, false},
-        {17, 2, 1, false},
-    };
+    TrailStyle estilo = trail_style(mestre, G.m->id, duel_move(&G.duel));
     Color fio = fadec(c, AJ_RASTRO_FIO_ALFA * p * (escuro ? 0.38f : 1.0f));
     MoveLook look = strike_look();
-    int riscos = ESTILO[mestre].riscos;
+    int riscos = estilo.riscos;
     for (int k = 0; k < riscos; k++) {
         Vector2 centro = {lamina.x, lamina.y + (k - (riscos - 1) * 0.5f) * 3.0f};
-        fio_do_golpe(centro, look, p, ESTILO[mestre].comprimento, ESTILO[mestre].largura, fio);
+        if (estilo.crescente) fio_crescente(centro, look, p, estilo, fio);
+        else fio_do_golpe(centro, look, p, estilo.comprimento, estilo.largura, fio);
     }
-    if (ESTILO[mestre].duas || duel_strike_dual(&G.duel)) {
+    if (estilo.gancho) {
+        const float dir = G.boss.faceLeft ? -1.0f : 1.0f;
+        DrawLineEx(lamina, (Vector2){lamina.x - dir * 5 * p, lamina.y - 5 * p},
+                   estilo.largura, fadec(fio, 0.75f));
+    }
+    /* A segunda arma só risca quando participa deste contato. Ter duas armas
+     * equipadas não significa que ambas atacam em todos os golpes. */
+    if (duel_strike_dual(&G.duel)) {
         Vector2 outra = {lamina.x + para_tras * 7, lamina.y - 5};
         spr_offhand_point(&G.bossS.pl, pes, G.boss.faceLeft, G.bossS.squat, &outra);
-        fio_do_golpe(outra, look, p, ESTILO[mestre].comprimento * 0.78f,
-                     ESTILO[mestre].largura, fio);
+        MoveLook segunda = estilo.cruz ? (look == LOOK_LOW ? LOOK_HIGH : LOOK_LOW) : look;
+        for (int k = 0; k < (mestre == 4 ? riscos : 1); k++) {
+            Vector2 centro = {outra.x, outra.y + (k - (mestre == 4 ? riscos - 1 : 0) * 0.5f) * 3.0f};
+            fio_do_golpe(centro, segunda, p, estilo.comprimento * 0.78f, estilo.largura, fio);
+        }
     }
     if (mestre == 5) { /* o fio escuro do karasu precisa aparecer sobre o telhado */
-        fio_do_golpe(lamina, look, p, ESTILO[mestre].comprimento, 1,
+        fio_do_golpe(lamina, look, p, estilo.comprimento, 1,
                      fadec((Color){193, 197, 209, 255}, 0.48f * p));
     }
     if (mestre == 9) { /* a descarga segue ambas as lâminas */
