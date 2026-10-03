@@ -1,6 +1,6 @@
-# Golpes novos por arma (item 2): a primeira etapa está aplicada
+# Golpes novos por arma (item 2): núcleo e primeiro passe visual
 
-A **primeira etapa** (só o núcleo: `roster.c` e testes, sem tocar o `main.c`) foi aplicada, um mestre por commit, depois da sua aprovação. A **segunda etapa** (o desenho próprio de cada golpe, no `main.c`) segue como proposta (seção 4).
+A **primeira etapa** (núcleo: `roster.c` e testes) foi aplicada, um mestre por commit. O **primeiro passe da segunda etapa** dá traços de lâmina diferentes aos 19 golpes e só desenha a segunda arma nos contatos duplos. Ainda cabe avaliar as animações à mão, golpe por golpe (seção 4).
 Os números abaixo vêm do protótipo que precedeu os commits, e foram conferidos de novo a cada commit (`make test` com a `curva-alvo`) e no repertório final. Como ficou, em commits: seção 5.
 
 ## 1. O que entra, o que não entra
@@ -75,11 +75,11 @@ que mais se mexem são o Hayate (+1,2) e a Suiren (−1,2). Se quiser os golpes 
 **O que passa sem mudar nenhum teste:** a janela viável de **toda** sequência de todo mestre (o `test_janelas_viaveis` exige ver cada sequência ao menos uma vez: perfeita e boa existem, sem apertar dá erro, cedo e tarde dão erro, aviso de
 320 ms ou mais), o resultado idêntico a 30, 60, 120, 144 e 240 Hz (30680 golpes, diferença máxima 0,000 ms), a calibração alta (32400 intervalos, menor partida da lâmina 140 ms) e os cliques no hitstop (14630 contatos).
 
-## 4. Segunda etapa: o desenho próprio de cada golpe (`main.c`), depois
+## 4. Segundo passe: o que já aparece e o que falta conferir
 
-O que faria cada golpe parecer novo, e não só um ritmo novo: o arco de corte desenhado por código na cor do mestre (inclinação de 10 a 15°, esticada horizontal), o raio, o fogo e a lua nos golpes de cada elemento, e a assinatura do aviso por
-família (brilho e som; o tempo do aviso não muda). Isso mexe no `main.c` (desenho do golpe, rastro, cores), que a outra sessão está mudando muito (701 linhas na `mac-integracao`). Proponho **só depois** de a outra sessão fechar o `main.c`,
-em commits pequenos por família, para não brigar com ela. Até lá, os 19 golpes já jogam com o que existe.
+No `main.c`, os 19 golpes novos agora têm comprimento, espessura e forma de rastro próprios: garras múltiplas, cruzes de duas armas, gancho, labareda larga, chicote e crescentes presos à espada. A segunda arma só deixa traço no contato marcado como duplo. O aviso inicial também usa partículas da matéria de cada mestre. São mudanças de apresentação: os contatos, as janelas, as âncoras e a duração dos quadros continuam no núcleo e nos sprites.
+
+Isso não cria quadros novos nas pranchas compradas. A fluidez real de cada transição ainda precisa ser conferida com o jogo rodando e com os golpes observados individualmente; os testes automáticos cobrem continuidade de quadros, vínculo do efeito à arma e regras do duelo.
 
 ## 5. Como entrou
 
@@ -92,4 +92,4 @@ Aprovados os quatro pontos (e a primeira etapa), em cima da junção com a `mac-
 5. **Um commit por mestre**, com o `roster.c` e a linha do `docs/JOGO.md`: Karasu, Hayate, Enjin, Suiren, Arashi, Yoru, Jinshi e, por último, o Garfiel. A ordem não é arbitrária: aplicado antes do Karasu, o Garfiel (Reação 250 de 9,4 para 8,5) deixava só 0,3 ponto
    até o Karasu de hoje (8,2), e a ordem da curva exige 0,5; com o Karasu antes (7,7), o degrau é 0,8. Cada commit passa o `make test` inteiro, com a `curva-alvo` em 0 itens.
 
-O que **não** entrou: golpes novos no Daichi e no Genbu (a regra dos sete), nada na Shizuku, no Raizo nem no sumiço do Karasu (da outra sessão), e o desenho próprio de cada golpe (segunda etapa).
+O que **não** entrou na primeira etapa: golpes novos no Daichi e no Genbu (a regra dos sete), nada na Shizuku, no Raizo nem no sumiço do Karasu. O primeiro passe visual do item 4 veio depois, em `a5b4303`.
