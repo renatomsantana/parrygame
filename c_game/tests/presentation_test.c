@@ -14,7 +14,7 @@ static void fake_sprites(void) {
     static const char *names[] = {
         "IDLE", "IDLE_FURIA", "ATTACK_1", "ATTACK_2", "ATTACK_3",
         "ATTACK_1_FURIA", "ATTACK_2_FURIA", "ATTACK_3_FURIA",
-        "STRONG_ATTACK", "STRONG_ATTACK_FURIA", "ESPECIAL", "DASH_ATTACK", "JUMP", "HURT", "HURT_FURIA", "DEATH"
+        "STRONG_ATTACK", "STRONG_ATTACK_FURIA", "ESPECIAL", "DASH_ATTACK", "JUMP", "HURT", "HURT_FURIA", "DEATH", "DEFEND"
     };
     fixture.height = 40;
     for (size_t i = 0; i < sizeof names / sizeof names[0]; i++) {
@@ -199,6 +199,29 @@ static void fatal_hit_finishes_hitstop_before_fall(void) {
     update_defeat(0.5f);
     REQUIRE(G.renS.pl.anim == death && G.renS.pl.frame == death->frames - 1 && !G.renS.autoIdle,
             "Kojiro levantou ou trocou de animação depois de morrer");
+}
+
+static void parry_and_miss_play_the_right_recovery(void) {
+    struct { Judgement judgement; int flags; const char *expected; } cases[] = {
+        {J_PERFEITO, 0, "DEFEND"},
+        {J_BOM, 0, "DEFEND"},
+        {J_RUIM, 0, "HURT"},
+        {J_BOM, 2, "HURT"}, /* a segunda lâmina acertou apesar da primeira defesa */
+    };
+    for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++) {
+        memset(&G, 0, sizeof G);
+        G.renS.set = &fixture;
+        G.bossS.set = &fixture;
+        G.renS.strike = fa(&G.renS, "DEFEND");
+        G.bossS.strike = fa(&G.bossS, "ATTACK_1");
+        DuelEvent e = {.judgement = cases[i].judgement, .i = cases[i].flags};
+        sprite_impact(&e);
+        REQUIRE(G.renS.pl.anim == fa(&G.renS, cases[i].expected),
+                "parry ou erro escolheu a reação errada do Kojiro");
+        f_update(&G.renS, 0.6f);
+        REQUIRE(G.renS.idle && G.renS.pl.anim == fa(&G.renS, "IDLE"),
+                "Kojiro não voltou à guarda após parry ou dano comum");
+    }
 }
 
 static void sword_continuity_and_parry(void) {
@@ -630,7 +653,7 @@ static void hanzo_uses_walk_when_available(void) {
 int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
-    damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); sword_continuity_and_parry(); visual_feedback_regressions();
+    damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); sword_continuity_and_parry(); visual_feedback_regressions();
     gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
