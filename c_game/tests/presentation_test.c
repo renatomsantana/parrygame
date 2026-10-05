@@ -727,8 +727,40 @@ static void hanzo_uses_walk_when_available(void) {
             "Hanzo perdeu o RUN atual quando WALK ainda não existe");
 }
 
+static void pupil_aftermath_preserves_progress(void) {
+    for (int master = 0; master < MASTER_COUNT; master++) {
+        memset(&G, 0, sizeof G);
+        G.m = roster_get(master);
+        campaign_reset(&G.camp);
+        for (int i = 0; i <= master; i++) campaign_mark_cleared(&G.camp, i);
+        Campaign before = G.camp;
+        G.ren.x = REN_X; G.boss.x = BOSS_X;
+        G.renS.set = G.bossS.set = &fixture;
+        fx_init(&G.fx);
+        start_scene(SCENE_PUPIL_AFTER);
+        REQUIRE(G.beats[0].cue == CUE_LEAVE_PUPIL, "o assassino apareceu antes da saída de Kojiro");
+        while (G.state == ST_SCENE && G.beatIndex == 0) update_scene(1.0f / 60);
+        REQUIRE(G.ren.x + G.ren.offsetX <= -60, "Kojiro ainda visível quando o assassino entra");
+        REQUIRE(G.beats[G.beatIndex].cue == CUE_ONI_AMBUSH, "saída não chegou à emboscada");
+        /* Sem texturas, mas com animações falsas: o corte deve respeitar o quadro de contato. */
+        /* A entrada carrega texturas no jogo real; aqui começar após essa carga. */
+        G.beatTime = G.beatPrev = 1.0f / 60;
+        G.hz.f.set = &fixture;
+        const SprAnim *a = fa(&G.hz.f, "ATTACK_1");
+        float impact = AJ_CENA_ONI_PREPARA + anim_contact(a) * a->frameTime;
+        while (G.beatTime + 1.0f / 60 < impact) update_scene(1.0f / 60);
+        REQUIRE(G.bossS.pl.anim != fa(&G.bossS, "DEATH"), "aprendiz morreu antes do contato");
+        update_scene(1.0f / 60);
+        REQUIRE(G.bossS.pl.anim == fa(&G.bossS, "DEATH"), "aprendiz não caiu no contato");
+        while (G.state == ST_SCENE) update_scene(1.0f / 60);
+        REQUIRE(G.state == ST_VISIT && !G.hz.on, "cena não voltou à cabana ou deixou o assassino ativo");
+        REQUIRE(!memcmp(&before, &G.camp, sizeof before), "cena avançou o progresso uma segunda vez");
+    }
+}
+
 int main(int argc, char **argv) {
     fake_sprites();
+    pupil_aftermath_preserves_progress();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); impact_frame_stays_on_contact(); sword_continuity_and_parry(); visual_feedback_regressions();
     gamepad_uses_frame_fallback(); menu_click_targets(); menu_state_routes(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();

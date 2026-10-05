@@ -2447,6 +2447,8 @@ static float cue_len(Cue c) {
         case CUE_HANZO_IN: return 1.6f;
         case CUE_HANZO_KILL: return 2.6f;
         case CUE_CHASE: return 1.8f;
+        case CUE_LEAVE_PUPIL: return AJ_CENA_SAIDA_APRENDIZ;
+        case CUE_ONI_AMBUSH: return AJ_CENA_ONI_DURACAO;
         default: return 0;
     }
 }
@@ -2548,8 +2550,8 @@ static void hanzo_enter(float x, bool faceLeft) {
     fighter_idle(&G.hz.f);
 }
 
-/* O golpe que mata oboro: clarão, o traço de corte, e ele cai (o fim da DEATH, de joelhos até o chão). */
-static void oboro_dies(void) {
+/* Morte na cena: o fim da DEATH, dos joelhos até o chão. Não altera vida nem julgamento. */
+static void scene_boss_dies(void) {
     Rig *b = &G.boss;
     Vector2 at = {b->x + b->offsetX, GROUND_LOW - 16};
     const SprAnim *d = fa(&G.bossS, "DEATH");
@@ -2621,7 +2623,7 @@ static void scene_cue(void) {
                 }
                 audio_play(SND_SWING, 1, 0.8f);
             }
-            if (crossed(0.15f)) oboro_dies();
+            if (crossed(0.15f)) scene_boss_dies();
             break;
         }
         case CUE_HANZO_CLAP: {
@@ -2636,7 +2638,7 @@ static void scene_cue(void) {
             break;
         }
         case CUE_HANZO_MASK:
-            /* ele vai até a máscara, pega do chão e põe no rosto: um raio, e é o homem que matou o pai de kojiro */
+            /* ele pega a máscara do chão: o mestre revela ser o assassino Oni */
             if (crossed(0)) hanzo_walk(bx + 18, 0.8f);
             if (crossed(1.0f)) {
                 G.maskOnGround = false;
@@ -2678,7 +2680,7 @@ static void scene_cue(void) {
                 G.hz.x = bx + 16;
                 G.hz.alpha = 1;
                 G.sword.active = false;
-                oboro_dies();
+                scene_boss_dies();
             }
             break;
         case CUE_CHASE: {
@@ -2694,6 +2696,37 @@ static void scene_cue(void) {
                 G.hz.on = false;
             }
             if (crossed(0.9f)) fighter_idle(&G.renS);
+            break;
+        }
+        case CUE_LEAVE_PUPIL:
+            if (crossed(0)) {
+                r->faceLeft = true;
+                ren_walk(AJ_CENA_SAIDA_APRENDIZ, false);
+                marco_de_teste("saida_aprendiz");
+            }
+            r->offsetX = G.cueFrom + (-64 - r->x - G.cueFrom) * smooth(t / AJ_CENA_SAIDA_APRENDIZ);
+            break;
+        case CUE_ONI_AMBUSH: {
+            if (crossed(0)) {
+                hanzo_enter(bx + 32, true);
+                /* O mesmo disfarce de Oboro: não mostrar o rosto de Hanzo antes do final. */
+                G.hz.f.set = spr_get("oboro_mascara");
+                fighter_idle(&G.hz.f);
+                audio_music_duck(1);
+            }
+            const SprAnim *a = fa(&G.hz.f, "ATTACK_1");
+            if (crossed(AJ_CENA_ONI_PREPARA)) {
+                if (a) {
+                    f_clear(&G.hz.f, false);
+                    f_add(&G.hz.f, a, 0, a->frames - 1, a->frames * a->frameTime);
+                }
+                audio_play(SND_SWING, 1, 0.8f);
+            }
+            float impact = AJ_CENA_ONI_PREPARA + (a ? anim_contact(a) * a->frameTime : 0.2f);
+            if (crossed(impact)) {
+                scene_boss_dies();
+                marco_de_teste("aprendiz_morto");
+            }
             break;
         }
         default: break;
@@ -2719,6 +2752,17 @@ static void scene_actors(float dt) {
 
 static void scene_done(void) {
     switch (G.sceneId) {
+        case SCENE_PUPIL_AFTER:
+            G.hz.on = false;
+            G.ren.faceLeft = false;
+            if (G.m->visitCount > 0) {
+                start_lines(G.m->visit, G.m->visitCount, ST_VISIT);
+                audio_music(MUSIC_LORE);
+            } else {
+                set_state(ST_TRAIL);
+                audio_music(MUSIC_TITLE);
+            }
+            break;
         case SCENE_SEAL_1:
         case SCENE_SEAL_2:
             /* de volta ao duelo: o grito vem agora, com tempo de acabar antes do próximo golpe */
@@ -4003,6 +4047,10 @@ static void update_cleared(float dt) {
     f_update(&G.bossS, dt);
     update_sword(dt);
     if (G.stateTime > AJ_VITORIA_TRAVA && pressed()) {
+        if (!G.m->isBigBoss) {
+            start_scene(SCENE_PUPIL_AFTER);
+            return;
+        }
         if (G.m->visitCount > 0) {
             /* a cabana de hanzo: kojiro conta quem venceu, hanzo fala do próximo */
             start_lines(G.m->visit, G.m->visitCount, ST_VISIT);

@@ -256,7 +256,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                    {"hanzo", "Se pegar fogo, não corra: apare perfeito, e a brasa apaga."}}, .senseiCount = 2,
         .visit = {{"kojiro", "Enjin falou de uma máscara. Uma máscara de oni."},
                   {"hanzo", "..."},
-                  {"kojiro", "O homem que matou meu pai usava uma."},
+                  {"kojiro", "A máscara do assassino de que eles falam?"},
                   {"hanzo", "Então você já sabe o que vai encontrar lá em cima."},
                   {"hanzo", "A próxima é suiren, no porto do farol. Uma lança: ataca de longe, em ondas."},
                   {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 6,
@@ -384,11 +384,11 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         },
         .moveCount = 12,
         .intro = {{"jinshi", "..."},
-                  {"jinshi", "Eu também vi aquele duelo. Não foi justo. E o oboro nunca mais foi o mesmo."},
+                  {"jinshi", "Eu vi aquele duelo. Hanzo deixou ele vencer. E antes disso, vi a máscara de oni no dojo."},
                   {"jinshi", "Ninguém consegue tirar ele daquele transe. Eu tentei."},
                   {"kojiro", "Não vim ajudar ele."},
                   {"jinshi", "Eu sei. Mesmo assim, tem que ser você."}}, .introCount = 5,
-        .outro = {{"jinshi", "Vai. Ele está te esperando há muito tempo. Mais do que você imagina."}}, .outroCount = 1,
+        .outro = {{"jinshi", "A máscara já estava lá quando Hanzo era o mestre. Lembra disso quando chegar ao topo."}}, .outroCount = 1,
         .sensei = {{"hanzo", "Na montanha, o som demora a chegar. Não espere ouvir. Olhe."},
                    {"hanzo", "A lua muda de forma, mas sempre volta. Decore as fases."}}, .senseiCount = 2,
         .visit = {{"kojiro", "Jinshi."},
@@ -476,12 +476,12 @@ static const char *LORE[LORE_PAGES] = {
     "O mais promissor era Oboro. Durante anos, Hanzo acreditou nele como em nenhum outro.",
     "Oboro pagou com a lâmina. Desafiou o mestre, venceu e tomou o dojo, como manda a tradição. "
     "Hanzo desceu a serra sozinho.",
-    "Anos depois, numa estrada, Hanzo encontrou um menino. Kojiro tinha visto o pai morrer pelas mãos de um "
-    "homem com máscara de oni, e desde então não tinha paz.",
-    "Hanzo o recolheu e o treinou na metade da arte que se ensina.",
+    "Hanzo adotou Kojiro. O menino cresceu sem saber como chegou até ele. Tudo o que conhece de sua origem veio do mestre.",
+    "Os aprendizes contavam histórias de um assassino com máscara de oni, que levou suas famílias. "
+    "Buscaram Hanzo para ficar mais fortes. Kojiro aprendeu com ele a metade da arte que se ensina.",
     "“A outra metade não se ensina. Tem que vir de você.”",
     "Oboro destruiu tudo o que Hanzo construiu. Os doze aprendizes que ficaram com ele guardam o caminho até o dojo.",
-    "Agora Kojiro sobe a Trilha dos Doze Aprendizes. Pelo mestre. Pela vingança.",
+    "Agora Kojiro sobe a Trilha dos Doze Aprendizes. Pelo mestre. Pelas respostas que nunca teve.",
     "“Não lute contra ele. Entenda ele. Depois, devore.”",
 };
 
@@ -495,14 +495,15 @@ const char *lore_page(int index) {
 static const Beat SEAL_1[] = {
     {"oboro", "Ele te contou do treino? Até a última gota de sangue. Todo dia. Até alguém não levantar mais.", CUE_NONE},
     {"oboro", "E no último duelo... ele parou. No meio do golpe, parou de lutar. Eu venci um homem que não quis lutar.", CUE_NONE},
+    {"oboro", "Eu devorei todas as posturas. Fiz tudo o que ele queria. Por que você é o escolhido? Por que ele desistiu de mim?", CUE_NONE},
     {"kojiro", "Mentira.", CUE_NONE},
 };
 static const Beat SEAL_2[] = {
     {NULL, NULL, CUE_MASK_ON},
-    {"kojiro", "Foi você.", CUE_NONE},
+    {"kojiro", "A máscara do Oni...", CUE_NONE},
     {"oboro", "O homem dessa máscara matou meus pais também.", CUE_NONE},
-    {"oboro", "Eu uso isso pra lembrar do que eu quase me tornei. E pra que o próximo garoto que ele mandasse "
-              "viesse atrás de mim, e não deles.", CUE_NONE},
+    {"oboro", "Só encontrei isso depois que assumi o dojo. Uso pra lembrar da falha que sou. "
+              "Nem com todas as posturas eu fui suficiente pra ele.", CUE_NONE},
     {"oboro", "Eu só não esperava que fosse você.", CUE_NONE},
 };
 static const Beat KNEEL[] = {
@@ -533,6 +534,11 @@ static const Beat NAO[] = {
     {NULL, NULL, CUE_CHASE},
     {"kojiro", "hanzo!", CUE_NONE},
 };
+/* A identidade de quem veste a máscara só é revelada no final. */
+static const Beat PUPIL_AFTER[] = {
+    {NULL, NULL, CUE_LEAVE_PUPIL},
+    {NULL, NULL, CUE_ONI_AMBUSH},
+};
 
 const Beat *story_scene(SceneId id, int *count) {
 #define SCENE(a) do { *count = (int)(sizeof a / sizeof a[0]); return a; } while (0)
@@ -542,6 +548,7 @@ const Beat *story_scene(SceneId id, int *count) {
         case SCENE_KNEEL: SCENE(KNEEL);
         case SCENE_SIM: SCENE(SIM);
         case SCENE_NAO: SCENE(NAO);
+        case SCENE_PUPIL_AFTER: SCENE(PUPIL_AFTER);
         default: break;
     }
 #undef SCENE

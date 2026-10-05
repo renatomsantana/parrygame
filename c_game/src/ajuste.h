@@ -156,6 +156,9 @@
 #define AJ_SILENCIO_QUEBRA          0.5f    /* a música abaixa depois de quebrar a postura */
 #define AJ_SILENCIO_DESARME         1.0f    /* ...depois do desarme */
 #define AJ_SILENCIO_MORTE_OBORO     1.5f    /* ...e no golpe que mata o oboro */
+#define AJ_CENA_SAIDA_APRENDIZ      1.8f    /* kojiro sai antes de o assassino aparecer */
+#define AJ_CENA_ONI_PREPARA         0.5f    /* entrada da figura mascarada antes de sacar o golpe */
+#define AJ_CENA_ONI_DURACAO         2.5f    /* golpe e queda do aprendiz; não faz parte do duelo */
 /* Quem aperta sem parar, sem ler, tem de ver o resultado: a palavra "derrota" e o pergaminho da vitória entram em fade
  * (AJ_FADE_RESULTADO) e têm de estar inteiros antes do primeiro clique que vale: na derrota, o título já inteiro com uma
  * margem de 0,06 s antes de as opções aceitarem clique (como sempre foi: 0,07 s); na vitória, o pergaminho inteiro por

@@ -184,6 +184,8 @@ typedef enum {
     CUE_HANZO_MASK,   /* hanzo pega a máscara do chão e põe no rosto */
     CUE_HANZO_KILL,   /* hanzo pega a katana dele do chão e mata oboro */
     CUE_CHASE,        /* kojiro corre atrás dele, e hanzo some */
+    CUE_LEAVE_PUPIL,  /* kojiro deixa o aprendiz vivo e sai da arena */
+    CUE_ONI_AMBUSH,   /* o assassino mascarado mata o aprendiz depois da saída */
 } Cue;
 
 typedef struct {
@@ -197,6 +199,7 @@ typedef enum {
     SCENE_KNEEL,      /* postura quebrada: de joelhos, sem a máscara */
     SCENE_SIM,        /* matou oboro */
     SCENE_NAO,        /* não matou */
+    SCENE_PUPIL_AFTER, /* o que acontece depois que kojiro vai embora */
     SCENE_COUNT
 } SceneId;
 

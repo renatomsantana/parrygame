@@ -208,6 +208,10 @@ static void test_story(void) {
     CHECK(scene_has(SCENE_NAO, CUE_HANZO_KILL) && scene_has(SCENE_NAO, CUE_CHASE), "não: hanzo mata e some");
     CHECK(!scene_has(SCENE_NAO, CUE_KILL), "no não, kojiro não mata");
     CHECK(scene_has(SCENE_SIM, CUE_HANZO_MASK) && scene_has(SCENE_NAO, CUE_HANZO_MASK), "nos dois finais, hanzo põe a máscara");
+    CHECK(scene_has(SCENE_PUPIL_AFTER, CUE_LEAVE_PUPIL) && scene_has(SCENE_PUPIL_AFTER, CUE_ONI_AMBUSH),
+          "aprendiz: kojiro sai e o assassino aparece depois");
+    for (int i = 0; i < LORE_PAGES; i++)
+        CHECK(!strstr(lore_page(i), "visto o pai morrer"), "a abertura não inventa lembranças de Kojiro");
     int n;
     story_scene(SCENE_COUNT, &n);
     CHECK(n == 0, "cena fora da lista");

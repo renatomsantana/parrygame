@@ -192,6 +192,7 @@ teste-jogo: apara
 	sh tests/teste_carimbo.sh
 	sh tests/teste_desempenho.sh
 	sh tests/teste_cenas.sh
+	sh tests/teste_historia.sh
 
 # Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, a ordem da curva, números, avisos e o jogo real.
 teste:
