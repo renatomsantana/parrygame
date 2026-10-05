@@ -180,6 +180,12 @@ audio_test: src/audio.c src/audio.h src/vozes.h tests/audio_test.c
 test-audio: audio_test
 	sh tests/teste_audio.sh
 
+arena_art_test: src/arenas.c src/arenas.h src/ajuste.h tests/arena_art_test.c
+	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) tests/arena_art_test.c -o $@ $(RAYLIB_LIBS) -lm
+
+test-arte: arena_art_test
+	sh tests/teste_arte.sh
+
 # O núcleo e as ferramentas de teste compilam para Windows (MinGW-w64) e dão o mesmo resultado que no Linux
 # (roda os .exe no Wine, se houver; sem o MinGW, pula).
 teste-windows:
@@ -213,13 +219,14 @@ teste:
 	$(MAKE) teste-jogo
 	$(MAKE) test-visual
 	$(MAKE) test-audio
+	$(MAKE) test-arte
 	@echo "teste: tudo certo"
 
 run: apara
 	./apara
 
 clean:
-	rm -f apara apara.exe core_test fonte_test save_test entrada_test desempenho_test fuzz_test presentation_test audio_test robos_relatorio curva_relatorio ritmo_relatorio personagens
+	rm -f apara apara.exe core_test fonte_test save_test entrada_test desempenho_test fuzz_test presentation_test audio_test arena_art_test robos_relatorio curva_relatorio ritmo_relatorio personagens
 
 teste-vitoria: apara
 	sh tests/teste_vitoria.sh
@@ -227,3 +234,5 @@ teste-vitoria: apara
 .PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva ritmo test-ritmo curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-entrada test-desempenho test-visual test-assets teste teste-jogo teste-vitoria
 
 .PHONY: test-audio
+
+.PHONY: test-arte

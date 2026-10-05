@@ -202,4 +202,6 @@
 /* Na primeira preparação de uma sequência, do começo até a lâmina partir sobra ao menos isto. */
 #define AJ_PREPARO_MIN_PRIMEIRO     0.100f
 
+#define AJ_CENARIO_QUADRO           0.125f /* animação opcional do fundo: 8 quadros/s, independente do combate */
+
 #endif

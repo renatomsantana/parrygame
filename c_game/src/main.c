@@ -3086,16 +3086,20 @@ static void draw_arena(void) {
 
     /* O fundo passa pela paleta curta do cenário, com dithering (pixelize.c). */
     Vector2 sh = fx_shake_offset(&G.fx);
-    pix_capture_begin();
-    begin_world(sh);
-    arena_draw_back(m->arena, &G.ctx);
-    EndMode2D();
-    pix_capture_end((int)m->arena);
+    bool teamArt = arena_has_art(m->arena);
+    if (!teamArt) {
+        pix_capture_begin();
+        begin_world(sh);
+        arena_draw_back(m->arena, &G.ctx);
+        EndMode2D();
+        pix_capture_end((int)m->arena);
+    }
 
     BeginTextureMode(G.scene);
     ClearBackground(BLACK);
-    pix_draw();
+    if (!teamArt) pix_draw();
     begin_world(sh);
+    if (teamArt) arena_draw_back(m->arena, &G.ctx);
     /* Reflexo no chão polido: a camada dos lutadores espelhada no chão. */
     float refl = arena_reflection(m->arena);
     if (refl > 0) {
@@ -4292,6 +4296,7 @@ int main(int argc, char **argv) {
     perf_carga("katana 3D");
     spr_init();
     preload_runtime_art();
+    arena_load_art();
     perf_carga("sprites");
     pix_init(RW, RH);
     perf_carga("pixelize");
@@ -4520,6 +4525,7 @@ int main(int argc, char **argv) {
     if (G.ui.texture.id != GetFontDefault().texture.id) UnloadFont(G.ui);
     UnloadRenderTexture(G.uiLow);
     spr_shutdown();
+    arena_unload_art();
     pix_shutdown();
     if (G.logImpactos) fprintf(stderr, "FANTASMAS %ld\n", G.fantasmasDesenhados);
     CloseWindow();

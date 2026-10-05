@@ -23,6 +23,9 @@ typedef struct {
 } ArenaCtx;
 
 void arena_draw_back(ArenaId id, const ArenaCtx *c);
+void arena_load_art(void);       /* PNGs opcionais da equipe; carregar antes do primeiro duelo */
+void arena_unload_art(void);
+bool arena_has_art(ArenaId id);  /* preserva a paleta do artista, sem o pixelize procedural */
 void arena_draw_front(ArenaId id, const ArenaCtx *c);
 Color arena_light(ArenaId id, const ArenaCtx *c);      /* luz ambiente sobre os lutadores */
 float arena_reflection(ArenaId id);

@@ -31,3 +31,6 @@ audio_test
 # Entregas locais da equipe
 assets/audio/**/*.wav
 assets/audio/**/*.ogg
+
+arena_art_test
+assets/arenas/**/*.png
