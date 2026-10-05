@@ -57,6 +57,12 @@ sprites: personagens
 packs:
 	tools/instalar_packs.sh "$(ZIP)"
 
+assets-prontos:
+	sh tools/verificar_assets.sh
+
+pacote-assets:
+	sh tools/empacotar_assets.sh "$(OUT)"
+
 apara: $(CORE) $(GAME) $(ENTRADA_PLAT) src/*.h
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(ENTRADA_CFLAGS) $(CORE) $(GAME) $(ENTRADA_PLAT) -o $@ $(RAYLIB_LIBS) $(ENTRADA_LIBS) -lm
 
@@ -208,6 +214,7 @@ teste-jogo: apara
 
 # Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, a ordem da curva, números, avisos e o jogo real.
 teste:
+	$(MAKE) assets-prontos
 	$(MAKE) test
 	$(MAKE) fuzz-rapido
 	$(MAKE) robos-taxas
@@ -220,7 +227,17 @@ teste:
 	$(MAKE) test-visual
 	$(MAKE) test-audio
 	$(MAKE) test-arte
-	@echo "teste: tudo certo"
+	@echo 'teste: verificações disponíveis concluídas; qualquer teste anunciado como "pulado" continua pendente nesse ambiente'
+
+# Ambiente Linux completo: nenhuma conferência gráfica pode ser pulada silenciosamente.
+teste-linux:
+	@test "$$(uname)" = Linux
+	@command -v xvfb-run >/dev/null && command -v clang >/dev/null
+	@pkg-config --exists raylib xi x11 xtst
+	$(MAKE) assets-prontos test fuzz-rapido robos-taxas curva-ordem
+	$(MAKE) curva-alvo CURVA_LUTAS=100000
+	$(MAKE) numeros avisos teste-jogo test-visual test-audio test-arte
+	xvfb-run -a $(MAKE) test-assets
 
 run: apara
 	./apara
@@ -232,7 +249,5 @@ teste-vitoria: apara
 	sh tests/teste_vitoria.sh
 
 .PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva ritmo test-ritmo curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-entrada test-desempenho test-visual test-assets teste teste-jogo teste-vitoria
-
-.PHONY: test-audio
-
-.PHONY: test-arte
+.PHONY: assets-prontos pacote-assets test-audio test-arte
+.PHONY: teste-linux

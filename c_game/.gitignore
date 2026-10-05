@@ -20,17 +20,15 @@ assets/sprites/*/sprite.txt
 !assets/sprites/_original/sprite.txt
 robos_relatorio
 presentation_test
+audio_test
+arena_art_test
+assets/arenas/**/*.png
+# Entregas locais da equipe: não publicar áudio sem decidir o pacote de distribuição.
+assets/audio/**/*.wav
+assets/audio/**/*.ogg
 apara_opcoes.txt
 # Capturas de revisão geradas localmente
 videos-lutas/
 curva_relatorio
 *.exe
 ritmo_relatorio
-
-audio_test
-# Entregas locais da equipe
-assets/audio/**/*.wav
-assets/audio/**/*.ogg
-
-arena_art_test
-assets/arenas/**/*.png
