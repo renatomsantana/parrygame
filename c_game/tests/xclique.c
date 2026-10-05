@@ -3,7 +3,7 @@
  * de verdade para o display de $DISPLAY, pelo XTest, o mesmo caminho de um mouse ou teclado (o servidor
  * gera os eventos brutos que o jogo carimba), e escreve, para cada um, o intervalo em que ele aconteceu,
  * no CLOCK_MONOTONIC (o relógio dos carimbos do jogo no Linux):
- *   xclique <quantos> <periodo_ms> [espaco|repete|semfoco]   uma linha "INJECAO antes depois" por aperto
+ *   xclique <quantos> <periodo_ms> [espaco|repete|semfoco|opcao]   uma linha "INJECAO antes depois" por aperto
  *       (com 0 cliques só dá o foco à janela, ou o tira, no caso de semfoco, e sai: serve para esperar a janela existir)
  *       (repete: o Espaço aperta e "repete" três vezes sem soltar: é um aperto só)
  * "antes" é lido antes de pedir ao servidor, e "depois", quando o servidor confirmou que já processou o
@@ -67,7 +67,10 @@ int main(int argc, char **argv) {
     if (!w) { fprintf(stderr, "xclique: janela do jogo não encontrada\n"); return 1; }
     if (argc > 3 && !strcmp(argv[3], "semfoco")) XSetInputFocus(d, DefaultRootWindow(d), RevertToNone, CurrentTime);   /* tira o foco do jogo, qualquer que fosse */
     else XSetInputFocus(d, w, RevertToParent, CurrentTime);
-    XWarpPointer(d, None, DefaultRootWindow(d), 0, 0, 0, 0, 200, 200);   /* o ponteiro dentro da janela do jogo */
+    if (argc > 3 && !strcmp(argv[3], "opcao"))
+        XWarpPointer(d, None, w, 0, 0, 0, 0, 640, 400); /* primeira opção na derrota, 1280x720 */
+    else
+        XWarpPointer(d, None, DefaultRootWindow(d), 0, 0, 0, 0, 200, 200);
     XSync(d, False);
     dorme(0.3);
     KeyCode tecla = XKeysymToKeycode(d, XK_space);

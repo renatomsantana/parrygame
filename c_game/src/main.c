@@ -414,6 +414,34 @@ static bool pressed(void) {
     return pressed_key_mouse() || (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN));
 }
 
+/* O mouse só confirma uma opção se o clique cair nela. Teclado, controle e
+ * demonstração continuam confirmando a opção selecionada pelas setas. */
+static int menu_row_at(Vector2 p, float x, float y, float width, float height, float step, int count) {
+    for (int i = 0; i < count; i++) {
+        Rectangle row = {x, y + i * step, width, height};
+        if (CheckCollisionPointRec(p, row)) return i;
+    }
+    return -1;
+}
+
+static bool menu_pick(int hovered, bool mouse, bool other, int *selected) {
+    if (!mouse && !other) return false;
+    if (mouse && !other) {
+        if (hovered < 0) return false;
+        *selected = hovered;
+    }
+    return true;
+}
+
+static bool menu_confirm(int hovered, int *selected) {
+    bool mouse = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    bool other = IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_J) || IsKeyPressed(KEY_ENTER) ||
+                 (IsGamepadAvailable(0) && IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) ||
+                 G.demo || G.autoJogo;
+    if (!pressed()) return false;
+    return menu_pick(hovered, mouse, other, selected);
+}
+
 /* Não corta um caractere UTF-8 ao meio. */
 static int utf8_visible(const char *s, float chars) {
     int n = (int)chars, len = (int)strlen(s);
@@ -1808,6 +1836,8 @@ static void tell_fx(void) {
 
 /* A vida de kojiro acaba: ele cai e o painel de derrota aparece. */
 static void ren_falls(void) {
+    G.duel.renPosture = 0;
+    G.shownRen = 0; /* a barra vermelha acaba junto com o golpe; o rastro claro ainda pode sumir devagar */
     rig_pose(&G.ren, POSE_FALLEN, 0.7f, EASE_OUT);
     sprite_fall();
     dust(G.ren.x + G.ren.offsetX, false, 20);
@@ -3853,11 +3883,9 @@ static void update_title(void) {
     if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) { G.menuIndex = (G.menuIndex + 1) % options; audio_play(SND_UI, 1, 1); }
     if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) { G.menuIndex = (G.menuIndex + options - 1) % options; audio_play(SND_UI, 1, 1); }
     Vector2 v = mouse_ui();
-    for (int i = 0; i < options; i++) {
-        Rectangle r = {UI_W / 2.0f - 200, 414 + i * 60.0f, 400, 54};
-        if (CheckCollisionPointRec(v, r) && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.menuIndex = i;
-    }
-    if (!pressed() || G.stateTime < AJ_TRAVA_CLIQUE_TITULO) return;
+    int hovered = menu_row_at(v, UI_W / 2.0f - 200, 414, 400, 54, 60, options);
+    if (hovered >= 0 && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.menuIndex = hovered;
+    if (G.stateTime < AJ_TRAVA_CLIQUE_TITULO || !menu_confirm(hovered, &G.menuIndex)) return;
     audio_play(SND_UI, 1, 1.2f);
     int choice = G.hasSave ? G.menuIndex : G.menuIndex + 1; /* 0 continuar, 1 novo, 2 lore */
     if (choice == 0) {
@@ -3950,14 +3978,12 @@ static void update_defeat(float dt) {
     if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) { G.defeatIndex = (G.defeatIndex + 1) % n; audio_play(SND_UI, 1, 1); }
     if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) { G.defeatIndex = (G.defeatIndex + n - 1) % n; audio_play(SND_UI, 1, 1); }
     Vector2 v = mouse_ui();
-    for (int i = 0; i < n; i++) {
-        Rectangle r = {UI_W / 2.0f - 220, 374 + i * 56.0f, 440, 52};
-        if (CheckCollisionPointRec(v, r) && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.defeatIndex = i;
-    }
+    int hovered = menu_row_at(v, UI_W / 2.0f - 220, 374, 440, 52, 56, n);
+    if (hovered >= 0 && (GetMouseDelta().x != 0 || GetMouseDelta().y != 0)) G.defeatIndex = hovered;
     const char *choice = NULL;
     if (IsKeyPressed(KEY_T)) choice = "voltar à trilha";
     else if (IsKeyPressed(KEY_H) && G.defeatsHere >= 2) choice = "conversar com hanzo";
-    else if (pressed()) choice = labels[G.defeatIndex < n ? G.defeatIndex : 0];
+    else if (menu_confirm(hovered, &G.defeatIndex)) choice = labels[G.defeatIndex < n ? G.defeatIndex : 0];
     if (!choice) return;
     audio_play(SND_UI, 1, 1);
     if (!strcmp(choice, "tentar de novo")) start_duel();
@@ -4014,7 +4040,10 @@ static void parse_args(int argc, char **argv, int *startMaster, bool *direct, co
             G.recEnd = (float)atof(argv[++i]);
         }
     }
-    if (G.teste && *startMaster < 0) *startMaster = 0;
+    bool stateWithoutMaster = *startState &&
+        (!strcmp(*startState, "title") || !strcmp(*startState, "lore") ||
+         !strcmp(*startState, "trail") || !strcmp(*startState, "calibra"));
+    if (G.teste && *startMaster < 0 && !stateWithoutMaster) *startMaster = 0;
 }
 
 static void step(float dtReal) {

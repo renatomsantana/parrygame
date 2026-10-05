@@ -54,7 +54,7 @@ PROG_ESTADO='$1 == "TESTE_MARCO" { if (ini == "" && $2 == e) { split($3, x, "=")
 aperta() {
     TENTATIVA=1
     while :; do
-        R=$(aperta_uma "$1" "$2")
+        R=$(aperta_uma "$1" "$2" "$3")
         [ "$R" != faltou ] || [ "$TENTATIVA" -ge 3 ] && break
         TENTATIVA=$((TENTATIVA + 1))   # o jogo nem chegou a sair da tela (Xvfb ou janela que demorou): tenta de novo
     done
@@ -65,7 +65,7 @@ aperta_uma() {
     PROG_ESTADO="$PROG_ESTADO" APARA_AUTO=1 APARA_SEMENTE=11 timeout 120 xvfb-run -a -s '-screen 0 1280x720x24' sh -c '
         ./apara --master 1 --duel --state '"$1"' >"'"$TMP"'/'"$1"'.log" 2>&1 &
         PID=$!
-        (until "'"$TMP"'/xclique" 3000 40 >/dev/null 2>&1; do sleep 0.1; done) &
+        (until "'"$TMP"'/xclique" 3000 40 '"$3"' >/dev/null 2>&1; do sleep 0.1; done) &
         CLIQUES=$!
         N=0
         while [ "$N" -lt 600 ] && kill -0 $PID 2>/dev/null; do
@@ -80,7 +80,7 @@ if [ -n "$SEM_XTEST" ]; then
     echo "3 e 4. puladas (sem libXtst para compilar tests/xclique.c)"
 else
     echo "3. a tela de derrota: clique sem parar, a saída só depois da trava"
-    D=$(aperta defeat 8)
+    D=$(aperta defeat 8 opcao)
     confere "$D s de tela até sair, com cliques sem parar (entre 1,15 e 1,5 s)" "$(awk -v d="$D" 'BEGIN { exit !(d != "faltou" && d >= 1.15 && d <= 1.5) }'; echo $?)"
     echo "4. a tela de vitória: clique sem parar, a saída só depois da trava"
     D=$(aperta cleared 7)

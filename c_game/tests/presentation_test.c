@@ -199,6 +199,13 @@ static void fatal_hit_finishes_hitstop_before_fall(void) {
     update_defeat(0.5f);
     REQUIRE(G.renS.pl.anim == death && G.renS.pl.frame == death->frames - 1 && !G.renS.autoIdle,
             "Kojiro levantou ou trocou de animação depois de morrer");
+
+    memset(&G, 0, sizeof G);
+    G.renS.set = &fixture;
+    G.duel.renPosture = G.shownRen = G.ghostRen = 42;
+    ren_falls();
+    REQUIRE(G.duel.renPosture == 0 && G.shownRen == 0 && G.ghostRen == 42,
+            "a tela de derrota manteve vida vermelha depois do golpe fatal");
 }
 
 static void parry_and_miss_play_the_right_recovery(void) {
@@ -662,6 +669,43 @@ static void gamepad_uses_frame_fallback(void) {
     REQUIRE(G.carimbados == 0 && G.semCarimbo == 1, "gamepad não foi contado como fallback");
 }
 
+static void menu_click_targets(void) {
+    int selected = 0;
+    int title_second = menu_row_at((Vector2){UI_W / 2.0f, 490}, UI_W / 2.0f - 200, 414, 400, 54, 60, 3);
+    REQUIRE(title_second == 1, "segunda opção do título fora da área clicável");
+    REQUIRE(menu_pick(title_second, true, false, &selected) && selected == 1,
+            "clique sem movimento do mouse não selecionou a opção apontada");
+    REQUIRE(!menu_pick(-1, true, false, &selected) && selected == 1,
+            "clique fora do menu confirmou a opção atual");
+    REQUIRE(menu_pick(-1, false, true, &selected) && selected == 1,
+            "teclado ou controle perdeu a seleção atual");
+    int defeat_second = menu_row_at((Vector2){UI_W / 2.0f, 444}, UI_W / 2.0f - 220, 374, 440, 52, 56, 3);
+    REQUIRE(defeat_second == 1, "segunda opção de derrota fora da área clicável");
+    REQUIRE(menu_row_at((Vector2){UI_W / 2.0f, 428}, UI_W / 2.0f - 220, 374, 440, 52, 56, 3) == -1,
+            "espaço entre opções de derrota aceitou clique");
+}
+
+static void menu_state_routes(void) {
+    const char *screens[] = {"title", "lore", "trail", "calibra"};
+    for (int i = 0; i < 4; i++) {
+        memset(&G, 0, sizeof G);
+        int master = -1;
+        bool direct = false;
+        const char *state = NULL;
+        char *argv[] = {"apara", "--state", (char *)screens[i]};
+        parse_args(3, argv, &master, &direct, &state);
+        REQUIRE(master == -1 && state && !strcmp(state, screens[i]) && G.teste,
+                "--state de menu iniciou a introdução do primeiro mestre");
+    }
+    memset(&G, 0, sizeof G);
+    int master = -1;
+    bool direct = false;
+    const char *state = NULL;
+    char *argv[] = {"apara", "--teste"};
+    parse_args(2, argv, &master, &direct, &state);
+    REQUIRE(master == 0 && direct && G.teclas, "--teste deixou de começar no duelo de Daichi");
+}
+
 static void hanzo_uses_walk_when_available(void) {
     SprSet sheet = {0};
     SprAnim *run = &sheet.anims[sheet.count++];
@@ -687,7 +731,7 @@ int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); impact_frame_stays_on_contact(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
+    gamepad_uses_frame_fallback(); menu_click_targets(); menu_state_routes(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
