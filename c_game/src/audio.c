@@ -5,6 +5,7 @@
  */
 #include "audio.h"
 #include "vozes.h"
+#include "core.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -32,8 +33,11 @@ static const char *const soundNames[SND_COUNT] = {
     "gem", "seal", "drum", "thunder", "victory", "defeat", "thud", "clap", "koiguchi", "saque"
 };
 static const char *const musicNames[MUSIC_TITLE + 1] = {
-    "daichi", "genbu", "raizo", "shizuku", "garfiel", "karasu", "hayate", "enjin",
-    "suiren", "arashi", "yoru", "jinshi", "oboro", "hanzo", "title"
+    [ARENA_DOJO] = "raizo", [ARENA_SERRA] = "jinshi", [ARENA_CELEIRO] = "daichi",
+    [ARENA_TELHADOS] = "karasu", [ARENA_PORTO] = "suiren", [ARENA_SALAO] = "arashi",
+    [ARENA_PONTE] = "hayate", [ARENA_CACHOEIRA] = "shizuku", [ARENA_BAMBUZAL] = "yoru",
+    [ARENA_FORJA] = "enjin", [ARENA_JARDIM] = "genbu", [ARENA_CIDADELA] = "oboro",
+    [ARENA_TEMPLO] = "garfiel", [MUSIC_LORE] = "hanzo", [MUSIC_TITLE] = "title"
 };
 static Music tracks[MUSIC_TITLE + 1];
 static int trackCurrent = -1, trackTarget = -1;

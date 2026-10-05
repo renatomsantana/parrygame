@@ -40,10 +40,14 @@ int main(void) {
     for (int i = 0; i < 10; i++) audio_play(SND_GOOD, 1, 1);
     CHECK(variationNext[SND_GOOD] == 0 && voiceNext[SND_GOOD] == 1 && variationVoiceNext[SND_GOOD][0] == 1,
           "rodízio de variantes cortou o banco de vozes");
-    audio_music(0);
-    CHECK(M.target == MUSIC_SILENCE && trackTarget == 0, "música externa toca junto da trilha sintetizada");
+    for (int i = 0; i < ROSTER_SIZE; i++) {
+        const MasterProfile *m = roster_get(i);
+        CHECK(!strcmp(musicNames[m->arena], m->name), "música externa foi associada à arena de outro mestre");
+    }
+    audio_music(ARENA_CELEIRO);
+    CHECK(M.target == MUSIC_SILENCE && trackTarget == ARENA_CELEIRO, "música externa toca junto da trilha sintetizada");
     for (int i = 0; i < 40; i++) audio_update(1.0f / 60);
-    CHECK(trackCurrent == 0 && tracks[0].looping && trackGain == 1, "música externa não iniciou com loop e fade");
+    CHECK(trackCurrent == ARENA_CELEIRO && tracks[ARENA_CELEIRO].looping && trackGain == 1, "música externa não iniciou com loop e fade");
     audio_music(MUSIC_WIND);
     for (int i = 0; i < 40; i++) audio_update(1.0f / 60);
     CHECK(trackCurrent == -1 && M.target == MUSIC_WIND, "escolha final não voltou ao vento embutido");

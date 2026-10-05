@@ -1,5 +1,6 @@
 #include "../src/arenas.c"
 #include "rlgl.h"
+#include <string.h>
 
 int main(void) {
     const char *root = getenv("APARA_ARENA_DIR");
@@ -18,9 +19,18 @@ int main(void) {
     snprintf(path, sizeof path, "%s/daichi/front.png", root);
     if (!ExportImage(bad, path)) return 2;
     UnloadImage(bad);
+    Image dojo = GenImageColor(320, 180, BLUE);
+    snprintf(path, sizeof path, "%s/raizo/back.png", root);
+    if (!ExportImage(dojo, path)) return 2;
+    UnloadImage(dojo);
     arena_load_art();
     int failures = 0;
+    for (int i = 0; i < ROSTER_SIZE; i++) {
+        const MasterProfile *m = roster_get(i);
+        if (strcmp(artNames[m->arena], m->name)) failures++;
+    }
     if (!arena_has_art(ARENA_CELEIRO) || arena_has_art(ARENA_JARDIM) || art[ARENA_CELEIRO][1].id) failures++;
+    if (!arena_has_art(ARENA_DOJO)) failures++;
     for (int i = 0; i < 3; i++) {
         BeginDrawing();
         ClearBackground(BLACK);
@@ -32,6 +42,14 @@ int main(void) {
         UnloadImage(got);
         EndDrawing();
     }
+    BeginDrawing();
+    arena_draw_back(ARENA_DOJO, &(ArenaCtx){0});
+    rlDrawRenderBatchActive();
+    Image got = LoadImageFromScreen();
+    Color c = GetImageColor(got, 160, 90);
+    if (c.r != BLUE.r || c.g != BLUE.g || c.b != BLUE.b) failures++;
+    UnloadImage(got);
+    EndDrawing();
     arena_unload_art();
     if (arena_has_art(ARENA_CELEIRO)) failures++;
     CloseWindow();

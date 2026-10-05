@@ -11,7 +11,7 @@
 
 static Texture2D art[ARENA_COUNT][2];
 static const char *const artNames[ARENA_COUNT] = {
-    "hanzo", "jinshi", "daichi", "karasu", "suiren", "arashi", "hayate",
+    "raizo", "jinshi", "daichi", "karasu", "suiren", "arashi", "hayate",
     "shizuku", "yoru", "enjin", "genbu", "oboro", "garfiel"
 };
 

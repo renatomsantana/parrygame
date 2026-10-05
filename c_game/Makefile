@@ -180,14 +180,14 @@ test-visual: presentation_test
 test-assets: presentation_test
 	./presentation_test --assets
 
-audio_test: src/audio.c src/audio.h src/vozes.h tests/audio_test.c
-	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) tests/audio_test.c -o $@ $(RAYLIB_LIBS) -lm
+audio_test: $(CORE) src/audio.c src/audio.h src/vozes.h tests/audio_test.c
+	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(CORE) tests/audio_test.c -o $@ $(RAYLIB_LIBS) -lm
 
 test-audio: audio_test
 	sh tests/teste_audio.sh
 
-arena_art_test: src/arenas.c src/arenas.h src/ajuste.h tests/arena_art_test.c
-	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) tests/arena_art_test.c -o $@ $(RAYLIB_LIBS) -lm
+arena_art_test: $(CORE) src/arenas.c src/arenas.h src/ajuste.h tests/arena_art_test.c
+	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(CORE) tests/arena_art_test.c -o $@ $(RAYLIB_LIBS) -lm
 
 test-arte: arena_art_test
 	sh tests/teste_arte.sh
