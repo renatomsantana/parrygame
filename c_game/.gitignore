@@ -26,3 +26,8 @@ videos-lutas/
 curva_relatorio
 *.exe
 ritmo_relatorio
+
+audio_test
+# Entregas locais da equipe
+assets/audio/**/*.wav
+assets/audio/**/*.ogg

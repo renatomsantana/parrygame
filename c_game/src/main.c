@@ -4405,6 +4405,7 @@ int main(int argc, char **argv) {
         if (G.silence > 0) { G.silence -= dtReal; audio_music_duck(G.silence > 0 ? 1 : 0); }
         double pf0 = perf_agora();
         if (!G.paused && !G.modoCarimbo) step(dtReal);
+        audio_update(dtReal);
         double pf1 = perf_agora();
         /* tests/teste_save.sh: depois de vencer o primeiro mestre (a cabana de hanzo), o jogo sai */
         if (G.autoJogo && ((G.state == ST_VISIT && G.stateTime > AJ_AUTO_VISITA_FIM) || G.time > AJ_AUTO_TEMPO_MAX)) break;

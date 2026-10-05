@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/sfx" "$tmp/music"
+# No Linux sem alto-falante, o ALSA null permite testar as mesmas APIs de reprodução.
+if [ "$(uname)" = Linux ]; then
+    printf 'pcm.!default { type null }\n' > "$tmp/alsa.conf"
+    export ALSA_CONFIG_PATH="$tmp/alsa.conf"
+fi
+APARA_AUDIO_DIR="$tmp" ./audio_test
