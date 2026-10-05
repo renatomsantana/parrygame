@@ -224,6 +224,39 @@ static void parry_and_miss_play_the_right_recovery(void) {
     }
 }
 
+static void impact_frame_stays_on_contact(void) {
+    Robo robots[] = {ROBO_SEM_DEFESA, ROBO_DO_DEMO, robo_deslocado(-0.15f), robo_deslocado(0.01f)};
+    Judgement expected[] = {J_RUIM, J_PERFEITO, J_BOM, J_BOM};
+    const int hz[] = {30, 60, 144, 240};
+    for (int rate = 0; rate < 4; rate++) for (int k = 0; k < 4; k++) {
+        memset(&G, 0, sizeof G);
+        fx_init(&G.fx);
+        G.m = roster_get(0);
+        settings_default(&G.settings);
+        duel_init(&G.duel, &G.settings, G.m, 17);
+        G.state = ST_DUEL;
+        G.slowmo = 1;
+        G.autoJogo = true;
+        robo_iniciar(&G.robo, &robots[k], 17);
+        G.ren.x = REN_X; G.ren.y = GROUND_LOW;
+        G.boss.x = G.bossHome = BOSS_X; G.boss.y = GROUND_LOW;
+        G.boss.faceLeft = true;
+        G.renS.set = G.bossS.set = &fixture;
+        fighter_idle(&G.renS);
+        fighter_idle(&G.bossS);
+        for (int i = 0; i < hz[rate] * 10 && G.hitstop <= 0; i++) update_duel(1.0f / hz[rate]);
+        REQUIRE(G.hitstop > 0, "duelo de teste não chegou ao primeiro contato");
+        /* O robô do demo aperta no meio do quadro; a 30 Hz pode pegar bom em
+         * vez de perfeito. O clique humano com carimbo é coberto por entrada_test. */
+        bool judgementOk = G.duel.lastJudgement == expected[k] ||
+                           (hz[rate] == 30 && k == 1 && G.duel.lastJudgement == J_BOM);
+        REQUIRE(judgementOk, "robô não produziu o resultado esperado no contato");
+        REQUIRE(G.bossS.pl.anim && strstr(G.bossS.pl.anim->name, "ATTACK"),
+                "contato perdeu a animação do golpe");
+        REQUIRE(G.bossS.pl.t == 0, "sprite avançou depois do contato, durante o primeiro quadro de hitstop");
+    }
+}
+
 static void sword_continuity_and_parry(void) {
     memset(&G, 0, sizeof G);
     G.m = roster_get(9);
@@ -653,7 +686,7 @@ static void hanzo_uses_walk_when_available(void) {
 int main(int argc, char **argv) {
     fake_sprites();
     flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
-    damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); sword_continuity_and_parry(); visual_feedback_regressions();
+    damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); impact_frame_stays_on_contact(); sword_continuity_and_parry(); visual_feedback_regressions();
     gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);

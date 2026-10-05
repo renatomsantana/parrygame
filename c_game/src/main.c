@@ -2366,7 +2366,10 @@ static void update_duel(float dtReal) {
     /* O clique chegou em algum ponto do último quadro: onde o carimbo diz, ou no meio dele. */
     duel_step_at(&G.duel, dt, press ? instante_do_aperto(corrido, dt, pressed_key_mouse()) : -1);
     handle_events();
-    if (G.state == ST_DUEL || G.state == ST_DEFEAT) update_actors(dt);
+    /* Um impacto que nasceu neste quadro já colocou os sprites no contato.
+     * Não avançá-los de novo pelo quadro inteiro: o primeiro quadro do choque
+     * precisa mostrar o contato, inclusive no parry e no golpe fatal. */
+    if (G.hitstop <= 0 && (G.state == ST_DUEL || G.state == ST_DEFEAT)) update_actors(dt);
 }
 
 static void update_finisher(float dt) {
