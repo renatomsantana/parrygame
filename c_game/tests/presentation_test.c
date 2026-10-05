@@ -636,6 +636,32 @@ static void real_assets(void) {
     }
     yoru_blades_on_real_sheets();
     body_measured_on_real_sheets();
+    /* Percorrer os dois finais com os PNGs reais; a vitória já foi registrada. */
+    for (int choice = 0; choice < 2; choice++) {
+        memset(&G, 0, sizeof G);
+        G.m = roster_get(12);
+        G.teste = G.demo = true;
+        G.cliquePeriodo = AJ_AUTO_CLIQUE_PERIODO;
+        G.quadro = 1.0 / 60;
+        settings_default(&G.settings);
+        campaign_reset(&G.camp);
+        for (int i = 0; i < ROSTER_SIZE; i++) campaign_mark_cleared(&G.camp, i);
+        Campaign before = G.camp;
+        fx_init(&G.fx);
+        setup_actors();
+        G.maskOnGround = true;
+        start_scene(choice == 0 ? SCENE_SIM : SCENE_NAO);
+        for (int tick = 0; tick < 12000 && G.state == ST_SCENE; tick++) {
+            G.time += G.quadro;
+            G.stateTime += G.quadro;
+            update_scene((float)G.quadro);
+        }
+        REQUIRE(G.state == ST_ENDING, "um dos finais travou com as pranchas reais");
+        REQUIRE(!memcmp(&before, &G.camp, sizeof before), "final repetiu o avanço da campanha");
+        REQUIRE(G.bossS.pl.anim && !strcmp(G.bossS.pl.anim->name, "DEATH"), "Oboro não morreu no final");
+        REQUIRE(choice == 0 ? G.hz.on && G.hz.f.set == spr_get("hanzo_mascara") : !G.hz.on,
+                "Hanzo não revelou a máscara ou não saiu na perseguição");
+    }
     printf("assets reais: 13 mestres, %d animações carregadas\n", animations);
     spr_shutdown(); CloseWindow();
 }
