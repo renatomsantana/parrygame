@@ -406,7 +406,7 @@ static bool pressed_key_mouse(void) {
 
 static bool pressed(void) {
     /* No modo demonstração, o robô também avança falas e painéis. */
-    if ((G.demo || G.autoJogo) && G.state != ST_DUEL && fmodf(G.stateTime, G.cliquePeriodo) < (G.recDir ? (float)G.recDt : GetFrameTime())) {
+    if ((G.demo || G.autoJogo) && G.state != ST_DUEL && fmodf(G.stateTime, G.cliquePeriodo) < (G.recDir ? (float)G.recDt : G.quadro)) {
         G.cliqueFlash = 0.05f;
         return true;
     }
@@ -3724,7 +3724,7 @@ static void ui_carimbo(Rectangle dst) {
         DrawText(ln, (int)x, (int)y, fs, WHITE);
     }
     y += lh;
-    snprintf(ln, sizeof ln, "quadro %.1f ms: os valores devem ir de 0 até uns 1 quadro", GetFrameTime() * 1000);
+    snprintf(ln, sizeof ln, "quadro %.1f ms: os valores devem ir de 0 até uns 1 quadro", G.quadro * 1000);
     DrawText(ln, (int)x, (int)y, fs, LIGHTGRAY); y += lh;
     DrawText("se der sempre perto de 0, o carimbo está sendo tirado no poll, e não no clique", (int)x, (int)y, fs, LIGHTGRAY);
 }
@@ -3745,7 +3745,7 @@ static void ui_debug(Rectangle dst) {
     const Move *mv = duel_move(d);
     Color branco = {235, 235, 235, 255}, cinza = {160, 160, 170, 255};
     DBG_LINHA(YELLOW, "DEBUG (F3)  %s  %s", G.m->name, st->name && st->name[0] ? st->name : "");
-    DBG_LINHA(branco, "fase: %s   relógio %.2f s   quadro %.1f ms%s%s", FASE[d->phase], d->clock, (G.recDir ? G.recDt : GetFrameTime()) * 1000,
+    DBG_LINHA(branco, "fase: %s   relógio %.2f s   quadro %.1f ms%s%s", FASE[d->phase], d->clock, (G.recDir ? G.recDt : G.quadro) * 1000,
               d->earlyUsed && d->phase == PH_WINDUP ? "   apertou cedo: sem perfeito" : "",
               d->pressBlockedUntil > d->clock ? "   recarga" : "");
     DBG_LINHA(branco, "golpe: %s  %d de %d   preparação %.0f ms%s%s", mv ? mv->name : "-", d->comboStrike + 1,
@@ -4262,7 +4262,7 @@ int main(int argc, char **argv) {
         G.perfUltimaCarga = entrada_relogio();
     }
 
-    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(UI_W, UI_H, "aparar - a trilha dos doze aprendizes");
     if (!IsWindowReady()) {
@@ -4271,7 +4271,10 @@ int main(int argc, char **argv) {
     }
     perf_carga("janela");
     SetExitKey(KEY_NULL);
-    if (getenv("APARA_FPS")) SetTargetFPS(atoi(getenv("APARA_FPS")));   /* só para os testes e as medidas */
+    /* O sleep do limitador da raylib pode passar 1–2 ms do alvo no macOS.
+     * Esperar até o prazo absoluto abaixo, com uma margem curta de precisão. */
+    int targetFPS = getenv("APARA_FPS") ? atoi(getenv("APARA_FPS")) : AJ_FPS_ALVO;
+    SetTargetFPS(0);
     /* O instante de hardware do clique só vale com um humano jogando: o demo, o jogo automático e as capturas
      * apertam por código, e os testes (tests/teste_*.sh) dependem de os cliques deles caírem no meio do quadro. */
     G.usaCarimbo = !G.demo && !G.autoJogo && !G.recDir && !G.shotFile && !getenv("APARA_SEM_CARIMBO") && entrada_iniciar();
@@ -4344,10 +4347,16 @@ int main(int argc, char **argv) {
 
     perf_carga("primeira tela");
     double wall = 0;
+    double previousPoll = 0;
+    double nextFrame = 0;
+    int startupFrames = 2; /* os dois primeiros polls ainda incluem o tempo de carregar as texturas */
     while (!WindowShouldClose()) {
         G.poll = entrada_relogio();
         if (G.perf && G.perfInicio == 0) G.perfInicio = G.poll;
-        float dtReal = G.recDir ? (float)G.recDt : GetFrameTime();
+        /* Polls consecutivos incluem desenho, apresentação e espera. */
+        float dtReal = G.recDir ? (float)G.recDt : previousPoll > 0 ? (float)(G.poll - previousPoll) : 0;
+        previousPoll = G.poll;
+        if (!G.recDir && startupFrames > 0) { dtReal = 0; startupFrames--; }
         wall += dtReal;
         /* Travamento longo: pausa em vez de engolir o golpe. */
         if (dtReal > AJ_PAUSA_POR_TRAVAMENTO) {
@@ -4395,7 +4404,7 @@ int main(int argc, char **argv) {
             }
             if (G.modoCarimbo && G.carimboN >= AJ_CARIMBO_MEDIDAS) {
                 printf("carimbo: %d cliques, o poll leu de %.1f a %.1f ms depois (média %.1f ms, quadro %.1f ms)\n", G.carimboN, G.carimboMin * 1000,
-                       G.carimboMax * 1000, G.carimboSoma / G.carimboN * 1000, GetFrameTime() * 1000);
+                       G.carimboMax * 1000, G.carimboSoma / G.carimboN * 1000, G.quadro * 1000);
                 break;
             }
         }
@@ -4463,7 +4472,7 @@ int main(int argc, char **argv) {
         double pf4 = perf_agora();
 
         if (getenv("APARA_CLIQUE_PERIODO") && (G.demo || G.autoJogo) && G.state != ST_DUEL &&
-            fmodf(G.stateTime, G.cliquePeriodo) < (G.recDir ? (float)G.recDt : GetFrameTime()))
+            fmodf(G.stateTime, G.cliquePeriodo) < (G.recDir ? (float)G.recDt : G.quadro))
             G.cliqueFlash = 0.05f;   /* o clique do robô existe mesmo quando a tela o ignora (a trava): o ponto mostra todos */
         if (G.cliqueFlash > 0) {
             /* APARA_CLIQUE_PERIODO: um ponto no canto mostra cada clique do robô (só nos vídeos dos testes) */
@@ -4501,6 +4510,17 @@ int main(int argc, char **argv) {
             UnloadImage(img);
             EndDrawing();
             break;
+        }
+        if (targetFPS > 0 && !G.recDir) {
+            /* Esperar ANTES do EndDrawing: ele coleta input no fim. Esperar
+             * depois faria o carimbo chegar num quadro antes de IsKeyPressed. */
+            double now = entrada_relogio();
+            nextFrame = (nextFrame > 0 ? nextFrame : G.poll) + 1.0 / targetFPS;
+            if (nextFrame < now) nextFrame = now;
+            double deadline = nextFrame;
+            double remaining = deadline - entrada_relogio();
+            if (remaining > AJ_FPS_MARGEM_PRECISA) WaitTime(remaining - AJ_FPS_MARGEM_PRECISA);
+            while (entrada_relogio() < deadline) { /* no máximo a margem abaixo; se atrasou, não esperar */ }
         }
         EndDrawing();
         if (G.perf) {

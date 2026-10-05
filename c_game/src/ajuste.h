@@ -180,6 +180,9 @@
 
 /* ---- Jogo automático (APARA_AUTO e --demo): o robô também clica nas telas ------------------ */
 #define AJ_AUTO_CLIQUE_PERIODO      0.9f    /* fora do duelo, um clique a cada isto */
+#define AJ_FPS_ALVO                 60     /* limite normal, mesmo em monitor de 120/144 Hz */
+#define AJ_FPS_MARGEM_PRECISA       0.002  /* últimos 2 ms evitam ultrapassar o prazo por precisão do sleep */
+#define AJ_CENARIO_QUADRO           0.125f /* animação opcional do fundo: 8 quadros/s, independente do combate */
 #define AJ_AUTO_TEMPO_MAX           900.0f  /* o jogo automático para depois disto (s de jogo) */
 #define AJ_AUTO_VISITA_FIM          1.5f    /* ...ou este tempo depois de entrar na cabana do hanzo */
 #define AJ_AUTO_ESCOLHA_ESCOLHE     3.0f    /* a escolha do final: o robô escolhe depois disto */
@@ -201,7 +204,5 @@
 #define AJ_CALIBRA_MAX_APERTOS     64       /* a calibração nunca guarda mais apertos que isto */
 /* Na primeira preparação de uma sequência, do começo até a lâmina partir sobra ao menos isto. */
 #define AJ_PREPARO_MIN_PRIMEIRO     0.100f
-
-#define AJ_CENARIO_QUADRO           0.125f /* animação opcional do fundo: 8 quadros/s, independente do combate */
 
 #endif
