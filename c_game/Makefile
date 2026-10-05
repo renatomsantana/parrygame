@@ -19,6 +19,9 @@ endif
 ifeq ($(OS),Windows_NT)
   # MSYS2/MinGW (ou make OS=Windows_NT CC=x86_64-w64-mingw32-gcc): o raylib estático pede o OpenGL, o GDI e o multimídia
   RAYLIB_LIBS += -lopengl32 -lgdi32 -lwinmm
+else ifeq ($(shell uname),Linux)
+  # katana3d chama glClear diretamente; a dependência transitiva do raylib não basta.
+  RAYLIB_LIBS += -lGL
 endif
 
 CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
