@@ -2508,6 +2508,84 @@ static void test_dual(void) {
     }
 }
 
+/* Arashi, relâmpago: quem leva o golpe (o erro, ou o bom em que a segunda lâmina entra) fica em choque, e a janela perfeita do golpe seguinte encolhe; o choque vale um golpe só. */
+static int impacto_do_golpe(Duel *d, double lead, DuelEvent *out) {
+    /* joga o golpe em curso: aperta quando faltam `lead` s para o contato (lead < 0: não aperta) e devolve o julgamento */
+    while (d->phase == PH_WINDUP) {
+        if (lead >= 0 && !d->attempted && d->strikeAt - d->clock <= lead) duel_press(d);
+        duel_tick(d, DT);
+    }
+    DuelEvent ev[MAX_EVENTS];
+    int k = duel_drain(d, ev, MAX_EVENTS), got = 0;
+    for (int e = 0; e < k; e++) if (ev[e].kind == EV_IMPACT) { *out = ev[e]; got = 1; }
+    return got;
+}
+
+static void test_choque(void) {
+    Settings s;
+    settings_default(&s);
+    const MasterProfile *arashi = roster_get(9);
+    int choques = 0;
+    for (int i = 0; i < roster_size(); i++)
+        for (int k = 0; k < roster_get(i)->moveCount; k++) choques += roster_get(i)->moves[k].shock;
+    CHECK(choques == 1, "só o relâmpago do arashi deixa em choque (%d golpes)", choques);
+    static const struct { double lead; Judgement j; float choque; int bits; const char *nome; } CASOS[3] = {
+        {0.02, J_PERFEITO, 0.0f, 1, "perfeito apara as duas lâminas e não choca"},
+        {0.10, J_BOM, 0.5f, 1 | 2 | 4, "bom: a segunda lâmina entra e é meio choque"},
+        {-1, J_RUIM, 1.0f, 1 | 2 | 4, "erro: as duas entram e é o choque cheio"},
+    };
+    for (int c = 0; c < 3; c++) {
+        Duel d;
+        duel_init(&d, &s, arashi, 7);
+        bool visto = false;
+        for (int n = 0; n < 600 && !visto && d.phase != PH_FINISHED; n++) {
+            while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
+            d.renPosture = s.renPosture;
+            const Move *mv = duel_move(&d);
+            const bool relampago = mv && mv->shock;
+            const double perfeitaBase = duel_stance(&d)->perfectWindow;
+            DuelEvent ev = {0};
+            if (!impacto_do_golpe(&d, relampago ? CASOS[c].lead : -1, &ev) || !relampago) {
+                CHECK(d.shock == 0 || d.phase == PH_FINISHED, "um golpe que não é o relâmpago deixou kojiro em choque");
+                continue;
+            }
+            visto = true;
+            CHECK(ev.judgement == CASOS[c].j, "%s: julgamento %d", CASOS[c].nome, (int)ev.judgement);
+            CHECK(fabsf(d.shock - CASOS[c].choque) < 1e-6f, "%s: choque %.2f", CASOS[c].nome, d.shock);
+            CHECK((ev.i & 7) == CASOS[c].bits, "%s: bits do evento %d", CASOS[c].nome, ev.i);
+            if (CASOS[c].choque <= 0) continue;
+            /* o golpe seguinte: com o choque a janela perfeita é menor, e o aperto que era perfeito vira bom; passado esse golpe, o choque acaba */
+            for (int m = 0; m < 40; m++) {
+                while (d.phase != PH_WINDUP && d.phase != PH_FINISHED) duel_tick(&d, DT);
+                if (d.phase == PH_FINISHED) break;
+                d.renPosture = s.renPosture;
+                const Move *prox = duel_move(&d);
+                if (prox->shock) { DuelEvent ignorado = {0}; impacto_do_golpe(&d, 0.02, &ignorado); continue; }   /* outro relâmpago: não é o que se mede */
+                const float esperada = (float)perfeitaBase * (1 - AJ_CHOQUE_JANELA * CASOS[c].choque);
+                CHECK(fabsf(duel_perfect_window(&d) - esperada) < 1e-6f, "janela perfeita com choque: %.4f (esperada %.4f)", duel_perfect_window(&d), esperada);
+                DuelTimeline t = duel_timeline(&d);
+                CHECK(fabs(t.perfectFrom - (d.strikeAt - esperada)) < 1e-9, "o começo da janela perfeita na linha do tempo acompanha o choque");
+                Duel sem = d;                       /* o mesmo golpe, mesmo aperto, sem choque */
+                sem.shock = 0;
+                const double aperto = perfeitaBase * 0.9;   /* dentro da janela de sempre, fora da encolhida */
+                DuelEvent com = {0}, livre = {0};
+                CHECK(impacto_do_golpe(&d, aperto, &com) && impacto_do_golpe(&sem, aperto, &livre), "o golpe seguinte foi julgado");
+                CHECK(livre.judgement == J_PERFEITO, "sem choque, o aperto a 90%% da janela é perfeito");
+                CHECK(com.judgement == J_BOM, "com choque, o mesmo aperto já não é perfeito (%d)", (int)com.judgement);
+                CHECK((com.i & 8) && !(livre.i & 8), "o evento diz que foi julgado em choque");
+                CHECK(d.shock == 0, "o choque vale um golpe só");
+                break;
+            }
+        }
+        CHECK(visto, "um relâmpago de arashi foi observado (%d)", c);
+    }
+    Duel d;
+    duel_init(&d, &s, arashi, 3);
+    d.shock = 1;
+    duel_reset(&d);
+    CHECK(d.shock == 0, "recomeçar a luta tira o choque");
+}
+
 /* Estocada de longe: a lâmina parte AJ_LANCA_PARTE_X vezes mais cedo que nos outros golpes. */
 static void test_far_lead(void) {
     Settings s;
@@ -2617,6 +2695,7 @@ int main(void) {
     test_movesets();
     test_traits();
     test_dual();
+    test_choque();
     test_far_lead();
     test_burn();
     test_levels();

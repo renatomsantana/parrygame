@@ -317,18 +317,18 @@ static void body_measured_on_real_sheets(void) {
     printf("deslize do golpe: %d golpes com corpo medido, %d com salto de %.0f px ou mais no contato\n", golpes, grandes, AJ_DESLIZE_MIN);
 }
 
-/* O relâmpago do arashi: raios caem em volta de quem aparou ou de kojiro, e quem leva fica meio paralisado (só desenho: o núcleo não muda). */
+/* O relâmpago do arashi: raios caem em volta de quem aparou ou de kojiro, e quem leva fica em choque (o núcleo diz quanto: duel.shock). O desenho segue o núcleo. */
 static void arashi_raios_e_paralisia(void) {
     const MasterProfile *arashi = roster_get(9);
     REQUIRE(arashi->id == 10, "o mestre 9 do roster não é o arashi");
-    int relampago = -1, pesados = 0, outro = -1;
+    int relampago = -1, choques = 0, outro = -1;
     for (int i = 0; i < arashi->moveCount; i++) {
-        if (arashi->moves[i].look == LOOK_HEAVY) { pesados++; relampago = i; }
+        if (arashi->moves[i].shock) { choques++; relampago = i; }
         else if (outro < 0) outro = i;
     }
-    REQUIRE(pesados == 1 && !strcmp(arashi->moves[relampago].name, "relâmpago"), "o arashi precisa de um só golpe pesado, o relâmpago");
+    REQUIRE(choques == 1 && !strcmp(arashi->moves[relampago].name, "relâmpago"), "o arashi precisa de um só golpe de choque, o relâmpago");
     static const struct { Judgement j; int i; float forca; float duracao; } CASOS[] = {
-        {J_PERFEITO, 1, 0.0f, 0}, {J_BOM, 3, 0.5f, PARALISIA_METADE}, {J_RUIM, 3, 1.0f, PARALISIA_CHEIA},
+        {J_PERFEITO, 1, 0.0f, 0}, {J_BOM, 1 | 2 | 4, 0.5f, PARALISIA_METADE}, {J_RUIM, 1 | 2 | 4, 1.0f, PARALISIA_CHEIA},
     };
     for (size_t c = 0; c < sizeof CASOS / sizeof CASOS[0]; c++) {
         memset(&G, 0, sizeof G);
@@ -337,11 +337,12 @@ static void arashi_raios_e_paralisia(void) {
         settings_default(&G.settings);
         duel_init(&G.duel, &G.settings, G.m, 1);
         G.duel.move = relampago;
+        G.duel.shock = CASOS[c].forca;                      /* o que o núcleo deixou depois de julgar o golpe */
         G.ren.x = 124; G.ren.y = GROUND_LOW;
         const Duel antes = G.duel;
         DuelEvent e = {.kind = EV_IMPACT, .judgement = CASOS[c].j, .i = CASOS[c].i};
         impacto_do_raio(&e);
-        REQUIRE(memcmp(&G.duel, &antes, sizeof antes) == 0, "o relâmpago mudou o núcleo do duelo");
+        REQUIRE(memcmp(&G.duel, &antes, sizeof antes) == 0, "o relâmpago desenhado mexeu no núcleo do duelo");
         const float alvo = CASOS[c].j == J_PERFEITO ? clash_point().x : G.ren.x + G.ren.offsetX;
         int ativos = 0, esperando = 0;
         for (int k = 0; k < RAIOS_MAX; k++) { ativos += G.raios[k].vida > 0; esperando += G.raios[k].espera > 0; }
@@ -349,13 +350,22 @@ static void arashi_raios_e_paralisia(void) {
         REQUIRE(G.raios[0].principal && G.raios[0].x == alvo, "o raio principal não caiu em quem aparou ou apanhou");
         REQUIRE(G.ctx.lightning == 1, "o relâmpago não acendeu o céu");
         REQUIRE(G.paralisiaForca == CASOS[c].forca && G.paralisia == CASOS[c].duracao,
-                "a força ou a duração do choque não bate com o julgamento (perfeito nada, bom meio, erro inteiro)");
-        /* o tempo passa: os raios entram, caem e somem; o choque acaba */
+                "a força ou a duração do choque não bate com o do núcleo (perfeito nada, bom meio, erro inteiro)");
+        /* o tempo passa: os raios entram, caem e somem; o choque forte acaba, e o fraco fica enquanto o núcleo não julga o golpe seguinte */
         for (float t = 0; t < RAIO_VIDA + 0.2f + PARALISIA_CHEIA; t += 1.0f / 60) raios_update(1.0f / 60);
         for (int k = 0; k < RAIOS_MAX; k++) REQUIRE(G.raios[k].vida <= 0 && G.raios[k].espera <= 0, "um raio ficou na tela para sempre");
-        REQUIRE(G.paralisia == 0, "o choque não acabou");
+        REQUIRE(G.paralisia == 0, "o choque forte não acabou");
+        REQUIRE(choque_do_nucleo() == CASOS[c].forca, "o brilho fraco deve seguir o choque do núcleo");
+        G.duel.shock = 0;                                    /* o golpe seguinte foi julgado: o núcleo tirou o choque */
+        G.paralisia = 0.5f;
+        raios_update(1.0f / 60);
+        REQUIRE(G.paralisia == 0, "o choque continuou no desenho depois de o núcleo tirá-lo");
     }
-    /* meio paralisado: o choque só atrasa a animação de dor, e o aperto o larga */
+    REQUIRE(brilho_do_choque(0, 0) == 0 && brilho_do_choque(1, 0) == 1, "sem choque nada brilha, e o choque forte brilha inteiro");
+    REQUIRE(fabsf(brilho_do_choque(0.1f, 0) - 0.4f) < 1e-6f, "o choque forte some nos últimos 0,25 s");
+    REQUIRE(fabsf(brilho_do_choque(0, 0.5f) - 0.45f) < 1e-6f && fabsf(brilho_do_choque(0.05f, 1) - 0.45f) < 1e-6f, "enquanto o núcleo guarda o choque, fica um brilho fraco");
+    REQUIRE(brilho_do_choque(1, 1) == 1, "o choque forte não perde brilho por o núcleo o guardar");
+    /* meio paralisado: o choque atrasa a animação de dor, e o aperto não o larga (ele vale até o golpe seguinte ser julgado) */
     memset(&G, 0, sizeof G);
     SprAnim dor = {0}, guarda = {0};
     snprintf(dor.name, sizeof dor.name, "HURT");
@@ -371,8 +381,8 @@ static void arashi_raios_e_paralisia(void) {
     REQUIRE(paralisia_ritmo() == 1, "sem choque a dor deve correr no ritmo de sempre");
     G.paralisia = PARALISIA_CHEIA; G.paralisiaForca = 1;
     sprite_press();
-    REQUIRE(G.paralisia == 0, "o aperto não largou o choque");
-    /* nenhum outro golpe, nem outro mestre, solta raio */
+    REQUIRE(G.paralisia == PARALISIA_CHEIA, "o aperto largou o choque: ele vale até o golpe seguinte ser julgado");
+    /* nenhum outro golpe, nem outro mestre, solta raio ou choque */
     for (int caso = 0; caso < 2; caso++) {
         memset(&G, 0, sizeof G);
         fx_init(&G.fx);

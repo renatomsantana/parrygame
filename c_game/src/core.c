@@ -67,6 +67,7 @@ void duel_reset(Duel *d) {
     d->pressBlockedUntil = AJ_NUNCA;
     d->attempted = false;
     d->renPosture = d->s.renPosture;
+    d->shock = 0;
     d->seal = 0;
     d->bossPosture = duel_posture_max(d);
     memset(d->stanceSequences, 0, sizeof d->stanceSequences);
@@ -217,7 +218,7 @@ DuelTimeline duel_timeline(const Duel *d) {
     t.start = d->strikeAt - d->windupDuration;
     t.launch = d->strikeAt - duel_strike_lead(d);
     t.cue = duel_cue_time(d);
-    t.perfectFrom = d->strikeAt - st->perfectWindow;
+    t.perfectFrom = d->strikeAt - duel_perfect_window(d);
     t.goodFrom = d->strikeAt - st->goodWindow;
     return t;
 }
@@ -282,6 +283,10 @@ static int pick_move(Duel *d) {
 const Move *duel_move(const Duel *d) {
     if (d->m->moveCount <= 0 || d->move < 0) return NULL;
     return &d->m->moves[d->move];
+}
+
+float duel_perfect_window(const Duel *d) {
+    return duel_stance(d)->perfectWindow * (1 - AJ_CHOQUE_JANELA * d->shock);
 }
 
 static void begin_attack(Duel *d) {
@@ -419,7 +424,9 @@ static void resolve(Duel *d) {
     double lead = d->attempted ? d->strikeAt - (d->lastPress - s->latency) : -1;
     bool dual = duel_strike_dual(d), second = false;
     Judgement j;
-    if (d->attempted && lead >= 0 && lead <= st->perfectWindow + AJ_EPS_JANELA && !d->earlyUsed) {
+    const double perfeita = duel_perfect_window(d);   /* com o choque do golpe anterior, menor; o choque vale para este golpe só */
+    const bool chocado = d->shock > 0;
+    if (d->attempted && lead >= 0 && lead <= perfeita + AJ_EPS_JANELA && !d->earlyUsed) {
         j = J_PERFEITO;
         d->perfects++;
         /* o parry perfeito apaga as brasas */
@@ -453,6 +460,10 @@ static void resolve(Duel *d) {
         if (d->m->healsOnHit) d->bossPosture = clampf(d->bossPosture + s->badBossRecover, 0, duel_posture_max(d));
     }
 
+    /* o choque: gasto neste golpe, e renovado se este for o golpe que choca e acertou kojiro */
+    const Move *mv = duel_move(d);
+    d->shock = mv && mv->shock ? (j == J_RUIM ? 1.0f : (j == J_BOM && second) ? 0.5f : 0.0f) : 0.0f;
+
     d->lastStrikeAt = d->strikeAt;
     d->lastJudgement = j;
     d->lastLead = lead;
@@ -471,9 +482,9 @@ static void resolve(Duel *d) {
         d->bossPosture = 0;
         d->comboRemaining = 0; /* a quebra interrompe o composto */
     }
-    /* i: bit 0 = golpe de duas lâminas, bit 1 = a segunda lâmina acertou kojiro */
-    DuelEvent *ev = emit(d, EV_IMPACT, j, (float)lead, (dual ? 1 : 0) | (second ? 2 : 0), broke);
-    if (ev && d->attempted) ev->b = lead > st->perfectWindow ? (float)(lead - st->perfectWindow) : lead < 0 ? (float)lead : 0;
+    /* i: bit 0 = golpe de duas lâminas, bit 1 = a segunda lâmina acertou kojiro, bit 2 = este golpe deixou kojiro em choque, bit 3 = kojiro foi julgado em choque */
+    DuelEvent *ev = emit(d, EV_IMPACT, j, (float)lead, (dual ? 1 : 0) | (second ? 2 : 0) | (d->shock > 0 ? 4 : 0) | (chocado ? 8 : 0), broke);
+    if (ev && d->attempted) ev->b = lead > perfeita ? (float)(lead - perfeita) : lead < 0 ? (float)lead : 0;
 
     /* vantagem: falta só um perfeito (a postura cabe num perfeito) */
     bool vantagem = !broke && duel_advantage(d);

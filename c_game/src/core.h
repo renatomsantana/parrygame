@@ -108,6 +108,7 @@ typedef struct {
     unsigned dual;
     bool thrustOnly;             /* apresentação: todos os contatos seguem retos, sem alternar para corte */
     bool feint;                  /* apresentação: ameaça sem contato antes da estocada real */
+    bool shock;                  /* choque (arashi, relâmpago): quem leva este golpe (o erro, ou o bom em que a segunda lâmina entra) fica meio paralisado, e a janela perfeita do golpe seguinte encolhe */
 } Move;
 
 /* Direção visual de cada contato. Não participa do julgamento do parry. */
@@ -272,6 +273,7 @@ typedef struct {
 
     float renPosture;             /* vida de kojiro */
     float burnLeft, burnRate;     /* brasas: segundos que faltam e vida perdida por segundo */
+    float shock;                  /* choque (0 a 1) que vale só para o próximo golpe julgado: encolhe a janela perfeita dele (AJ_CHOQUE_JANELA) */
     float bossPosture;
     int seal;                     /* selo atual (0..sealCount-1) */
     int stanceIndex;
@@ -296,6 +298,8 @@ typedef struct {
 } Duel;
 
 void duel_init(Duel *d, const Settings *s, const MasterProfile *m, uint32_t seed);
+/* A janela perfeita do golpe que vem: a da postura, menos o que o choque tira. */
+float duel_perfect_window(const Duel *d);
 void duel_reset(Duel *d);
 /* Para testar à mão (F3): recomeça a luta direto no selo `seal` (0 = o primeiro), com
  * vida cheia e a postura e a postura de luta desse selo; e reabastece vida e postura. */

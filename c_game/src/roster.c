@@ -310,7 +310,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"trovão", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.80f, 0x1},
             {"raio duplo", 2, {0.40f}, 1.0f, -1, 0, LOOK_JUMP, 0.90f, 0x3},
             {"céu partido", 5, {0.40f, 0.40f, 0.40f, 0.80f}, 0.6f, -1, 0, LOOK_HIGH, 0.75f, 0x10},
-            {"relâmpago", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.80f, 0x1},
+            {"relâmpago", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.80f, 0x1, false, false, true},
             {"descarga", 2, {0.45f}, 0.5f, -1, 0, LOOK_THRUST, 0.85f},
             {"cruz elétrica", 1, {0}, 0.8f, -1, 0, LOOK_HIGH, 0.80f, 0x1},
         },

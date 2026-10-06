@@ -76,6 +76,7 @@
 #define AJ_PAUSA_NA_CADEIA         0.080f   /* pausa entre dois golpes da mesma sequência */
 #define AJ_CADEIA_MIN              0.400f   /* menor intervalo entre dois contatos de uma sequência */
 #define AJ_BRASAS_TEMPO              3.0f   /* enjin: segundos em brasas depois de um erro */
+#define AJ_CHOQUE_JANELA            0.40f   /* arashi: quanto a janela perfeita do golpe seguinte encolhe depois de levar o relâmpago (o choque cheio; o meio choque, a metade) */
 
 /* ---- O aviso: som e brilho na lâmina, sempre o mesmo tempo antes do contato ---- */
 /* Cada mestre tem o seu (Stance.aviso, no roster.c), dentro destes limites. Na

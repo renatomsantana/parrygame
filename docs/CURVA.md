@@ -187,12 +187,17 @@ Duas coisas mexeram na curva depois da tabela acima, e as duas passam nas mesmas
 | 7 | hayate | 0,0 | 85,3 | 5,8 | 100,0 | 0,0 |
 | 8 | enjin | 0,0 | 79,5 | 2,7 | 100,0 | 0,0 |
 | 9 | suiren | 0,0 | 71,2 | 0,0 | 100,0 | 0,0 |
-| 10 | arashi | 0,0 | 63,6 | 0,4 | 100,0 | 0,0 |
+| 10 | arashi | 0,0 | 63,1 | 0,4 | 100,0 | 0,0 |
 | 11 | yoru | 0,0 | 58,4 | 0,8 | 100,0 | 0,0 |
 | 12 | jinshi | 0,0 | 55,3 | 0,6 | 100,0 | 0,0 |
 | 13 | oboro | 0,0 | 37,8 | 0,0 | 100,0 | 0,0 |
 
 Os degraus do casual, do Karasu ao Oboro, são 5,8 / 5,8 / 8,3 / 7,6 / 5,2 / 3,1 / 17,5 (o mínimo, do Garfiel ao Oboro, é 3,0; o do Yoru ao Jinshi, 3,1, é o apertado). Daichi, Genbu, Raizo e Shizuku não mudam, e o Oboro só mudou pela Shizuku.
+**O choque do relâmpago (arashi), depois da tabela acima:** quem leva o relâmpago (erro, ou aparo bom em que a segunda lâmina entra) fica em choque, e a janela perfeita do
+**golpe seguinte** encolhe `AJ_CHOQUE_JANELA` = 40% no choque cheio (20% no meio choque): 46 ms viram 28 ms. O casual do arashi vai de 63,6 para 63,1 (100 mil lutas, 60 e 144 Hz);
+nenhum outro mestre se mexe, e o Reação 250 do arashi fica em 0,4. Com 30% o casual dele seria 63,2 e com 50%, 62,9 (a faixa é 62 a 68): o choque quase não pesa na curva porque o casual
+já acerta pouco o perfeito, e o relâmpago é uma de doze sequências, com peso baixo. A janela boa, o aviso e a menor partida da lâmina não mudam.
+
 O piso do Jinshi no `test_curva` do `core_test.c` passou de 55 para 52 (a faixa aprovada), porque o teste usa 300 lutas e varia 3 pontos.
 
 ## O que mudou no `roster.c`

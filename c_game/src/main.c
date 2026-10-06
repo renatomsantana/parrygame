@@ -68,11 +68,11 @@
 #define KARASU_WARP_DISSOLVE 0.10f    /* o corpo apaga neste tempo (s) antes de virar penas: sem corte seco */
 #define KARASU_WARP_FORMA 0.04f       /* e se forma neste tempo ao reaparecer: ele reaparece 40 ms antes do aviso (KARASU_WARP_ANTES_AVISO), então está inteiro no aviso */
 #define KARASU_WARP_PENAS_S 240.0f    /* penas por segundo que se soltam do corpo, ou voltam para ele */
-#define ARASHI_ID 10                  /* o relâmpago (o golpe pesado dele): raios caem do céu e, quem leva, fica meio paralisado. Só desenho: o núcleo julga como qualquer outro golpe */
+/* O relâmpago do arashi (o golpe que o núcleo marca com `shock`): raios caem do céu e, quem leva, fica em choque: meio paralisado, com a janela perfeita do golpe seguinte menor (AJ_CHOQUE_JANELA, no núcleo). */
 #define RAIOS_MAX 6
 #define RAIO_VIDA 0.26f               /* s que cada raio fica na tela */
-#define PARALISIA_CHEIA 0.9f          /* s de choque no kojiro quando o golpe pega em cheio (erro: as duas lâminas entram) */
-#define PARALISIA_METADE 0.5f         /* s quando só uma lâmina entra (aparo bom): meio paralisado */
+#define PARALISIA_CHEIA 0.9f          /* s de choque forte no kojiro (tremor, faíscas, queda lenta) quando o golpe pega em cheio (erro: as duas lâminas entram); depois fica só o brilho fraco até o golpe seguinte ser julgado */
+#define PARALISIA_METADE 0.5f         /* s de choque forte quando só uma lâmina entra (aparo bom): meio choque */
 #define PARALISIA_LENTIDAO 0.65f      /* quanto a queda do kojiro (o HURT) fica mais lenta com o choque cheio */
 enum { LEAP_NONE, LEAP_DASH, LEAP_JUMP, LEAP_FAR, LEAP_WARP, LEAP_FEINT };
 #define PIX_TITLE 40          /* paletas das telas fora do duelo (as dos cenários são o ArenaId) */
@@ -1442,7 +1442,6 @@ static void sprite_launch(void) {
 
 /* O gesto de kojiro: a guarda (DEFEND) ou um corte rápido de encontro ao golpe. */
 static void sprite_press(void) {
-    G.paralisia = 0;          /* meio paralisado: o aperto sempre vale, e com ele o choque larga */
     Fighter *f = &G.renS;
     if (!f->set) return;
     const SprAnim *a = fa(f, "DEFEND");
@@ -1601,13 +1600,16 @@ static void on_impact(const DuelEvent *e) {
     }
 }
 
-/* O relâmpago do arashi (o golpe pesado dele, LOOK_HEAVY): quando o golpe chega, raios caem do céu em volta de quem aparou ou, se pegou, de kojiro. Quem leva fica
- * meio paralisado: treme, pisca em azul e cai devagar. É só o que se vê: o núcleo julga o relâmpago como qualquer outro golpe de duas lâminas, e o aperto seguinte vale igual. */
+/* O relâmpago do arashi (o golpe que o núcleo marca com `shock`): quando chega, raios caem do céu em volta de quem aparou ou, se pegou, de kojiro. Quem leva fica em
+ * choque, meio paralisado: treme, pisca em azul e cai devagar, e (no núcleo) a janela perfeita do golpe seguinte encolhe; o brilho azul fica até esse golpe ser julgado. */
 static bool golpe_do_raio(void) {
-    if (!G.m || G.m->id != ARASHI_ID || G.duel.m != G.m) return false;
+    if (!G.m || G.duel.m != G.m) return false;
     const Move *mv = duel_move(&G.duel);
-    return mv && mv->look == LOOK_HEAVY;
+    return mv && mv->shock;
 }
+
+/* O choque que o núcleo guarda (duel.shock, de 0 a 1): vale para o próximo golpe, e o desenho segue até ele ser julgado. */
+static float choque_do_nucleo(void) { return G.duel.m ? G.duel.shock : 0; }
 
 static void raio_acende(Raio *r) {
     r->espera = 0;
@@ -1638,7 +1640,8 @@ static void impacto_do_raio(const DuelEvent *e) {
     G.ctx.lightning = 1;
     audio_play(SND_THUNDER, 0.9f, 1);
     fx_flash(&G.fx, (Color){170, 200, 255, 255}, aparou ? 0.3f : 0.6f);
-    const float forca = e->judgement == J_RUIM ? 1.0f : (e->judgement == J_BOM && (e->i & 2)) ? 0.5f : 0.0f;
+    if (!(e->i & 4)) return;                               /* o núcleo diz se kojiro ficou em choque (bit 2 do evento) e quanto */
+    const float forca = choque_do_nucleo();
     if (forca <= 0) return;
     G.paralisiaForca = forca;
     G.paralisia = G.paralisiaTotal = forca >= 1 ? PARALISIA_CHEIA : PARALISIA_METADE;
@@ -1651,13 +1654,18 @@ static void raios_update(float dt) {
         if (r->espera > 0) { r->espera -= dt; if (r->espera <= 0) raio_acende(r); }
         else if (r->vida > 0) r->vida -= dt;
     }
-    if (G.paralisia <= 0) return;
+    if (G.duel.m) {                     /* na luta quem manda é o núcleo: julgado o golpe seguinte, o choque acaba na hora */
+        if (G.duel.shock <= 0) G.paralisia = 0;
+        else G.paralisiaForca = G.duel.shock;
+    }
+    const bool emChoque = G.paralisia > 0 || choque_do_nucleo() > 0;
+    if (!emChoque) return;
     G.paralisia = fmaxf(0, G.paralisia - dt);
     G.paralisiaFaisca -= dt;
-    if (G.paralisiaFaisca <= 0 && G.paralisia > 0) {
-        G.paralisiaFaisca = 0.07f;
+    if (G.paralisiaFaisca <= 0) {
+        G.paralisiaFaisca = G.paralisia > 0 ? 0.07f : 0.35f;     /* tremendo, faísca a cada 70 ms; só em choque, uma de vez em quando */
         const Vector2 at = {G.ren.x + G.ren.offsetX + frand(-6, 6), GROUND_LOW - frand(8, 38)};
-        fx_burst(&G.fx, P_SPARK, at, 2, 40, 3.14f, 0, (Color){225, 238, 255, 255}, (Color){120, 170, 255, 255});
+        fx_burst(&G.fx, P_SPARK, at, G.paralisia > 0 ? 2 : 1, 40, 3.14f, 0, (Color){225, 238, 255, 255}, (Color){120, 170, 255, 255});
     }
 }
 
@@ -2832,13 +2840,20 @@ static void desenha_laminas_acesas(float k) {
     spr_draw(f->set, lamina, f->pl.frame, feet, o);
 }
 
+/* O brilho do choque (0 a 1): forte enquanto o choque tem tempo (some nos últimos 0,25 s) e, depois, um brilho fraco (0,45) enquanto o núcleo ainda o guarda,
+ * isto é, até o golpe seguinte ser julgado. */
+static float brilho_do_choque(float paralisia, float choqueDoNucleo) {
+    const float forte = clampf(paralisia / 0.25f, 0, 1);
+    return choqueDoNucleo > 0 ? fmaxf(forte, 0.45f) : forte;
+}
+
 /* O choque do relâmpago no kojiro: a silhueta pisca em azul e branco por cima do corpo, e some nos últimos 0,25 s. */
 static void desenha_choque(const Rig *r, const Fighter *f) {
     const SprAnim *a = f->pl.anim;
     if (!a) return;
-    const float fim = clampf(G.paralisia / 0.25f, 0, 1);
+    const float brilho = brilho_do_choque(G.paralisia, choque_do_nucleo());
     const Color cor = ((int)(G.time * 30) & 1) ? (Color){235, 245, 255, 255} : (Color){110, 160, 255, 255};
-    SprDraw o = {r->faceLeft, sprite_breath(r, f), true, fadec(cor, 0.55f * G.paralisiaForca * fim)};
+    SprDraw o = {r->faceLeft, sprite_breath(r, f), true, fadec(cor, 0.55f * G.paralisiaForca * brilho)};
     spr_draw(f->set, a, f->pl.frame, (Vector2){r->x + r->offsetX, r->y - r->hopY}, o);
 }
 
@@ -2933,7 +2948,7 @@ static void draw_rigs(Color light) {
         Rig ren = G.ren;
         if (G.paralisia > 0) ren.offsetX += ((int)(G.time * 28) & 1) ? 1.0f : -1.0f;       /* o choque faz tremer (1 px) */
         draw_sprite_fighter(&ren, &G.renS, light, rim, 0.0f, 1.0f, 1.0f);
-        if (G.paralisia > 0) desenha_choque(&ren, &G.renS);
+        if (G.paralisia > 0 || choque_do_nucleo() > 0) desenha_choque(&ren, &G.renS);
     }
     draw_pole_flying();
     if (G.crack > 0) {
@@ -3586,8 +3601,8 @@ static void ui_debug(Rectangle dst) {
               d->pressBlockedUntil > d->clock ? "   recarga" : "");
     DBG_LINHA(branco, "golpe: %s  %d de %d   preparação %.0f ms%s%s", mv ? mv->name : "-", d->comboStrike + 1,
               mv ? mv->strikes : 1, d->windupDuration * 1000, d->special ? "  ESPECIAL" : "", duel_strike_dual(d) ? "  DUPLO" : "");
-    DBG_LINHA(branco, "janela: perfeita %.0f ms, boa %.0f ms   lâmina parte %.0f ms antes, aviso %.0f ms antes",
-              st->perfectWindow * 1000, st->goodWindow * 1000, duel_strike_lead(d) * 1000, duel_aviso(d) * 1000);
+    DBG_LINHA(branco, "janela: perfeita %.0f ms%s, boa %.0f ms   lâmina parte %.0f ms antes, aviso %.0f ms antes",
+              duel_perfect_window(d) * 1000, d->shock > 0 ? " (choque)" : "", st->goodWindow * 1000, duel_strike_lead(d) * 1000, duel_aviso(d) * 1000);
     DBG_LINHA(branco, "mestre: postura %.0f / %.0f   selo %d de %d%s%s", d->bossPosture, duel_posture_max(d), d->seal + 1,
               d->m->sealCount > 0 ? d->m->sealCount : 1, duel_under_pressure(d) && d->m->sealCount <= 1 ? "   com pressa" : "",
               d->advantage ? "   VANTAGEM" : "");
