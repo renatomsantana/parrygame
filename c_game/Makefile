@@ -47,7 +47,7 @@ endif
 all: apara
 
 # Gera os lutadores a partir das pranchas do Samurai #3 (ver ../docs/PERSONAGENS.md).
-personagens: tools/personagens.c
+personagens: tools/personagens.c src/cores_posturas.h
 	$(CC) $(CFLAGS) -ffp-contract=off $(RAYLIB_CFLAGS) tools/personagens.c -o $@ $(RAYLIB_LIBS) -lm
 
 sprites: personagens

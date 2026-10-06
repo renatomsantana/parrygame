@@ -125,6 +125,13 @@ static void borrowed_feedback(void) {
     }
 }
 
+static void fixed_element_colors(void) {
+    Color ice = posture_color(3), sea = posture_color(8), storm = posture_color(9);
+    REQUIRE(ice.r > 180 && ice.g > 225 && ice.b > 240, "gelo perdeu a leitura clara/quase branca");
+    REQUIRE(sea.g > sea.r + 80 && sea.g > sea.b, "mar deixou de ser turquesa e voltou ao azul do gelo");
+    REQUIRE(storm.r > 90 && storm.r < 190 && abs(storm.b - storm.r) < 50, "tempestade perdeu o cinza de nuvem");
+}
+
 static void bought_pack_timing_and_hands(void) {
     SprFx sheet = {.name = "slash", .cell = 96, .rows = 12, .frames = 9};
     const int rows[] = {1,3,7,10}, peaks[] = {2,2,0,1}, hz[] = {30,60,144,240};
@@ -170,7 +177,7 @@ static void bought_pack_timing_and_hands(void) {
     G.m = roster_get(9); a->hasOffhand[0] = false;
     REQUIRE(!bought_weapon(true, &other), "pack inventou uma lâmina oculta a partir de outro quadro");
     vfx_clear();
-    REQUIRE(!G.cut.sheet, "reset deixou o slash novo ativo");
+    REQUIRE(!G.cut.sheet, "reset deixou o slash ativo");
 }
 
 static void jump_and_frame_time(void) {
@@ -435,7 +442,7 @@ static void tell_particles_match_master(void) {
             REQUIRE(p->pos.x == at.x && p->pos.y == at.y, "aviso se soltou do chão ou da arma errada");
             if (id == 7) REQUIRE(p->color.g > p->color.r, "vento do Hayate parece brasa");
             if (id == 8) REQUIRE(p->color.r >= 250 && p->color.b < 90, "fogo do Enjin parece água");
-            if (id == 9) REQUIRE(p->color.b >= 200 && p->color.r <= 170, "mar da Suiren parece sombra");
+            if (id == 9) REQUIRE(p->color.g >= 180 && p->color.g > p->color.r && p->color.g > p->color.b, "mar da Suiren perdeu o turquesa fixo");
         }
         REQUIRE(count >= 7, "aviso do mestre perdeu as partículas");
     }
@@ -727,6 +734,34 @@ static void real_assets(void) {
         fighter_load(&G.bossS, G.m->name);
         REQUIRE(G.bossS.set != NULL, "arte do mestre não carregou");
         if (!G.bossS.set) continue;
+        if (master == 4 || master == 9 || G.m->isBigBoss) {
+            Duel original = G.duel;
+            /* Exercita o evento de partida, que só existe durante a preparação. */
+            G.duel.phase = PH_WINDUP;
+            G.duel.strikeAt = 1;
+            G.duel.strikeLead = .2f;
+            for (int move = 0; move < G.m->moveCount; move++) {
+                G.duel.move = move;
+                const MasterProfile *source = feedback_master();
+                if (source->id != 5 && source->id != ARASHI_ID) continue;
+                G.bossS.strike = boss_strike_anim(strike_look());
+                REQUIRE(G.bossS.strike != NULL, "eco não carregou seu golpe para o efeito");
+                bool claws = source->id == 5;
+                REQUIRE(bought_slash_available(G.bossS.strike) == (G.packSlashes && claws), "Arashi ocultou o rastro nativo ou Garfiel perdeu suas garras");
+                G.packSlashes = true;
+                Duel before = G.duel;
+                bought_slash_begin();
+                REQUIRE(!memcmp(&before, &G.duel, sizeof before), "garras/choque alteraram julgamento ou RNG");
+                if (claws) {
+                    REQUIRE(G.cut.sheet == slashes && G.cut.row == 3, "Oboro não recebeu as mesmas garras laranja do Garfiel");
+                    if (G.m->isBigBoss) REQUIRE(!G.cut.second, "Oboro duplicou a arma no eco");
+                    spr_play(&G.bossS.pl, G.bossS.strike, G.bossS.strike->contact, G.bossS.strike->frames - 1, 0);
+                    bought_slash_contact();
+                    REQUIRE(G.cut.hand[0] && (G.m->isBigBoss ? !G.cut.hand[1] : true), "garras do eco não saíram da própria katana");
+                } else REQUIRE(!G.cut.sheet, "Arashi/eco ainda usam o slash comprado");
+            }
+            G.duel = original;
+        }
         duel_tick(&G.duel, 0.01);
         Duel beforeSlash = G.duel;
         (void)feedback_master();
@@ -739,6 +774,26 @@ static void real_assets(void) {
             if (G.m->isBigBoss) layerExpected = strstr(a->name, "ECO_GARFIEL") || strstr(a->name, "ECO_ARASHI") ||
                 (strstr(a->name, "FURIA") && strstr(a->name, "ATTACK"));
             if (layerExpected) REQUIRE(a->cleanTex.id, "falta a camada que remove o slash antigo");
+            int element = master == 3 ? 0 : master == 8 ? 1 : master == 9 ? 2 :
+                strstr(a->name, "ECO_SHIZUKU") ? 0 : strstr(a->name, "ECO_SUIREN") ? 1 : strstr(a->name, "ECO_ARASHI") ? 2 : -1;
+            if (element >= 0 && (strstr(a->name, "ATTACK") || !strcmp(a->name, "ESPECIAL"))) {
+                const Color palettes[3][3] = {
+                    {{COR_GELO_CLARA,255},{COR_GELO_MEDIA,255},{COR_GELO_ESCURA,255}},
+                    {{COR_MAR_CLARA,255},{COR_MAR_MEDIA,255},{COR_MAR_ESCURA,255}},
+                    {{COR_NUVEM_CLARA,255},{COR_NUVEM_MEDIA,255},{COR_NUVEM_ESCURA,255}}
+                };
+                Image strip = LoadImageFromTexture(a->tex);
+                Color *pixels = LoadImageColors(strip);
+                Color electric = {COR_RAIO_AZUL,255};
+                int signature = 0, bolts = 0;
+                for (int pixel = 0; pixel < strip.width * strip.height; pixel++) {
+                    for (int shade = 0; shade < 3; shade++) signature += !memcmp(&pixels[pixel], &palettes[element][shade], sizeof(Color));
+                    bolts += !memcmp(&pixels[pixel], &electric, sizeof(Color));
+                }
+                REQUIRE(signature > 8, "tira/eco não recebeu sua paleta fixa de gelo, mar ou nuvem");
+                if (element == 2) REQUIRE(bolts > 0, "raios não saíram do slash cinza do Arashi/eco");
+                UnloadImageColors(pixels); UnloadImage(strip);
+            }
             if (a->cleanTex.id) {
                 REQUIRE(a->cleanTex.width == a->tex.width && a->cleanTex.height == a->tex.height, "camada mudou tamanho/número de quadros");
                 Image original = LoadImageFromTexture(a->tex), clean = LoadImageFromTexture(a->cleanTex);
@@ -969,7 +1024,7 @@ static void pupil_aftermath_preserves_progress(void) {
 int main(int argc, char **argv) {
     fake_sprites();
     pupil_aftermath_preserves_progress();
-    flaming_actions(); sword_attachment(); borrowed_feedback(); bought_pack_timing_and_hands(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
+    flaming_actions(); sword_attachment(); borrowed_feedback(); fixed_element_colors(); bought_pack_timing_and_hands(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); impact_frame_stays_on_contact(); sword_continuity_and_parry(); visual_feedback_regressions();
     gamepad_uses_frame_fallback(); menu_click_targets(); menu_state_routes(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();

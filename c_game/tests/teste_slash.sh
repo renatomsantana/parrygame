@@ -1,16 +1,19 @@
 #!/bin/sh
 # O pack comprado substitui o rastro antigo sem mudar contatos/quadros.
-# Arashi, Garfiel e os ecos do Oboro usam suas próprias armas.
+# Garfiel usa garras; Arashi volta ao slash branco original pintado de azul.
 set -eu
 cd "$(dirname "$0")/.."
 command -v xvfb-run >/dev/null 2>&1 || { echo 'teste_slash: pulado (sem xvfb-run)'; exit 0; }
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 for master in 3 5 10 13; do
+    seconds=12
+    # A primeira volta precisa chegar à postura do Arashi, depois da do Garfiel.
+    if [ "$master" -eq 13 ]; then seconds=30; fi
     for enabled in 0 1; do
         APARA_SEMENTE=11 APARA_LOG_IMPACTOS=1 APARA_LOG_POSTURAS=1 APARA_LOG_SLASH=1 APARA_SLASH="$enabled" APARA_REC_RAW=/dev/null \
             timeout 180 xvfb-run -a ./apara --demo --master "$master" --duel --fase 2 \
-            --rec "$tmp/q" 0 12 > "$tmp/$enabled.log" 2>&1
+            --rec "$tmp/q" 0 "$seconds" > "$tmp/$enabled.log" 2>&1
         sed -n '/^IMPACTO /p' "$tmp/$enabled.log" > "$tmp/$enabled.imp"
     done
     cmp "$tmp/0.imp" "$tmp/1.imp"
@@ -19,7 +22,7 @@ for master in 3 5 10 13; do
     on=$(sed -n 's/^SLASHES //p' "$tmp/1.log")
     off=$(sed -n 's/^SLASHES //p' "$tmp/0.log")
     [ "$off" -eq 0 ]
-    if [ "$master" -eq 3 ]; then [ "$on" -eq 0 ]; else [ "$on" -gt 0 ]; fi
+    if [ "$master" -eq 3 ] || [ "$master" -eq 10 ]; then [ "$on" -eq 0 ]; else [ "$on" -gt 0 ]; fi
     if [ "$master" -eq 13 ]; then
         # A fase 2 começa com terra: gesto, corte e aviso usam Daichi.
         sed -n '/^POSTURA /p' "$tmp/1.log" > "$tmp/feedback.log"
@@ -29,6 +32,6 @@ for master in 3 5 10 13; do
         ! grep -q 'fonte=oboro' "$tmp/feedback.log"
         grep -q 'quadro ATTACK_[123]_ECO_' "$tmp/1.imp"
     fi
-    echo "  ok: mestre $master — $count contatos idênticos; pack $on desenhos, nativo $off desenhos extras"
+    echo "  ok: mestre $master — $count contatos idênticos; garras $on desenhos, pack desligado $off"
 done
 echo 'teste_slash: substituição visível, assinatura da postura e julgamento preservados'

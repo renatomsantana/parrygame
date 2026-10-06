@@ -38,9 +38,17 @@ Resolução de arte: **320 × 180**, chão em y=150. Janela inicial: **1280 × 7
 
 Os fundos procedurais continuam disponíveis. Os PNGs do artista substituem o fundo de cada arena, com sua paleta preservada e camadas animáveis. Os sons sintetizados continuam como fallback; WAVs e músicas da equipe entram sem alterar o núcleo. Formatos e nomes: `ENTREGAS_EQUIPE.md`.
 
-Arashi usa os slashes de relâmpago do pack comprado `vfx_slash`, recoloridos em azul nas duas espadas visíveis. Garfiel usa as três garras laranja do mesmo pack; a garra de espera só recebe um segundo efeito nos golpes duplos. Camadas auxiliares `_clean_*` removem o rastro anterior e preservam os pixels de corpo e arma, para substituir o efeito sem empilhar dois cortes. O pivô acompanha a lâmina até o contato e a cauda acompanha o corpo, sem saltar para a pose de recuperação. `APARA_SLASH=0`, pack ausente ou camada ausente restauram os rastros nativos. Os demais aprendizes continuam com rastros nativos.
+As três posturas que antes se pareciam têm paletas fixas, compartilhadas pelo gerador e pelo jogo em `src/cores_posturas.h`:
 
-Oboro na fase 2 conserva suas animações de katana e as variantes `_ECO_<POSTURA>` inclusive nos contatos duplos, pesados e finais. Ao copiar Arashi ou Garfiel, usa os mesmos slashes comprados na sua única katana. Partículas, aura, aviso, gesto e som de corte consultam a mesma postura de origem do aprendiz. Jinshi conserva o aviso visual sem som. A fase 3 continua usando as ações da espada flamejante. Os PNGs originais, durações dos quadros, âncoras, hitboxes e julgamento permanecem iguais. As cópias de corpo ficam desligadas por padrão (`APARA_RASTRO=1` serve para comparação).
+| Mestre | Elemento | Corte e aura | Detalhes |
+|---|---|---|---|
+| Shizuku | Gelo | Branco gelado / ciano claro: `#f4fcff`, `#bfefff`, `#72cfeb` | Lascas claras |
+| Suiren | Mar / água | Turquesa: `#b6ffe8`, `#22bdaa`, `#096c75` | Gotas e ondas da mesma paleta |
+| Arashi | Tempestade / chuva | Cinza de nuvem: `#d9dfe8`, `#8c99ad`, `#3e526d` | Ramos de raio azul-elétrico `#497eff`, ponta clara `#f4f8ff` |
+
+Arashi voltou às poses de ataque e ao formato do slash branco original do Samurai #5. O gerador recolore esse corte em cinza e acrescenta dois ramos curtos ligados à borda, sem trocar o arco por um zigue-zague ou sobrepor o slash comprado. O aço mantém seus highlights claros. Garfiel usa as três garras laranja do pack comprado `vfx_slash`; a garra de espera só recebe um segundo efeito nos golpes duplos. Camadas auxiliares `_clean_*` removem o rastro anterior e preservam corpo e arma. `APARA_SLASH=0`, pack ausente ou camada ausente restauram o rastro nativo do Garfiel.
+
+Oboro na fase 2 conserva suas animações de katana e as variantes `_ECO_<POSTURA>` inclusive nos contatos duplos, pesados e finais. Seus ecos herdam as três paletas acima, os ramos elétricos do Arashi e as garras laranja do Garfiel, sempre na própria katana. Partículas, aura, aviso, gesto e som de corte consultam a postura de origem. Jinshi conserva o aviso visual sem som. A fase 3 continua usando as ações da espada flamejante. As tiras derivadas dos três aprendizes e dos respectivos ecos do Oboro com e sem máscara foram regeneradas; durações, número de quadros, âncoras, alcance configurado e julgamento permaneceram iguais. Os pontos físicos de arma do Arashi foram atualizados para as poses restauradas. As cópias de corpo ficam desligadas por padrão (`APARA_RASTRO=1` serve para comparação).
 
 O save é validado, guarda corrupção em `.bak` e troca um `.tmp` sem apagar o arquivo anterior primeiro. A vitória é registrada no golpe final, antes de qualquer clique. Opções têm arquivo separado. Os modos de teste não gravam o progresso.
 

@@ -47,6 +47,7 @@
 #endif
 
 #include "raylib.h"
+#include "../src/cores_posturas.h"
 
 /* Contas de ponto flutuante sem FMA, para sair igual em qualquer máquina. */
 #ifdef __clang__
@@ -770,6 +771,7 @@ typedef struct {
     const Row *cab_frente, *cab_costas; /* Samurai #5: cabelo novo (de frente e de costas), em volta do olho */
     int cab_balanco;                        /* quanto o cabelo acompanha o movimento: 1 curto e duro, 2 médio, 3 comprido */
     bool sem_rastro_pack;                   /* tira o corte de katana do pack (cores de rastro_pack longe do corpo) */
+    bool rastro_original;                   /* conserva o formato do slash do pack */
     bool rastro_pack_solto;                 /* o rastro do pack tem cor própria: sai inteiro (menos as lâminas) e o
                                                buraco que ele deixa no corpo é tapado com a cor em volta */
     Remonta remonta[3];
@@ -1035,7 +1037,7 @@ static Char CHARS[] = {
      .destaque = {HEX(0x9ef0ff), HEX(0x3aa6d8)}, .obi = HEX(0x3aa6d8),
      .saya = HEX(0xe8f4ff), .cabo = HEX(0x3aa6d8),
      .lamina = {HEX(0xffffff), HEX(0xbfe8ff)},
-     .rastro = {HEX(0xffffff), HEX(0xc8f0ff), HEX(0x7ec8f0)}, .elemento = EL_GELO, .largura = -1,
+     .rastro = {{COR_GELO_CLARA}, {COR_GELO_MEDIA}, {COR_GELO_ESCURA}}, .elemento = EL_GELO, .largura = -1,
      .especial = SP_ESTOCADA, .efeito = FX_CRISTAL,
      /* o florete fica na mão em todos os quadros (em guarda, para baixo); os golpes
         são estocadas retas com rastro fino: a do meio e a alta saem do arremesso do
@@ -1144,7 +1146,7 @@ static Char CHARS[] = {
      .destaque = {HEX(0x3cf0d8), HEX(0x14a8a0)}, .obi = HEX(0x3cf0d8),
      .sem_saya = true, .cabo = HEX(0x14a8a0),
      .lamina = {HEX(0xd8fffa), HEX(0x3cf0d8)},
-     .rastro = {HEX(0xe0fffc), HEX(0x5cf0e0), HEX(0x1c9cc8)}, .elemento = EL_AGUA, .largura = -1,
+     .rastro = {{COR_MAR_CLARA}, {COR_MAR_MEDIA}, {COR_MAR_ESCURA}}, .elemento = EL_AGUA, .largura = -1,
      .especial = SP_ESTOCADA, .efeito = FX_ONDA,
      /* golpes de lança: a estocada (e a alta) sai do arremesso do pack, com o braço
         esticado; a varrida baixa, do corte baixo (ATTACK_3) sem o rastro de katana */
@@ -1173,12 +1175,12 @@ static Char CHARS[] = {
      .destaque = {HEX(0x3ca8ff), HEX(0x1a5ad0)}, .obi = HEX(0x3ca8ff),
      .saya = HEX(0x111219), .cabo = HEX(0x1a5ad0),
      .lamina = {HEX(0xeef8ff), HEX(0x5cb4ff)},
-     .rastro = {HEX(0xf4faff), HEX(0x7cc8ff), HEX(0x2a6cf0)}, .elemento = EL_RAIO,
+     .rastro = {{COR_NUVEM_CLARA}, {COR_NUVEM_MEDIA}, {COR_NUVEM_ESCURA}}, .elemento = EL_RAIO,
      .especial = SP_INVESTIDA, .efeito = FX_RAIO,
      /* corpo do Samurai #5 (já com as duas espadas): o verde vira preto, cinto e botas em azul
         elétrico, cabelo prateado e olhos de raio */
-     /* golpes: sem a meia-lua do pack, um raio em zigue-zague no caminho de cada espada */
-     .golpe = GP_RAIO, S5_REMONTA,
+     /* Slash branco original do Samurai #5, recolorido em azul; sem remontagem ou arco extra. */
+     .rastro_original = true,
      .sem_pano = true, .pack = "samurai5", .cab_frente = CAB_ARASHI_FRENTE, .cab_costas = CAB_ARASHI_COSTAS, .cab_balanco = 3, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x3a4056)}, {HEX(0x134c4c), HEX(0x252a3a)}, {HEX(0x0c2e44), HEX(0x14161f)},
@@ -1581,7 +1583,7 @@ static void paint_smear(Canvas *cv, const Char *ch, const char *anim, int idx) {
             set_rgb(cv, x, y, in_set(s->c[y][x], "Lg") ? ch->rastro[2] : inner ? ch->rastro[0] : ch->rastro[1]);
         }
     Element el = ch->elemento;
-    if (el == EL_NONE) return;
+    if (el == EL_NONE || ch->rastro_original) return;
     /* Partículas soltas perto da borda de fora do rastro. */
     mask_dilate(ring, sm, 2, false);
     for (int y = 0; y < CH; y++)
@@ -1591,7 +1593,7 @@ static void paint_smear(Canvas *cv, const Char *ch, const char *anim, int idx) {
             if (el == EL_FOGO && r < 0.07) {
                 cv_put(cv, x, y, r < 0.035 ? (Rgb){255, 120, 30} : (Rgb){255, 200, 70});
             } else if (el == EL_AGUA && r < 0.05) {
-                cv_put(cv, x, y, (Rgb){150, 230, 255});
+                cv_put(cv, x, y, (Rgb){COR_MAR_MEDIA});
             } else if (el == EL_GELO && r < 0.05) {
                 /* lasca de gelo: um ponto branco e, às vezes, a cruz de um cristal */
                 cv_put(cv, x, y, (Rgb){236, 250, 255});
@@ -1688,6 +1690,7 @@ static void remove_smear_px(Canvas *cv, int x, int y) {
 /* O formato do rastro conta a arma: adaga corta duplo, garra deixa três
    riscos, arma pesada abre um rastro grosso, duas espadas deixam um eco. */
 static void smear_style(Canvas *cv, const Char *ch) {
+    if (ch->rastro_original) return;
     static int d[CH][CW];
     const Seg *s = cv->seg;
     WeaponKind k = ch->arma.kind;
@@ -1722,6 +1725,27 @@ static void smear_style(Canvas *cv, const Char *ch) {
                 int ex = x - 3, ey = y + 3;
                 if (cv_ok(ex, ey) && cv->a[ey][ex].a == 0) cv_put(cv, ex, ey, ch->rastro[2]);
             }
+    }
+}
+
+static void fx_put_clean(Canvas *cv, int x, int y, Rgb c);
+/* Dois ramos curtos saem de pixels da borda do slash original. Sem arco novo,
+ * sem pintar por cima do corpo/aço e sem raio quando a tira não mostra corte. */
+static void slash_lightning(Canvas *cv) {
+    int rightX = -1, rightY = -1, topX = -1, topY = CH;
+    for (int y = 1; y < CH - 1; y++) for (int x = 1; x < CW - 1; x++) {
+        if (!cv->a[y][x].a || cv->tag[y][x] != T_WEAPON || cv->wpx[y][x] || cv->seg->lab[y][x] != SMEAR) continue;
+        if (!cv->a[y][x + 1].a && x > rightX) { rightX = x; rightY = y; }
+        if (!cv->a[y - 1][x].a && y < topY) { topX = x; topY = y; }
+    }
+    for (int branch = 0; branch < 2; branch++) {
+        int x = branch ? topX : rightX, y = branch ? topY : rightY;
+        if (x < 0 || y < 0 || y >= CH) continue;
+        for (int j = 1; j <= 6; j++) {
+            int nx = x + (branch ? ((j / 2) % 2) : j);
+            int ny = y + (branch ? -j : ((j / 2) % 2));
+            fx_put_clean(cv, nx, ny, j == 6 ? (Rgb){COR_RAIO_LUZ} : (Rgb){COR_RAIO_AZUL});
+        }
     }
 }
 
@@ -2713,7 +2737,7 @@ static void blade_fx(Canvas *cv, const Char *ch, const char *anim, int idx) {
                 if (r < 0.12) {
                     static const int d[4][2] = {{0, -2}, {1, -1}, {-1, 1}, {0, 2}};
                     int k = (int)(r * 100) % 4, dx = d[k][0], dy = d[k][1];
-                    if (cv_is_empty(cv, x + dx, y + dy)) cv_put(cv, x + dx, y + dy, (Rgb){150, 235, 255});
+                    if (cv_is_empty(cv, x + dx, y + dy)) cv_put(cv, x + dx, y + dy, (Rgb){COR_MAR_MEDIA});
                 }
             }
         }
@@ -4231,9 +4255,9 @@ static void body_aura(Canvas *cv, const Char *ch, const Ctx *ctx, bool only_dust
             break;
         }
         case EL_AGUA:
-            glow(cv, ctx, 0.14 * pw, ymid, (Rgb){150, 235, 255}, (Rgb){60, 170, 230}, false);
+            glow(cv, ctx, 0.14 * pw, ymid, (Rgb){COR_MAR_MEDIA}, (Rgb){COR_MAR_ESCURA}, false);
             particles(cv, ctx, "bolha", (int)(4 * pw), 10, bx0, bx1, ymid, by1, 0, -1.2, 0.8,
-                      (Rgb){200, 250, 255}, (Rgb){120, 220, 250}, (Rgb){60, 160, 220}, 1);
+                      (Rgb){COR_MAR_CLARA}, (Rgb){COR_MAR_MEDIA}, (Rgb){COR_MAR_ESCURA}, 1);
             break;
         case EL_RAIO: {
             glow(cv, ctx, 0.1 * pw, ymid, (Rgb){170, 220, 255}, (Rgb){60, 130, 255}, false);
@@ -4609,7 +4633,7 @@ static void special_fx(Canvas *cv, const Char *ch, SpecialFx fx, int ax, int rdx
             }
             for (int k = 0; k < 5; k++) {
                 double ang = -1.2 - k * 0.2;
-                fx_px(cv, tx + (int)(cos(ang) * (r + 3)), ty + (int)(sin(ang) * (r + 3)) + age, (Rgb){200, 250, 255});
+                fx_px(cv, tx + (int)(cos(ang) * (r + 3)), ty + (int)(sin(ang) * (r + 3)) + age, (Rgb){COR_MAR_CLARA});
             }
             break;
         }
@@ -5535,6 +5559,7 @@ static void round_top(Canvas *cv) {
 
 static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ctx, Canvas *cv) {
     const char *anim = ctx->anim;
+    bool originalSlash = ch->rastro_original && (strstr(anim, "ATTACK") || !strcmp(anim, "ESPECIAL"));
     int idx = ctx->idx;
     memcpy(cv->a, f->p, sizeof cv->a);
     cv->seg = seg;
@@ -5585,11 +5610,12 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         cv->pen = T_FX;
         paint_smear(cv, ch, anim, idx);
         smear_style(cv, ch);
+        if (originalSlash && ch->elemento == EL_RAIO) slash_lightning(cv);
         /* o rastro preto do Karasu (e o do eco dele no Oboro, que herda o rastro) ganha o fio cinza */
         if (ch->rastro[0].r == 0x34 && ch->rastro[0].g == 0x34 && ch->rastro[0].b == 0x3e) trail_rim(cv, ch);
         /* a aura na arma vem depois dos cortes de vento e de lua: o halo tem a cor do rastro e
            mudaria o desenho (e o alcance) do corte */
-        if (!cor7(ch)) aura(cv, ch, ctx);
+        if (!cor7(ch) && !originalSlash) aura(cv, ch, ctx);
         if (ch->elemento == EL_VENTO) wind_slash(cv, ch, ctx);
         if (ch->elemento == EL_LUA) {
             /* o corte em lua sempre contou o pó de prata da aura do corpo (branco, a cor do
@@ -5604,7 +5630,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
                     for (int x = 0; x < CW; x++)
                         if (cv->tag[y][x] == T_FX && !a0[y][x].a && cv->a[y][x].a) cv_clear(cv, x, y);
         }
-        if (cor7(ch)) aura(cv, ch, ctx);
+        if (cor7(ch) && !originalSlash) aura(cv, ch, ctx);
     }
     for (int i = 0; i < seg->nerase; i++)
         for (int y = seg->erase[i][1] < 0 ? 0 : seg->erase[i][1]; y <= seg->erase[i][3] && y < CH; y++)
@@ -6885,13 +6911,13 @@ static const struct { const char *id; Rgb c[3]; } COR7[] = {
     {"daichi", {HEX(0xfaf0d8), HEX(0xdcc49a), HEX(0xa88c64)}},
     {"genbu", {HEX(0x6aa85a), HEX(0x2e6a2a), HEX(0x163e18)}},
     {"raizo", {HEX(0xfffac8), HEX(0xffe030), HEX(0xc8a010)}},
-    {"shizuku", {HEX(0xffffff), HEX(0xc8ecff), HEX(0x80c4f0)}},
+    {"shizuku", {{COR_GELO_CLARA}, {COR_GELO_MEDIA}, {COR_GELO_ESCURA}}},
     {"garfiel", {HEX(0xffe4c0), HEX(0xff8c20), HEX(0xc05010)}},
-    {"suiren", {HEX(0xc8dcff), HEX(0x2c5cd0), HEX(0x142c80)}},
+    {"suiren", {{COR_MAR_CLARA}, {COR_MAR_MEDIA}, {COR_MAR_ESCURA}}},
     {"karasu", {HEX(0x34343e), HEX(0x1c1c24), HEX(0x0c0c10)}},
     {"hayate", {HEX(0xf0ffe8), HEX(0xa8f0a0), HEX(0x58c060)}},
     {"enjin", {HEX(0xffd0c0), HEX(0xff3020), HEX(0xa00c10)}},
-    {"arashi", {HEX(0xf4faff), HEX(0x7cc8ff), HEX(0x2a6cf0)}},
+    {"arashi", {{COR_NUVEM_CLARA}, {COR_NUVEM_MEDIA}, {COR_NUVEM_ESCURA}}},
     {"yoru", {HEX(0xf6e6ff), HEX(0xb070ff), HEX(0x6a2cc8)}},
     {"jinshi", {HEX(0xffffff), HEX(0xe6ecff), HEX(0xb8c4ec)}},   /* o branco que ele já tinha: o alcance mede o rastro por estas cores */
 };
@@ -7236,7 +7262,7 @@ int main(int argc, char **argv) {
                 }
                 for (int y = 0; y < CH; y++)
                     for (int x = 0; x < CW; x++) sil[k % 3][y][x] = cv.tag[y][x] == T_BODY && cv.a[y][x].a;
-                if (ci >= 0 && hr) special_fx(&cv, ch, ch->efeito, ax, rdx, ty, ay, k - ci);
+                if (ci >= 0 && hr && !ch->rastro_original) special_fx(&cv, ch, ch->efeito, ax, rdx, ty, ay, k - ci);
                 weapon_point(r, k, &cv, ax, ay);
                 if (replacement_layer(ch, "ESPECIAL")) clean_frame(k, &cv, ch);
                 memcpy(r->frames[k].p, cv.a, sizeof cv.a);
@@ -7468,6 +7494,7 @@ int main(int argc, char **argv) {
                 /* a espada é a dele; só a aura, o rastro e o brilho do elemento são do aprendiz */
                 Char tmp = *ch;
                 tmp.elemento = ap->elemento;
+                tmp.rastro_original = ap->rastro_original;
                 memcpy(tmp.rastro, ap->rastro, sizeof tmp.rastro);
                 tmp.destaque[0] = ap->destaque[0];
                 tmp.destaque[1] = ap->destaque[1];

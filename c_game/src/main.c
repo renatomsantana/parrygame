@@ -35,6 +35,7 @@
 #include "arenas.h"
 #include "audio.h"
 #include "core.h"
+#include "cores_posturas.h"
 #include "desempenho.h"
 #include "entrada.h"
 #include "entrada_plat.h"
@@ -780,9 +781,9 @@ static int echo_of(const Move *mv) {
 
 /* Uma identidade por postura, compartilhada pelo aprendiz e pelo eco do Oboro. */
 static const Color postureColors[ROSTER_SIZE] = {
-    {218,178,116,255}, {64,122,83,255}, {207,175,93,255}, {170,229,252,255},
+    {218,178,116,255}, {64,122,83,255}, {207,175,93,255}, {COR_GELO_MEDIA,255},
     {249,139,62,255}, {91,94,105,255}, {136,230,167,255}, {237,77,52,255},
-    {51,106,191,255}, {89,160,251,255}, {164,99,203,255}, {238,239,249,255},
+    {COR_MAR_MEDIA,255}, {COR_NUVEM_MEDIA,255}, {164,99,203,255}, {238,239,249,255},
     {181,83,211,255}
 };
 static const float posturePitch[ROSTER_SIZE] = {
@@ -1276,11 +1277,11 @@ static MoveLook strike_look(void) {
     return move_contact_look(duel_move(&G.duel), G.duel.comboStrike);
 }
 
-/* Somente Arashi/Garfiel (e seus ecos). As demais posturas continuam nativas. */
+/* Garras do Garfiel e seu eco. Arashi usa o slash original recolorido no PNG. */
 static bool bought_slash_available(const SprAnim *a) {
     const MasterProfile *source = feedback_master();
     return G.packSlashes && a && a->cleanTex.id && source &&
-        (source->id == 5 || source->id == 10) && spr_fx("slash");
+        source->id == 5 && spr_fx("slash");
 }
 static bool bought_weapon(bool other, Vector2 *at) {
     const SprPlayer *p = &G.bossS.pl;
@@ -1298,17 +1299,12 @@ static void bought_slash_begin(void) {
     if (!bought_slash_available(G.bossS.strike)) return;
     DuelTimeline timeline = duel_timeline(&G.duel);
     if (!timeline.active) return;
-    int source = feedback_master()->id;
-    MoveLook look = strike_look();
-    int row = source == 5 ? 3 : look == LOOK_HEAVY ? 1 :
-        (look == LOOK_HIGH || look == LOOK_JUMP || look == LOOK_WARP) ? 7 : 10;
-    int peak = row == 3 || row == 1 ? 2 : row == 7 ? 0 : 1;
-    G.cut = (BoughtSlash){.sheet = spr_fx("slash"), .row = row, .peak = peak,
-        .scale = source == 5 ? .42f : .48f,
+    G.cut = (BoughtSlash){.sheet = spr_fx("slash"), .row = 3, .peak = 2,
+        .scale = .42f,
         .start = fmax(timeline.launch, timeline.strike - AJ_PACK_SLASH_ANTES),
         .contact = timeline.strike, .end = timeline.strike + AJ_PACK_SLASH_CAUDA,
         .flip = G.boss.faceLeft,
-        .second = !G.m->isBigBoss && (source == 10 || duel_strike_dual(&G.duel))};
+        .second = !G.m->isBigBoss && duel_strike_dual(&G.duel)};
 }
 static void bought_slash_contact(void) {
     if (!G.cut.sheet) return;
@@ -1752,7 +1748,7 @@ static bool golpe_do_raio(void) {
 static void raio_acende(Raio *r) {
     r->espera = 0;
     r->vida = RAIO_VIDA;
-    const Color claro = {225, 238, 255, 255}, azul = {120, 170, 255, 255};
+    const Color claro = {COR_RAIO_LUZ,255}, azul = {COR_RAIO_AZUL,255};
     fx_burst(&G.fx, P_SPARK, (Vector2){r->x, GROUND_LOW - 1}, r->principal ? 7 : 4, 75, 1.5f, -1.57f, claro, azul);
     if (r->principal) fx_burst(&G.fx, P_DUST, (Vector2){r->x, GROUND_LOW - 1}, 5, 35, 1.2f, -1.57f, (Color){170, 180, 200, 140}, (Color){100, 108, 130, 110});
 }
@@ -1797,7 +1793,7 @@ static void raios_update(float dt) {
     if (G.paralisiaFaisca <= 0 && G.paralisia > 0) {
         G.paralisiaFaisca = 0.07f;
         const Vector2 at = {G.ren.x + G.ren.offsetX + frand(-6, 6), GROUND_LOW - frand(8, 38)};
-        fx_burst(&G.fx, P_SPARK, at, 2, 40, 3.14f, 0, (Color){225, 238, 255, 255}, (Color){120, 170, 255, 255});
+        fx_burst(&G.fx, P_SPARK, at, 2, 40, 3.14f, 0, (Color){COR_RAIO_LUZ,255}, (Color){120, 170, 255, 255});
     }
 }
 
@@ -1861,7 +1857,7 @@ static void tell_particles(int id, Vector2 tip, Vector2 mid, Vector2 feet) {
         case 2: /* Genbu: casco de pedra */
             fx_burst(&G.fx, P_SHARD, feet, 7, 24, 0.70f, -1.57f, (Color){165, 176, 150, 210}, (Color){108, 123, 106, 190}); break;
         case 4: /* Shizuku: gelo */
-            fx_burst(&G.fx, P_SHARD, tip, 8, 32, 0.55f, -1.57f, (Color){218, 245, 255, 230}, (Color){132, 196, 230, 210}); break;
+            fx_burst(&G.fx, P_SHARD, tip, 8, 32, 0.55f, -1.57f, (Color){COR_GELO_CLARA,230}, (Color){COR_GELO_ESCURA,210}); break;
         case 5: /* Garfiel: garras */
             fx_burst(&G.fx, P_SPARK, tip, 8, 46, 0.55f, 3.14f, (Color){247, 224, 178, 225}, (Color){205, 176, 116, 200}); break;
         case 6: /* Karasu: penas */
@@ -1871,9 +1867,9 @@ static void tell_particles(int id, Vector2 tip, Vector2 mid, Vector2 feet) {
         case 8: /* Enjin: brasas */
             fx_burst(&G.fx, P_EMBER, tip, 13, 32, 0.8f, -1.57f, (Color){255, 190, 80, 240}, (Color){255, 90, 30, 220}); break;
         case 9: /* Suiren: gotas do mar */
-            fx_burst(&G.fx, P_GEM, tip, 9, 36, 0.7f, -1.57f, (Color){170, 230, 240, 220}, (Color){90, 170, 220, 200}); break;
+            fx_burst(&G.fx, P_GEM, tip, 9, 36, 0.7f, -1.57f, (Color){COR_MAR_CLARA,220}, (Color){COR_MAR_MEDIA,200}); break;
         case 10: /* Arashi: faíscas elétricas */
-            fx_burst(&G.fx, P_SPARK, tip, 11, 65, 0.7f, 3.14f, (Color){222, 238, 255, 240}, (Color){117, 170, 255, 220}); break;
+            fx_burst(&G.fx, P_SPARK, tip, 11, 65, 0.7f, 3.14f, (Color){COR_RAIO_LUZ,240}, (Color){COR_RAIO_AZUL,220}); break;
         case 11: /* Yoru: lascas discretas fora do apagão */
             fx_burst(&G.fx, P_SHARD, feet, 7, 27, 0.65f, -1.57f, (Color){112, 106, 128, 170}, (Color){62, 58, 83, 150}); break;
         case 12: /* Jinshi: luar */
@@ -3001,7 +2997,7 @@ static void desenha_choque(const Rig *r, const Fighter *f) {
     const SprAnim *a = f->pl.anim;
     if (!a) return;
     const float fim = clampf(G.paralisia / 0.25f, 0, 1);
-    const Color cor = ((int)(G.time * 30) & 1) ? (Color){235, 245, 255, 255} : (Color){110, 160, 255, 255};
+    const Color cor = ((int)(G.time * 30) & 1) ? (Color){235, 245, 255, 255} : (Color){COR_RAIO_AZUL,255};
     SprDraw o = {r->faceLeft, sprite_breath(r, f), true, fadec(cor, 0.55f * G.paralisiaForca * fim)};
     spr_draw(f->set, a, f->pl.frame, (Vector2){r->x + r->offsetX, r->y - r->hopY}, o);
 }
@@ -3024,10 +3020,10 @@ static void desenha_raios(void) {
         s = s * 1664525u + 1013904223u;
         const float lado = (s >> 16) & 1 ? 1.0f : -1.0f;
         const float corpo = r->principal ? 2.0f : 1.0f;                       /* o raio que cai em quem aparou ou apanhou é o mais grosso */
-        for (int j = 1; j <= N; j++) DrawLineEx(pt[j - 1], pt[j], corpo + 2, fadec((Color){110, 160, 255, 255}, 0.34f * k));  /* o brilho em volta */
-        if (r->principal) DrawLineEx(pt[4], (Vector2){pt[4].x + lado * 15, pt[4].y + 20}, 1, fadec((Color){170, 205, 255, 255}, 0.8f * k));   /* o ramo */
-        for (int j = 1; j <= N; j++) DrawLineEx(pt[j - 1], pt[j], corpo, fadec((Color){240, 247, 255, 255}, k));          /* o fio */
-        DrawEllipse((int)r->x, GROUND_LOW, 4 + 7 * k, 1.5f + k, fadec((Color){225, 238, 255, 255}, 0.7f * k));
+        for (int j = 1; j <= N; j++) DrawLineEx(pt[j - 1], pt[j], corpo + 2, fadec((Color){COR_RAIO_AZUL,255}, 0.34f * k));  /* o brilho em volta */
+        if (r->principal) DrawLineEx(pt[4], (Vector2){pt[4].x + lado * 15, pt[4].y + 20}, 1, fadec((Color){COR_RAIO_AZUL,255}, 0.8f * k));   /* o ramo */
+        for (int j = 1; j <= N; j++) DrawLineEx(pt[j - 1], pt[j], corpo, fadec((Color){COR_RAIO_LUZ,255}, k));          /* o fio */
+        DrawEllipse((int)r->x, GROUND_LOW, 4 + 7 * k, 1.5f + k, fadec((Color){COR_RAIO_LUZ,255}, 0.7f * k));
     }
 }
 
