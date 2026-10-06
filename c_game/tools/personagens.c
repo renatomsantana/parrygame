@@ -6947,7 +6947,10 @@ static Rgb cor_pack(const Char *ch, Rgb de) {
 }
 
 static void roupa_postura(Canvas *cv, const Char *ch) {
-    if (!cor7(ch) && !ch->ecos) return;
+    /* Estes mantêm o figurino anterior, independente da cor dos efeitos.
+       Oboro (incluindo máscara e ecos) também não recebe recoloração. */
+    if (!cor7(ch) || !strcmp(ch->id, "karasu") || !strcmp(ch->id, "garfiel") ||
+        !strcmp(ch->id, "yoru") || !strcmp(ch->id, "jinshi")) return;
     const Rgb *paleta = ch->tecido;
     Rgb camisa[] = {tom_tecido(paleta[0], 90), tom_tecido(paleta[1], 85),
                     tom_tecido(paleta[2], 80), tom_tecido(paleta[2], 55)};
@@ -6972,9 +6975,6 @@ static void roupa_postura(Canvas *cv, const Char *ch) {
         PACK(0x571c27, paleta[2]); PACK(0x891e2b, paleta[1]);
     } else if (!strcmp(ch->pack, "espadao")) {
         PACK(0x3d3d3d, camisa[1]); PACK(0x272727, camisa[2]); PACK(0x131313, camisa[3]);
-    } else if (!strcmp(ch->pack, "demon")) {
-        /* O manto azul vira violeta; máscara e armadura conservam a arte. */
-        PACK(0x0069aa, camisa[1]); PACK(0x00396d, camisa[2]); PACK(0x0c2e44, camisa[3]);
     }
     TECIDO(ch->destaque[0], paleta[1]);
     TECIDO(ch->destaque[1], paleta[2]);
