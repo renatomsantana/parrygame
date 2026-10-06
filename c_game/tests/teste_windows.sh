@@ -66,5 +66,11 @@ if cmp -s "$T/tabela_linux.txt" "$T/tabela_windows.txt"; then
 else
     echo "teste_windows: a tabela da curva difere entre Windows e Linux"; diff "$T/tabela_linux.txt" "$T/tabela_windows.txt" | head -10; FALHAS=$((FALHAS + 1))
 fi
+# o jogo inteiro, se já foi compilado para Windows (make apara OS=Windows_NT CC=..., como no tests/Dockerfile.windows): os arquivos do jogador
+if [ -f ./apara.exe ]; then
+    sh tests/teste_dados_windows.sh || FALHAS=$((FALHAS + 1))
+else
+    echo "  (sem ./apara.exe, o teste do progresso e das opções no jogo inteiro (tests/teste_dados_windows.sh) fica para quando ele existir)"
+fi
 if [ "$FALHAS" -eq 0 ]; then echo "teste_windows: tudo certo"; else echo "teste_windows: $FALHAS falha(s)"; fi
 exit "$FALHAS"

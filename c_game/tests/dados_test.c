@@ -47,6 +47,8 @@ static int le(const char *path, char *out, size_t max) {
 
 static bool e_pasta(const char *path) { struct stat st; return stat(path, &st) == 0 && S_ISDIR(st.st_mode); }
 
+/* O caminho de `nome` dentro da pasta de teste. Vale só até a próxima chamada ou duas (um anel de 8 buffers): quem precisa
+ * guardar o caminho copia para um vetor (`char c[512]`), senão uma chamada mais adiante troca o caminho debaixo dele. */
 static const char *sub(const char *nome) {
     static char buf[8][512];
     static int i = 0;
@@ -59,10 +61,11 @@ static const char *sub(const char *nome) {
 
 static void teste_pastas(void) {
     char erro[200] = "";
-    const char *fundo = sub("a/b/c");
+    char fundo[512];
+    snprintf(fundo, sizeof fundo, "%s", sub("a/b/c"));
     CHECK(gravar_pasta(fundo, erro, sizeof erro) && e_pasta(fundo), "cria a pasta e as de cima (%s)", erro);
     CHECK(gravar_pasta(fundo, erro, sizeof erro), "uma pasta que já existe não é erro");
-    char com_barra[300];
+    char com_barra[520];
     snprintf(com_barra, sizeof com_barra, "%s/", fundo);
     CHECK(gravar_pasta(com_barra, erro, sizeof erro), "uma barra no fim vale a mesma pasta");
     char dupla[300];
@@ -109,7 +112,8 @@ static void teste_ler_pequeno(void) {
 
 static void teste_atomico(void) {
     char erro[200] = "", lido[100];
-    const char *c = sub("grava.txt");
+    char c[512];
+    snprintf(c, sizeof c, "%s", sub("grava.txt"));
     CHECK(gravar_atomico(c, "um\n", 3, erro, sizeof erro), "grava (%s)", erro);
     CHECK(le(c, lido, sizeof lido) == 3 && strcmp(lido, "um\n") == 0, "o conteúdo é o gravado");
     CHECK(!gravar_existe(sub("grava.txt.tmp")), "sem .tmp sobrando");
@@ -354,7 +358,8 @@ static void teste_opcoes(void) {
 
     /* arquivo: gravar, ler, estragado, ilegível */
     char erro[200] = "", aviso[300] = "", lido[200];
-    const char *c = sub("apara_opcoes.txt");
+    char c[512];
+    snprintf(c, sizeof c, "%s", sub("apara_opcoes.txt"));
     Opcoes b = {-1, -1};
     CHECK(opcoes_ler(c, &b, aviso, sizeof aviso) == OPCOES_NAO_EXISTE, "sem arquivo: a primeira vez não é erro");
     o = (Opcoes){60, 35};

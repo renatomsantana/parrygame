@@ -11,6 +11,7 @@ MinGW-w64 (o compilador de Windows) e Wine (que roda os `.exe`): **não houve Wi
 | Testes (`core_test`, `entrada_test`, `save_test`, `fonte_test`, `desempenho_test`, fuzz, `robos`, `curva`) | compilam e passam como programas Windows no Wine, com os **mesmos números do Linux**: 12066 verificações, 20280 golpes com janela viável, 7775 cliques no hitstop; a tabela da curva sai idêntica, número por número (`make teste-windows`) |
 | Carimbo do clique (`src/entrada_win.c`) | Raw Input numa thread própria. No Wine, com cliques e Espaço injetados pelo XTest: 12 de 12 cliques, 12 de 12 Espaços e 10 de 10 Espaços repetidos viram 12, 12 e 10 carimbos, com intervalo igual ao injetado (mediana 0,3 a 0,7 ms). No jogo inteiro (`apara.exe`), 30 cliques deram 30 carimbos. **Não conferido em Windows de verdade**: lá, o teste é `apara --carimbo` (o atraso do poll em relação ao clique tem de dar uns milissegundos, e não 0) |
 | O jogo inteiro (`apara.exe`) | compila e liga sem nenhum aviso (MinGW) com os arquivos da junção com a `mac-integracao`, e abre e luta no Wine (assets, duelo, relatório `APARA_PERF`: 195 quadros, lógica de no máximo 0,06 ms). As duas correções que ele pedia (abaixo) já estão no `main.c` e no `katana3d.c` |
+| Progresso e opções na pasta do usuário (`gravar.c`, `pasta_dados.c`, `opcoes.c`) | `dados_test` (163 verificações) passa como programa Windows no Wine, e o **`apara.exe` da versão atual** (compilado com o MinGW, sem nenhum aviso, só DLLs do sistema: `KERNEL32`, `USER32`, `GDI32`, `OPENGL32`, `WINMM`, `SHELL32`, `msvcrt`) passa em `tests/teste_dados_windows.sh` no Wine, num prefixo novo: a pasta `%LOCALAPPDATA%\Apara` nasce, o save e as opções que ficavam ao lado do `.exe` são copiados para lá (o original fica), um save antigo estragado não é copiado, `APARA_DADOS=C:\...` com as pastas de cima, e a calibração grava as opções. **Não conferido em Windows de verdade**: uma instalação em `Program Files` (o Wine não aplica as permissões de pasta) e nomes de usuário com caracteres fora da página de código |
 | Áudio, vsync, 144 Hz, gamepad, instalador | não conferidos (o Wine do teste não tinha placa de som nem GPU) |
 
 ## Por que o carimbo importa tanto
@@ -28,7 +29,7 @@ Dois arquivos do jogo não compilavam para Windows. Estavam num patch porque sã
 1. **`main.c`**: usava `sys/resource.h` e `getrusage` no relatório do `APARA_PERF`. Usa `perf_cpu_do_processo()` (em `desempenho.c`: `getrusage` no POSIX, `GetProcessTimes` no Windows).
 2. **`katana3d.c`**: o `<GL/gl.h>` do Windows puxa o `windows.h`, que choca com os nomes do raylib (`Rectangle`, `CloseWindow`, `ShowCursor`). No Windows declara só o `glClear` e o `GL_DEPTH_BUFFER_BIT` que o arquivo usa (a `opengl32.dll` exporta `glClear`).
 
-**Regra daqui para frente: o `windows.h` só entra em arquivos que não incluem o `raylib.h`** (hoje: `entrada_win.c` e `desempenho.c`); o resto do jogo pede ao sistema por uma função desses arquivos.
+**Regra daqui para frente: o `windows.h` só entra em arquivos que não incluem o `raylib.h`** (hoje: `entrada_win.c`, `desempenho.c` e `gravar.c`); o resto do jogo pede ao sistema por uma função desses arquivos.
 
 ## Compilar no Windows
 
@@ -72,4 +73,5 @@ O `main.c` compila sem nenhum aviso para Windows.
 - As ferramentas `tools/gravar_video.sh` e os testes de jogo (`teste_*.sh`, xvfb, XTest) são do Linux.
 - A resolução do relógio do Windows (15,6 ms por padrão) não afeta o núcleo (ele conta em ms pelo carimbo, em `QueryPerformanceCounter`), mas o
   ritmo dos quadros depende do vsync do driver: confira com `APARA_PERF=10 apara.exe --demo --master 1 --duel`.
-- O `salvar.c` já tem os caminhos de `_WIN32` (gravação atômica); o `save_test` passa no Windows (81 verificações).
+- A gravação atômica (`gravar.c`: `.tmp`, `_commit`, `MoveFileExA` com substituição, sem apagar o arquivo antigo antes) e a pasta de dados têm os caminhos de `_WIN32`; o `save_test` (85 verificações) e o `dados_test` (163) passam no Windows. O `windows.h` fica só em `gravar.c` e `desempenho.c`/`entrada_win.c`, nenhum deles inclui o `raylib.h`.
+- O `tests/teste_windows.sh` roda o `tests/teste_dados_windows.sh` quando existe um `./apara.exe` (o `tests/Dockerfile.windows` o compila antes): `APARA_EXE=caminho tests/teste_dados_windows.sh` roda só ele.
