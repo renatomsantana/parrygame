@@ -582,6 +582,25 @@ personagem em `CHARS` e conferir a `deteccao_<nome>.png`.
 
 O Hanzo de barba branca (pack B) já está encaixado em `_packs/hanzo/`.
 
+## Roupas e paletas dos cortes
+
+As roupas e faixas dos aprendizes seguem a família de cores de `COR7` em
+`tools/personagens.c`. `roupa_postura` deriva tons de tecido e sombras dessa
+paleta e recolore somente o corpo, depois de montar o quadro. A leitura do
+golpe continua usando as cores anteriores, para uma troca de roupa não mudar
+o recorte do slash, a cintura ou o arco lunar. Pele, cabelo e lâminas mantêm
+suas cores.
+
+Shizuku usa branco/ciano de gelo, Suiren turquesa/verde água, e Arashi cinza
+de nuvem; os raios do Arashi continuam azul/branco. Jinshi passa a usar
+branco/prata e Garfiel laranja. Oboro mantém o tecido violeta nos ecos: só
+os efeitos herdam a postura roubada. Kojiro e Hanzo conservam suas roupas.
+
+Na verificação de 05/10, as 286 tiras comparadas mantiveram dimensões e
+transparência idênticas; os 17 manifestos em uso ficaram intactos. Os PNGs
+recoloridos foram copiados das pastas `*_gerado` para as pastas em uso,
+preservando os manifestos com tempos, âncoras e pontos das armas.
+
 ## Arte e repositório
 
 O repositório é público e as pranchas são do pack pago da Mattz Art, então os

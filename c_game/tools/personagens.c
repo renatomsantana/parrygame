@@ -739,6 +739,7 @@ typedef struct {
     Rgb chapeu_cor[3];
     const char *rosto;   /* debaixo do chapéu */
     Rgb camisa[4], hakama[5], pele[3], cabelo[3];
+    Rgb tecido[3];                          /* paleta fixa da roupa, mesmo quando Oboro troca o elemento */
     Rgb saya;
     bool sem_saya;
     Rgb cabo, lamina[2], rastro[3], destaque[2], destaque2, obi, olho, mascara[2];
@@ -4732,6 +4733,8 @@ static void scream_fx(Canvas *cv, int age) {
     }
 }
 
+static void roupa_postura(Canvas *cv, const Char *ch);
+
 static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ctx, Canvas *cv);
 
 /* Parado, a fúria sobe, ele treme e grita. Monta a partir do IDLE e do IDLE_FURIA. */
@@ -5644,6 +5647,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         translate(cv, lunge(ch, ctx));
     }
     round_top(cv);
+    roupa_postura(cv, ch);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -6928,10 +6932,71 @@ static bool cor7(const Char *ch) {
     return false;
 }
 
+/* Tecido na família do corte, recolorido DEPOIS de montar o quadro. A leitura
+   da espada, da cintura e do arco lunar ainda usa a paleta original do corpo:
+   roupa diferente não pode alterar a geometria de um golpe. */
+static Rgb tom_tecido(Rgb cor, int percent) {
+    return (Rgb){cor.r * percent / 100, cor.g * percent / 100, cor.b * percent / 100};
+}
+
+static Rgb cor_pack(const Char *ch, Rgb de) {
+    for (int i = 0; i < 24 && rgb_set(ch->troca[i].de); i++)
+        if (ch->troca[i].de.r == de.r && ch->troca[i].de.g == de.g && ch->troca[i].de.b == de.b)
+            return ch->troca[i].para;
+    return de;
+}
+
+static void roupa_postura(Canvas *cv, const Char *ch) {
+    if (!cor7(ch) && !ch->ecos) return;
+    const Rgb *paleta = ch->tecido;
+    Rgb camisa[] = {tom_tecido(paleta[0], 90), tom_tecido(paleta[1], 85),
+                    tom_tecido(paleta[2], 80), tom_tecido(paleta[2], 55)};
+    Rgb hakama[5];
+    static const int sombras[] = {75, 58, 42, 30, 20};
+    for (int i = 0; i < 5; i++) hakama[i] = tom_tecido(paleta[2], sombras[i]);
+    Rgb de[16], para[16];
+    int n = 0;
+#define TECIDO(A, B) do { de[n] = (A); para[n++] = (B); } while (0)
+#define PACK(A, B) TECIDO(cor_pack(ch, (Rgb)HEX(A)), B)
+    if (!ch->pack) {
+        for (int i = 0; i < 4; i++) TECIDO(ch->camisa[i], camisa[i]);
+        for (int i = 0; i < 5; i++) TECIDO(ch->hakama[i], hakama[i]);
+        TECIDO(ch->obi, paleta[1]);
+    } else if (!strcmp(ch->pack, "samurai5")) {
+        PACK(0x1e6f50, camisa[1]); PACK(0x134c4c, camisa[2]); PACK(0x0c2e44, camisa[3]);
+        PACK(0x391f21, paleta[2]); PACK(0x5d2c28, paleta[1]);
+    } else if (!strcmp(ch->pack, "samurai4")) {
+        PACK(0xffffff, camisa[0]); PACK(0xc7cfdd, camisa[1]);
+        PACK(0x92a1b9, camisa[2]); PACK(0x657392, camisa[3]);
+        PACK(0x424c6e, hakama[0]); PACK(0x2a2f4e, hakama[1]); PACK(0x1a1932, hakama[3]);
+        PACK(0x571c27, paleta[2]); PACK(0x891e2b, paleta[1]);
+    } else if (!strcmp(ch->pack, "espadao")) {
+        PACK(0x3d3d3d, camisa[1]); PACK(0x272727, camisa[2]); PACK(0x131313, camisa[3]);
+    } else if (!strcmp(ch->pack, "demon")) {
+        /* O manto azul vira violeta; máscara e armadura conservam a arte. */
+        PACK(0x0069aa, camisa[1]); PACK(0x00396d, camisa[2]); PACK(0x0c2e44, camisa[3]);
+    }
+    TECIDO(ch->destaque[0], paleta[1]);
+    TECIDO(ch->destaque[1], paleta[2]);
+#undef PACK
+#undef TECIDO
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            Color c = cv->a[y][x];
+            if (!c.a || cv->tag[y][x] != T_BODY || cv->wpx[y][x]) continue;
+            for (int i = 0; i < n; i++)
+                if (c.r == de[i].r && c.g == de[i].g && c.b == de[i].b) {
+                    set_rgb(cv, x, y, para[i]);
+                    break;
+                }
+        }
+}
+
 static void cor_prova(void) {
     for (size_t i = 0; i < sizeof COR7 / sizeof COR7[0]; i++)
         for (int c = 0; c < NCHARS; c++)
             if (!strcmp(CHARS[c].id, COR7[i].id)) memcpy(CHARS[c].rastro, COR7[i].c, sizeof CHARS[c].rastro);
+    for (int c = 0; c < NCHARS; c++) memcpy(CHARS[c].tecido, CHARS[c].rastro, sizeof CHARS[c].tecido);
 }
 
 /* A aura na arma: um halo de 1 px na cor do meio colado na lâmina, pontos soltos na cor da borda
