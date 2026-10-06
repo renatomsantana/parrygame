@@ -301,6 +301,92 @@
       "audio": "Sons básicos sintetizados de aviso, gesto, corte com pitch da postura e impactos; sem trilha ou gravação do mix final."
     },
     "windows": "Não executado nesta revisão. Validações de Windows anteriores permanecem históricas.",
-    "remaining": "Avaliação artística dos vídeos; Garfiel mantém o rastro nativo nesta tentativa. Substituir apenas seu rastro pelo pack novo não foi aplicado."
+    "remaining": "Avaliação artística dos vídeos; Garfiel mantém o rastro nativo nesta tentativa. Substituir apenas seu rastro pelo pack novo não foi aplicado.",
+    "status": "historical: replaced selectively by 41b9c6d for Arashi, Garfiel and their Oboro echoes; other postures remain native"
+  },
+  "slashes_substituidos": {
+    "date": "2026-10-05",
+    "source_commit": "41b9c6de6f49f2ba02a3aa269175186c3932b9f9",
+    "asset_sha256": "fbf2b77628e9d50a7fa87979d0bb0bec7108a49668a21a3b9aa66991e2cb4dbb",
+    "source_png_unchanged": true,
+    "profiles": {
+      "garfiel": "row 3 orange claws; second effect only for double strikes",
+      "arashi": "rows 1/7/10 blue lightning on both visible swords",
+      "oboro": "same purchased profiles on own single katana; flaming actions retained"
+    },
+    "replacement_layers": {
+      "strips": 28,
+      "private_files": 56,
+      "original_strips_pixel_identical_to_generator": 28,
+      "selection": "semantic generator tags preserve body and physical weapon pixels"
+    },
+    "mac": {
+      "presentation_checks": 45499,
+      "real_asset_checks": 173799,
+      "failures": 0,
+      "build_warnings": 0
+    },
+    "linux": {
+      "real_asset_checks": 173799,
+      "failures": 0,
+      "build_warnings": 0,
+      "environment": "fresh unique temporary checkout, raylib 6, Xvfb"
+    },
+    "palette_gpu_test": "blue lightning / orange claws / white highlights passed on Mac and Linux",
+    "real_game_comparison": {
+      "masters": [
+        3,
+        5,
+        10,
+        13
+      ],
+      "oboro_phase": 2,
+      "identical_contacts": 58,
+      "compared": [
+        "contact time",
+        "judgement",
+        "input lead",
+        "sprite animation and frame"
+      ],
+      "pack_draws": {
+        "raizo": 0,
+        "garfiel": 134,
+        "arashi": 254,
+        "oboro": 52
+      },
+      "disabled_draws": 0
+    },
+    "core_before_palette_and_second_hand_refinement": {
+      "checks": 15352,
+      "viable_strikes": 20280,
+      "frame_rate_contacts": 30680,
+      "max_contact_difference_ms": 0,
+      "fuzz_scenarios": 2400,
+      "fuzz_violations": 0,
+      "curve_target_items_outside_range": 0,
+      "failures": 0,
+      "note": "Subsequent changes affect shader palette, VFX hand selection and GPU test only; core source untouched."
+    },
+    "assets_prontos": "17 runtime sets, 281 declared strips and required replacement sidecars present",
+    "unchanged": [
+      "original runtime PNGs",
+      "sprite frame durations",
+      "anchors",
+      "hitboxes",
+      "core judgement"
+    ],
+    "preview": {
+      "file": "outputs/slashes-substituidos-05out/garfiel-arashi.mp4",
+      "seconds": 16,
+      "resolution": [
+        640,
+        360
+      ],
+      "fps": 60,
+      "audio": "basic synthesized cues, gestures, swings and impacts; no final soundtrack or final mix"
+    },
+    "fallback": "APARA_SLASH=0, missing pack or missing replacement layer draws original native trail",
+    "windows": "Not executed for this change; previous Windows checks remain historical.",
+    "human_review": "pending"
   }
 }
