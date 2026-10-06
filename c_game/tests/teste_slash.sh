@@ -24,13 +24,19 @@ for master in 7 8 6 13; do
     [ "$off" -eq 0 ]
     if [ "$master" -eq 7 ] || [ "$master" -eq 6 ]; then [ "$on" -eq 0 ]; else [ "$on" -gt 0 ]; fi
     if [ "$master" -eq 13 ]; then
-        # Todo gesto, corte e aviso deve identificar a postura sorteada.
+        # Fase 2 identifica a postura sorteada; fase 3 usa apenas o repertório Oni.
         sed -n '/^POSTURA /p' "$tmp/1.log" > "$tmp/feedback.log"
         grep -q 'som=6' "$tmp/feedback.log"
         grep -q 'som=5' "$tmp/feedback.log"
         grep -q 'som=0' "$tmp/feedback.log"
-        ! grep -q 'fonte=oboro' "$tmp/feedback.log"
+        sed -n '/fase=2$/p' "$tmp/feedback.log" > "$tmp/ecos.log"
+        [ -s "$tmp/ecos.log" ]
+        ! grep -q 'fonte=oboro' "$tmp/ecos.log"
+        sed -n '/fase=3$/p' "$tmp/feedback.log" > "$tmp/oni.log"
+        [ -s "$tmp/oni.log" ]
+        ! grep -v 'fonte=oboro' "$tmp/oni.log"
         grep -q 'quadro ATTACK_[123]_ECO_' "$tmp/1.imp"
+        grep -q 'quadro ATTACK_.*_FURIA' "$tmp/1.imp"
     fi
     echo "  ok: mestre $master — $count contatos idênticos; garras $on desenhos, pack desligado $off"
 done

@@ -1069,8 +1069,8 @@ static void test_robos_deslocados(void) {
 
 /* Oboro. Fase 1: abre com a lição completa, sete golpes. Fase 2: 50 padrões dos
  * aprendizes, cada um igual ao do aprendiz (intervalos, aparência, duplo e preparação),
- * sorteados desde a abertura. Fase 3: os mesmos 50 padrões com a
- * espera antes do aviso x0,85, dano x1,25, aviso nunca abaixo de 320 ms e sem especial. */
+ * sorteados desde a abertura. Fase 3: 12 sequências novas com a
+ * espera antes do aviso x0,60, dano x1,25, aviso nunca abaixo de 320 ms e sem especial. */
 static const struct { int aprendiz; const char *golpe; } ECO[12] = {
     {0, "desabamento"}, {1, "mordida"}, {2, "foices gêmeas"}, {3, "geada"}, {4, "incêndio"}, {5, "tormenta"},
     {6, "fenda dupla"}, {7, "fúria do tigre"}, {8, "maré longa"}, {9, "revoada"}, {10, "meia-noite"}, {11, "lua cheia"},
@@ -1092,7 +1092,7 @@ static void test_oboro_fases(void) {
         const Move *src = move_named(a, ECO[e].golpe, -2);
         char nome[64];
         snprintf(nome, sizeof nome, "eco %s", a->style + 8);
-        for (int f = 1; f <= 2; f++) {
+        for (int f = 1; f <= 1; f++) {
             const Move *eco = move_named(o, nome, f);
             bool igual = src && eco && eco->strikes == src->strikes && eco->look == src->look && eco->dual == src->dual &&
                          fabsf(eco->windup - src->windup) < 1e-6f;
@@ -1101,8 +1101,8 @@ static void test_oboro_fases(void) {
         }
     }
     CHECK(o->stances[0].ordered == 1 && o->stances[1].ordered == 0 && o->stances[2].ordered == 0, "só a abertura de Hanzo tem ordem fixa");
-    CHECK(fabsf(o->seals[2].speedMultiplier - 0.85f) < 1e-6f && fabsf(o->seals[2].damageMultiplier - 1.25f) < 1e-6f,
-          "fase 3: x0,85 na preparação, x1,25 no dano");
+    CHECK(fabsf(o->seals[2].speedMultiplier - 0.60f) < 1e-6f && fabsf(o->seals[2].damageMultiplier - 1.25f) < 1e-6f,
+          "fase 3: x0,60 na preparação, x1,25 no dano");
     CHECK(o->seals[0].noSpecial && o->seals[1].noSpecial && o->seals[2].noSpecial, "nenhuma fase tem o especial x2");
     CHECK(fabsf(o->seals[1].damageMultiplier - 0.5f) < 1e-6f, "fase 2: dano x0,5");
     /* erros até cair em cada fase, com a vida cheia a cada selo: 5, 10 e 4 */
@@ -1146,9 +1146,9 @@ static void test_oboro_fases(void) {
                         vistosFase2++;
                     }
                     if (d.seal == 2) {
-                        double antes = (mv->windup - o->stances[2].aviso) * 0.85 * s.waitScale;
+                        double antes = (mv->windup - o->stances[2].aviso) * 0.60 * s.waitScale;
                         double esperado = duel_aviso(&d) + (antes < AJ_PREPARO_ANTES_DO_AVISO ? AJ_PREPARO_ANTES_DO_AVISO : antes);
-                        if (mv->stance != 2 || strncmp(mv->name, "eco ", 4) || fabs(d.windupDuration - esperado) > 1e-4) fase3 = false;
+                        if (mv->stance != 2 || mv->sourceIdentity != 0 || !strncmp(mv->name, "eco ", 4) || fabs(d.windupDuration - esperado) > 1e-4) fase3 = false;
                         float base = s.renPosture / o->hitsToFall;
                         if (fabsf(duel_ren_damage(&d) - base * 1.25f) > 1e-3f) dano = false;
                     } else if (d.seal == 1 && fabsf(duel_ren_damage(&d) - s.renPosture / o->hitsToFall * 0.5f) > 1e-3f) {
@@ -1165,7 +1165,7 @@ static void test_oboro_fases(void) {
     }
     CHECK(abre, "a fase 1 sempre abre com a lição completa");
     CHECK(aleatorio && vistosFase2 > 0, "fase 2 usa ecos sorteados desde o primeiro (%d sequências)", vistosFase2);
-    CHECK(fase3, "na fase 3, os doze ecos com a espera antes do aviso x0,85");
+    CHECK(fase3, "na fase 3, doze sequências próprias com espera x0,60");
     CHECK(semEspecial && especiaisAntes > 0, "o especial x2 nunca sai (%d sequências)", especiaisAntes);
     CHECK(dano, "o dano de um erro: x0,5 na fase 2, x1,25 na fase 3");
 }
@@ -1192,7 +1192,7 @@ static void test_oboro_repertorio_aleatorio(void) {
         for (int g = 0; same && g + 1 < mv->strikes; g++) same = fabsf(mv->gaps[g] - original->gaps[g]) < 1e-6f;
         CHECK(same, "%s: selo %d copia o padrão original completo", mv->name, mv->stance + 1);
     }
-    CHECK(totals[0] == 7 && totals[1] == 50 && totals[2] == 50, "7 fundamentos + 50 padrões por fase final");
+    CHECK(totals[0] == 7 && totals[1] == 50 && totals[2] == 12, "7 fundamentos + 50 ecos na fase 2 + 12 padrões Oni");
     for (int seal = 1; seal <= 2; seal++) {
         Settings s;
         settings_default(&s);
@@ -1208,7 +1208,7 @@ static void test_oboro_repertorio_aleatorio(void) {
                 last = a.attacks; draws++;
                 const Move *mv = duel_move(&a);
                 seen[a.move] = true;
-                repeat |= previous == mv->sourceIdentity;
+                repeat |= seal == 1 && previous == mv->sourceIdentity;
                 previous = mv->sourceIdentity;
                 counts[previous]++;
                 different |= a.move != c.move;
@@ -1223,24 +1223,24 @@ static void test_oboro_repertorio_aleatorio(void) {
             }
         }
         CHECK(draws == 2000 && same && different, "selo %d: 2000 sorteios reproduzíveis; outra semente muda a luta", seal + 1);
-        CHECK(!repeat, "selo %d: nenhuma postura se repete imediatamente", seal + 1);
+        if (seal == 1) CHECK(!repeat, "selo %d: nenhuma postura se repete imediatamente", seal + 1);
         for (int k = 0; k < o->moveCount; k++) if (o->moves[k].stance == seal)
             CHECK(seen[k], "selo %d: %s pode ser sorteado", seal + 1, o->moves[k].name);
-        for (int k = 0; k < MASTER_COUNT; k++) {
+        for (int k = 0; seal == 1 && k < MASTER_COUNT; k++) {
             int count = counts[roster_get(k)->identity];
             CHECK(count >= 80 && count <= 260, "selo %d: postura de %s participa sem dominar (%d/2000)", seal + 1, roster_get(k)->name, count);
         }
     }
 }
 
-/* Cada contato dos 50 padrões nos dois selos finais, no atraso máximo.
+/* Cada contato dos 50 ecos e 12 padrões Oni, no atraso máximo.
  * Isolar o padrão garante cobertura; não depende de ele aparecer no sorteio. */
 static void test_oboro_cinquenta_viaveis(void) {
     const MasterProfile *o = roster_get(12);
     int patterns = 0, contacts = 0;
     for (int k = 0; k < o->moveCount; k++) {
         const Move *mv = &o->moves[k];
-        if (!mv->sourceIdentity) continue;
+        if (mv->stance == 0) continue;
         MasterProfile one = *o;
         one.moveCount = 1;
         one.moves[0] = *mv;
@@ -1277,10 +1277,46 @@ static void test_oboro_cinquenta_viaveis(void) {
         for (int h = 0; h < mv->strikes; h++) CHECK(fabs(times[0][h] - times[1][h]) < 1e-6, "%s: contato %d igual a 60 e 144 Hz", mv->name, h + 1);
         patterns++; contacts += mv->strikes;
     }
-    CHECK(patterns == 100, "50 padrões em cada selo final verificados individualmente");
+    CHECK(patterns == 62, "50 ecos e 12 padrões Oni verificados individualmente");
     printf("oboro: %d padrões / %d contatos viáveis com 120 ms, iguais a 60 e 144 Hz\n", patterns, contacts);
 }
 
+
+static void test_oni_dano_na_defesa(void) {
+    const MasterProfile *o = roster_get(12);
+    Settings s;
+    settings_default(&s); settings_for_level(&s, MASTER_COUNT);
+    const float expected[] = {5, 24, 62.5f};
+    for (int outcome = 0; outcome < 3; outcome++) {
+        Duel d;
+        duel_init(&d, &s, o, 401); duel_start_seal(&d, 2);
+        d.renPosture = 230;
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        CHECK(duel_move(&d)->sourceIdentity == 0 && duel_move(&d)->stance == 2, "Oni usa golpe próprio");
+        if (outcome < 2) {
+            duel_tick(&d, d.strikeAt - (outcome == 0 ? .02 : .08) - d.clock);
+            duel_press(&d);
+        }
+        while (d.lastStrikeAt < 0 && d.phase != PH_FINISHED) duel_tick(&d, DT);
+        CHECK(fabsf(230 - d.renPosture - expected[outcome]) < 1e-4, "Oni resultado %d tira %.1f de vida, sem cura", outcome, expected[outcome]);
+        CHECK(d.lastJudgement == (outcome == 0 ? J_PERFEITO : outcome == 1 ? J_BOM : J_RUIM), "Oni preserva julgamento %d", outcome);
+        DuelEvent ev[MAX_EVENTS]; int n = duel_drain(&d, ev, MAX_EVENTS); bool chip = false;
+        for (int k=0;k<n;k++) if (ev[k].kind == EV_IMPACT) chip = (ev[k].i & 4) != 0;
+        CHECK(chip == (outcome < 2), "Oni marca o dano que atravessa o parry");
+    }
+    /* Mesmo quebrando a postura no último perfeito, vida zero é derrota. */
+    Duel d;
+    duel_init(&d, &s, o, 401); duel_start_seal(&d, 2);
+    d.renPosture = 5; d.bossPosture = s.perfectBossDamage / 2;
+    while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+    duel_tick(&d, d.strikeAt - .02 - d.clock); duel_press(&d);
+    while (d.phase != PH_FINISHED && d.clock < 10) duel_tick(&d, DT);
+    bool win=false, lose=false;
+    DuelEvent ev[MAX_EVENTS]; int n=duel_drain(&d,ev,MAX_EVENTS);
+    for(int k=0;k<n;k++) if(ev[k].kind==EV_FINISHED) {win |= ev[k].flag; lose |= !ev[k].flag;}
+    CHECK(d.phase == PH_FINISHED && d.renPosture == 0 && lose && !win, "perfeito fatal derrota Kojiro, mesmo no golpe final");
+    for(int phase=0;phase<2;phase++) CHECK(o->seals[phase].perfectChip == 0 && o->seals[phase].goodChip == 0, "selos anteriores não recebem dano Oni");
+}
 
 /* Vantagem: quando falta só um perfeito para quebrar a postura, o duelo avisa (e o
  * perfeito seguinte quebra: é a execução, sem botão). Se o mestre se recupera acima
@@ -1462,7 +1498,7 @@ static void test_florete(void) {
     }
     CHECK(fintas == 1, "só uma sequência tem finta visual");
     CHECK(fabsf(m->moves[1].gaps[0] - 0.40f) < 1e-6f, "a dupla deixa 400 ms para o segundo parry");
-    for (int seal = 1; seal <= 2; seal++) {
+    for (int seal = 1; seal <= 1; seal++) {
         const Move *echo = move_named(o, "eco do gelo", seal);
         const Move *src = &m->moves[1];
         CHECK(echo && echo->stance == seal && echo->strikes == src->strikes &&
@@ -1471,7 +1507,7 @@ static void test_florete(void) {
               "eco de gelo do selo %d copia a dupla do florete", seal + 1);
         if (echo) CHECK(move_contact_look(echo, 1) == LOOK_THRUST, "eco de gelo do selo %d não vira corte alto", seal + 1);
     }
-    CHECK(o->moveCount == 107, "oboro tem 7 fundamentos e 50 ecos em cada selo final");
+    CHECK(o->moveCount == 69, "oboro tem 7 fundamentos, 50 ecos e 12 padrões Oni");
 
     /* O campo feint só chega ao desenho: removê-lo de uma cópia do roster não
      * pode mudar nenhum resultado ou duração do núcleo. */
@@ -1486,10 +1522,10 @@ static void test_florete(void) {
     }
     CHECK(iguais == 60, "finta é só apresentação: 60 lutas idênticas");
 
-    /* Cada padrão novo e os dois ecos: perfeita e boa ainda existem no atraso
+    /* Cada padrão novo e seu eco: perfeita e boa ainda existem no atraso
      * máximo; o mesmo roteiro produz os mesmos contatos a 60 e 144 Hz. */
     int cobertos = 0, fpsIguais = 0;
-    for (int grupo = 0; grupo < 3; grupo++) {
+    for (int grupo = 0; grupo < 2; grupo++) {
         const MasterProfile *base = grupo == 0 ? m : o;
         int seal = grupo == 0 ? 0 : grupo;
         int moves = grupo == 0 ? m->moveCount : 1;
@@ -1544,10 +1580,10 @@ static void test_florete(void) {
             fpsIguais += igual;
         }
     }
-    int esperados = 2 * 2;      /* a dupla do eco, nos dois selos */
+    int esperados = 2;          /* dupla do eco, só no segundo selo */
     for (int k = 0; k < nflorete; k++) esperados += FLORETE[k].contatos;
-    CHECK(cobertos == esperados, "todos os contatos dos padrões de florete e dos dois ecos conferidos no atraso máximo (%d de %d)", cobertos, esperados);
-    CHECK(fpsIguais == m->moveCount + 2, "os padrões de florete e os dois ecos iguais a 60 e 144 Hz com atraso máximo (%d de %d)", fpsIguais, m->moveCount + 2);
+    CHECK(cobertos == esperados, "todos os contatos dos padrões de florete e do eco conferidos no atraso máximo (%d de %d)", cobertos, esperados);
+    CHECK(fpsIguais == m->moveCount + 1, "os padrões de florete e o eco iguais a 60 e 144 Hz com atraso máximo (%d de %d)", fpsIguais, m->moveCount + 1);
 }
 
 /* Cada golpe de cada mestre comum, sozinho num repertório de um golpe só (assim o sorteio não esconde nenhum): com o atraso máximo de 120 ms, a perfeita e a boa
@@ -2722,6 +2758,7 @@ int main(void) {
     test_oboro_fases();
     test_oboro_repertorio_aleatorio();
     test_oboro_cinquenta_viaveis();
+    test_oni_dano_na_defesa();
     test_vantagem();
     test_lamina_variavel();
     test_taxa_de_quadros();

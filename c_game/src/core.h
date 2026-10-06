@@ -71,6 +71,7 @@ typedef struct {
     float posture;                /* postura deste selo (0 = a do mestre) */
     float damageMultiplier;       /* o dano de um erro x isto (0 = 1) */
     bool noSpecial;               /* neste selo, nada de golpe especial */
+    float perfectChip, goodChip;  /* dano atravessa o parry: fração da vida máxima; perfeito com dano não cura */
 } SealRule;
 
 /*
@@ -78,7 +79,7 @@ typedef struct {
  * uma preparação seguida de 1 a MAX_CHAIN golpes, com intervalos sempre iguais
  * entre um contato e o próximo. É isso que o jogador estuda e decora.
  */
-#define MAX_MOVES 128 /* Oboro: fundamentos + 50 sequências em cada selo final */
+#define MAX_MOVES 128 /* Oboro: 7 fundamentos + 50 ecos + 12 sequências Oni */
 #define MAX_CHAIN 8
 
 /* Preparação que denuncia a sequência. LOOK_HEAVY é o golpe forte: o salto com a
@@ -228,7 +229,8 @@ typedef enum {
     EV_PRESS,         /* gesto aceito; i: PressKind; a: antecedência ao contato (CEDO, TENTATIVA) ou atraso
                          depois do contato que entrou (TARDE); b: CEDO, quanto faltava para o aviso */
     EV_IMPACT,        /* judgement, a: antecedência (negativa = depois do contato; -1 = sem defesa), flag: quebrou
-                         postura; b: quanto o aperto ficou fora da janela perfeita (>0 cedo, <0 tarde, 0 dentro) */
+                         postura; b: quanto o aperto ficou fora da janela perfeita (>0 cedo, <0 tarde, 0 dentro);
+                         i: bits 0 duas lâminas, 1 segunda acertou, 2 dano atravessou a defesa */
     EV_STANCE,        /* i: nova postura */
     EV_SEAL,          /* i: novo selo (o BIG BOSS entrou em outra fase) */
     EV_COMBO,         /* i: golpes na sequência (só quando mais de um) */

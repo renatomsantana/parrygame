@@ -6518,7 +6518,7 @@ static int NSOURCES;
  * espalhados, e em cima da armadura, também vermelha, o fogo some no meio do corpo.
  * O fogo é o que muda do quadro normal para o da fúria nas cores da máscara. Saem os
  * pontos soltos (manchas com menos de 6 px), sai o fogo em cima do corpo longe da
- * lâmina, e o que fica ganha uma rampa pela distância até a lâmina: laranja no fio,
+ * lâmina, e o que fica ganha uma rampa pela distância até a lâmina: vermelho no fio,
  * vermelho vivo perto, vermelho escuro longe e a borda mais escura. Nos golpes (o rastro
  * vermelho tem outro desenho, e às vezes outro número de quadros) só saem as manchas
  * soltas no ar, de até 23 px (o arco do rastro é bem maior). */
@@ -6634,7 +6634,7 @@ static void clean_fury(Source *s) {
                         int nx = x + d4[i][0], ny = y + d4[i][1];
                         edge = nx < 0 || ny < 0 || nx >= W || ny >= H || (!fire[ny][nx] && !p[ny][nx].a);
                     }
-                    uint32_t v = dist[y][x] <= 1 ? 0xff6a20 : edge ? 0x571c27 : dist[y][x] <= 4 ? 0xc42430 : 0x891e2b;
+                    uint32_t v = dist[y][x] <= 1 ? 0xff3048 : edge ? 0x571c27 : dist[y][x] <= 4 ? 0xc42430 : 0x891e2b;
                     out[y][x] = (Color){(unsigned char)(v >> 16), (unsigned char)(v >> 8), (unsigned char)v, 255};
                 }
             for (int y = 0; y < H; y++) memcpy(p[y], out[y], sizeof(Color) * (size_t)W);

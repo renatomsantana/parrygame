@@ -284,3 +284,24 @@ A semente normal combina relógio e contador de tentativas para variar também n
 Validação final: 26.173 verificações do núcleo, 55.209 de apresentação sem assets e 234.123 com os PNGs reais no Mac; 234.123 com os PNGs no Linux. Fontes, save, entrada, desempenho, ritmo, fuzz (600 cenários em cada um dos quatro modos) e 168 compilações com avisos como erro passaram. O jogo real no Linux conservou os mesmos 104 contatos com os efeitos ligados/desligados, incluindo 59 de Oboro; as garras copiadas foram desenhadas 102 vezes. Windows e revisão humana da sensação não foram repetidos nesta mudança.
 
 No Mac, quatro amostras do jogo real (fases 2 e 3, sementes 11 e 12, 45 s cada) produziram roteiros diferentes: 42/45 contatos na fase 2 e 18/14 na fase 3. A fase 2 usou variantes da própria katana e todos os contatos da fase 3 usaram ações `_FURIA` da espada flamejante.
+
+
+## Oboro: repertório próprio da forma Oni (6 de outubro)
+
+Novo pedido substitui a fase 3 descrita acima. A fase 2 conserva os 50 padrões dos 12 aprendizes. A fase 3 sorteia **12 sequências próprias**, com 2 a 6 contatos, usando as ações existentes da espada flamejante: cortes altos/baixos, estocadas, avanços, saltos e golpes pesados. Preparação ×0,60; intervalos internos de 400–440 ms; aviso inicial de 320 ms; janelas de perfeito/bom e durações dos quadros preservadas.
+
+O dano atravessa a defesa: com 250 de vida, **perfeito tira 5 e não cura; bom tira 24 (4 normais + 20 adicionais); erro tira 62,5**. Constantes por selo em `roster.c` usam 2% da vida no perfeito e 8% adicionais no bom. Se Kojiro morrer no parry que quebra a postura de Oboro, perde; não se emite vitória nem se salva progresso.
+
+| Medição | Casual (%) | Perfeito (%) | Spam (%) |
+|---|---|---|---|
+| Antes, fase 3 com ecos (100 mil lutas) | 39,7 | 100 | 0 |
+| Novos ataques e dano, postura antiga de 550 (10 mil) | 6,0 | 100 | 0 |
+| Fase própria, postura reduzida a 320 (100 mil) | 38,4 | 100 | 0 |
+
+As medições finais a 60 e 144 Hz, com aperto em ms exato, foram idênticas. Os 12 aprendizes continuam com a mesma tabela; a curva mantém as faixas e a ordem existentes, sem relaxar o verificador. São estimativas de robôs, não uma avaliação da sensação ao jogar.
+
+Validação: 20.936 verificações do núcleo, incluindo dano de perfeito/bom/erro e parry fatal; 2.000 sorteios por fase final cobrem os 50 ecos e os 12 padrões próprios. Os 149 contatos dos 62 padrões finais foram isolados com calibração de 120 ms a 60 e 144 Hz: todos têm perfeito viável e tempos iguais. Fuzz: 600 cenários em cada um de quatro modos, zero violações. Fontes, save, entrada, desempenho, apresentação e 168 compilações com avisos como erro passaram.
+
+Apresentação com PNGs reais: 208.450 verificações no Mac e no Linux, zero falhas. No Linux/Xvfb, 96 contatos do jogo real foram idênticos com pack ligado/desligado, incluindo 51 de Oboro; a fase 2 usou sons das posturas e a fase 3 só os de Oboro, com ações `_FURIA`. No Mac, oito perfeitos consecutivos na fase 3 baixaram a vida de 250 para 210. O fio da espada em espera foi recolorido de laranja para vermelho em oito tiras locais de Oboro/com máscara; dimensões, alfa, corpo, duração, número de quadros e âncoras permaneceram iguais. Gerador atualizado para reproduzir a cor. Amostra de oito segundos com SFX básicos em `outputs/oni-novo-05out/video/13_oboro.mp4`.
+
+Windows e avaliação humana não foram repetidos nessa mudança. Logs e tabelas em `outputs/oni-novo-05out/`.

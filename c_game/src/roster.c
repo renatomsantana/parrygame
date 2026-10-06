@@ -415,7 +415,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .seals = {
             {"primeiro selo", 1.00f, 0, 360, 0, true},
             {"segundo selo", 1.00f, 0, 1800, 0.5f, true},  /* preserva a duração e o dano da fase longa */
-            {"terceiro selo", 0.85f, 0, 550, 1.25f, true}, /* 50 padrões: mantém o casual perto de 40% */
+            {"terceiro selo", 0.60f, 0, 320, 1.25f, true, 0.02f, 0.08f}, /* perfeito: 5, bom: 24, erro: 62,5; fase curta, sem cura */
         },
         .sealCount = 3,
         /* 50 sequências copiadas dos 12 aprendizes, com seus intervalos, direção,
@@ -483,11 +483,22 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"salto do mestre", 2, {0.55f}, 1.0f, 0, 0, LOOK_JUMP, 1.15f},
             /* devorador: 50 sequências aleatórias, sem volta ordenada */
             ECOS(1),
-            /* oni: as mesmas 50, mais rápidas e mais pesadas (selo 3) */
-            ECOS(2),
+            /* Oni: repertório próprio, uma lâmina vermelha; sequências rápidas e apertadas. */
+            {"corte carmesim", 2, {0.40f}, 1.0f, 2, 0, LOOK_HIGH, 0.54f},
+            {"rasgo do oni", 3, {0.40f, 0.40f}, 1.0f, 2, 0, LOOK_LOW, 0.56f},
+            {"presa rubra", 2, {0.42f}, 1.0f, 2, 0, LOOK_THRUST, 0.52f},
+            {"avanço sangrento", 3, {0.40f, 0.44f}, 1.0f, 2, 0, LOOK_DASH, 0.58f},
+            {"queda escarlate", 2, {0.40f}, 1.0f, 2, 0, LOOK_JUMP, 0.60f},
+            {"martelo infernal", 3, {0.44f, 0.40f}, 1.0f, 2, 0, LOOK_HEAVY, 0.64f},
+            {"fúria vermelha", 5, {0.40f, 0.40f, 0.42f, 0.40f}, 1.0f, 2, 0, LOOK_HIGH, 0.54f},
+            {"cicatriz ardente", 4, {0.40f, 0.44f, 0.40f}, 1.0f, 2, 0, LOOK_LOW, 0.56f},
+            {"espinho do inferno", 3, {0.40f, 0.40f}, 1.0f, 2, 0, LOOK_THRUST, 0.52f},
+            {"caçada do demônio", 4, {0.42f, 0.40f, 0.44f}, 1.0f, 2, 0, LOOK_DASH, 0.58f},
+            {"céu em sangue", 4, {0.40f, 0.42f, 0.40f}, 1.0f, 2, 0, LOOK_JUMP, 0.60f},
+            {"último rugido", 6, {0.40f, 0.40f, 0.42f, 0.40f, 0.44f}, 1.0f, 2, 0, LOOK_HEAVY, 0.64f},
         },
 #undef ECOS
-        .moveCount = 107,
+        .moveCount = 69,
         .intro = {{"oboro", "Então é você. O último que ele mandou."},
                   {"kojiro", "Você traiu o mestre."},
                   {"oboro", "Ele não é quem você pensa."},

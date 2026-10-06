@@ -793,7 +793,9 @@ static const Color postureColors[ROSTER_SIZE] = {
 static const float posturePitch[ROSTER_SIZE] = {
     .7f, .8f, .6f, 1.5f, 1, 1.25f, 1.4f, 1.1f, 1.3f, 1.6f, 1.2f, .65f, .9f
 };
+static bool oni_phase(void) { return G.m && G.m->isBigBoss && G.duel.m == G.m && G.duel.seal == 2; }
 static Color posture_color(int echo) {
+    if (echo < 0 && oni_phase()) return (Color){COR_ONI_MEDIA,255};
     return postureColors[echo >= 0 && echo < MASTER_COUNT ? roster_get(echo)->identity - 1 : ROSTER_SIZE - 1];
 }
 static const MasterProfile *feedback_master(void) {
@@ -803,8 +805,8 @@ static const MasterProfile *feedback_master(void) {
 static void posture_sound(SoundId sound, float volume, float pitch) {
     const MasterProfile *source = feedback_master();
     if (source && volume > .001f) {
-        if (getenv("APARA_LOG_POSTURAS")) fprintf(stderr, "POSTURA tempo=%.5f fonte=%s som=%d volume=%.3f pitch=%.3f\n",
-            G.time, source->name, (int)sound, volume, pitch);
+        if (getenv("APARA_LOG_POSTURAS")) fprintf(stderr, "POSTURA tempo=%.5f fonte=%s som=%d volume=%.3f pitch=%.3f fase=%d\n",
+            G.time, source->name, (int)sound, volume, pitch, G.duel.seal + 1);
         audio_play_master(source->id - 1, sound, volume, pitch);
     }
 }
@@ -1722,6 +1724,14 @@ static void on_impact(const DuelEvent *e) {
             break;
         }
     }
+    if (e->i & 4) {
+        /* O bloqueio continua visível; a queimadura vermelha mostra o dano que atravessou. */
+        r->flash = e->judgement == J_PERFEITO ? 0.35f : 0.65f;
+        r->flashColor = (Color){COR_ONI_MEDIA,255};
+        fx_burst(&G.fx, P_SPARK, (Vector2){r->x + 4, GROUND_LOW - 28},
+                 e->judgement == J_PERFEITO ? 3 : 6, 28, 0.6f, -1.57f,
+                 (Color){COR_ONI_CLARA,220}, (Color){COR_ONI_ESCURA,200});
+    }
     if ((e->i & 1) && e->judgement == J_PERFEITO) {
         /* as duas lâminas aparadas: o segundo tinido e o X de faíscas */
         audio_play(SND_PERFECT, 0.7f, 1.25f);
@@ -1861,6 +1871,11 @@ static bool yoru_no_escuro(void) { return G.m && G.m->identity == 11 && G.duel.b
  * do projeto: manter esta escolha por nome/ID impede que vento solte brasas ou
  * que a katana de fogo solte água. São só desenho; o aviso do core é o mesmo. */
 static void tell_particles(int id, Vector2 tip, Vector2 mid, Vector2 feet) {
+    if (id == 13 && oni_phase()) {
+        fx_burst(&G.fx, P_SPARK, tip, 10, 42, 0.6f, -1.57f,
+                 (Color){COR_ONI_CLARA,240}, (Color){COR_ONI_MEDIA,230});
+        return;
+    }
     switch (id) {
         case 1: /* Daichi: terra */
             fx_burst(&G.fx, P_DUST, feet, 10, 35, 0.65f, -1.57f, (Color){206, 172, 122, 210}, (Color){130, 95, 62, 190}); break;
@@ -2042,7 +2057,7 @@ static void handle_events(void) {
                 if (m->isBigBoss) {
                     int echo = echo_of(duel_move(&G.duel));
                     if (G.duel.comboStrike == 0) begin_posture_aura(echo);
-                    else if (echo >= 0) G.auraLeft = fmaxf(G.auraLeft, G.duel.windupDuration + 0.65f);
+                    else if (echo >= 0 || oni_phase()) G.auraLeft = fmaxf(G.auraLeft, G.duel.windupDuration + 0.65f);
                 }
                 if (duel_strike_dual(&G.duel)) dual_tell();
                 G.blackoutTarget = G.duel.blackout ? 1 : 0;
@@ -2080,8 +2095,8 @@ static void handle_events(void) {
                 }
                 anota_aperto(e);
                 if (G.logImpactos)
-                    fprintf(stderr, "IMPACTO contato %.5f julgamento %d antecedencia %.5f quadro %s %d\n", G.duel.lastStrikeAt, (int)e->judgement, e->a,
-                            G.bossS.pl.anim ? G.bossS.pl.anim->name : "-", G.bossS.pl.frame);
+                    fprintf(stderr, "IMPACTO contato %.5f julgamento %d antecedencia %.5f quadro %s %d vida=%.2f fase=%d\n", G.duel.lastStrikeAt, (int)e->judgement, e->a,
+                            G.bossS.pl.anim ? G.bossS.pl.anim->name : "-", G.bossS.pl.frame, G.duel.renPosture, G.duel.seal + 1);
                 on_impact(e);
                 impacto_do_raio(e);
                 if (m->identity == 3 || (m->isBigBoss && feedback_master()->identity == 3))
@@ -2299,11 +2314,11 @@ static void update_after(float dt) {
 }
 
 static void begin_posture_aura(int echo) {
-    if (echo < 0) return;
+    if (echo < 0 && !oni_phase()) return;
     G.auraEcho = echo;
     G.auraLeft = G.duel.windupDuration + 0.65f;
     G.auraTick = 0;
-    banner(roster_get(echo)->style, posture_color(echo));
+    banner(echo < 0 ? "postura do oni" : roster_get(echo)->style, posture_color(echo));
 }
 
 static void update_posture_aura(float dt) {
@@ -3221,7 +3236,7 @@ static int mestre_do_rastro(void) {
     return eco >= 0 ? roster_get(eco)->identity - 1 : G.m->identity - 1;
 }
 
-static Color cor_rastro(void) { return postureColors[mestre_do_rastro()]; }
+static Color cor_rastro(void) { return oni_phase() ? (Color){COR_ONI_MEDIA,255} : postureColors[mestre_do_rastro()]; }
 
 /* O traço acompanha o ponto da arma anotado para cada quadro do PNG Mattz.
  * Uma estocada fica longa e fina; um corte faz uma curva curta; garras viram
@@ -3449,7 +3464,7 @@ static void ui_hud(void) {
     bool low = G.shownRen <= G.settings.renPosture * 0.25f;
     /* kojiro não tem postura: tem vida, em vermelho, que pulsa quando está no fim */
     float pulse = low ? 0.5f + 0.5f * sinf(G.time * 8) : 0;
-    ui_status(bot, "kojiro", G.duel.burnLeft > 0 ? "em brasas" : NULL, "vida", G.shownRen, G.ghostRen, G.settings.renPosture,
+    ui_status(bot, "kojiro", G.duel.burnLeft > 0 ? "em brasas" : oni_phase() ? "aparar também queima" : NULL, "vida", G.shownRen, G.ghostRen, G.settings.renPosture,
               (Color){(unsigned char)(140 + 40 * pulse), 26, 30, 255}, (Color){(unsigned char)(212 + 30 * pulse), 62, 56, 255});
 
     if (G.bannerTime > 0) {

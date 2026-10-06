@@ -125,6 +125,31 @@ static void borrowed_feedback(void) {
     }
 }
 
+static void oni_feedback_proprio(void) {
+    memset(&G, 0, sizeof G);
+    settings_default(&G.settings);
+    G.m = roster_get(12);
+    duel_init(&G.duel, &G.settings, G.m, 11);
+    duel_start_seal(&G.duel, 2);
+    while (G.duel.phase != PH_WINDUP) duel_tick(&G.duel, .01);
+    REQUIRE(echo_of(duel_move(&G.duel)) == -1 && feedback_master() == G.m, "Oni ainda copia postura de aprendiz");
+    begin_posture_aura(-1);
+    REQUIRE(G.auraEcho == -1 && G.auraLeft > 0, "Oni manteve a aura do último aprendiz");
+    Color c = cor_rastro(), aura = posture_color(-1);
+    REQUIRE(c.r == 255 && c.g == 48 && c.b == 72 && !memcmp(&c,&aura,sizeof c), "golpe e aura Oni não são vermelhos");
+    fx_init(&G.fx); tell_fx();
+    int red = 0;
+    for (int i=0;i<MAX_PARTICLES;i++) if(G.fx.p[i].life > 0) {
+        REQUIRE(G.fx.p[i].color.r > G.fx.p[i].color.g && G.fx.p[i].color.r > G.fx.p[i].color.b, "aviso Oni herdou outra paleta");
+        red++;
+    }
+    REQUIRE(red > 0, "aviso Oni sem partículas vermelhas");
+    DuelEvent e = {.kind=EV_IMPACT,.judgement=J_PERFEITO,.i=4};
+    on_impact(&e);
+    REQUIRE(G.ren.flash > 0 && G.ren.flashColor.r == 255 && G.ren.flashColor.b == 72, "dano no perfeito ficou invisível em Kojiro");
+    REQUIRE(G.fx.flash == 0, "dano no perfeito voltou a clarear a tela inteira");
+}
+
 static void fixed_element_colors(void) {
     Color ice = posture_color(3), sea = posture_color(8), storm = posture_color(roster_by_identity(10)->id - 1);
     REQUIRE(ice.r > 180 && ice.g > 225 && ice.b > 240, "gelo perdeu a leitura clara/quase branca");
@@ -1024,7 +1049,7 @@ static void pupil_aftermath_preserves_progress(void) {
 int main(int argc, char **argv) {
     fake_sprites();
     pupil_aftermath_preserves_progress();
-    flaming_actions(); sword_attachment(); borrowed_feedback(); fixed_element_colors(); bought_pack_timing_and_hands(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
+    flaming_actions(); sword_attachment(); borrowed_feedback(); oni_feedback_proprio(); fixed_element_colors(); bought_pack_timing_and_hands(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); impact_frame_stays_on_contact(); sword_continuity_and_parry(); visual_feedback_regressions();
     gamepad_uses_frame_fallback(); menu_click_targets(); menu_state_routes(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();

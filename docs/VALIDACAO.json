@@ -658,5 +658,89 @@
     "windows": "not executed for this change",
     "human_review": "pending",
     "outputs": "outputs/oboro-50-05out"
+  },
+  "oboro_oni_2026_10_06": {
+    "baseline_commit": "ac2b792",
+    "phase_move_counts": [
+      7,
+      50,
+      12
+    ],
+    "new_phase": "12 own sequences using existing flaming sword actions, red cues/slashes/aura; no borrowed posture in phase 3",
+    "balance": {
+      "preparation_multiplier": 0.6,
+      "combo_contacts_ms": [
+        400,
+        440
+      ],
+      "initial_cue_ms": 320,
+      "third_seal_posture": 320,
+      "max_life": 250,
+      "perfect_damage": 5,
+      "good_damage": 24,
+      "miss_damage": 62.5,
+      "perfect_heals": false,
+      "fatal_parry_is_loss_even_when_boss_breaks": true,
+      "casual_before_percent": 39.7,
+      "casual_after_percent": 38.4,
+      "fights_per_master_and_bot": 100000,
+      "fps": [
+        60,
+        144
+      ],
+      "same_results": true,
+      "perfect_percent": 100,
+      "spam_percent": 0,
+      "pupil_results": "unchanged",
+      "curve_gate_violations": 0
+    },
+    "core": {
+      "checks": 20936,
+      "failures": 0,
+      "draws_per_final_phase": 2000,
+      "all_patterns_reached": true,
+      "isolated_pattern_variants": 62,
+      "isolated_contacts": 149,
+      "latency_ms": 120,
+      "fps": [
+        60,
+        144
+      ],
+      "all_perfect_viable": true,
+      "contact_times_identical": true
+    },
+    "mac": {
+      "real_asset_checks": 208450,
+      "failures": 0,
+      "fuzz_modes": 4,
+      "scenarios_per_mode": 600,
+      "fuzz_violations": 0,
+      "warnings_as_errors_compilations": 168,
+      "perfect_phase3_real_game_contacts": 8,
+      "life_start": 250,
+      "life_end": 210,
+      "all_flame_actions": true
+    },
+    "linux": {
+      "real_asset_checks": 208450,
+      "failures": 0,
+      "real_game_slash_on_off_identical_contacts": 96,
+      "oboro_contacts": 51,
+      "oboro_claw_draws": 52,
+      "phase2_borrowed_sounds": true,
+      "phase3_only_own_sounds": true,
+      "test": "teste_slash.sh"
+    },
+    "sprites": {
+      "existing_paid_Mattz_actions_only": true,
+      "recolored_local_strips": 8,
+      "recolor": "orange blade core to red in idle/run/hurt/shout; body/alpha/dimensions unchanged",
+      "generator_updated": true,
+      "frames_durations_anchors_unchanged": true
+    },
+    "windows": "not executed for this change",
+    "human_review": "pending",
+    "outputs": "outputs/oni-novo-05out",
+    "preview": "outputs/oni-novo-05out/video/13_oboro.mp4"
   }
 }
