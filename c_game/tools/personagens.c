@@ -1082,7 +1082,7 @@ static Char CHARS[] = {
                {HEX(0x272727), HEX(0xb88428)}, {HEX(0x3d3d3d), HEX(0xe8b83c)}, {HEX(0x5ac54f), HEX(0xffb020)}}},
     /* 6. Corvo. Katana na mão da frente e wakizashi (a curta) na outra. Preto e vermelho. */
     {.id = "karasu", .titulo = "Karasu",
-     .arma = {.kind = W_KATANA, .escala = 0.95, .par = true, .par_comprimento = 13, .cor_par = HEX(0xece4e6),
+     .arma = {.kind = W_KATANA, .escala = 0.95, .par = true, .par_comprimento = 11, .cor_par = HEX(0xece4e6),
               .guarda = HEX(0x8c1018)},
      .cabeca = "corvo",
      .acessorios = {AC_TRAPO},
@@ -1106,7 +1106,7 @@ static Char CHARS[] = {
                {HEX(0x272727), HEX(0x100c10)}, {HEX(0x3d3d3d), HEX(0x241c26)}, {HEX(0x5ac54f), HEX(0xff2a2a)}}},
     /* 7. Vento. Duas foices (kama), uma em cada mão, e cortes de vento. Verde claro e limão, cachecol. */
     {.id = "hayate", .titulo = "Hayate",
-     .arma = {.kind = W_FOICE, .comprimento = 7, .par = true, .haste = {HEX(0x8a6a44), HEX(0x5a4228)}},
+     .arma = {.kind = W_FOICE, .comprimento = 9, .par = true, .haste = {HEX(0x8a6a44), HEX(0x5a4228)}},
      .cabeca = "vento", .acessorios = {AC_CACHECOL}, .sem_saya = true,
      .camisa = {HEX(0xeefce0), HEX(0xc2eca8), HEX(0x8ccc78), HEX(0x5c9c54)},
      .hakama = {HEX(0x4a6448), HEX(0x384e38), HEX(0x283a2a), HEX(0x1c2a1e), HEX(0x131e15)},
@@ -1139,7 +1139,7 @@ static Char CHARS[] = {
      .especial = SP_SALTO, .efeito = FX_FOGO},
     /* 9. Mar. Lança de água. Azul mar e turquesa. */
     {.id = "suiren", .titulo = "Suiren",
-     .arma = {.kind = W_LANCA, .escala = 1.2, .atras = 14, .ponta = 5, .haste = {HEX(0x5a9cc0), HEX(0x24506e)}},
+     .arma = {.kind = W_LANCA, .escala = 1.2, .atras = 20, .ponta = 8, .haste = {HEX(0x5a9cc0), HEX(0x24506e)}},
      .camisa = {HEX(0xeef8ff), HEX(0xbfe2f6), HEX(0x86bde6), HEX(0x5a8cc4)},
      .hakama = {HEX(0x4a78b0), HEX(0x36609a), HEX(0x284a7c), HEX(0x1d3862), HEX(0x142848)},
      .pele = {HEX(0xf2c29c), HEX(0xd69a74), HEX(0xa86a4e)},
@@ -1374,6 +1374,7 @@ typedef struct {
     unsigned char tag[CH][CW];
     bool empty[CH][CW];  /* vazio no quadro original: dá para desenhar atrás */
     bool wpx[CH][CW];    /* pixels da arma nova */
+    bool hpx[CH][CW];    /* cabos do pack, acompanhando os deslocamentos do quadro */
     int pen;             /* camada de quem está desenhando agora */
     const Seg *seg;
     const Frame *orig;   /* o quadro como veio do pack */
@@ -1391,11 +1392,13 @@ static void cv_put(Canvas *cv, int x, int y, Rgb c) {
     if (!cv_ok(x, y)) return;
     cv->a[y][x] = (Color){c.r, c.g, c.b, 255};
     cv->tag[y][x] = (unsigned char)cv->pen;
+    if(cv->pen == T_BODY) cv->hpx[y][x] = false;
 }
 static void cv_clear(Canvas *cv, int x, int y) {
     if (!cv_ok(x, y)) return;
     cv->a[y][x] = (Color){0, 0, 0, 0};
     cv->tag[y][x] = T_NONE;
+    cv->hpx[y][x] = false;
 }
 static bool cv_is_empty(const Canvas *cv, int x, int y) { return cv_ok(x, y) && cv->a[y][x].a == 0; }
 /* Pinta só onde não havia nada (fica atrás do corpo). */
@@ -2796,7 +2799,7 @@ static void thrust(Canvas *cv, const Char *ch, const Ctx *ctx) {
     int reach_tbl[5][2] = {{22, 12}, {22, 12}, {16, 16}, {34, 12}, {26, 12}};  /* lança: frente, trás */
     int foil_tbl[5][2] = {{20, 2}, {20, 2}, {15, 2}, {30, 2}, {24, 2}};
     int ph = ctx->phase;
-    int front = lanca ? reach_tbl[ph][0] : foil_tbl[ph][0], back = lanca ? reach_tbl[ph][1] : foil_tbl[ph][1];
+    int front = lanca ? reach_tbl[ph][0] : foil_tbl[ph][0], back = lanca ? (w->atras ? w->atras : reach_tbl[ph][1]) : foil_tbl[ph][1];
     if (ph == PH_RECOVERY && ctx->idx > ctx->contact + 1) front -= 4;
     if (hx + front > cellw - 4) front = cellw - 4 - (int)hx;  /* a ponta não passa da borda do quadro */
     Blade b = {0};
@@ -2808,8 +2811,9 @@ static void thrust(Canvas *cv, const Char *ch, const Ctx *ctx) {
         int head = w->ponta ? w->ponta : 5;
         stroke(cv, &b, -back, front - head, w->haste[0], NULL, 0, 0, 2, false);
         stroke(cv, &b, front - head, front, core, &edge, 0, 0, 1, false);
-        for (int k = -1; k <= 1; k += 2) {
-            int x = pyround(hx + front - head + 1.5), y = (int)hy + k;
+        for (int k = -2; k <= 2; k += 1) {
+            if(!k) continue;
+            int x = pyround(hx + front - head + 2.5), y = (int)hy + k;
             if (empty_orig(cv, x, y) || (cv_ok(x, y) && cv->a[y][x].a == 0)) { cv_put(cv, x, y, edge); mark(cv, x, y); }
         }
     } else {
@@ -4375,9 +4379,12 @@ static void body_aura(Canvas *cv, const Char *ch, const Ctx *ctx, bool only_dust
 static void resize_body(Canvas *cv, int cx, int wy, int dw, int dh, int head_y) {
     static Color a[CH][CW];
     static unsigned char t[CH][CW];
+    static bool w[CH][CW], h[CH][CW];
     if (dw && cx > 0 && cx < CW - 1) {
         memcpy(a, cv->a, sizeof a);
         memcpy(t, cv->tag, sizeof t);
+        memcpy(w,cv->wpx,sizeof w);
+        memcpy(h,cv->hpx,sizeof h);
         for (int y = 0; y < CH; y++) {
             bool head = y <= head_y;
             for (int x = head ? 0 : cx + 1; x < CW; x++) {
@@ -4385,22 +4392,24 @@ static void resize_body(Canvas *cv, int cx, int wy, int dw, int dh, int head_y) 
                 /* na altura da cabeça só a arma e os efeitos andam; o corpo fica */
                 if (head) {
                     bool moved = sx < CW && t[y][sx] != T_BODY && a[y][sx].a;
-                    if (moved) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; }
+                    if (moved) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; cv->wpx[y][x] = w[y][sx]; cv->hpx[y][x] = h[y][sx]; }
                     else if (t[y][x] == T_BODY) { cv->a[y][x] = a[y][x]; cv->tag[y][x] = T_BODY; }
-                    else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; }
-                } else if (sx < CW) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; }
-                else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; }
+                    else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; cv->wpx[y][x] = false; cv->hpx[y][x] = false; }
+                } else if (sx < CW) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; cv->wpx[y][x] = w[y][sx]; cv->hpx[y][x] = h[y][sx]; }
+                else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; cv->wpx[y][x] = false; cv->hpx[y][x] = false; }
             }
         }
     }
     if (dh && wy > 1 && wy < CH) {
         memcpy(a, cv->a, sizeof a);
         memcpy(t, cv->tag, sizeof t);
+        memcpy(w,cv->wpx,sizeof w);
+        memcpy(h,cv->hpx,sizeof h);
         for (int y = 0; y < wy; y++) {
             int sy = y + dh;  /* mais alto: a parte de cima sobe dh linhas */
             if (dh > 0 && sy >= wy) sy = wy - 1;
-            if (sy >= 0 && sy < wy) { memcpy(cv->a[y], a[sy], sizeof a[0]); memcpy(cv->tag[y], t[sy], sizeof t[0]); }
-            else { memset(cv->a[y], 0, sizeof a[0]); memset(cv->tag[y], 0, sizeof t[0]); }
+            if (sy >= 0 && sy < wy) { memcpy(cv->a[y], a[sy], sizeof a[0]); memcpy(cv->tag[y], t[sy], sizeof t[0]); memcpy(cv->wpx[y],w[sy],sizeof w[0]); memcpy(cv->hpx[y],h[sy],sizeof h[0]); }
+            else { memset(cv->a[y], 0, sizeof a[0]); memset(cv->tag[y], 0, sizeof t[0]); memset(cv->wpx[y],0,sizeof w[0]); memset(cv->hpx[y],0,sizeof h[0]); }
         }
     }
 }
@@ -4410,13 +4419,16 @@ static void translate(Canvas *cv, int dx) {
     if (!dx) return;
     static Color a[CH][CW];
     static unsigned char t[CH][CW];
+    static bool w[CH][CW], h[CH][CW];
     memcpy(a, cv->a, sizeof a);
     memcpy(t, cv->tag, sizeof t);
+    memcpy(w,cv->wpx,sizeof w);
+        memcpy(h,cv->hpx,sizeof h);
     for (int y = 0; y < CH; y++)
         for (int x = 0; x < CW; x++) {
             int sx = x - dx;
-            if (sx >= 0 && sx < CW) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; }
-            else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; }
+            if (sx >= 0 && sx < CW) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; cv->wpx[y][x] = w[y][sx]; cv->hpx[y][x] = h[y][sx]; }
+            else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; cv->wpx[y][x] = false; cv->hpx[y][x] = false; }
         }
 }
 
@@ -5571,6 +5583,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         for (int x = 0; x < CW; x++) {
             int lb = seg->lab[y][x];
             cv->empty[y][x] = lb == NONE;
+            cv->hpx[y][x] = lb == HANDLE;
             cv->tag[y][x] = lb == NONE ? T_NONE : (lb == SMEAR || lb == BLADE) ? T_WEAPON : T_BODY;
         }
     cv->pen = T_BODY;
@@ -6065,16 +6078,38 @@ static const Color INK2 = {150, 150, 170, 255};
 
 typedef struct {
     const char *name; int n; Frame *frames;
+    Frame *weapons, *steel;
     Vector2 weapon[64];
     bool hasWeapon[64];
     Vector2 offhand[64];
     bool hasOffhand[64];
 } Rendered;
 
+/* Camadas exatas da arma: sem seleção por cor do rosto/roupa. */
+static void save_rendered(const char *path, const Rendered *r, int cw, int ch) {
+    save_strip(path, r->frames, r->n, cw, ch);
+    if (!r->weapons) return;
+    char file[PATHLEN]; const char *dir=GetDirectoryPath(path);
+    snprintf(file,sizeof file,"%s/_weapon_%s.png",dir,r->name);
+    save_strip(file,r->weapons,r->n,cw,ch);
+    snprintf(file,sizeof file,"%s/_steel_%s.png",dir,r->name);
+    save_strip(file,r->steel,r->n,cw,ch);
+}
+
 /* Só os pixels da lâmina, sem a aura: os VFX acompanham a arma desenhada.
  * A metade da frente evita centrar o efeito entre as duas mãos dos espadachins. */
 static void weapon_point(Rendered *r, int frame, const Canvas *cv, int ax, int ay) {
     if (frame >= 64) return;
+    if (!r->weapons) r->weapons = calloc((size_t)r->n, sizeof(Frame));
+    if (!r->steel) r->steel = calloc((size_t)r->n, sizeof(Frame));
+    if (!r->weapons || !r->steel) { fprintf(stderr, "sem memória para separar armas\n"); exit(1); }
+    for (int y=0;y<CH;y++) for(int x=0;x<CW;x++) {
+        Color c=cv->a[y][x];
+        bool blade=cv->wpx[y][x] && c.a && cv->tag[y][x] != T_FX;
+        bool handle=cv->hpx[y][x] && c.a && cv->tag[y][x] != T_FX;
+        r->weapons[frame].p[y][x] = blade || handle ? c : (Color){0};
+        r->steel[frame].p[y][x] = blade ? c : (Color){0};
+    }
     int lo = CW, hi = -1;
     for (int y = 0; y < CH; y++) for (int x = 0; x < CW; x++)
         if (cv->wpx[y][x] && cv->a[y][x].a) { if (x < lo) lo = x; if (x > hi) hi = x; }
@@ -7012,9 +7047,9 @@ static void weapon_aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
             if (!w[y][x]) continue;
             for (int k = 0; k < 4; k++) {
                 int nx = x + d4[k][0], ny = y + d4[k][1];
-                if (hsh6("aura7", ctx->anim, ctx->idx, x, y, k, 0) < 0.55 * pw) fx_put_clean(cv, nx, ny, ch->rastro[1]);
+                if (hsh6("aura7", ctx->anim, !strcmp(ch->id,"yoru") ? 0 : ctx->idx, x, y, k, 0) < (!strcmp(ch->id,"yoru") ? .22 : .55) * pw) fx_put_clean(cv, nx, ny, ch->rastro[1]);
                 int fx = x + 2 * d4[k][0], fy = y + 2 * d4[k][1];
-                if (hsh6("aura7b", ctx->anim, ctx->idx, x, y, k, 0) < 0.12 * pw) fx_put_clean(cv, fx, fy, ch->rastro[2]);
+                if (strcmp(ch->id,"yoru") && hsh6("aura7b", ctx->anim, ctx->idx, x, y, k, 0) < 0.12 * pw) fx_put_clean(cv, fx, fy, ch->rastro[2]);
             }
             double r = hsh4("aura7c", ctx->anim, ctx->idx, x, y);
             if (ch->elemento == EL_FOGO && r < 0.35 * pw)
@@ -7255,7 +7290,7 @@ int main(int argc, char **argv) {
             }
             snprintf(fn, sizeof fn, "%.63s.png", st->name);
             path_join(p, d, fn);
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (replacement_layer(ch, st->name)) save_clean(d, st->name, r->n, OUT_W(sc), sc->ch, r->weapon, r->hasWeapon, r->offhand, r->hasOffhand);
             nr++;
         }
@@ -7333,7 +7368,7 @@ int main(int argc, char **argv) {
                 memcpy(r->frames[k].p, cv.a, sizeof cv.a);
             }
             path_join(p, d, "ESPECIAL.png");
-            save_strip(p, r->frames, nst, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (replacement_layer(ch, "ESPECIAL")) save_clean(d, "ESPECIAL", nst, OUT_W(sc), sc->ch, r->weapon, r->hasWeapon, r->offhand, r->hasOffhand);
             if (mf) {
                 fprintf(mf, "anim %-13s  hold %d  contact %d", "ESPECIAL", hold, ci);
@@ -7354,11 +7389,11 @@ int main(int argc, char **argv) {
             const char *out = ch->sem_arma ? "PARADO" : "DESARMADO";
             if (ch->sem_arma) {
                 if (!source_strip(sc, "IDLE") && (ss = source_strip(sc, "DASH"))) f0 = f1 = ss->nframes - 1;
-            } else if ((ss = source_strip(sc, "DASH_ATTACK"))) {
-                f0 = f1 = ss->nframes > 1 ? 1 : 0;
             } else if ((ss = source_strip(sc, "DEATH"))) {
-                f1 = ss->nframes * 2 / 5;          /* o quadro em que chega aos joelhos */
-                if (ch->ecos) f1 = ss->nframes / 3; /* o Oboro ainda de cabeça erguida (depois ela pende) */
+                f1 = ss->nframes * 2 / 5;          /* reação até chegar aos joelhos; sem a arma */
+                if (ch->ecos) f1 = ss->nframes / 3;
+            } else if ((ss = source_strip(sc, "DASH_ATTACK"))) {
+                f0=0; f1=ss->nframes > 1 ? 1 : 0;
             } else if ((ss = source_strip(sc, "HURT"))) {
                 f0 = ss->nframes > 1 ? 1 : 0;       /* o primeiro é o clarão do golpe */
                 f1 = ss->nframes - 1;
@@ -7378,7 +7413,7 @@ int main(int argc, char **argv) {
                 }
                 snprintf(fn, sizeof fn, "%s.png", out);
                 path_join(p, d, fn);
-                save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                save_rendered(p, r, OUT_W(sc), sc->ch);
                 if (mf) {
                     if (r->n > 1) fprintf(mf, "anim %-13s  stop %d\n", out, r->n - 1);
                     else fprintf(mf, "anim %s\n", out);
@@ -7405,7 +7440,7 @@ int main(int argc, char **argv) {
                 memcpy(r->frames[j].p, cv.a, sizeof cv.a);
             }
             path_join(p, d, "EMBAINHADO.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim EMBAINHADO     loop\n");
             nr++;
             r = &rend[si][nr];
@@ -7426,7 +7461,7 @@ int main(int argc, char **argv) {
             }
             memcpy(r->frames[5].p, rend[si][iq].frames[0].p, sizeof r->frames[5].p);
             path_join(p, d, "DESEMBAINHAR.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             /* o preparo devagar, o saque num quadro curto, a pausa no brilho e a volta */
             if (mf) fprintf(mf, "anim DESEMBAINHAR   stop 5  tempos 120 150 40 110 70 100\n");
             nr++;
@@ -7448,7 +7483,7 @@ int main(int argc, char **argv) {
             }
             snprintf(fn, sizeof fn, "%s.png", r->name);
             path_join(p, d, fn);
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim %s\n", r->name);
             nr++;
         }
@@ -7478,7 +7513,7 @@ int main(int argc, char **argv) {
                 }
             }
             path_join(p, d, "PROVA_GUARDA.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim PROVA_GUARDA    loop  ms 170\n");
             nr++;
             r = &rend[si][nr];
@@ -7502,7 +7537,7 @@ int main(int argc, char **argv) {
             }
             g_koj_spark = 0;
             path_join(p, d, "PROVA_PARRY.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim PROVA_PARRY     contact 1\n");
             nr++;
             /* o storyboard do saque: 10 quadros, do embainhado até a guarda nova */
@@ -7525,7 +7560,7 @@ int main(int argc, char **argv) {
                     memcpy(r->frames[j].p, cv.a, sizeof cv.a);
                 }
                 path_join(p, d, "PROVA_SAQUE.png");
-                save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                save_rendered(p, r, OUT_W(sc), sc->ch);
                 if (mf) fprintf(mf, "anim PROVA_SAQUE     stop 9  tempos 140 120 150 60 35 90 70 70 80 120\n");
                 nr++;
             }
@@ -7545,7 +7580,7 @@ int main(int argc, char **argv) {
             r->frames = calloc((size_t)r->n, sizeof(Frame));
             for (int j = 0; j < src->n; j++) seated_frame(&src->frames[j], &r->frames[j], ch);
             path_join(p, d, "SENTADO.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim SENTADO        loop  ms 190\n");   /* a respiração lenta */
             nr++;
         }
@@ -7591,7 +7626,7 @@ int main(int argc, char **argv) {
                     }
                     snprintf(fn, sizeof fn, "%.63s.png", r->name);
                     path_join(p, d, fn);
-                    save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                    save_rendered(p, r, OUT_W(sc), sc->ch);
                     if (replacement_layer(ch, r->name)) save_clean(d, r->name, r->n, OUT_W(sc), sc->ch, r->weapon, r->hasWeapon, r->offhand, r->hasOffhand);
                     if (mf) {
                         int hold;
@@ -7616,7 +7651,7 @@ int main(int argc, char **argv) {
                 r->frames = calloc(32, sizeof(Frame));
                 r->n = grito(&sc->strips[ii], &sc->strips[fi], ch, &cv, r->frames);
                 path_join(p, d, "GRITO.png");
-                save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                save_rendered(p, r, OUT_W(sc), sc->ch);
                 if (mf) fprintf(mf, "anim GRITO                     ms 90\n");
                 nr++;
             }
@@ -7689,7 +7724,7 @@ int main(int argc, char **argv) {
             printf("%s é de antes da troca de nomes (gerada pelo programa); pode apagar\n", od);
     }
     for (int si = 0; si < nsel; si++)
-        for (int i = 0; i < nrend[si]; i++) free(rend[si][i].frames);
+        for (int i = 0; i < nrend[si]; i++) { free(rend[si][i].frames); free(rend[si][i].weapons); free(rend[si][i].steel); }
     free_sources();
     return 0;
 }

@@ -1039,7 +1039,7 @@ static void bambuzal(const ArenaCtx *c) {
 /* ------------------------------------------------------------------ */
 static void forja(const ArenaCtx *c) {
     float t = c->t;
-    float fl = 0.88f + 0.12f * sinf(t * 7) * sinf(t * 3.3f);
+    float fl = 1; /* luz estável; o golpe não compete com lampejos da lava */
     /* O céu pela boca da cratera: fumaça avermelhada e cinza caindo. */
     vgrad(0, 0, LOW_W, 70, C(20, 8, 12), C(72, 24, 20));
     for (int i = 0; i < 7; i++) {
@@ -1076,10 +1076,6 @@ static void forja(const ArenaCtx *c) {
         float cx = fract(hash1(k + 40) + t * 0.01f) * (LOW_W + 40) - 20, cy = 116 + hash1(k + 41) * 14, w = 10 + hash1(k + 42) * 16;
         DrawEllipse((int)cx, (int)cy, w / 2, 1.5f, C(70, 26, 16));
         rect(cx - w / 4, cy - 1, w / 2, 1, C(110, 40, 20));
-    }
-    for (int i = 0; i < 6; i++) {
-        float ph = fract(t * 0.6f + hash1(i + 50)), x = hash1(i + 51) * LOW_W;
-        if (ph < 0.35f) DrawCircleLines((int)x, 118 + (int)(hash1(i + 52) * 10), ph * 8, C(255, 236, 150));
     }
     glow(160, 124, 120, C(110, 30, 8));
     for (int k = 0; k < 9; k++) {   /* as línguas de fogo saindo da crosta do lago */
@@ -1661,7 +1657,7 @@ void arena_draw_front(ArenaId id, const ArenaCtx *c) {
                 float life = fract(hash1(i + 1) + t * (0.15f + hash1(i + 2) * 0.2f));
                 Color e = life < 0.5f ? C(255, 200, 90) : C(255, 110, 40);
                 DrawPixel((int)x, (int)y, fade(e, 0.95f - life * 0.5f));
-                if (i % 5 == 0) DrawCircleGradient((Vector2){x + 0.5f, y + 0.5f}, 2.5f, fade(C(255, 120, 40), 0.35f), fade(C(255, 120, 40), 0));
+
             }
             EndBlendMode();
             break;

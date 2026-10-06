@@ -25,7 +25,7 @@ Pasta: `c_game/assets/audio/sfx/`. Um efeito aceita `nome.wav` ou até quatro va
 | `cue` | Aviso antes do contato |
 | `perfect`, `good`, `bad` | Perfeito, bom, dano recebido |
 | `break`, `seal` | Quebra de postura e selo |
-| `swing`, `gesture` | Corte e gesto |
+| `swing`, `gesture` | Corte do adversário e gesto de Kojiro |
 | `koiguchi`, `saque` | Soltar a bainha e desembainhar |
 | `thunder`, `drum`, `thud`, `clap` | Raio, tambor, queda e palmas |
 | `ui`, `type`, `gem` | Menu, texto e progressão |
@@ -38,6 +38,8 @@ Pasta: `c_game/assets/audio/sfx/`. Um efeito aceita `nome.wav` ou até quatro va
 Entregar `sfx/<mestre>/cue.wav`, `gesture.wav` e `swing.wav` (ou `_01.wav` até `_04.wav`). Exemplo: `sfx/arashi/swing_01.wav`. Oboro consulta a pasta do aprendiz cuja postura está copiando; o mesmo banco e suas vozes são compartilhados. Não entregar uma cópia dos mesmos sons em `oboro/`. Esta pasta serve para a postura própria do Oboro.
 
 Sem arquivo válido, o jogo retorna ao som global/embutido; o gesto usa o mesmo tom do aprendiz. WAVs específicos preservam seu timbre. `swing` mantém o limite de 1,6 s e quatro vozes por variante; arquivos inválidos são recusados. Jinshi continua sem som de aviso. `APARA_LOG_POSTURAS=1` registra a origem escolhida em cada evento.
+
+O aviso toca somente no evento de aviso. O corte é agendado pela energia máxima em blocos de 5 ms de cada variação WAV: o pico é alinhado ao contato sem acelerar ou desacelerar o arquivo. Evitar silêncio inicial longo e ataques de volume muito tardios; a antecedência máxima disponível é a viagem da lâmina. O gesto de Kojiro toca no aperto, e o resultado do parry toca no impacto. O movimento preparatório não deve adicionar outro corte.
 
 ## Composição
 
@@ -57,6 +59,8 @@ O pack comprado `vfx_slash` entra sem modificar o PNG original: copiar
 O pack substitui o rastro do Garfiel (garras laranja, linha 3), inclusive na katana do Oboro quando ele rouba essa postura. A recoloração ocorre no shader e preserva os highlights brancos; o PNG comprado permanece intacto. Arashi voltou ao formato do slash branco das poses originais do Samurai #5, recolorido em cinza de nuvem, com pequenos raios azul-elétrico saindo da borda. O Oboro usa a mesma paleta e os mesmos detalhes no slash original da própria katana. Os slashes completos das linhas 1/7/10 não são usados nas lutas.
 
 O gerador produz 28 camadas `_clean_*.png` e seus pontos de arma `_clean_*.txt`, nas pastas `arashi`, `garfiel`, `oboro` e `oboro_mascara`. As camadas do Arashi ficaram disponíveis, mas o jogo desenha sua tira com o slash original cinza e raios azuis. Elas retiram apenas o efeito antigo usando as tags semânticas do gerador e preservam corpo e arma. Esses arquivos derivados dos packs pagos também ficam fora do Git e entram no pacote de assets. Quem já tem os packs-fonte pode gerar novamente com `make sprites`; quem recebe só o runtime precisa do pacote atualizado, incluindo as tiras atualizadas de Shizuku, Suiren, Arashi e os respectivos ecos do Oboro com e sem máscara. `make assets-prontos` confere as camadas quando o pack slash está instalado. `APARA_SLASH=0` permite comparar as garras com o rastro anterior.
+
+O runtime também precisa das máscaras `_weapon_<animação>.png` e `_steel_<animação>.png` em cada pasta de adversário, além do `DESARMADO.png` e do `sprite.txt` atualizados. A primeira camada recorta a arma real para o desarme; a segunda mantém os efeitos no aço. O gerador produz essas máscaras com as mesmas células dos ataques. `make assets-prontos` exige as camadas dos ataques para impedir uma entrega incompleta.
 
 O Git não contém os PNGs pagos nem as novas entregas. Na máquina que tem os arquivos:
 

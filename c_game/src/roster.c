@@ -46,11 +46,11 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         .arena = ARENA_JARDIM, .posture = 396, .hitsToFall = 8, .cueVisual = 1, .cueAudio = 1, .tint = 0xD8E0C8FF,
         .stances = {STANCE("", 0.082f, 0.203f, 0.437f)}, .stanceCount = 1,
         .moves = {
-            {"casco", 1, {0}, 2.0f, -1, 0, LOOK_THRUST, 1.15f},
-            {"mordida", 2, {0.42f}, 2.0f, -1, 0, LOOK_THRUST, 1.00f},
+            {"casco", 1, {0}, 2.0f, -1, 0, LOOK_HIGH, 1.15f},
+            {"mordida", 2, {0.42f}, 2.0f, -1, 0, LOOK_HIGH, 1.00f},
             {"carapaça", 2, {0.60f}, 1.5f, -1, 0, LOOK_HIGH, 1.25f},
             {"concha", 1, {0}, 1.5f, -1, 0, LOOK_LOW, 1.15f},
-            {"bote da tartaruga", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 1.00f},
+            {"bote da tartaruga", 1, {0}, 1.2f, -1, 0, LOOK_HIGH, 1.00f},
             {"maré lenta", 2, {0.75f}, 1.0f, -1, 0, LOOK_LOW, 1.25f},
             {"casco fechado", 2, {0.90f}, 1.0f, -1, 0, LOOK_HIGH, 1.15f},
         },
@@ -428,10 +428,10 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"eco da terra / sulco", 1, {0}, 1.0f, p, 0, LOOK_THRUST, 1.75f, 0, false, false, 1}, \
             {"eco da terra / pedregulho", 2, {1.10f}, 1.0f, p, 0, LOOK_JUMP, 1.75f, 0, false, false, 1}, \
             {"eco da terra / terremoto", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.55f, 0, false, false, 1}, \
-            {"eco da tartaruga", 2, {0.42f}, 1.0f, p, 0, LOOK_THRUST, 1.00f, 0, false, false, 2}, \
+            {"eco da tartaruga", 2, {0.42f}, 1.0f, p, 0, LOOK_HIGH, 1.00f, 0, false, false, 2}, \
             {"eco da tartaruga / carapaça", 2, {0.60f}, 1.0f, p, 0, LOOK_HIGH, 1.25f, 0, false, false, 2}, \
             {"eco da tartaruga / concha", 1, {0}, 1.0f, p, 0, LOOK_LOW, 1.15f, 0, false, false, 2}, \
-            {"eco da tartaruga / bote da tartaruga", 1, {0}, 1.0f, p, 0, LOOK_DASH, 1.00f, 0, false, false, 2}, \
+            {"eco da tartaruga / bote da tartaruga", 1, {0}, 1.0f, p, 0, LOOK_HIGH, 1.00f, 0, false, false, 2}, \
             {"eco do vento", 2, {0.45f}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x2, false, false, 7}, \
             {"eco do vento / tufão", 5, {0.40f, 0.40f, 0.40f, 0.60f}, 1.0f, p, 0, LOOK_LOW, 0.65f, 0, false, false, 7}, \
             {"eco do vento / lufada", 1, {0}, 1.0f, p, 0, LOOK_DASH, 0.75f, 0, false, false, 7}, \

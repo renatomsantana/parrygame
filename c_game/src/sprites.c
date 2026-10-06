@@ -56,6 +56,8 @@ void spr_shutdown(void) {
         for (int k = 0; k < sets[i].count; k++) {
             UnloadTexture(sets[i].anims[k].tex);
             if (sets[i].anims[k].cleanTex.id) UnloadTexture(sets[i].anims[k].cleanTex);
+            if (sets[i].anims[k].weaponTex.id) UnloadTexture(sets[i].anims[k].weaponTex);
+            if (sets[i].anims[k].steelTex.id) UnloadTexture(sets[i].anims[k].steelTex);
         }
     nsets = 0;
     for (int i = 0; i < nfx; i++)
@@ -138,6 +140,16 @@ static void parse_anim(SprSet *s, char *line, const char *dir) {
     a.tex = LoadTextureFromImage(im);
     UnloadImage(im);
     SetTextureFilter(a.tex, TEXTURE_FILTER_POINT);
+    Texture2D *layers[2] = {&a.weaponTex, &a.steelTex};
+    const char *names[2] = {"weapon", "steel"};
+    for(int k=0;k<2;k++) {
+        snprintf(path,sizeof path,"%s/_%s_%s.png",dir,names[k],a.name);
+        if (!FileExists(path)) continue;
+        Texture2D t=LoadTexture(path);
+        if(t.id && t.width==a.tex.width && t.height==a.tex.height) {
+            *layers[k]=t; SetTextureFilter(t,TEXTURE_FILTER_POINT);
+        } else if(t.id) UnloadTexture(t);
+    }
     snprintf(path, sizeof path, "%s/_clean_%s.png", dir, a.name);
     if (FileExists(path)) {
         Texture2D clean = LoadTexture(path);
@@ -212,6 +224,8 @@ const SprSet *spr_get(const char *id) {
         for (int k = 0; k < sets[i].count; k++) {
             UnloadTexture(sets[i].anims[k].tex);
             if (sets[i].anims[k].cleanTex.id) UnloadTexture(sets[i].anims[k].cleanTex);
+            if (sets[i].anims[k].weaponTex.id) UnloadTexture(sets[i].anims[k].weaponTex);
+            if (sets[i].anims[k].steelTex.id) UnloadTexture(sets[i].anims[k].steelTex);
         }
         sets[i].count = 0;
         snprintf(sets[i].id, sizeof sets[i].id, "%s", id);
@@ -231,7 +245,6 @@ const SprAnim *spr_anim(const SprSet *s, const char *name) {
 /* A lâmina sozinha (as adagas do yoru, as únicas que aparecem no apagão) */
 /* ------------------------------------------------------------------ */
 
-#define LAMINA_LUZ_BRANCA 190     /* o brilho do aço: luminância de 190 ou mais (0 a 255), em qualquer lugar do corpo abaixo dos olhos */
 #define LAMINA_LUZ_VIOLETA 75     /* o violeta da lâmina: de 75 ou mais, mas só perto de um ponto de lâmina */
 #define LAMINA_ACIMA_MAX 28       /* abaixo da altura dos olhos: nada acima disto, a partir dos pés */
 #define LAMINA_RAIO 10            /* px em volta de um ponto de lâmina */
@@ -240,7 +253,7 @@ const SprAnim *spr_anim(const SprSet *s, const char *name) {
 bool spr_pixel_de_lamina(Color c, int acimaDosPes, bool pertoDoPonto) {
     if (c.a < 200 || acimaDosPes > LAMINA_ACIMA_MAX || c.b < c.r) return false;
     float luz = 0.30f * c.r + 0.59f * c.g + 0.11f * c.b;
-    return luz >= LAMINA_LUZ_BRANCA || (pertoDoPonto && luz >= LAMINA_LUZ_VIOLETA);
+    return pertoDoPonto && luz >= LAMINA_LUZ_VIOLETA;
 }
 
 static struct { const SprAnim *src; SprAnim lamina; bool ok; } lam[LAMINA_MAX];
@@ -283,7 +296,12 @@ const SprAnim *spr_lamina(const SprSet *s, const SprAnim *a) {
     int i = nlam++;
     lam[i].src = a;
     lam[i].lamina = *a;
-    lam[i].lamina.tex = tira_da_lamina(s, a);
+    if(a->steelTex.id) {
+        Image steel=LoadImageFromTexture(a->steelTex);
+        lam[i].lamina.tex=LoadTextureFromImage(steel);
+        UnloadImage(steel);
+        SetTextureFilter(lam[i].lamina.tex,TEXTURE_FILTER_POINT);
+    } else lam[i].lamina.tex = tira_da_lamina(s, a);
     lam[i].ok = lam[i].lamina.tex.id != 0;
     return lam[i].ok ? &lam[i].lamina : NULL;
 }

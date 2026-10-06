@@ -837,5 +837,45 @@
     "windows": "not executed for this change",
     "human_review": "pending",
     "outputs": "outputs/postura-06out"
-  }
+  },
+  "updates": [
+    {
+      "date": "2026-10-06",
+      "branch": "codex/fluidez-golpes",
+      "base_commit": "1eaa38c",
+      "scope": "Coreografia, aviso/corte/impacto sonoros, máscaras semânticas de arma, desarme dos 13 chefes e limpeza da lava. Preserva dano, pesos, intervalos e julgamento atuais; Genbu usa direções altas nos padrões existentes.",
+      "mac": {
+        "core_checks": 20964,
+        "core_failures": 0,
+        "presentation_checks": 36190,
+        "presentation_failures": 0,
+        "real_asset_checks": 215444,
+        "real_asset_failures": 0,
+        "audio_failures": 0,
+        "fuzz_scenarios_per_mode": 600,
+        "fuzz_modes": 4,
+        "fuzz_violations": 0,
+        "frame_rate_robot_gate": "passed",
+        "asset_sets": 17,
+        "declared_strips": 281,
+        "warning_builds": 168,
+        "compiler_warnings": 0
+      },
+      "linux": {
+        "real_asset_checks": 215444,
+        "real_asset_failures": 0,
+        "audio_gate": "passed",
+        "slash_contacts": "identical with and without purchased pack; masters 6, 7, 8 and Oboro"
+      },
+      "held_changes": [
+        "Dano 26,25 e preparação mais lenta do Raizo; pesos maiores de especiais do Daichi e combos longos do Garfiel: proposta interrompida por quebrar a curva; aguardando decisão sobre compensação.",
+        "Formato definitivo das adagas de Yoru: aguardando referência."
+      ],
+      "limits": [
+        "Robôs são estimativas; não validam sensação humana.",
+        "Este registro não renova a validação de hardware de Windows ou gamepad.",
+        "Precisão sonora depende do quadro e do dispositivo; pico posterior à viagem disponível começa na partida da lâmina."
+      ]
+    }
+  ]
 }

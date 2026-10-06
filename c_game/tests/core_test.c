@@ -2348,7 +2348,8 @@ static void test_movesets(void) {
             dash |= m->moves[k].look == LOOK_DASH;
             jump |= m->moves[k].look == LOOK_JUMP;
         }
-        CHECK(dash, "%s tem uma investida correndo", m->name);
+        if(m->identity == 2) CHECK(!dash, "genbu permanece firme, sem corrida");
+        else CHECK(dash, "%s tem uma investida correndo", m->name);
         if (i != 1 && i != 3) CHECK(jump, "%s tem um golpe saltando", m->name);
     }
     /* O intervalo entre contatos de uma sequência é exatamente o do moveset. */

@@ -64,10 +64,10 @@
 #define VFX_MAX 12            /* efeitos das folhas tocando ao mesmo tempo */
 #define AFTER_MAX 8           /* silhuetas que o mestre deixa nos movimentos rápidos */
 #define KARASU_WARP_RECUO 28.0f       /* foge para a direita antes de virar penas */
-#define KARASU_WARP_ANTES_AVISO 0.04f /* reaparece antes do brilho/aviso existente */
+#define KARASU_WARP_ANTES_CONTATO 0.0f /* reaparece no contato, com o aviso preservado */
 #define KARASU_WARP_PENAS 0.035f      /* espaçamento do rastro durante o recuo */
-#define KARASU_WARP_DISSOLVE 0.10f    /* o corpo apaga neste tempo (s) antes de virar penas: sem corte seco */
-#define KARASU_WARP_FORMA 0.04f       /* e se forma neste tempo ao reaparecer: ele reaparece 40 ms antes do aviso (KARASU_WARP_ANTES_AVISO), então está inteiro no aviso */
+#define KARASU_WARP_DISSOLVE (1.0f/120.0f)    /* sumiço em um quadro, sem dissolução longa */
+#define KARASU_WARP_FORMA (1.0f/120.0f)       /* formação em um quadro, no contato */
 #define KARASU_WARP_PENAS_S 240.0f    /* penas por segundo que se soltam do corpo, ou voltam para ele */
 #define ARASHI_ID 10                  /* o relâmpago (o golpe pesado dele): raios caem do céu e, quem leva, fica meio paralisado. Só desenho: o núcleo julga como qualquer outro golpe */
 #define RAIOS_MAX 6
@@ -215,6 +215,8 @@ typedef struct {
     float angle, spin, len, t, flight, landY, target, stuckTime;
     Color blade;
     KatanaStyle style;
+    Texture2D held;              /* pixels da arma realmente usada, sem redesenho genérico */
+    float heldAngle;
 } FlySword;
 
 /* Um raio do relâmpago do arashi: cai em x depois de `espera` s e fica `vida` s na tela. */
@@ -275,7 +277,8 @@ static struct {
     bool packSlashes;
     long packDraws;
     Fx fx;
-    FlySword sword;
+    FlySword sword, offSword;
+    bool swingWaiting; double swingAt; int swingMaster;
 
     Settings settings;
     Duel duel;
@@ -790,9 +793,6 @@ static const Color postureColors[ROSTER_SIZE] = {
     {COR_MAR_MEDIA,255}, {COR_NUVEM_MEDIA,255}, {164,99,203,255}, {238,239,249,255},
     {181,83,211,255}
 };
-static const float posturePitch[ROSTER_SIZE] = {
-    .7f, .8f, .6f, 1.5f, 1, 1.25f, 1.4f, 1.1f, 1.3f, 1.6f, 1.2f, .65f, .9f
-};
 static bool oni_phase(void) { return G.m && G.m->isBigBoss && G.duel.m == G.m && G.duel.seal == 2; }
 static Color posture_color(int echo) {
     if (echo < 0 && oni_phase()) return (Color){COR_ONI_MEDIA,255};
@@ -802,6 +802,7 @@ static const MasterProfile *feedback_master(void) {
     int echo = G.m && G.m->isBigBoss && G.duel.m == G.m ? echo_of(duel_move(&G.duel)) : -1;
     return echo >= 0 ? roster_get(echo) : G.m;
 }
+static int feedback_identity(void) { const MasterProfile *m=feedback_master(); return m ? m->identity : 0; }
 static void posture_sound(SoundId sound, float volume, float pitch) {
     const MasterProfile *source = feedback_master();
     if (source && volume > .001f) {
@@ -939,6 +940,7 @@ static void ren_draw_sounds(void) {
 enum { VFX_FRONT = 0, VFX_BACK = 1, VFX_GLOW = 2, VFX_SWORD = 4, VFX_BODY = 8, VFX_OFFHAND = 16 };
 
 static void boss_blade(Vector2 *butt, Vector2 *tip);
+static int anim_hold(const SprAnim *a);
 
 static Vector2 vfx_origin(bool sword, bool body) {
     if (sword) { Vector2 h, t; boss_blade(&h, &t); return t; }
@@ -1026,7 +1028,7 @@ static int ren_guard_x(void) { return G.renS.set && G.renS.set->hasGuard ? G.ren
 
 static void setup_actors(void) {
     int idx = G.camp.index < ROSTER_SIZE ? G.camp.index : ROSTER_SIZE - 1;
-    Look rl = REN_LOOK, bl = MASTER_LOOKS[idx];
+    Look rl = REN_LOOK, bl = MASTER_LOOKS[G.m ? G.m->identity-1 : idx];
     rl.size *= ACTOR_SCALE;
     bl.size *= ACTOR_SCALE;
     G.bossHome = BOSS_X + (bl.size - ACTOR_SCALE) * 30;
@@ -1038,7 +1040,11 @@ static void setup_actors(void) {
     G.renParryTime = -1;
     G.renKnock = G.bossKnock = 0;
     G.staggerTime = 0;
+    G.swingWaiting=false;
+    if(G.sword.held.id) UnloadTexture(G.sword.held);
+    if(G.offSword.held.id) UnloadTexture(G.offSword.held);
     memset(&G.sword, 0, sizeof G.sword);
+    memset(&G.offSword, 0, sizeof G.offSword);
     fighter_load(&G.renS, "kojiro");
     ren_sheathed();
     fighter_load(&G.bossS, G.m ? G.m->name : "");
@@ -1125,6 +1131,71 @@ static void start_duel(void) {
 /* ------------------------------------------------------------------ */
 
 static void boss_blade(Vector2 *butt, Vector2 *tip);
+static int anim_hold(const SprAnim *a);
+
+/* Recorta a arma deste ataque. O quadro de smear usa a antecipação do mesmo
+ * ataque; nunca troca a katana do Oboro pela arma da postura imitada. */
+static bool capture_held_weapon(FlySword *s, bool offhand) {
+    if(s->held.id) UnloadTexture(s->held);
+    s->held=(Texture2D){0};
+    const SprSet *set=G.bossS.set; const SprAnim *a=G.bossS.pl.anim;
+    if(!set || !a || !a->weaponTex.id || !IsWindowReady()) return false;
+    Image sheet=LoadImageFromTexture(a->weaponTex);
+    ImageFormat(&sheet,PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    int frame=G.bossS.pl.frame;
+    Image im={0};
+    for(int attempt=0;attempt<2;attempt++) {
+        im=ImageFromImage(sheet,(Rectangle){frame*set->cw,0,set->cw,set->ch});
+        Color *px=im.data; int visible=0;
+        for(int y=0;y<im.height;y++) for(int x=0;x<im.width;x++) {
+            bool second=false;
+            if(a->hasOffhand[frame]) {
+                Vector2 p=a->weapon[frame],q=a->offhand[frame];
+                float dx=x-set->ax,dy=y-set->ay;
+                second=(dx-q.x)*(dx-q.x)+(dy-q.y)*(dy-q.y) < (dx-p.x)*(dx-p.x)+(dy-p.y)*(dy-p.y);
+            }
+            if(second!=offhand) px[y*im.width+x]=(Color){0};
+            visible+=px[y*im.width+x].a>0;
+        }
+        if(visible) break;
+        UnloadImage(im); im=(Image){0}; frame=anim_hold(a);
+    }
+    UnloadImage(sheet);
+    if(!im.data) return false;
+    Rectangle box=GetImageAlphaBorder(im,.1f);
+    if(box.width<=0 || box.height<=0) { UnloadImage(im); return false; }
+    /* A direção original vem dos dois pixels mais distantes: mantém foice,
+     * odachi, lança e garras, inclusive cor e proporção do pack. */
+    Color *px=im.data; Vector2 end[2]={{0}}; float maxDistance=-1;
+    for(int k=0;k<2;k++) {
+        float far=-1; Vector2 origin=k?end[0]:(Vector2){box.x+box.width*.5f,box.y+box.height*.5f};
+        for(int y=(int)box.y;y<box.y+box.height;y++) for(int x=(int)box.x;x<box.x+box.width;x++) if(px[y*im.width+x].a) {
+            float d=(x-origin.x)*(x-origin.x)+(y-origin.y)*(y-origin.y);
+            if(d>far) {far=d;end[k]=(Vector2){x,y};}
+        }
+        maxDistance=far;
+    }
+    s->len=fmaxf(4,sqrtf(maxDistance));
+    Vector2 local={(box.x+box.width*.5f-set->ax),(box.y+box.height*.5f-set->ay)};
+    if(G.boss.faceLeft) {local.x=-local.x; ImageFlipHorizontal(&im); box.x=im.width-box.x-box.width; end[0].x=im.width-1-end[0].x;end[1].x=im.width-1-end[1].x;}
+    s->pos=(Vector2){G.boss.x+G.boss.offsetX+local.x,G.boss.y-G.boss.hopY+local.y+G.bossS.squat};
+    s->angle=s->heldAngle=atan2f(end[1].y-end[0].y,end[1].x-end[0].x)*RAD2DEG;
+    ImageCrop(&im,box); s->held=LoadTextureFromImage(im); UnloadImage(im);
+    SetTextureFilter(s->held,TEXTURE_FILTER_POINT);
+    return s->held.id != 0;
+}
+
+static void launch_disarmed_weapon(FlySword *s, bool other) {
+    s->active=other ? capture_held_weapon(s,true) : true;
+    if(!other) capture_held_weapon(s,false);
+    s->stuck=false; s->stuckTime=0; s->t=0;
+    s->vel=(Vector2){other?72:58,other?-155:-175};
+    s->target=other?82:100;
+    s->landY=GROUND_LOW+3-sinf(s->target*DEG2RAD)*s->len/2;
+    float dy=s->landY-s->pos.y;
+    s->flight=(-s->vel.y+sqrtf(s->vel.y*s->vel.y+2*SWORD_GRAVITY*dy))/SWORD_GRAVITY;
+    s->spin=(s->target+720-s->angle)/s->flight;
+}
 
 static void start_disarm(void) {
     Rig *b = &G.boss, *r = &G.ren;
@@ -1143,6 +1214,8 @@ static void start_disarm(void) {
     s->flight = (-s->vel.y + sqrtf(s->vel.y * s->vel.y + 2 * SWORD_GRAVITY * dy)) / SWORD_GRAVITY;
     s->spin = (s->target + 720 - s->angle) / s->flight; /* duas voltas e meia até cravar */
     s->t = 0;
+    launch_disarmed_weapon(s, false);
+    launch_disarmed_weapon(&G.offSword, true);
     s->blade = b->look.blade;
     s->style = katana_style(&b->look);
     b->noSword = true;
@@ -1154,7 +1227,7 @@ static void start_disarm(void) {
         /* sem a arma, de joelhos (ou curvado, quem não cai) */
         const SprAnim *d = fa(&G.bossS, "DESARMADO");
         f_clear(&G.bossS, false);
-        if (d) f_add(&G.bossS, d, 0, d->frames - 1, 0.7f);
+        if (d) f_add(&G.bossS, d, 0, d->frames - 1, 0);
         else fighter_idle(&G.bossS);
     }
     b->breath = 0.4f;
@@ -1172,8 +1245,7 @@ static void start_disarm(void) {
     set_state(ST_FINISHER);
 }
 
-static void update_sword(float dt) {
-    FlySword *s = &G.sword;
+static void update_flying_weapon(FlySword *s, float dt) {
     if (!s->active) return;
     if (s->stuck) { s->stuckTime += dt; return; }
     s->t += dt;
@@ -1195,6 +1267,19 @@ static void update_sword(float dt) {
     }
 }
 
+static void update_sword(float dt) {
+    update_flying_weapon(&G.sword,dt);
+    update_flying_weapon(&G.offSword,dt);
+}
+
+static void draw_held_flying(const FlySword *s) {
+    if(!s->active || !s->held.id) return;
+    float wobble=s->stuck?sinf(s->stuckTime*38)*expf(-s->stuckTime*5)*7:0;
+    Rectangle src={0,0,s->held.width,s->held.height};
+    Rectangle dst={roundf(s->pos.x),roundf(s->pos.y),s->held.width,s->held.height};
+    DrawTexturePro(s->held,src,dst,(Vector2){s->held.width*.5f,s->held.height*.5f},s->angle-s->heldAngle+wobble,WHITE);
+}
+
 /* Posição da arma voando: centro, direção e as duas pontas. */
 static void fly_ends(const FlySword *s, Vector2 *butt, Vector2 *tip) {
     float wobble = s->stuck ? sinf(s->stuckTime * 38) * expf(-s->stuckTime * 5) * 7 : 0;
@@ -1212,7 +1297,7 @@ static void fly_ends(const FlySword *s, Vector2 *butt, Vector2 *tip) {
 /* Lança e cajado voando: haste desenhada em 2D. */
 static void draw_pole_flying(void) {
     FlySword *s = &G.sword;
-    if (!s->active || G.boss.look.weapon == WEAPON_KATANA) return;
+    if (!s->active || s->held.id || G.boss.look.weapon == WEAPON_KATANA) return;
     Vector2 b, t;
     fly_ends(s, &b, &t);
     bool spear = G.boss.look.weapon == WEAPON_SPEAR;
@@ -1223,7 +1308,7 @@ static void draw_pole_flying(void) {
 /* A espada do desarme em 3D: gira no ar e no próprio eixo, e crava pela ponta. */
 static void draw_sword_3d(Color light) {
     FlySword *s = &G.sword;
-    if (!s->active || G.boss.look.weapon != WEAPON_KATANA) return;
+    if (!s->active || s->held.id || G.boss.look.weapon != WEAPON_KATANA) return;
     float wobble = s->stuck ? sinf(s->stuckTime * 38) * expf(-s->stuckTime * 5) * 7 : 0;
     float a = (s->angle + wobble) * DEG2RAD;
     Vector2 dir = {cosf(a), sinf(a)};
@@ -1240,7 +1325,7 @@ static void draw_sword_3d(Color light) {
 
 static void draw_sword(void) {
     FlySword *s = &G.sword;
-    if (!s->active) return;
+    if (!s->active || s->held.id) return;
     float wobble = s->stuck ? sinf(s->stuckTime * 38) * expf(-s->stuckTime * 5) * 7 : 0;
     int ghosts = s->stuck ? 0 : 3;
     for (int g = ghosts; g >= 0; g--) {
@@ -1312,7 +1397,7 @@ static void bought_slash_begin(void) {
     DuelTimeline timeline = duel_timeline(&G.duel);
     if (!timeline.active) return;
     G.cut = (BoughtSlash){.sheet = spr_fx("slash"), .row = 3, .peak = 2,
-        .scale = .42f,
+        .scale = .50f,
         .start = fmax(timeline.launch, timeline.strike - AJ_PACK_SLASH_ANTES),
         .contact = timeline.strike, .end = timeline.strike + AJ_PACK_SLASH_CAUDA,
         .flip = G.boss.faceLeft,
@@ -1369,6 +1454,29 @@ static Pose parry_pose(MoveLook l) { l = rig_look(l); return l == LOOK_LOW ? POS
  * (ATTACK_3), baixo sobe (ATTACK_2), estocada é o corte reto ou a investida.
  * O último golpe das sequências longas é o especial; oboro ataca com o eco da
  * postura em que está e, depois do grito, com a fúria. */
+/* Mobilidade de cada postura só na apresentação. O aviso, contato e o
+ * repertório usado pelos robôs continuam no núcleo, sem mudar o julgamento. */
+static MoveLook movement_look(void) {
+    MoveLook look=strike_look();
+    if(G.duel.comboStrike) return look;
+    const Move *mv=duel_move(&G.duel); if(!mv) return look;
+    const char *name=strstr(mv->name," / "); name=name?name+3:mv->name;
+    if(feedback_identity()==2) return look==LOOK_LOW?LOOK_LOW:LOOK_HIGH;
+    if(feedback_identity()==4) {
+        if(!strcmp(name,"geada") || !strcmp(name,"agulha") || !strcmp(name,"eco do gelo")) return LOOK_DASH;
+        if(!strcmp(name,"sincelo") || !strcmp(name,"glaciar")) return LOOK_FAR;
+        if(!strcmp(name,"nevasca")) return LOOK_JUMP;
+    }
+    if(feedback_identity()==9) {
+        if(!strcmp(name,"onda")) return LOOK_FAR;
+        if(!strcmp(name,"arrebentação")) return LOOK_DASH;
+        if(!strcmp(name,"maremoto")) return LOOK_JUMP;
+    }
+    if(feedback_identity()==5 && !strcmp(name,"bote do tigre")) return LOOK_DASH;
+    if(feedback_identity()==5 && !strcmp(name,"rugido")) return LOOK_JUMP;
+    return look;
+}
+
 static const SprAnim *boss_strike_anim(MoveLook look) {
     const Fighter *f = &G.bossS;
     const SprAnim *a = NULL;
@@ -1384,6 +1492,12 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
         snprintf(name, sizeof name, "%s_ECO_%s", base, roster_get(borrowed)->name);
         for (char *u = name; *u; u++) if (*u >= 'a' && *u <= 'z') *u = (char)(*u - 32);
         if ((a = fa(f, name))) return a;
+    }
+    if(!G.m->isBigBoss && feedback_identity()==1 && mv && !strcmp(mv->name,"rocha")) {
+        a=fa(f,"ESPECIAL"); if(a) return a;
+    }
+    if(!G.m->isBigBoss && feedback_identity()==2 && look!=LOOK_LOW) {
+        a=fa(f,"ATTACK_1"); if(a) return a;
     }
     if (G.special) {
         a = f->furia ? fa(f, "STRONG_ATTACK_FURIA") : NULL;
@@ -1458,7 +1572,7 @@ static void feathers(void) {
     fx_burst(&G.fx, P_FEATHER, at, 22, 80, 3.14f, -1.57f, (Color){18, 14, 29, 255}, (Color){65, 42, 62, 245});
     fx_burst(&G.fx, P_FEATHER, at, 6, 60, 3.14f, -1.57f, (Color){120, 22, 40, 240}, (Color){80, 14, 31, 230});
     if (IsWindowReady()) vfx("64", 8, at, true, VFX_BACK, 26);
-    audio_play(SND_SWING, 0.45f, 0.7f);
+    /* As penas são visuais; o corte só soa quando a lâmina parte. */
 }
 
 static const SprAnim *boss_run(void) {
@@ -1475,9 +1589,10 @@ static void sprite_windup(void) {
     Fighter *f = &G.bossS;
     G.leap = LEAP_NONE;
     if (!f->set) return;
-    MoveLook look = strike_look();
+    MoveLook look = movement_look();
     const SprAnim *a = boss_strike_anim(look);
     int hold = anim_hold(a);
+    if(hold>0) hold--; /* a preparação segura uma pose antes da saída, sem voltar quadros */
     float w = G.windupSpr;
     bool first = G.duel.comboStrike == 0;
     const SprAnim *previous = f->pl.anim;
@@ -1485,9 +1600,9 @@ static void sprite_windup(void) {
     bool follow = !first && previous && strstr(previous->name, "ATTACK") && resume < previous->frames;
     f_clear(f, false);
     if (follow) {
-        float tail = fminf((previous->frames - resume) * previous->frameTime, w * 0.45f);
+        float tail = (previous->frames - resume) * previous->frameTime;
         f_add(f, previous, resume, previous->frames - 1, tail);
-        w -= tail;
+        w = fmaxf(.01f, w - tail);
     }
     f->strike = a;
     float reach = a->hasReach ? (float)a->reachX : 36;
@@ -1528,8 +1643,7 @@ static void sprite_windup(void) {
         G.leap = LEAP_WARP;
         float cue = (float)(duel_cue_time(&G.duel) - (G.duel.strikeAt - G.duel.windupDuration));
         G.leapAt = fmaxf(0.05f, fminf(G.windupLen * 0.38f, cue - 0.12f));
-        G.leapAir = fminf(G.windupLen - 0.02f,
-                          fmaxf(G.leapAt + 0.07f, cue - KARASU_WARP_ANTES_AVISO));
+        G.leapAir = G.duel.windupDuration - KARASU_WARP_ANTES_CONTATO;
         G.warpPenasT = 0;
         f_add(f, a, 0, hold, G.leapAt);
         f_add(f, a, hold, hold, w - G.leapAt);
@@ -1562,6 +1676,11 @@ static void sprite_windup(void) {
         return;
     }
     f_add(f, a, 0, hold, first ? fminf(w * 0.6f, antic) : fminf(w, antic));
+    if(feedback_identity() == 2) {
+        G.bossStepTo=G.bossStrikeStep;
+        G.bossStepSpeed=fabsf(G.bossStrikeStep-G.bossStep)/fmaxf(.1f,w);
+        return;
+    }
     G.bossStepTo = G.bossStep + (G.bossStrikeStep - G.bossStep) * 0.4f;
     float stepTime = first ? fminf(0.2f, w * 0.5f) : w * 0.8f;
     G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.06f, stepTime);
@@ -1576,15 +1695,18 @@ static void sprite_launch(void) {
     const SprAnim *a = f->strike;
     int c = anim_contact(a);
     float lead = duel_strike_lead(&G.duel);
-    if (G.bossHidden) { G.bossHidden = false; feathers(); }
+    if (G.bossHidden && G.leap != LEAP_WARP) { G.bossHidden = false; feathers(); }
     if (!(G.leap == LEAP_JUMP && G.hopTravel)) {
         G.bossStepTo = G.bossStrikeStep;
         G.bossStepSpeed = fabsf(G.bossStrikeStep - G.bossStep) / fmaxf(0.05f, lead - 0.02f);
+        if(feedback_identity()==4 && (G.leap==LEAP_DASH || G.leap==LEAP_FAR)) G.bossStepSpeed*=AJ_SHIZUKU_DASH_X;
     }
     /* Repassar a antecipação evita congelar os packs cujo hold é c - 1. */
     if (c > 0) {
+        int from = f->pl.anim == a ? fminf(f->pl.frame,c-1) : 0;
         f_clear(f, false);
-        f_add(f, a, 0, c - 1, lead);
+        f_add(f, a, from, c - 1, lead);
+        f_add(f,a,c,c,a->frameTime); /* contato visual também durante a tolerância tardia */
     }
 }
 
@@ -1637,7 +1759,7 @@ static void sprite_impact(const DuelEvent *e) {
             G.landT = 0.2f;
         }
         /* entre os golpes de uma sequência ele fica onde está; no fim, volta */
-        G.bossStepTo = G.duel.comboRemaining > 0 ? G.bossStep : 0;
+        G.bossStepTo = G.duel.comboRemaining > 0 || feedback_identity() == 2 ? G.bossStep : 0;
         G.bossStepSpeed = 40;
         G.hopT = G.hopLen;
         G.hopTravel = false;
@@ -1760,7 +1882,7 @@ static void on_impact(const DuelEvent *e) {
 /* O relâmpago do arashi (o golpe pesado dele, LOOK_HEAVY): quando o golpe chega, raios caem do céu em volta de quem aparou ou, se pegou, de kojiro. Quem leva fica
  * meio paralisado: treme, pisca em azul e cai devagar. É só o que se vê: o núcleo julga o relâmpago como qualquer outro golpe de duas lâminas, e o aperto seguinte vale igual. */
 static bool golpe_do_raio(void) {
-    if (!G.m || G.duel.m != G.m || feedback_master()->identity != ARASHI_ID) return false;
+    if (!G.m || G.duel.m != G.m || feedback_identity() != ARASHI_ID) return false;
     const Move *mv = duel_move(&G.duel);
     return mv && mv->look == LOOK_HEAVY;
 }
@@ -1892,11 +2014,11 @@ static void tell_particles(int id, Vector2 tip, Vector2 mid, Vector2 feet) {
         case 8: /* Enjin: brasas */
             fx_burst(&G.fx, P_EMBER, tip, 13, 32, 0.8f, -1.57f, (Color){255, 190, 80, 240}, (Color){255, 90, 30, 220}); break;
         case 9: /* Suiren: gotas do mar */
-            fx_burst(&G.fx, P_GEM, tip, 9, 36, 0.7f, -1.57f, (Color){COR_MAR_CLARA,220}, (Color){COR_MAR_MEDIA,200}); break;
+            fx_burst(&G.fx, P_GEM, tip, 16, 36, 0.7f, -1.57f, (Color){COR_MAR_CLARA,220}, (Color){COR_MAR_MEDIA,200}); break;
         case 10: /* Arashi: faíscas elétricas */
             fx_burst(&G.fx, P_SPARK, tip, 11, 65, 0.7f, 3.14f, (Color){COR_RAIO_LUZ,240}, (Color){COR_RAIO_AZUL,220}); break;
         case 11: /* Yoru: lascas discretas fora do apagão */
-            fx_burst(&G.fx, P_SHARD, feet, 7, 27, 0.65f, -1.57f, (Color){112, 106, 128, 170}, (Color){62, 58, 83, 150}); break;
+            fx_burst(&G.fx, P_SHARD, tip, 7, 18, 0.30f, -1.57f, (Color){164, 99, 203, 180}, (Color){112, 75, 158, 145}); break;
         case 12: /* Jinshi: luar */
             fx_burst(&G.fx, P_GEM, tip, 8, 26, 0.6f, -1.57f, (Color){219, 220, 245, 210}, (Color){157, 143, 201, 190}); break;
         default: /* Oboro sem eco: sombra da própria postura */
@@ -1916,7 +2038,7 @@ static void tell_fx(void) {
         if (source->identity == 3) raizo_tell(tip, feet);
         else tell_particles(source->identity, tip, mid, feet);
     }
-    posture_sound(SND_GESTURE, .3f, posturePitch[source->identity - 1]);
+    /* Som do aviso exclusivamente no EV_CUE de áudio (calibrado). */
 }
 
 /* A vida de kojiro acaba: ele cai e o painel de derrota aparece. */
@@ -1944,8 +2066,7 @@ static void dual_tell(void) {
         fx_star(&G.fx, (Vector2){c.x - 7, c.y - 5}, 11, 0.2f);
         fx_star(&G.fx, (Vector2){c.x + 3, c.y + 3}, 9, 0.2f);
     }
-    posture_sound(SND_SWING, 0.35f, 1.7f);
-    posture_sound(SND_SWING, 0.3f, 1.9f);
+    /* Sem falsos cortes na preparação; o duplo é anunciado pelo cue. */
     G.boss.flash = 0.7f;
     G.boss.flashColor = (Color){230, 236, 255, 255};
 }
@@ -1976,7 +2097,7 @@ static void aviso_brilho(bool primeiro) {
     Vector2 h, t;
     boss_blade(&h, &t);
     Vector2 at = {h.x + (t.x - h.x) * 0.75f, h.y + (t.y - h.y) * 0.75f};
-    if (G.m->identity == 3 || (G.m->isBigBoss && feedback_master()->identity == 3)) {
+    if (G.m->identity == 3 || (G.m->isBigBoss && feedback_identity() == 3)) {
         /* Lascas cinza-pedra e ocre no instante do aviso, presas à odachi. */
         fx_burst(&G.fx, P_SHARD, at, primeiro ? 7 : 4, 35, 0.70f, -1.57f,
                  (Color){196, 192, 183, 255}, (Color){223, 177, 104, 255});
@@ -2032,7 +2153,15 @@ static void anota_aperto(const DuelEvent *e) {
 
 static void begin_posture_aura(int echo);
 
+static void attack_sfx_tick(void) {
+    if(!G.swingWaiting || G.duel.clock+1e-9<G.swingAt) return;
+    G.swingWaiting=false;
+    if(getenv("APARA_LOG_POSTURAS")) fprintf(stderr,"POSTURA tempo=%.5f fonte=%s som=%d volume=0.900 pitch=1.000 fase=%d\n",G.time,roster_get(G.swingMaster)->name,SND_SWING,G.duel.seal+1);
+    audio_play_master(G.swingMaster,SND_SWING,.9f,1);
+}
+
 static void handle_events(void) {
+    attack_sfx_tick();
     DuelEvent ev[MAX_EVENTS];
     int n = duel_drain(&G.duel, ev, MAX_EVENTS);
     const MasterProfile *m = G.m;
@@ -2061,7 +2190,7 @@ static void handle_events(void) {
                 }
                 if (duel_strike_dual(&G.duel)) dual_tell();
                 G.blackoutTarget = G.duel.blackout ? 1 : 0;
-                if (m->arena == ARENA_PORTO) audio_play(SND_DRUM, 0.9f, 1);
+
                 break;
             case EV_LAUNCH:
                 G.bossWinding = false;
@@ -2070,12 +2199,19 @@ static void handle_events(void) {
                 b->trail = true;
                 sprite_launch();
                 bought_slash_begin();
-                posture_sound(SND_SWING, 0.9f, 1);
+                G.swingMaster=feedback_master()->id-1;
+                G.swingAt=fmax(G.duel.clock,duel_timeline(&G.duel).strike-audio_swing_peak(G.swingMaster));
+                G.swingWaiting=true; attack_sfx_tick();
                 break;
             case EV_CUE:
                 /* o aviso: sempre o mesmo tempo antes do contato; na sequência, mais discreto.
                  * O som vem num evento próprio, adiantado pela calibração de áudio. */
-                if (e->flag) posture_sound(SND_CUE, feedback_master()->cueAudio * (e->i == 0 ? 1 : 0.55f), 1);
+                if (e->flag) {
+                    bool heavy=G.special || strike_look()==LOOK_HEAVY || (G.bossS.strike && !strcmp(G.bossS.strike->name,"ESPECIAL"));
+                    posture_sound(SND_CUE, feedback_master()->cueAudio * (e->i == 0 ? 1 : 0.55f),
+                                  heavy ? .75f : duel_strike_dual(&G.duel) ? .9f : 1);
+                    if(feedback_identity() == 1 && heavy) audio_play(SND_DRUM,.65f,1);
+                }
                 else aviso_brilho(e->i == 0);
                 break;
             case EV_PRESS:
@@ -2097,9 +2233,14 @@ static void handle_events(void) {
                 if (G.logImpactos)
                     fprintf(stderr, "IMPACTO contato %.5f julgamento %d antecedencia %.5f quadro %s %d vida=%.2f fase=%d\n", G.duel.lastStrikeAt, (int)e->judgement, e->a,
                             G.bossS.pl.anim ? G.bossS.pl.anim->name : "-", G.bossS.pl.frame, G.duel.renPosture, G.duel.seal + 1);
+                if(G.leap == LEAP_WARP) {
+                    G.bossHidden=false; G.bossDissolve=0;
+                    G.bossStep=G.bossStrikeStep; G.boss.offsetX=G.bossKnock+G.bossStep;
+                    feathers();
+                }
                 on_impact(e);
                 impacto_do_raio(e);
-                if (m->identity == 3 || (m->isBigBoss && feedback_master()->identity == 3))
+                if (m->identity == 3 || (m->isBigBoss && feedback_identity() == 3))
                     fx_burst(&G.fx, P_SHARD, clash_point(), 6, 43, 0.90f, 3.14f,
                              (Color){185, 182, 174, 220}, (Color){203, 157, 92, 220});
                 sprite_impact(e);
@@ -2127,7 +2268,7 @@ static void handle_events(void) {
             }
             case EV_SPECIAL:
                 G.special = true;
-                audio_play(SND_DRUM, 1, 0.7f);
+
                 break;
             case EV_COMBO:
                 break;
@@ -2195,7 +2336,7 @@ static void fighters_update(float dt) {
     if (!G.bossS.set) return;
     bool landed = G.hopT >= G.hopLen;
     /* investida e salto: depois do recuo (ou de agachar) ele arranca */
-    if (G.leap == LEAP_WARP && G.bossWinding) {
+    if (G.leap == LEAP_WARP) {
         G.leapT += dt;
         if (G.leapStage == 0) {
             G.warpPenasT -= dt;
@@ -2222,7 +2363,7 @@ static void fighters_update(float dt) {
         /* a dissolução: apaga nos últimos instantes do recuo e some; ao reaparecer, se forma. O que vem do núcleo (relógio, aviso, contato) é o mesmo. */
         const float dis = G.leap == LEAP_WARP ? fminf(KARASU_WARP_DISSOLVE, G.leapAt * 0.5f) : KARASU_WARP_DISSOLVE;
         bool apagando = false;
-        if (G.leap == LEAP_WARP && G.bossWinding)
+        if (G.leap == LEAP_WARP)
             apagando = G.leapStage == 1 || (G.leapStage == 0 && G.leapT >= G.leapAt - dis);
         const float antes = G.bossDissolve;
         G.bossDissolve = clampf(antes + (apagando ? dt / dis : -dt / KARASU_WARP_FORMA), 0, 1);
@@ -2237,7 +2378,7 @@ static void fighters_update(float dt) {
             dust(G.boss.x + G.boss.offsetX, true, 22);
             if (G.leap == LEAP_DASH) {
                 G.bossStepTo = G.bossStrikeStep + 10;
-                G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.windupLen - G.leapAt);
+                G.bossStepSpeed = fabsf(G.bossStepTo - G.bossStep) / fmaxf(0.05f, G.windupLen - G.leapAt) * (feedback_identity() == 4 ? AJ_SHIZUKU_DASH_X : 1);
             } else {
                 G.leapAir = fmaxf(0.05f, (float)(duel_timeline(&G.duel).strike - G.duel.clock));
                 boss_hop(G.leapAir, 24);
@@ -2267,7 +2408,7 @@ static void fighters_update(float dt) {
     else if (G.landT > 0) squat = (int)roundf(3 * smooth(G.landT / 0.2f));
     else if (G.bossWinding && (!G.leap || G.leap == LEAP_FAR) && G.windupTime > G.windupLen * 0.5f) squat = 1;
     G.bossS.squat = squat;
-    if (G.bossS.idle && !G.bossWinding && landed) {
+    if (G.bossS.idle && !G.bossWinding && landed && feedback_identity()!=2) {
         if (G.bossStep < -10) {
             /* longe do lugar: volta num pulo para trás */
             float t = 0.32f;
@@ -2766,7 +2907,7 @@ static void scene_cue(void) {
             if (crossed(0.45f)) {
                 G.hz.x = bx + 16;
                 G.hz.alpha = 1;
-                G.sword.active = false;
+                G.sword.active = G.offSword.active = false;
                 scene_boss_dies();
             }
             break;
@@ -3121,6 +3262,8 @@ static void draw_rigs(Color light) {
         draw_sprite_fighter(&ren, &G.renS, light, rim, 0.0f, 1.0f, 1.0f);
         if (G.paralisia > 0) desenha_choque(&ren, &G.renS);
     }
+    draw_held_flying(&G.sword);
+    draw_held_flying(&G.offSword);
     draw_pole_flying();
     if (G.crack > 0) {
         /* Rachadura branca atravessando o mestre de cima a baixo. */
@@ -4617,6 +4760,8 @@ int main(int argc, char **argv) {
     UnloadRenderTexture(G.actors);
     if (G.ui.texture.id != GetFontDefault().texture.id) UnloadFont(G.ui);
     UnloadRenderTexture(G.uiLow);
+    if(G.sword.held.id) UnloadTexture(G.sword.held);
+    if(G.offSword.held.id) UnloadTexture(G.offSword.held);
     spr_shutdown();
     arena_unload_art();
     pix_shutdown();

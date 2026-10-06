@@ -47,6 +47,9 @@
  * (nunca perfeito). Sem aperto, o golpe só entra quando ela acaba. */
 #define AJ_TOLERANCIA_TARDIA       0.030f
 
+/* Velocidade do deslocamento visual; não altera quadros, aviso ou contato. */
+#define AJ_SHIZUKU_DASH_X          1.15f
+
 /* ---- Calibração de latência (opções: tela de teste) -------------------- */
 /* O atraso de vídeo entra no julgamento: o aperto conta esse tanto mais cedo. O de
  * áudio adianta o som do aviso para chegar junto com o brilho. Um golpe sem defesa só é

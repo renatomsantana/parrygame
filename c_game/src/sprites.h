@@ -20,6 +20,8 @@
 typedef struct {
     char name[40];
     Texture2D tex;
+    Texture2D weaponTex;          /* pixels reais da arma, cabo e lâmina; sem corpo/aura */
+    Texture2D steelTex;           /* só o aço; apagão do Yoru */
     Texture2D cleanTex;           /* mesma tira, sem rastro; corpo e arma intactos */
     int frames;
     int hold, contact, stop;     /* -1 = não tem */
@@ -80,10 +82,9 @@ void spr_loop(SprPlayer *p, const SprAnim *a);
 void spr_cycle(SprPlayer *p, const SprAnim *a, float time);  /* o laço por `time` segundos */
 void spr_update(SprPlayer *p, float dt);
 bool spr_done(const SprPlayer *p);
-/* A tira só com a lâmina, para o apagão do yoru: do corpo ficam só as adagas, nas cores delas. É aço o pixel frio (o azul igual ou maior que o vermelho, o que deixa
- * a pele de fora) que está abaixo da altura dos olhos e é bem claro (branco e lilás) em qualquer lugar, ou é violeta mas perto de um ponto de lâmina
- * (`arma` e `arma2` do sprite.txt: o violeta também é do cabelo e das botas, e longe da lâmina fica apagado). Cada tira é feita na primeira vez que se pede,
- * e fica guardada. NULL se a tira não está lá. */
+/* Aço isolado pelo gerador (_steel_<animação>.png): só as adagas no apagão.
+ * Para packs antigos sem máscara, o fallback exige cor fria e proximidade da
+ * lâmina; olhos, barba e roupa clara não acendem por luminância sozinha. */
 const SprAnim *spr_lamina(const SprSet *s, const SprAnim *a);
 bool spr_pixel_de_lamina(Color c, int acimaDosPes, bool pertoDoPonto);   /* a regra de cor e altura, aberta para o teste */
 /* Quanto o corpo avança (px, + para onde o lutador olha) do quadro `de` para o quadro `para`; 0 se algum dos dois não tem corpo. */

@@ -18,6 +18,13 @@ for nome in kojiro hanzo hanzo_mascara daichi genbu raizo shizuku garfiel karasu
                     done;;
             esac
         fi
+        case "$nome/$anim" in
+            kojiro/*|hanzo*/*) ;;
+            daichi/ATTACK*|genbu/ATTACK*|raizo/ATTACK*|shizuku/ATTACK*|garfiel/ATTACK*|karasu/ATTACK*|hayate/ATTACK*|enjin/ATTACK*|suiren/ATTACK*|arashi/ATTACK*|yoru/ATTACK*|jinshi/ATTACK*|oboro*/ATTACK*|*/ESPECIAL|*/STRONG_ATTACK*)
+                for layer in weapon steel; do
+                    if [ ! -s "$pasta/_${layer}_$anim.png" ]; then echo "FALTA: $pasta/_${layer}_$anim.png"; falhas=$((falhas + 1)); fi
+                done;;
+        esac
         tiras=$((tiras + 1))
     done
 done

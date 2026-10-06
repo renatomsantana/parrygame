@@ -26,7 +26,7 @@ for master in 7 8 6 13; do
     if [ "$master" -eq 13 ]; then
         # Fase 2 identifica a postura sorteada; fase 3 usa apenas o repertório Oni.
         sed -n '/^POSTURA /p' "$tmp/1.log" > "$tmp/feedback.log"
-        grep -q 'som=6' "$tmp/feedback.log"
+        ! grep -q 'som=6' "$tmp/feedback.log" # nenhuma falsa partida da lâmina no aviso
         grep -q 'som=5' "$tmp/feedback.log"
         grep -q 'som=0' "$tmp/feedback.log"
         sed -n '/fase=2$/p' "$tmp/feedback.log" > "$tmp/ecos.log"
