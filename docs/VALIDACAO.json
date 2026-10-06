@@ -387,6 +387,91 @@
     },
     "fallback": "APARA_SLASH=0, missing pack or missing replacement layer draws original native trail",
     "windows": "Not executed for this change; previous Windows checks remain historical.",
+    "human_review": "pending",
+    "status": "historical: Arashi purchased lightning replaced by f8096c7; Garfiel claws retained"
+  },
+  "paletas_elementos": {
+    "date": "2026-10-05",
+    "source_commit": "f8096c73996c62b63cc14cb41508c97dc9af99f7",
+    "palette_source": "c_game/src/cores_posturas.h",
+    "fixed_colors": {
+      "shizuku": [
+        "#f4fcff",
+        "#bfefff",
+        "#72cfeb"
+      ],
+      "suiren": [
+        "#b6ffe8",
+        "#22bdaa",
+        "#096c75"
+      ],
+      "arashi_cloud": [
+        "#d9dfe8",
+        "#8c99ad",
+        "#3e526d"
+      ],
+      "arashi_lightning": [
+        "#497eff",
+        "#f4f8ff"
+      ]
+    },
+    "arashi": "Original Samurai #5 attack poses and slash shape restored; cloud-gray recoloring plus two short blue branches originate from slash boundary. Purchased lightning overlays disabled.",
+    "oboro": "All three palettes inherited by own-katana echoes; orange Garfiel claws retained. Flaming sword actions unchanged.",
+    "runtime_assets": "Shizuku, Suiren and Arashi strips and corresponding Oboro echoes regenerated privately; PNG dimensions, frame count, durations, anchors and configured reach verified unchanged. Arashi physical weapon points updated for restored native poses.",
+    "mac": {
+      "headless_checks": 45502,
+      "real_asset_checks": 173416,
+      "failures": 0,
+      "build_warnings": 0
+    },
+    "linux": {
+      "real_asset_checks": 173416,
+      "failures": 0,
+      "build_warnings": 0,
+      "snapshot_note": "Target effects and palettes tested; original Jinshi cue highlight subsequently restored to its previous value, verified in final Mac build."
+    },
+    "palette_pixel_tests": "All three actual loaded attack/echo palettes present; storm slashes contain electric-blue branches.",
+    "real_game_comparison": {
+      "masters": [
+        3,
+        5,
+        10,
+        13
+      ],
+      "oboro_phase": 2,
+      "seconds_oboro": 30,
+      "identical_contacts": 84,
+      "comparison": [
+        "contact time",
+        "judgement",
+        "input lead",
+        "sprite animation and frame"
+      ],
+      "pack_draws": {
+        "raizo": 0,
+        "garfiel": 134,
+        "arashi": 0,
+        "oboro": 52
+      }
+    },
+    "core_source_unchanged": true,
+    "assets_prontos": "17 sets / 281 declared strips plus required replacement layers passed",
+    "preview": {
+      "path": "outputs/paletas-elementos-05out/gelo-mar-tempestade.mp4",
+      "order": [
+        "shizuku",
+        "suiren",
+        "arashi"
+      ],
+      "seconds": 24,
+      "fps": 60,
+      "resolution": [
+        640,
+        360
+      ],
+      "audio": "basic synthesized cues and impacts; no final team mix"
+    },
+    "windows": "Not executed for this visual revision.",
     "human_review": "pending"
   }
 }
