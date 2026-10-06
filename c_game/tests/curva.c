@@ -79,8 +79,8 @@ static const Faixa ALVO[NROBOS][NMESTRES] = {
     {F(85, 91), F(83, 89), F(72, 78), F(67, 73), FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, F0},
     /* casual que decora: saturado na entrada, depois cai em degraus até o oboro */
     {F100, F100, F(98, 100), F(98, 100), F(98, 100), F(88, 94), F(81, 87), F(76, 82), F(70, 76), F(62, 68), F(57, 63), F(52, 58), F(37, 43)},
-    /* reação 250: o precipício do garfiel, sempre descendo (sem os picos do karasu, do arashi e do jinshi) */
-    {F100, F100, F100, F100, F(7, 13), F(5, 11), F(3, 9), F(0.5, 6), FPOUCO, FPOUCO, FPOUCO, FPOUCO, F0},
+    /* Reação 250 cai a partir do quinto; os combos longos do Garfiel, agora oitavo, podem zerar essa reação. */
+    {F100, F100, F100, F100, F(7, 13), F(5, 11), F(3, 9), F(0, 6), FPOUCO, FPOUCO, FPOUCO, FPOUCO, F0},
     /* perfeito e spam: sempre */
     {F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100)},
     {F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0)},

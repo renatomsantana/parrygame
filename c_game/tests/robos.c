@@ -14,7 +14,7 @@
  *       As brasas são somadas por quadro antes de o quadro julgar o golpe que caiu dentro dele, então
  *       um parry perfeito que as apaga no meio de um quadro chega até um quadro de brasa tarde; isso
  *       muda ~0,4% das lutas dele entre as taxas, e o teste só exige que fique abaixo de 2%.
- *   robos_relatorio --ordem [lutas]            make curva-ordem: o casual (ms exato, 60 Hz) do karasu ao oboro, com muitas
+ *   robos_relatorio --ordem [lutas]            make curva-ordem: o casual (ms exato, 60 Hz) do sexto aprendiz ao oboro, com muitas
  *       lutas (100000 por mestre, em todos os núcleos da máquina), tem de ser decrescente com folga de 0,5 ponto de um mestre
  *       para o seguinte: o yoru nunca mais fácil que o arashi, nem o jinshi mais fácil que o yoru. Escreve a tabela com a
  *       margem de erro (95%) e sai com erro se a ordem quebrar.
@@ -103,8 +103,8 @@ static int taxas(int n) {
     return divergem || !brasasOk ? 1 : 0;
 }
 
-/* ---- a ordem da curva, do karasu ao oboro ---- */
-#define ORDEM_DE 5                 /* karasu, o 6º mestre */
+/* ---- a ordem da curva, do sexto aprendiz ao oboro ---- */
+#define ORDEM_DE 5                 /* sexto aprendiz: Arashi na ordem atual */
 #define ORDEM_N (13 - ORDEM_DE)
 #define ORDEM_FOLGA 0.5            /* pontos de vitória: cada mestre tem de ser ao menos isto mais difícil que o anterior */
 
@@ -135,7 +135,7 @@ static int ordem(int lutas) {
     pthread_t th[16];
     for (long i = 0; i < nucleos; i++) pthread_create(&th[i], NULL, ordem_trabalha, NULL);
     for (long i = 0; i < nucleos; i++) pthread_join(th[i], NULL);
-    printf("Casual, ms exato, %d lutas por mestre: a curva do karasu ao oboro tem de cair, com folga de %.1f ponto\n\n| Mestre | vitórias (%%) | ± (95%%) | o anterior menos este |\n|---|---|---|---|\n", lutas, ORDEM_FOLGA);
+    printf("Casual, ms exato, %d lutas por mestre: a curva do sexto aprendiz ao oboro tem de cair, com folga de %.1f ponto\n\n| Mestre | vitórias (%%) | ± (95%%) | o anterior menos este |\n|---|---|---|---|\n", lutas, ORDEM_FOLGA);
     int falhas = 0;
     double anterior = 0;
     for (int k = 0; k < ORDEM_N; k++) {
@@ -148,7 +148,7 @@ static int ordem(int lutas) {
         }
         anterior = v;
     }
-    printf("\n%s\n", falhas ? "ordem: a curva não cai com a folga de 0,5 ponto (FALHA)" : "ordem: a curva cai do karasu ao oboro");
+    printf("\n%s\n", falhas ? "ordem: a curva não cai com a folga de 0,5 ponto (FALHA)" : "ordem: a curva cai do sexto aprendiz ao oboro");
     return falhas ? 1 : 0;
 }
 

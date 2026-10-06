@@ -8,7 +8,7 @@ O relógio do núcleo agenda preparação, aviso, partida da lâmina e contato. 
 
 O perfeito causa mais dano de postura, cura uma porcentagem da vida e apaga a brasa de Enjin. O bom apara com recompensa menor. Nos golpes de duas lâminas, o perfeito segura as duas; o bom deixa entrar a segunda. Errar causa dano e a morte de Kojiro tem hitstop antes da queda. Não há ataque livre, dash controlável nem invencibilidade concedida ao jogador.
 
-O aviso varia de 450 ms no Daichi a 320 ms nos últimos; Jinshi tem aviso visual de pelo menos 350 ms e nenhum som de aviso. Hayate e Jinshi conservam variação na preparação. A lâmina viaja em tempo variável do Garfiel em diante, ligável em `ajuste.h`; aviso e contato não se deslocam. Sequências têm piso de 400 ms entre contatos. Hitstop é descontado da preparação seguinte.
+O aviso varia de 450 ms no Daichi a 320 ms nos últimos; Jinshi tem aviso visual de pelo menos 350 ms e nenhum som de aviso. Hayate e Jinshi conservam variação na preparação. A lâmina viaja em tempo variável do quinto aprendiz (Enjin) em diante, ligável em `ajuste.h`; aviso e contato não se deslocam. Sequências têm piso de 400 ms entre contatos. Hitstop é descontado da preparação seguinte.
 
 Oboro tem três selos: fundamentos de Hanzo, doze ecos e a forma Oni. Recupera a vida do jogador a cada selo; a segunda fase reduz o dano pela metade. A terceira usa os ataques de espada em chamas e preparação ×0,85, com aviso nunca inferior a 320 ms. O HUD não revela selos restantes.
 
@@ -18,17 +18,19 @@ Oboro tem três selos: fundamentos de Hanzo, doze ecos e a forma Oni. Recupera a
 |---|---|---|---|
 | 1 | Daichi | Katana | Terra |
 | 2 | Genbu | Katana | Tartaruga |
-| 3 | Raizo | Odachi | Montanha / pedra |
+| 3 | Hayate | Duas foices | Vento |
 | 4 | Shizuku | Florete | Gelo |
-| 5 | Garfiel | Garras | Tigre |
-| 6 | Karasu | Katana e wakizashi | Corvo |
-| 7 | Hayate | Duas foices | Vento |
-| 8 | Enjin | Katana em chamas | Chama |
+| 5 | Enjin | Katana em chamas | Chama |
+| 6 | Arashi | Duas katanas | Tempestade |
+| 7 | Raizo | Odachi | Montanha / pedra |
+| 8 | Garfiel | Garras | Tigre |
 | 9 | Suiren | Lança | Mar |
-| 10 | Arashi | Duas katanas | Tempestade |
+| 10 | Karasu | Katana e wakizashi | Corvo |
 | 11 | Yoru | Duas adagas invertidas | Noite |
 | 12 | Jinshi | Katana branca | Lua |
 | 13 | Oboro | Katana / espada em chamas | Hanzo, doze ecos, Oni |
+
+A posição na trilha determina o nível, as janelas e o progresso salvo. A identidade do personagem mantém sua arma, postura, arena, roupa, efeitos e sons. Os ecos do segundo selo de Oboro seguem essa mesma ordem na primeira volta.
 
 Todos os padrões e seus tempos estão em `c_game/src/roster.c`. Os objetivos da curva estão em `CURVA.md`; a análise de ritmo, em `FLUIDEZ.md`. As propostas de reduzir hitstop em sequência e acelerar Daichi continuam sem aplicação.
 

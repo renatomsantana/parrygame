@@ -102,10 +102,15 @@ static void test_ajuste(void) {
 static void test_roster(const Settings *s) {
     CHECK(roster_size() == 13, "doze aprendizes e oboro");
     CHECK(roster_get(-1) == NULL && roster_get(13) == NULL, "índices fora da trilha");
+    static const char *ORDER[] = {"daichi", "genbu", "hayate", "shizuku", "enjin", "arashi",
+                                 "raizo", "garfiel", "suiren", "karasu", "yoru", "jinshi", "oboro"};
+    CHECK(roster_by_identity(0) == NULL && roster_by_identity(14) == NULL, "identidades fora da trilha");
     float lastPerfect = 1, lastGood = 1;
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
         CHECK(m->id == i + 1, "id em ordem (%s)", m->name);
+        CHECK(!strcmp(m->name, ORDER[i]), "nova ordem: posição %d é %s", i + 1, ORDER[i]);
+        CHECK(roster_by_identity(m->identity) == m, "identidade única e estável (%s)", m->name);
         CHECK(m->name && m->name[0], "nome do mestre %d", i + 1);
         CHECK(m->style && (m->isBigBoss || strncmp(m->style, "postura d", 9) == 0), "cada aprendiz tem uma postura (%s)", m->name);
         CHECK(m->posture > 0, "postura positiva (%s)", m->name);
@@ -128,9 +133,9 @@ static void test_roster(const Settings *s) {
     /* Quantos erros kojiro aguenta é de cada mestre (a curva de dificuldade, conferida
      * pelos robôs em test_curva); arashi bate mais pesado que o próprio erro dele. */
     Duel da;
-    duel_init(&da, s, roster_get(9), 1);
-    CHECK(roster_get(9)->damage > 1 && duel_ren_damage(&da) > s->renPosture / roster_get(9)->hitsToFall, "arashi bate mais pesado");
-    static const int HITS[13] = {8, 8, 7, 7, 6, 7, 6, 6, 6, 10, 5, 5, 5};
+    duel_init(&da, s, roster_by_identity(10), 1);
+    CHECK(roster_by_identity(10)->damage > 1 && duel_ren_damage(&da) > s->renPosture / roster_by_identity(10)->hitsToFall, "arashi bate mais pesado");
+    static const int HITS[13] = {8, 8, 7, 7, 7, 11, 6, 7, 6, 7, 5, 5, 5};
     for (int i = 0; i < roster_size(); i++) {
         CHECK(roster_get(i)->hitsToFall == HITS[i], "Ren aguenta %d erros contra %s", HITS[i], roster_get(i)->name);
         CHECK(roster_get(i)->senseiCount >= 1, "hanzo tem conselho para %s", roster_get(i)->name);
@@ -305,7 +310,7 @@ static void test_bad_recovers_boss(void) {
     Duel d;
     for (int i = 0; i < ROSTER_SIZE; i++) CHECK(roster_get(i)->healsOnHit == (i >= 4), "%s %s postura ao acertar", roster_get(i)->name,
                                                 i >= 4 ? "recupera" : "não recupera");
-    const MasterProfile *tetsu = roster_get(0), *kaelen = roster_get(4);
+    const MasterProfile *tetsu = roster_get(0), *kaelen = roster_by_identity(5);
     float a = posture_after_perfect_then_miss(tetsu, &d);
     CHECK(fabsf(a - (tetsu->posture - s.perfectBossDamage)) < 1e-4, "os quatro primeiros não recuperam postura ao acertar (%.1f)", a);
     CHECK(fabsf(d.renPosture - (s.renPosture - duel_ren_damage(&d))) < 1e-4, "perfeito não passa de 100; o erro tira o dano do mestre");
@@ -375,10 +380,10 @@ static void test_accelerando(void) {
 }
 
 static void test_combos(void) {
-    Tally kira = play(roster_get(9), 21, 0.02, 300);
+    Tally kira = play(roster_by_identity(10), 21, 0.02, 300);
     CHECK(kira.combos > 0, "Kira abre golpes duplos");
     CHECK(kira.victory, "perfeitos vencem a Kira mesmo nos compostos");
-    Tally magna = play(roster_get(7), 21, 0.02, 300); /* enjin */
+    Tally magna = play(roster_by_identity(8), 21, 0.02, 300); /* enjin */
     CHECK(magna.combos > 0, "Magna abre golpes triplos");
 }
 
@@ -1013,8 +1018,8 @@ static void test_curva(void) {
     }
     for (int i = 0; i < 4; i++) CHECK(vit[i] >= 95, "o humano casual vence %s em 95%% ou mais (%.0f%%)", roster_get(i)->name, vit[i]);
     CHECK(crescente, "a dificuldade só cresce pela trilha");
-    /* a ordem fina (yoru nunca mais fácil que o arashi, jinshi nunca mais fácil que o yoru) precisa de muitas lutas: make curva-ordem */
-    CHECK(vit[9] <= vit[8] + 4 && vit[10] <= vit[9] + 4 && vit[11] <= vit[9] + 4, "yoru e jinshi não são mais fáceis que o arashi (%.0f, %.0f, %.0f)",
+    /* a ordem fina (yoru nunca mais fácil que o décimo mestre, jinshi nunca mais fácil que o yoru) precisa de muitas lutas: make curva-ordem */
+    CHECK(vit[9] <= vit[8] + 4 && vit[10] <= vit[9] + 4 && vit[11] <= vit[9] + 4, "yoru e jinshi não são mais fáceis que o décimo mestre (%.0f, %.0f, %.0f)",
           vit[9], vit[10], vit[11]);
     CHECK(vit[11] >= 52 && vit[11] <= 75, "uns 55%% no jinshi, a faixa aprovada é de 52 a 58 e o sorteio de 300 lutas varia 3 pontos (%.0f%%)", vit[11]);
     CHECK(vit[12] >= 30 && vit[12] <= 55 && vit[12] <= vit[11], "uns 40%% no oboro (%.0f%%)", vit[12]);
@@ -1067,8 +1072,8 @@ static void test_robos_deslocados(void) {
  * na ordem da trilha na primeira volta e depois sorteados. Fase 3: os mesmos doze com a
  * espera antes do aviso x0,85, dano x1,25, aviso nunca abaixo de 320 ms e sem especial. */
 static const struct { int aprendiz; const char *golpe; } ECO[12] = {
-    {0, "desabamento"}, {1, "mordida"}, {2, "fenda dupla"}, {3, "geada"}, {4, "fúria do tigre"}, {5, "revoada"},
-    {6, "foices gêmeas"}, {7, "incêndio"}, {8, "maré longa"}, {9, "tormenta"}, {10, "meia-noite"}, {11, "lua cheia"},
+    {0, "desabamento"}, {1, "mordida"}, {2, "foices gêmeas"}, {3, "geada"}, {4, "incêndio"}, {5, "tormenta"},
+    {6, "fenda dupla"}, {7, "fúria do tigre"}, {8, "maré longa"}, {9, "revoada"}, {10, "meia-noite"}, {11, "lua cheia"},
 };
 
 static const Move *move_named(const MasterProfile *m, const char *name, int stance) {
@@ -1202,7 +1207,7 @@ static void test_vantagem(void) {
     }
     /* quem se cura sai da vantagem */
     Duel d;
-    duel_init(&d, &s, roster_get(4), 3);   /* garfiel se recupera quando acerta */
+    duel_init(&d, &s, roster_by_identity(5), 3);   /* garfiel se recupera quando acerta */
     while (d.phase != PH_WINDUP) duel_tick(&d, DT);
     d.bossPosture = s.perfectBossDamage * 0.5f;
     d.advantage = true;
@@ -1507,7 +1512,7 @@ static void test_traco_aleatorio(void) {
     for (int volta = 0; volta < 3; volta++) {
         /* 0: hayate, 1: jinshi, 2: hayate com traço de ±5 s (só para provar o piso) */
         int id = volta == 1 ? 11 : 6;
-        MasterProfile m = *roster_get(id);
+        MasterProfile m = *roster_by_identity(id + 1);
         if (volta == 2) m.rhythmJitter = 5.0f;
         CHECK(volta == 2 || (volta == 0 && fabsf(m.rhythmJitter - 0.12f) < 1e-6f) || (volta == 1 && fabsf(m.rhythmJitter - 0.08f) < 1e-6f),
               "%s: traço de ±%.0f ms", m.name, m.rhythmJitter * 1000);
@@ -1907,7 +1912,7 @@ static void test_teste_a_mao(void) {
     Settings s7;
     settings_default(&s7);
     settings_for_level(&s7, 7);
-    duel_init(&d, &s7, roster_get(7), 3);
+    duel_init(&d, &s7, roster_by_identity(8), 3);
     while (d.bads == 0 && d.phase != PH_FINISHED) duel_tick(&d, DT);
     CHECK(d.renPosture < s7.renPosture && d.burnLeft > 0, "enjin: o erro tira vida e deixa em brasas");
     duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
@@ -2131,10 +2136,11 @@ static void test_special(void) {
 static void test_movesets(void) {
     Settings s;
     settings_default(&s);
-    /* Os três primeiros são simples: sete sequências, nenhuma com mais de dois contatos. */
+    /* Terra, tartaruga e montanha mantêm sete sequências simples, em qualquer posição. */
     for (int i = 0; i < 3; i++) {
-        CHECK(roster_get(i)->moveCount == 7, "%s tem sete sequências", roster_get(i)->name);
-        for (int k = 0; k < roster_get(i)->moveCount; k++) CHECK(roster_get(i)->moves[k].strikes <= 2, "%s: nada acima de dois contatos", roster_get(i)->name);
+        const MasterProfile *m = roster_by_identity(i + 1);
+        CHECK(m->moveCount == 7, "%s tem sete sequências", m->name);
+        for (int k = 0; k < m->moveCount; k++) CHECK(m->moves[k].strikes <= 2, "%s: nada acima de dois contatos", m->name);
     }
     /* Cada golpe tem nome próprio: nenhum mestre repete o de outro. */
     for (int a = 0; a < roster_size(); a++)
@@ -2452,8 +2458,8 @@ static void test_traits(void) {
     for (int k = 0; k < genbu->moveCount; k++) wg += genbu->moves[k].windup / genbu->moveCount;
     CHECK(wd > wg, "daichi prepara mais devagar que genbu (%.2f x %.2f s)", wd, wg);
     int longest = 0;
-    for (int k = 0; k < roster_get(4)->moveCount; k++)
-        if (roster_get(4)->moves[k].strikes > longest) longest = roster_get(4)->moves[k].strikes;
+    for (int k = 0; k < roster_by_identity(5)->moveCount; k++)
+        if (roster_by_identity(5)->moves[k].strikes > longest) longest = roster_by_identity(5)->moves[k].strikes;
     CHECK(longest >= 7, "garfiel tem combo de sete golpes ou mais (%d)", longest);
     for (int i = 5; i <= 9; i += 4) {
         bool dual = false;
@@ -2461,12 +2467,12 @@ static void test_traits(void) {
         CHECK(dual, "%s ataca com as duas lâminas", roster_get(i)->name);
     }
     int arashiDual = 0, karasuDual = 0;
-    for (int k = 0; k < roster_get(9)->moveCount; k++) arashiDual += roster_get(9)->moves[k].dual != 0;
-    for (int k = 0; k < roster_get(5)->moveCount; k++) karasuDual += roster_get(5)->moves[k].dual != 0;
+    for (int k = 0; k < roster_by_identity(10)->moveCount; k++) arashiDual += roster_by_identity(10)->moves[k].dual != 0;
+    for (int k = 0; k < roster_by_identity(6)->moveCount; k++) karasuDual += roster_by_identity(6)->moves[k].dual != 0;
     CHECK(arashiDual > karasuDual, "arashi usa as duas lâminas mais que karasu (%d x %d)", arashiDual, karasuDual);
     bool far = false, warp = false;
     for (int k = 0; k < roster_get(8)->moveCount; k++) far |= roster_get(8)->moves[k].look == LOOK_FAR;
-    for (int k = 0; k < roster_get(5)->moveCount; k++) warp |= roster_get(5)->moves[k].look == LOOK_WARP;
+    for (int k = 0; k < roster_by_identity(6)->moveCount; k++) warp |= roster_by_identity(6)->moves[k].look == LOOK_WARP;
     CHECK(far, "suiren ataca de longe");
     CHECK(warp, "karasu some em penas e reaparece na frente de kojiro");
     CHECK(roster_get(10)->blackoutChance >= 0.6f, "yoru apaga as luzes quase sempre");
@@ -2483,7 +2489,7 @@ static void test_traits(void) {
 static void test_dual(void) {
     Settings s;
     settings_default(&s);
-    const MasterProfile *arashi = roster_get(9);
+    const MasterProfile *arashi = roster_by_identity(10);
     static const double LEADS[3] = {0.02, 0.12, -1};   /* perfeito, bom, sem gesto */
     for (int c = 0; c < 3; c++) {
         Duel d;
@@ -2543,10 +2549,10 @@ static void test_far_lead(void) {
 static void test_burn(void) {
     Settings s;
     settings_default(&s);
-    const MasterProfile *enjin = roster_get(7);
+    const MasterProfile *enjin = roster_by_identity(8);
     CHECK(enjin->burn > 0, "enjin queima");
     for (int i = 0; i < roster_size(); i++)
-        if (i != 7) CHECK(roster_get(i)->burn == 0, "só o enjin queima (%s)", roster_get(i)->name);
+        if (roster_get(i) != enjin) CHECK(roster_get(i)->burn == 0, "só o enjin queima (%s)", roster_get(i)->name);
     Duel d;
     duel_init(&d, &s, enjin, 3);
     while (d.phase != PH_WINDUP) duel_tick(&d, DT);

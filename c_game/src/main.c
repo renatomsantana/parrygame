@@ -790,7 +790,7 @@ static const float posturePitch[ROSTER_SIZE] = {
     .7f, .8f, .6f, 1.5f, 1, 1.25f, 1.4f, 1.1f, 1.3f, 1.6f, 1.2f, .65f, .9f
 };
 static Color posture_color(int echo) {
-    return postureColors[echo >= 0 && echo < MASTER_COUNT ? echo : ROSTER_SIZE - 1];
+    return postureColors[echo >= 0 && echo < MASTER_COUNT ? roster_get(echo)->identity - 1 : ROSTER_SIZE - 1];
 }
 static const MasterProfile *feedback_master(void) {
     int echo = G.m && G.m->isBigBoss && G.duel.m == G.m ? echo_of(duel_move(&G.duel)) : -1;
@@ -1281,7 +1281,7 @@ static MoveLook strike_look(void) {
 static bool bought_slash_available(const SprAnim *a) {
     const MasterProfile *source = feedback_master();
     return G.packSlashes && a && a->cleanTex.id && source &&
-        source->id == 5 && spr_fx("slash");
+        source->identity == 5 && spr_fx("slash");
 }
 static bool bought_weapon(bool other, Vector2 *at) {
     const SprPlayer *p = &G.bossS.pl;
@@ -1740,7 +1740,7 @@ static void on_impact(const DuelEvent *e) {
 /* O relâmpago do arashi (o golpe pesado dele, LOOK_HEAVY): quando o golpe chega, raios caem do céu em volta de quem aparou ou, se pegou, de kojiro. Quem leva fica
  * meio paralisado: treme, pisca em azul e cai devagar. É só o que se vê: o núcleo julga o relâmpago como qualquer outro golpe de duas lâminas, e o aperto seguinte vale igual. */
 static bool golpe_do_raio(void) {
-    if (!G.m || G.duel.m != G.m || feedback_master()->id != ARASHI_ID) return false;
+    if (!G.m || G.duel.m != G.m || feedback_master()->identity != ARASHI_ID) return false;
     const Move *mv = duel_move(&G.duel);
     return mv && mv->look == LOOK_HEAVY;
 }
@@ -1845,7 +1845,7 @@ static void raizo_tell(Vector2 tip, Vector2 feet) {
 }
 
 /* O yoru apagou as luzes nesta sequência: só as adagas dele aparecem, então nada de brilho, faísca ou raio em volta. */
-static bool yoru_no_escuro(void) { return G.m && G.m->id == 11 && G.duel.blackout; }
+static bool yoru_no_escuro(void) { return G.m && G.m->identity == 11 && G.duel.blackout; }
 
 /* Partículas do aviso ligadas ao mestre atual. O roster mudou de ordem ao longo
  * do projeto: manter esta escolha por nome/ID impede que vento solte brasas ou
@@ -1888,10 +1888,10 @@ static void tell_fx(void) {
     Vector2 mid = {(butt.x + tip.x) / 2, (butt.y + tip.y) / 2};
     Vector2 feet = {G.boss.x + G.boss.offsetX - 9 * G.boss.look.size, GROUND_LOW - 1};
     if (!yoru_no_escuro()) {
-        if (source->id == 3) raizo_tell(tip, feet);
-        else tell_particles(source->id, tip, mid, feet);
+        if (source->identity == 3) raizo_tell(tip, feet);
+        else tell_particles(source->identity, tip, mid, feet);
     }
-    posture_sound(SND_GESTURE, .3f, posturePitch[source->id - 1]);
+    posture_sound(SND_GESTURE, .3f, posturePitch[source->identity - 1]);
 }
 
 /* A vida de kojiro acaba: ele cai e o painel de derrota aparece. */
@@ -1951,7 +1951,7 @@ static void aviso_brilho(bool primeiro) {
     Vector2 h, t;
     boss_blade(&h, &t);
     Vector2 at = {h.x + (t.x - h.x) * 0.75f, h.y + (t.y - h.y) * 0.75f};
-    if (G.m->id == 3 || (G.m->isBigBoss && echo_of(duel_move(&G.duel)) == 2)) {
+    if (G.m->identity == 3 || (G.m->isBigBoss && feedback_master()->identity == 3)) {
         /* Lascas cinza-pedra e ocre no instante do aviso, presas à odachi. */
         fx_burst(&G.fx, P_SHARD, at, primeiro ? 7 : 4, 35, 0.70f, -1.57f,
                  (Color){196, 192, 183, 255}, (Color){223, 177, 104, 255});
@@ -2074,7 +2074,7 @@ static void handle_events(void) {
                             G.bossS.pl.anim ? G.bossS.pl.anim->name : "-", G.bossS.pl.frame);
                 on_impact(e);
                 impacto_do_raio(e);
-                if (m->id == 3 || (m->isBigBoss && echo_of(duel_move(&G.duel)) == 2))
+                if (m->identity == 3 || (m->isBigBoss && feedback_master()->identity == 3))
                     fx_burst(&G.fx, P_SHARD, clash_point(), 6, 43, 0.90f, 3.14f,
                              (Color){185, 182, 174, 220}, (Color){203, 157, 92, 220});
                 sprite_impact(e);
@@ -2269,7 +2269,7 @@ static void fighters_update(float dt) {
 
 /* Silhuetas que o mestre deixa para trás no bote, na corrida e no salto. */
 static void update_after(float dt) {
-    if (G.m && G.m->id == 10) {
+    if (G.m && G.m->identity == 10) {
         memset(G.after, 0, sizeof G.after);
         G.lastStep = G.bossStep;
         return;
@@ -3065,10 +3065,10 @@ static void draw_rigs(Color light) {
     bool dark = G.ctx.blackout > 0.5f;
     Color rim = G.m->isBigBoss && G.auraLeft > 0 ? posture_color(G.auraEcho) : arena_rim(G.m->arena);
     begin_actors();
-    if (G.rastro && G.bossS.set && G.m->id != 10 && !dark && !G.bossHidden) {
+    if (G.rastro && G.bossS.set && G.m->identity != 10 && !dark && !G.bossHidden) {
         /* As silhuetas da corrida usam a mesma cor que o golpe e somem com a chave. */
         Color c = cor_rastro();
-        if (G.m->id == 6 && G.leap == LEAP_WARP) c = (Color){50, 39, 64, 255};
+        if (G.m->identity == 6 && G.leap == LEAP_WARP) c = (Color){50, 39, 64, 255};
         for (int n = 1; n <= AFTER_MAX; n++) {       /* da mais antiga para a mais nova */
             int i = (G.afterHead + n) % AFTER_MAX;
             if (G.after[i].life <= 0 || !G.after[i].a) continue;
@@ -3081,7 +3081,7 @@ static void draw_rigs(Color light) {
     if (G.bossHidden) {
         /* sumiu em penas */
     } else if (G.bossS.set) {
-        const bool yoru = G.m->id == 11;
+        const bool yoru = G.m->identity == 11;
         /* o yoru apaga com o apagão (sem o salto dos outros em 50%) e some por inteiro, só as adagas ficam; os outros mestres viram a silhueta de sempre */
         draw_sprite_fighter(&G.boss, &G.bossS, light, rim, yoru ? G.ctx.blackout : (dark ? 1.0f : 0.0f), yoru ? 0.0f : 1.0f, 1 - G.bossDissolve);
         if (yoru && G.ctx.blackout > 0.02f) desenha_laminas_acesas(clampf(G.ctx.blackout, 0, 1));
@@ -3208,7 +3208,7 @@ static void cabin_scene(int page, float t) { (void)page; lore_draw_cabin(t); }
 static int mestre_do_rastro(void) {
     /* na abertura da luta final o duelo ainda não foi iniciado (G.duel.m nulo): sem golpe, sem eco */
     int eco = G.m->isBigBoss && G.duel.m == G.m ? echo_of(duel_move(&G.duel)) : -1;
-    return eco >= 0 ? eco : G.m->id - 1;
+    return eco >= 0 ? roster_get(eco)->identity - 1 : G.m->identity - 1;
 }
 
 static Color cor_rastro(void) { return postureColors[mestre_do_rastro()]; }
@@ -3297,7 +3297,7 @@ static void fio_crescente(Vector2 arma, MoveLook look, float p, TrailStyle s, Co
 static void desenha_rastro_do_golpe(bool escuro, bool so_fio) {
     float p = duel_launch_progress(&G.duel);
     if (p <= 0) return;
-    if (escuro && G.m->id == 11) return;      /* no apagão do yoru só as adagas aparecem: nem o fio do golpe */
+    if (escuro && G.m->identity == 11) return;      /* no apagão do yoru só as adagas aparecem: nem o fio do golpe */
     int mestre = mestre_do_rastro();
     Color c = cor_rastro();
     Vector2 pes = {G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};
@@ -3315,7 +3315,7 @@ static void desenha_rastro_do_golpe(bool escuro, bool so_fio) {
     Vector2 empunhadura, lamina;
     boss_blade(&empunhadura, &lamina);
     (void)empunhadura;
-    TrailStyle estilo = trail_style(mestre, G.m->id, duel_move(&G.duel));
+    TrailStyle estilo = trail_style(mestre, G.m->identity, duel_move(&G.duel));
     Color fio = fadec(c, AJ_RASTRO_FIO_ALFA * p * (escuro ? 0.38f : 1.0f));
     MoveLook look = strike_look();
     int riscos = estilo.riscos;

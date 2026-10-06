@@ -20,7 +20,7 @@ luta() { # mestre, rastro (0/1), arquivo
         ./apara --master "$1" --duel --rec "$TMP/q" 99999 99999 >"$3" 2>&1
 }
 
-for M in 5 9 11; do
+for M in 8 9 11; do
     echo "mestre $M"
     luta "$M" 1 "$TMP/com.txt"
     luta "$M" 0 "$TMP/sem.txt"

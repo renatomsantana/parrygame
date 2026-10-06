@@ -1,14 +1,14 @@
 #!/bin/sh
 # O pack comprado substitui o rastro antigo sem mudar contatos/quadros.
-# Garfiel usa garras; Arashi volta ao slash branco original pintado de azul.
+# Garfiel usa garras; Arashi usa o slash original em cinza de nuvem com raios azuis.
 set -eu
 cd "$(dirname "$0")/.."
 command -v xvfb-run >/dev/null 2>&1 || { echo 'teste_slash: pulado (sem xvfb-run)'; exit 0; }
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-for master in 3 5 10 13; do
+for master in 7 8 6 13; do
     seconds=12
-    # A primeira volta precisa chegar à postura do Arashi, depois da do Garfiel.
+    # A primeira volta precisa chegar às posturas de Arashi (6) e Garfiel (8).
     if [ "$master" -eq 13 ]; then seconds=30; fi
     for enabled in 0 1; do
         APARA_SEMENTE=11 APARA_LOG_IMPACTOS=1 APARA_LOG_POSTURAS=1 APARA_LOG_SLASH=1 APARA_SLASH="$enabled" APARA_REC_RAW=/dev/null \
@@ -22,7 +22,7 @@ for master in 3 5 10 13; do
     on=$(sed -n 's/^SLASHES //p' "$tmp/1.log")
     off=$(sed -n 's/^SLASHES //p' "$tmp/0.log")
     [ "$off" -eq 0 ]
-    if [ "$master" -eq 3 ] || [ "$master" -eq 10 ]; then [ "$on" -eq 0 ]; else [ "$on" -gt 0 ]; fi
+    if [ "$master" -eq 7 ] || [ "$master" -eq 6 ]; then [ "$on" -eq 0 ]; else [ "$on" -gt 0 ]; fi
     if [ "$master" -eq 13 ]; then
         # A fase 2 começa com terra: gesto, corte e aviso usam Daichi.
         sed -n '/^POSTURA /p' "$tmp/1.log" > "$tmp/feedback.log"

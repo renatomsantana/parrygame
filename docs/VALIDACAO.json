@@ -473,5 +473,101 @@
     },
     "windows": "Not executed for this visual revision.",
     "human_review": "pending"
+  },
+  "trail_reorder_2026_10_05": {
+    "baseline_commit": "2fcfd4b",
+    "order": [
+      "daichi",
+      "genbu",
+      "hayate",
+      "shizuku",
+      "enjin",
+      "arashi",
+      "raizo",
+      "garfiel",
+      "suiren",
+      "karasu",
+      "yoru",
+      "jinshi",
+      "oboro"
+    ],
+    "identity": "Stable original identity; id follows stage. Saves preserve stage position.",
+    "oboro_echoes": "First lap follows new trail; owned katana and source effects retained.",
+    "curve": {
+      "fights_per_master_and_bot": 100000,
+      "fps": [
+        60,
+        144
+      ],
+      "same_results": true,
+      "casual_wins_percent": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        99.2,
+        91.1,
+        84.9,
+        79.8,
+        71.2,
+        64.6,
+        58.4,
+        55.3,
+        37.9
+      ],
+      "violations": 0,
+      "reaction_250_stage_8_floor_percent": 0,
+      "reaction_floor_reason": "Garfiel long combos at stage 8; previous floor was 0.5%. Casual targets and monotonic gates retained."
+    },
+    "mac": {
+      "core_checks": 15379,
+      "headless_presentation_checks": 45565,
+      "real_asset_checks": 173479,
+      "failures": 0,
+      "fuzz_scenarios_per_mode": 600,
+      "fuzz_modes": 4,
+      "fuzz_violations": 0,
+      "warnings_as_errors_compilations": 168,
+      "real_game_sources": [
+        "hayate",
+        "enjin",
+        "arashi",
+        "raizo",
+        "garfiel",
+        "karasu",
+        "oboro"
+      ],
+      "real_game_oboro_first_lap": [
+        "daichi",
+        "genbu",
+        "hayate",
+        "shizuku",
+        "enjin",
+        "arashi",
+        "raizo",
+        "garfiel",
+        "suiren",
+        "karasu",
+        "yoru",
+        "jinshi"
+      ]
+    },
+    "core_judgement_and_sprite_timing": "unchanged",
+    "outputs": "outputs/ordem-05out",
+    "human_review": "pending",
+    "windows": "not executed for this reorder",
+    "linux": {
+      "real_asset_checks": 173479,
+      "failures": 0,
+      "slash_on_off_identical_contacts": 84,
+      "native_arashi_pack_draws": 0,
+      "garfiel_claw_pack_draws": 162,
+      "oboro_claw_pack_draws": 53,
+      "afterimage_on_off_identical_contacts": 90,
+      "real_game_scripts": [
+        "teste_slash.sh",
+        "teste_rastro.sh"
+      ]
+    }
   }
 }

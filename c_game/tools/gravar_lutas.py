@@ -8,8 +8,8 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = ('daichi', 'genbu', 'raizo', 'shizuku', 'garfiel', 'karasu',
-         'hayate', 'enjin', 'suiren', 'arashi', 'yoru', 'jinshi', 'oboro')
+NAMES = ('daichi', 'genbu', 'hayate', 'shizuku', 'enjin', 'arashi',
+         'raizo', 'garfiel', 'suiren', 'karasu', 'yoru', 'jinshi', 'oboro')
 SOUND = {1: 3, 2: 2, 3: 1}  # J_RUIM, J_BOM, J_PERFEITO -> SoundId
 
 

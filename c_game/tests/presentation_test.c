@@ -126,7 +126,7 @@ static void borrowed_feedback(void) {
 }
 
 static void fixed_element_colors(void) {
-    Color ice = posture_color(3), sea = posture_color(8), storm = posture_color(9);
+    Color ice = posture_color(3), sea = posture_color(8), storm = posture_color(roster_by_identity(10)->id - 1);
     REQUIRE(ice.r > 180 && ice.g > 225 && ice.b > 240, "gelo perdeu a leitura clara/quase branca");
     REQUIRE(sea.g > sea.r + 80 && sea.g > sea.b, "mar deixou de ser turquesa e voltou ao azul do gelo");
     REQUIRE(storm.r > 90 && storm.r < 190 && abs(storm.b - storm.r) < 50, "tempestade perdeu o cinza de nuvem");
@@ -150,7 +150,7 @@ static void bought_pack_timing_and_hands(void) {
         }
     }
     memset(&G, 0, sizeof G);
-    G.m = roster_get(9); G.bossS.set = &fixture;
+    G.m = roster_by_identity(10); G.bossS.set = &fixture;
     SprAnim *a = &fixture.anims[0];
     a->hasWeapon[0] = a->hasOffhand[0] = true;
     a->weapon[0] = (Vector2){10,-30}; a->offhand[0] = (Vector2){4,-15};
@@ -174,7 +174,7 @@ static void bought_pack_timing_and_hands(void) {
     REQUIRE(G.cut.local[0].x == stored.x && G.cut.local[0].y == stored.y, "a recuperação arrastou a cauda para outra pose");
     G.m = roster_get(12); G.bossS.pl.frame = 0;
     REQUIRE(bought_weapon(false, &main) && !bought_weapon(true, &other), "Oboro ganhou uma segunda espada ao roubar o raio");
-    G.m = roster_get(9); a->hasOffhand[0] = false;
+    G.m = roster_by_identity(10); a->hasOffhand[0] = false;
     REQUIRE(!bought_weapon(true, &other), "pack inventou uma lâmina oculta a partir de outro quadro");
     vfx_clear();
     REQUIRE(!G.cut.sheet, "reset deixou o slash ativo");
@@ -204,7 +204,7 @@ static void karasu_warp_reappears_before_cue(void) {
         const float leads[] = {0.14f, 0.22f, 0.32f};
         memset(&G, 0, sizeof G);
         fx_init(&G.fx);
-        G.m = roster_get(5);
+        G.m = roster_by_identity(6);
         G.bossS.set = &fixture;
         fighter_idle(&G.bossS);
         G.boss.x = G.bossHome = BOSS_X;
@@ -267,7 +267,7 @@ static void karasu_warp_reappears_before_cue(void) {
 static void damage_has_no_burst(void) {
     memset(&G, 0, sizeof G);
     fx_init(&G.fx);
-    G.m = roster_get(9);
+    G.m = roster_by_identity(10);
     G.ren.x = 124; G.ren.y = GROUND_LOW;
     DuelEvent e = {.judgement = J_RUIM};
     on_impact(&e);
@@ -367,7 +367,7 @@ static void impact_frame_stays_on_contact(void) {
 
 static void sword_continuity_and_parry(void) {
     memset(&G, 0, sizeof G);
-    G.m = roster_get(9);
+    G.m = roster_by_identity(10);
     settings_default(&G.settings);
     duel_init(&G.duel, &G.settings, G.m, 1);
     G.bossS.set = &fixture;
@@ -461,7 +461,7 @@ static void new_move_trails(void) {
         {12, "quarto crescente"}, {12, "maré de luar"},
     };
     for (int id = 1; id <= ROSTER_SIZE; id++) {
-        const MasterProfile *master = roster_get(id - 1);
+        const MasterProfile *master = roster_by_identity(id);
         const TrailStyle base = trail_style(id - 1, id, NULL);
         for (int i = 0; i < master->moveCount; i++) {
             const Move *mv = &master->moves[i];
@@ -474,7 +474,7 @@ static void new_move_trails(void) {
     }
     for (size_t n = 0; n < sizeof novos / sizeof novos[0]; n++) {
         int id = novos[n].id, found = 0;
-        const MasterProfile *master = roster_get(id - 1);
+        const MasterProfile *master = roster_by_identity(id);
         TrailStyle base = trail_style(id - 1, id, NULL);
         for (int i = 0; i < master->moveCount; i++) {
             const Move *mv = &master->moves[i];
@@ -576,8 +576,8 @@ static void body_measured_on_real_sheets(void) {
 
 /* O relâmpago do arashi: raios caem em volta de quem aparou ou de kojiro, e quem leva fica meio paralisado (só desenho: o núcleo não muda). */
 static void arashi_raios_e_paralisia(void) {
-    const MasterProfile *arashi = roster_get(9);
-    REQUIRE(arashi->id == 10, "o mestre 9 do roster não é o arashi");
+    const MasterProfile *arashi = roster_by_identity(10);
+    REQUIRE(arashi->identity == 10 && arashi->id == 6, "Arashi não está na sexta posição com sua identidade visual");
     int relampago = -1, pesados = 0, outro = -1;
     for (int i = 0; i < arashi->moveCount; i++) {
         if (arashi->moves[i].look == LOOK_HEAVY) { pesados++; relampago = i; }
@@ -734,7 +734,7 @@ static void real_assets(void) {
         fighter_load(&G.bossS, G.m->name);
         REQUIRE(G.bossS.set != NULL, "arte do mestre não carregou");
         if (!G.bossS.set) continue;
-        if (master == 4 || master == 9 || G.m->isBigBoss) {
+        if (G.m->identity == 5 || G.m->identity == 10 || G.m->isBigBoss) {
             Duel original = G.duel;
             /* Exercita o evento de partida, que só existe durante a preparação. */
             G.duel.phase = PH_WINDUP;
@@ -743,10 +743,10 @@ static void real_assets(void) {
             for (int move = 0; move < G.m->moveCount; move++) {
                 G.duel.move = move;
                 const MasterProfile *source = feedback_master();
-                if (source->id != 5 && source->id != ARASHI_ID) continue;
+                if (source->identity != 5 && source->identity != ARASHI_ID) continue;
                 G.bossS.strike = boss_strike_anim(strike_look());
                 REQUIRE(G.bossS.strike != NULL, "eco não carregou seu golpe para o efeito");
-                bool claws = source->id == 5;
+                bool claws = source->identity == 5;
                 REQUIRE(bought_slash_available(G.bossS.strike) == (G.packSlashes && claws), "Arashi ocultou o rastro nativo ou Garfiel perdeu suas garras");
                 G.packSlashes = true;
                 Duel before = G.duel;
@@ -770,11 +770,11 @@ static void real_assets(void) {
         for (int i = 0; i < G.bossS.set->count; i++) {
             const SprAnim *a = &G.bossS.set->anims[i]; animations++;
             REQUIRE(a->tex.id && a->frames > 0 && a->frames <= SPR_MAX_FRAMES, "folha inválida");
-            bool layerExpected = (master == 4 || master == 9) && (strstr(a->name, "ATTACK") || !strcmp(a->name, "ESPECIAL"));
+            bool layerExpected = (G.m->identity == 5 || G.m->identity == 10) && (strstr(a->name, "ATTACK") || !strcmp(a->name, "ESPECIAL"));
             if (G.m->isBigBoss) layerExpected = strstr(a->name, "ECO_GARFIEL") || strstr(a->name, "ECO_ARASHI") ||
                 (strstr(a->name, "FURIA") && strstr(a->name, "ATTACK"));
             if (layerExpected) REQUIRE(a->cleanTex.id, "falta a camada que remove o slash antigo");
-            int element = master == 3 ? 0 : master == 8 ? 1 : master == 9 ? 2 :
+            int element = G.m->identity == 4 ? 0 : G.m->identity == 9 ? 1 : G.m->identity == 10 ? 2 :
                 strstr(a->name, "ECO_SHIZUKU") ? 0 : strstr(a->name, "ECO_SUIREN") ? 1 : strstr(a->name, "ECO_ARASHI") ? 2 : -1;
             if (element >= 0 && (strstr(a->name, "ATTACK") || !strcmp(a->name, "ESPECIAL"))) {
                 const Color palettes[3][3] = {
@@ -905,7 +905,7 @@ static void real_assets(void) {
 
 static void visual_feedback_regressions(void) {
     memset(&G, 0, sizeof G);
-    G.m = roster_get(9); G.bossS.set = &fixture;
+    G.m = roster_by_identity(10); G.bossS.set = &fixture;
     G.bossS.pl.anim = &fixture.anims[2];
     G.bossStep = 40; G.hopT = 0; G.hopLen = 1; G.hopH = 24;
     G.after[0].life = 1;

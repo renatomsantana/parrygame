@@ -126,7 +126,8 @@ typedef struct {
 } Line;
 
 typedef struct {
-    int id;
+    int id;                       /* posição na trilha, 1..13: nível e progresso */
+    int identity;                 /* identidade visual estável, independente da posição */
     const char *name, *title, *venue, *special;
     const char *style;            /* postura de combate, mostrada no lugar de dicas */
     ArenaId arena;
@@ -165,6 +166,7 @@ typedef struct {
 
 #define ROSTER_SIZE 13
 const MasterProfile *roster_get(int index);   /* 0..12; o último é oboro */
+const MasterProfile *roster_by_identity(int identity); /* personagem, sem confundir com o nível */
 int roster_size(void);
 
 #define LORE_PAGES 10

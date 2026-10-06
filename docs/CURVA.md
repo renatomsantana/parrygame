@@ -218,3 +218,46 @@ O aviso, as janelas perfeita e boa e a menor partida da lâmina (140 ms) não mu
 
 Nada de aviso abaixo de 300 ms, nenhuma janela perfeita mais estreita que a já medida como viável. Se um dia a curva sair do lugar (outro mestre
 ganha golpes, outra regra muda), o `make curva-alvo` reprova e mostra qual célula, qual ordem ou qual degrau quebrou.
+
+## Reordenação de 5 de outubro de 2026
+
+Pedido: Hayate no nível 3 e Raizo no 7; Enjin no 5 e Garfiel no 8; Arashi no 6 e Karasu no 10. Os demais mantêm suas posições. O `id` representa a posição/nível e uma `identity` estável conserva roupas, arma, arena, som e VFX do personagem. Progresso salvo continua por posição. As visitas a Hanzo anunciam o próximo adversário correto; a primeira volta dos ecos de Oboro segue a nova trilha.
+
+Trocar apenas janelas e postura entre posições não conservou a curva por causa das brasas, golpes duplos e combos longos. O ajuste final mantém os padrões, animações, quadros, âncoras, hitboxes e regras do núcleo; calibra as janelas, aviso, recuperação de postura a partir do quinto e estes valores:
+
+| Nível | Mestre | Postura | Parâmetro de erros (`hitsToFall`) | Teto da lâmina (ms) |
+|---|---|---|---|---|
+| 3 | Hayate | 300 | 7 | fixo |
+| 5 | Enjin | 530 | 7 | 260 |
+| 6 | Arashi | 400 | 11 | 235 |
+| 7 | Raizo | 460 | 6 | 224 |
+| 8 | Garfiel | 1350 | 7 | global |
+| 10 | Karasu | 780 | 7 | 220 |
+
+Arashi mantém dano ×1,2 e golpes duplos; Enjin mantém brasas. Por isso `hitsToFall` não é uma promessa de quantidade literal de apertos errados nessas lutas. Hayate mantém a variação de preparação de ±120 ms. A lâmina variável começa no nível 5, agora Enjin; os quatro primeiros continuam fixos.
+
+### Antes e depois, por nível
+
+Antes: 10 mil lutas por mestre/robô no commit `2fcfd4b`. Depois: 100 mil lutas por mestre/robô, a 60 e 144 Hz com aperto em ms exato. As duas taxas deram a mesma tabela. Valores são estimativas dos robôs.
+
+| Nível | Mestre antes | Casual antes (%) | Mestre depois | Casual depois (%) | Primeira vez (%) | Reação 250 (%) |
+|---|---|---|---|---|---|---|
+| 1 | daichi | 100.0 | daichi | 100.0 | 87.0 | 100.0 |
+| 2 | genbu | 100.0 | genbu | 100.0 | 84.9 | 100.0 |
+| 3 | raizo | 99.9 | hayate | 100.0 | 74.6 | 100.0 |
+| 4 | shizuku | 100.0 | shizuku | 100.0 | 68.9 | 100.0 |
+| 5 | garfiel | 99.8 | enjin | 99.2 | 0.1 | 10.8 |
+| 6 | karasu | 91.3 | arashi | 91.1 | 0.1 | 8.0 |
+| 7 | hayate | 85.6 | raizo | 84.9 | 0.0 | 5.7 |
+| 8 | enjin | 79.7 | garfiel | 79.8 | 0.0 | 0.0 |
+| 9 | suiren | 71.2 | suiren | 71.2 | 0.0 | 0.0 |
+| 10 | arashi | 63.9 | karasu | 64.6 | 0.0 | 0.1 |
+| 11 | yoru | 58.6 | yoru | 58.4 | 0.0 | 0.8 |
+| 12 | jinshi | 55.4 | jinshi | 55.3 | 0.0 | 0.6 |
+| 13 | oboro | 37.4 | oboro | 37.9 | 0.0 | 0.0 |
+
+Perfeito: 100% em todos antes/depois. Spam: 0% em todos antes/depois. A curva casual mantém todas as faixas anteriores por posição e cai pelo menos 3 pontos a partir do sexto nível; os quatro primeiros ficam saturados em aproximadamente 100%. A faixa de Reação 250 do oitavo nível passa de 0,5–6% para 0–6%: os combos longos do Garfiel nessa dificuldade zeram a vitória desse robô. As demais faixas e verificações de ordem não foram relaxadas.
+
+Validação Mac: 15.379 verificações do núcleo, 45.565 de apresentação sem assets e 173.479 com os PNGs reais, zero falhas. Saves, entradas, fontes, desempenho, ritmo, fuzz (600 cenários em cada um dos quatro modos), assets e 168 compilações com avisos como erro passaram. Todo contato mantém janela viável, inclusive com calibração de 120 ms. A exceção já conhecida das brasas do Enjin entre taxas deu 9 diferenças em 3.200 comparações (0,28%, abaixo de 2%); os demais deram zero em 38.400.
+
+Jogo real: os seis aprendizes trocados e Oboro foram executados no Mac com logs de fonte sonora, efeitos e impactos; Oboro percorreu os doze ecos na nova ordem. No Linux/Xvfb, 173.479 verificações com os PNGs reais passaram, assim como `teste_slash.sh` (84 contatos idênticos com pack ligado/desligado) e `teste_rastro.sh` (90 contatos idênticos com silhuetas ligadas/desligadas). Garfiel e seu eco desenham as garras compradas; Arashi não usa esse pack. Windows e sensação ao jogar não foram revalidados nesta alteração.
