@@ -21,7 +21,8 @@ compila() {    # nome, fontes..., depois as bibliotecas
 }
 compila core_test $CORE tests/core_test.c -lm
 compila entrada_test $CORE src/entrada.c tests/entrada_test.c -lm
-compila save_test src/salvar.c src/core.c src/roster.c src/ajuste.c tests/save_test.c -lm
+compila save_test src/salvar.c src/gravar.c src/core.c src/roster.c src/ajuste.c tests/save_test.c -lm
+compila dados_test src/gravar.c src/pasta_dados.c src/opcoes.c src/salvar.c src/core.c src/roster.c src/ajuste.c tests/dados_test.c -lm
 compila fonte_test src/fonte.c tests/fonte_test.c
 compila desempenho_test src/desempenho.c tests/desempenho_test.c -lm
 compila fuzz_test $CORE tests/fuzz.c -lm
@@ -33,7 +34,7 @@ if ! SAIDA=$($CCW $FLAGS -c src/entrada_win.c -o "$T/entrada_win.o" 2>&1); then
     echo "teste_windows: src/entrada_win.c não compila"; echo "$SAIDA" | head -8; FALHAS=$((FALHAS + 1))
 fi
 if [ "$FALHAS" -ne 0 ]; then echo "teste_windows: $FALHAS ferramenta(s) sem compilar para Windows"; exit 1; fi
-echo "teste_windows: 9 programas e a camada de carimbo (src/entrada_win.c) compilam para Windows, sem aviso"
+echo "teste_windows: 10 programas e a camada de carimbo (src/entrada_win.c) compilam para Windows, sem aviso"
 if [ -z "$WINE" ]; then echo "teste_windows: sem o Wine, não rodo os executáveis"; exit 0; fi
 # o prefixo do Wine (a "pasta C:") fica em cache: criá-lo leva uns 10 s, e a pasta temporária some ao fim
 export WINEPREFIX="${WINEPREFIX:-${XDG_CACHE_HOME:-$HOME/.cache}/apara-wine}" WINEDEBUG=-all
@@ -49,6 +50,7 @@ roda() {       # nome, argumentos...
 roda core_test
 roda entrada_test
 roda save_test
+roda dados_test
 roda fonte_test assets/fonts/Tiny5-Regular.ttf src/*.c
 roda desempenho_test
 roda fuzz_test 100 1

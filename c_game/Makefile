@@ -25,7 +25,7 @@ else ifeq ($(shell uname),Linux)
 endif
 
 CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
-GAME := src/main.c src/fonte.c src/salvar.c src/entrada.c src/desempenho.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
+GAME := src/main.c src/fonte.c src/salvar.c src/gravar.c src/pasta_dados.c src/opcoes.c src/entrada.c src/desempenho.c src/rig.c src/sprites.c src/pixelize.c src/katana3d.c src/arenas.c src/audio.c src/fx.c src/lore.c
 
 # O carimbo do clique (src/entrada_plat.h): um arquivo por plataforma. Sem XInput2 (Wayland puro),
 # o stub: o jogo funciona igual, com o aperto no meio do quadro.
@@ -118,11 +118,18 @@ test-fonte: fonte_test
 	./fonte_test assets/fonts/Tiny5-Regular.ttf src/*.c
 
 # O arquivo de progresso: formato, validação, .bak e gravação atômica.
-save_test: src/salvar.c src/salvar.h src/core.h tests/save_test.c
-	$(CC) $(CFLAGS) src/salvar.c src/core.c src/roster.c src/ajuste.c tests/save_test.c -o $@ -lm
+save_test: src/salvar.c src/salvar.h src/gravar.c src/gravar.h src/core.h tests/save_test.c
+	$(CC) $(CFLAGS) src/salvar.c src/gravar.c src/core.c src/roster.c src/ajuste.c tests/save_test.c -o $@ -lm
 
 test-save: save_test
 	./save_test
+
+# Os arquivos do jogador fora da pasta do jogo: gravar, achar a pasta de dados em cada sistema, migrar, opções.
+dados_test: src/gravar.c src/gravar.h src/pasta_dados.c src/pasta_dados.h src/opcoes.c src/opcoes.h src/salvar.c src/salvar.h src/ajuste.h tests/dados_test.c tests/portavel.h
+	$(CC) $(CFLAGS) src/gravar.c src/pasta_dados.c src/opcoes.c src/salvar.c src/core.c src/roster.c src/ajuste.c tests/dados_test.c -o $@ -lm
+
+test-dados: dados_test
+	./dados_test
 
 # Fuzz do núcleo (tests/fuzz.c): make fuzz N=3000. O make teste roda 600 cenários por modo.
 N ?= 3000
@@ -167,7 +174,7 @@ numeros:
 avisos:
 	RAYLIB_CFLAGS="$(RAYLIB_CFLAGS)" sh tests/avisos.sh
 
-test: core_test test-fonte test-save test-entrada test-desempenho test-curva curva-alvo test-ritmo
+test: core_test test-fonte test-save test-dados test-entrada test-desempenho test-curva curva-alvo test-ritmo
 	./core_test
 
 # Regressões de apresentação: seleciona sprites e acompanha armas sem abrir janela.
@@ -244,11 +251,11 @@ run: apara
 	./apara
 
 clean:
-	rm -f apara apara.exe core_test fonte_test save_test entrada_test desempenho_test fuzz_test presentation_test audio_test arena_art_test robos_relatorio curva_relatorio ritmo_relatorio personagens
+	rm -f apara apara.exe core_test fonte_test save_test dados_test entrada_test desempenho_test fuzz_test presentation_test audio_test arena_art_test robos_relatorio curva_relatorio ritmo_relatorio personagens
 
 teste-vitoria: apara
 	sh tests/teste_vitoria.sh
 
-.PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva ritmo test-ritmo curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-entrada test-desempenho test-visual test-assets teste teste-jogo teste-vitoria
+.PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva ritmo test-ritmo curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-dados test-entrada test-desempenho test-visual test-assets teste teste-jogo teste-vitoria
 .PHONY: assets-prontos pacote-assets test-audio test-arte
 .PHONY: teste-linux

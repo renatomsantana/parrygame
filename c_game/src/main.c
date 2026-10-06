@@ -40,6 +40,9 @@
 #include "entrada.h"
 #include "entrada_plat.h"
 #include "robo.h"
+#include "gravar.h"
+#include "opcoes.h"
+#include "pasta_dados.h"
 #include "salvar.h"
 #include "fonte.h"
 #include "fx.h"
@@ -299,7 +302,7 @@ static struct {
 
     int menuIndex;
     bool hasSave;
-    char avisoSave[192];      /* o que dizer ao jogador sobre o save (não gravou, estava corrompido) */
+    char avisoSave[480];      /* o que dizer ao jogador sobre o save (não gravou, estava corrompido) */
     float avisoSaveAte;       /* G.time até quando a faixa fica na tela */
 
     /* Coreografia. */
@@ -678,6 +681,19 @@ static Vector2 mouse_ui(void) {
 /* ------------------------------------------------------------------ */
 
 #define SAVE_FILE "apara_save.txt"
+#define OPTIONS_FILE "apara_opcoes.txt"
+
+/* Onde estão os arquivos do jogador: na pasta de dados do usuário (src/pasta_dados.h), não ao lado do executável.
+ * Enquanto prepara_dados não decide, e se a pasta de dados não puder ser usada, valem os nomes soltos, que depois
+ * do ChangeDirectory são os da pasta do jogo (onde as versões antigas guardavam). */
+static char arqSave[CAMINHO_MAX] = SAVE_FILE;
+static char arqOpcoes[CAMINHO_MAX] = OPTIONS_FILE;
+static char pastaDados[CAMINHO_MAX];     /* a pasta de dados em uso; vazia enquanto os arquivos ficam ao lado do jogo */
+
+/* A pasta de dados existe? Cria (com as de cima) se faltar: a primeira gravação, ou alguém que apagou a pasta com o jogo aberto. */
+static bool garante_pasta(char *erro, size_t n) {
+    return !pastaDados[0] || gravar_pasta(pastaDados, erro, n);
+}
 
 /* Testes do jogo real (APARA_AUTO): uma linha por marco, para o script saber onde o jogo está. */
 static void marco_de_teste(const char *nome) {
@@ -687,48 +703,77 @@ static void marco_de_teste(const char *nome) {
 
 /* Uma faixa no canto avisa o jogador (e o terminal), em vez de perder o progresso calado. */
 #define AVISO_SAVE_SEGUNDOS 12.0f
+#define AVISO_SAVE_LINHAS 8           /* dois avisos juntos (save e opções estragados) e o motivo que o sistema dá podem ser compridos */
 
 static void avisa_save(const char *texto) {
     fprintf(stderr, "apara: %s\n", texto);
-    snprintf(G.avisoSave, sizeof G.avisoSave, "%s", texto);
+    /* Dois avisos de uma vez (o save e as opções estragados, na abertura) ficam na faixa um depois do outro; o mesmo aviso de novo só
+     * renova o tempo. */
+    bool aberta = G.avisoSaveAte > G.time && G.avisoSave[0];
+    if (!aberta) G.avisoSave[0] = 0;
+    if (!strstr(G.avisoSave, texto)) {
+        size_t n = strlen(G.avisoSave);
+        snprintf(G.avisoSave + n, sizeof G.avisoSave - n, "%s%s", n ? " " : "", texto);
+    }
     G.avisoSaveAte = G.time + AVISO_SAVE_SEGUNDOS;
+    if (G.autoJogo) fprintf(stderr, "TESTE_FAIXA %s\n", G.avisoSave);
+}
+
+/* O aviso da faixa é curto (sem caminhos: uma pasta de usuário comprida não cabe na faixa); o arquivo vai para o terminal. */
+static void avisa_arquivo(const char *quem, const char *arquivo) {
+    fprintf(stderr, "apara: %s: %s\n", quem, arquivo);
 }
 
 static void save_game(void) {
     if (G.demo || G.teste) return;
-    char erro[128], texto[192];
-    if (save_gravar(SAVE_FILE, &G.camp, erro, sizeof erro)) return;
-    snprintf(texto, sizeof texto, "não consegui gravar o progresso (%s): %s", SAVE_FILE, erro);
+    char erro[128], texto[256];
+    if (garante_pasta(erro, sizeof erro) && save_gravar(arqSave, &G.camp, erro, sizeof erro)) return;
+    avisa_arquivo("o arquivo do progresso é", arqSave);
+    snprintf(texto, sizeof texto, "não consegui gravar o progresso: %s", erro);
     avisa_save(texto);
     marco_de_teste("save_falhou");
 }
 
-/* Opções que não são progresso: a calibração de latência. */
-#define OPTIONS_FILE "apara_opcoes.txt"
-
+/* Opções que não são progresso: a calibração de latência. Falhar em gravar avisa, como o progresso: sem aviso o jogador
+ * calibraria de novo a cada partida sem saber por quê. */
 static void save_options(void) {
     if (G.demo) return;
-    FILE *f = fopen(OPTIONS_FILE, "w");
-    if (!f) return;
-    fprintf(f, "atraso_video_ms %d\natraso_audio_ms %d\n", (int)lroundf(G.latVideo * 1000), (int)lroundf(G.latAudio * 1000));
-    fclose(f);
+    Opcoes o = {.atrasoVideoMs = (int)lroundf(G.latVideo * 1000), .atrasoAudioMs = (int)lroundf(G.latAudio * 1000)};
+    char erro[128], texto[256];
+    if (garante_pasta(erro, sizeof erro) && opcoes_gravar(arqOpcoes, &o, erro, sizeof erro)) { marco_de_teste("opcoes_gravadas"); return; }
+    avisa_arquivo("o arquivo das opções é", arqOpcoes);
+    snprintf(texto, sizeof texto, "não consegui gravar as opções: %s", erro);
+    avisa_save(texto);
+    marco_de_teste("opcoes_falhou");
 }
 
 static void load_options(void) {
-    FILE *f = fopen(OPTIONS_FILE, "r");
-    if (!f) return;
-    int v = 0, a = 0;
-    if (fscanf(f, "atraso_video_ms %d atraso_audio_ms %d", &v, &a) == 2) {
-        G.latVideo = clampf(v / 1000.0f, 0, AJ_LATENCIA_MAX);
-        G.latAudio = clampf(a / 1000.0f, 0, AJ_LATENCIA_MAX);
+    Opcoes o;
+    char aviso[256];
+    switch (opcoes_ler(arqOpcoes, &o, aviso, sizeof aviso)) {
+        case OPCOES_OK:
+            G.latVideo = clampf(o.atrasoVideoMs / 1000.0f, 0, AJ_LATENCIA_MAX);
+            G.latAudio = clampf(o.atrasoAudioMs / 1000.0f, 0, AJ_LATENCIA_MAX);
+            break;
+        case OPCOES_NAO_EXISTE:
+            break;
+        case OPCOES_CORROMPIDA:
+            avisa_arquivo("o arquivo das opções é", arqOpcoes);
+            avisa_save(aviso);
+            marco_de_teste("opcoes_corrompidas");
+            break;
+        default:
+            avisa_arquivo("o arquivo das opções é", arqOpcoes);
+            avisa_save(aviso);
+            marco_de_teste("opcoes_ilegiveis");
+            break;
     }
-    fclose(f);
 }
 
 static bool load_game(void) {
     Campaign lida;
-    char aviso[192];
-    switch (save_ler(SAVE_FILE, &lida, aviso, sizeof aviso)) {
+    char aviso[256];
+    switch (save_ler(arqSave, &lida, aviso, sizeof aviso)) {
         case SAVE_OK:
             G.camp.index = lida.index;
             G.camp.clearedMask = lida.clearedMask;
@@ -738,13 +783,97 @@ static bool load_game(void) {
         case SAVE_NAO_EXISTE:
             return false;
         case SAVE_CORROMPIDO:
+            avisa_arquivo("o arquivo do progresso é", arqSave);
             avisa_save(aviso);
             marco_de_teste("save_corrompido");
             return false;
         default:
+            avisa_arquivo("o arquivo do progresso é", arqSave);
             avisa_save(aviso);
             marco_de_teste("save_ilegivel");
             return false;
+    }
+}
+
+static bool save_valido(const char *texto) {
+    Campaign c;
+    return save_interpretar(texto, &c);
+}
+
+static bool opcoes_validas(const char *texto) {
+    Opcoes o;
+    return opcoes_interpretar(texto, &o);
+}
+
+/* Um arquivo do jogador que as versões antigas guardavam ao lado do executável (`antigo`): copia para a pasta de dados
+ * (`novo`) na primeira vez. O original fica lá. Se não deu para copiar, o jogo segue com o antigo (`destino`), para o
+ * progresso não sumir da vista do jogador. */
+static void migra_arquivo(const char *nome, const char *antigo, const char *novo, char *destino, size_t n, bool (*valido)(const char *), size_t max, const char *marco) {
+    char aviso[256], m[48];
+    switch (pasta_dados_migrar(antigo, novo, valido, max, aviso, sizeof aviso)) {
+        case MIGROU_COPIOU:
+            fprintf(stderr, "apara: copiei %s para a pasta de dados (%s); o original continua em %s\n", nome, novo, antigo);
+            snprintf(m, sizeof m, "%s_migrado", marco);
+            marco_de_teste(m);
+            break;
+        case MIGROU_INVALIDO:
+            fprintf(stderr, "apara: %s ao lado do jogo (%s) não é um arquivo do jogo: não foi copiado\n", nome, antigo);
+            snprintf(m, sizeof m, "%s_antigo_invalido", marco);
+            marco_de_teste(m);
+            break;
+        case MIGROU_FALHOU:
+            fprintf(stderr, "apara: não copiei %s para %s; sigo com o antigo\n", antigo, novo);
+            snprintf(destino, n, "%s", antigo);
+            avisa_save(aviso);
+            snprintf(m, sizeof m, "%s_migracao_falhou", marco);
+            marco_de_teste(m);
+            break;
+        default:
+            break;
+    }
+}
+
+/* Decide onde ficam o progresso e as opções (antes do ChangeDirectory, para um APARA_DADOS relativo valer a partir de
+ * onde o jogo foi aberto) e traz o que as versões antigas guardaram ao lado do executável. O demo não grava nada e os
+ * modos de teste só gravam a calibração: esses não criam a pasta de dados (ela nasce na primeira gravação) nem migram. */
+static void prepara_dados(void) {
+    AmbienteDados amb = pasta_dados_ambiente();
+    char pasta[CAMINHO_MAX], erro[128], texto[256];
+    char antigoSave[CAMINHO_MAX], antigoOpcoes[CAMINHO_MAX];
+    const char *app = GetApplicationDirectory();
+    bool jogo_de_verdade = !G.demo && !G.teste;
+    bool forcada = amb.forcada && amb.forcada[0];          /* APARA_DADOS é uma pasta de propósito (testes, instalação portátil): nada vem de fora para ela */
+    if (!pasta_dados_arquivo(amb.sistema, app, SAVE_FILE, antigoSave, sizeof antigoSave) || !pasta_dados_arquivo(amb.sistema, app, OPTIONS_FILE, antigoOpcoes, sizeof antigoOpcoes)) {
+        snprintf(antigoSave, sizeof antigoSave, "%s", SAVE_FILE);
+        snprintf(antigoOpcoes, sizeof antigoOpcoes, "%s", OPTIONS_FILE);
+    }
+    if (!pasta_dados_caminho(&amb, pasta, sizeof pasta)) {
+        avisa_save("não achei a pasta de dados do jogador: guardo o progresso ao lado do jogo");
+        marco_de_teste("dados_sem_pasta");
+        return;
+    }
+    if (!pasta_dados_arquivo(amb.sistema, pasta, SAVE_FILE, arqSave, sizeof arqSave) || !pasta_dados_arquivo(amb.sistema, pasta, OPTIONS_FILE, arqOpcoes, sizeof arqOpcoes)) {
+        snprintf(arqSave, sizeof arqSave, "%s", SAVE_FILE);
+        snprintf(arqOpcoes, sizeof arqOpcoes, "%s", OPTIONS_FILE);
+        avisa_save("o caminho da pasta de dados é comprido demais: guardo o progresso ao lado do jogo");
+        marco_de_teste("dados_sem_pasta");
+        return;
+    }
+    snprintf(pastaDados, sizeof pastaDados, "%s", pasta);
+    if (!jogo_de_verdade) return;
+    if (!garante_pasta(erro, sizeof erro)) {
+        avisa_arquivo("a pasta de dados é", pasta);
+        snprintf(texto, sizeof texto, "não consegui criar a pasta de dados (%s): guardo o progresso ao lado do jogo", erro);
+        snprintf(arqSave, sizeof arqSave, "%s", SAVE_FILE);
+        snprintf(arqOpcoes, sizeof arqOpcoes, "%s", OPTIONS_FILE);
+        pastaDados[0] = 0;
+        avisa_save(texto);
+        marco_de_teste("dados_sem_pasta");
+        return;
+    }
+    if (!forcada) {
+        migra_arquivo("o progresso", antigoSave, arqSave, arqSave, sizeof arqSave, save_valido, SAVE_MAX_BYTES, "save");
+        migra_arquivo("as opções", antigoOpcoes, arqOpcoes, arqOpcoes, sizeof arqOpcoes, opcoes_validas, OPCOES_MAX_BYTES, "opcoes");
     }
 }
 
@@ -4042,8 +4171,8 @@ static void ui_debug(Rectangle dst) {
 static void ui_aviso_save(void) {
     if (G.avisoSaveAte <= G.time || !G.avisoSave[0]) return;
     const float size = 18, lh = size * 1.5f, w = 420;
-    char linhas[4][LINHA_MAX];
-    int n = wrap_lines(G.avisoSave, size, w - 32, linhas, 4);
+    char linhas[AVISO_SAVE_LINHAS][LINHA_MAX];
+    int n = wrap_lines(G.avisoSave, size, w - 32, linhas, AVISO_SAVE_LINHAS);
     float a = clampf(G.avisoSaveAte - G.time, 0, 1);
     Rectangle r = {20, 80, w, 24 + n * lh};
     parchment(r, a);
@@ -4110,6 +4239,13 @@ static void start_calibra(bool pausado) {
     G.cal.audio = G.latAudio;
     G.paused = false;
     set_state(ST_CALIBRA);
+    /* tests/teste_save.sh: sem batidas de verdade, vai direto à confirmação com estes atrasos ("vídeo,áudio" em ms) */
+    int v, a;
+    if (G.autoJogo && getenv("APARA_CALIBRA_PRONTA") && sscanf(getenv("APARA_CALIBRA_PRONTA"), "%d,%d", &v, &a) == 2) {
+        G.cal.video = v / 1000.0f;
+        G.cal.audio = a / 1000.0f;
+        G.cal.modo = 2;
+    }
 }
 
 static void end_calibra(bool salva) {
@@ -4514,6 +4650,7 @@ int main(int argc, char **argv) {
     G.usaCarimbo = !G.demo && !G.autoJogo && !G.recDir && !G.shotFile && !getenv("APARA_SEM_CARIMBO") && entrada_iniciar();
     G.carimboMin = 1e9;
     SetWindowMinSize(LOW_W, LOW_H);
+    prepara_dados();                       /* antes de mudar de pasta: um APARA_DADOS relativo vale a partir de onde o jogo foi aberto */
     ChangeDirectory(GetApplicationDirectory());
     srand(getenv("APARA_SEMENTE") ? (unsigned)atoi(getenv("APARA_SEMENTE")) : (unsigned)time(NULL));
 

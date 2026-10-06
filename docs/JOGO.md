@@ -65,7 +65,7 @@ Todos os adversários têm `DESARMADO` com mais de um quadro, derivado da queda 
 
 A alteração numérica proposta para Raizo (26,25 de dano, 5% acima do Oboro na fase 2), o aumento de frequência dos especiais do Daichi e dos combos longos do Garfiel continuam suspensos: a primeira simulação quebrou a curva crescente. Pesos, preparação, dano e intervalos atuais foram preservados. A forma definitiva das adagas de Yoru aguarda referência; sua aura foi reduzida e concentrada nas lâminas.
 
-O save é validado, guarda corrupção em `.bak` e troca um `.tmp` sem apagar o arquivo anterior primeiro. A vitória é registrada no golpe final, antes de qualquer clique. Opções têm arquivo separado. Os modos de teste não gravam o progresso.
+O save é validado, guarda corrupção em `.bak` e troca um `.tmp` sem apagar o arquivo anterior primeiro. A vitória é registrada no golpe final, antes de qualquer clique. Opções (a calibração) têm arquivo separado, com as mesmas garantias: gravação atômica, validação, `.bak` e aviso na faixa quando não grava. Os dois ficam na pasta de dados do usuário (`%LOCALAPPDATA%\Apara`, `~/Library/Application Support/Apara`, `~/.local/share/apara`; `APARA_DADOS` troca), e um save ao lado do executável, de versões antigas, é copiado para lá na primeira vez, sem tocar o original (ver `c_game/LEIA-ME.md`). Os modos de teste não gravam o progresso.
 
 ## Organização
 
@@ -77,7 +77,7 @@ O save é validado, guarda corrupção em `.bak` e troca um `.tmp` sem apagar o 
 | `src/sprites.c`, `tools/personagens.c` | Leitura e geração dos PNGs dos packs |
 | `src/arenas.c`, `pixelize.c` | Fundos da equipe e fundos procedurais |
 | `src/audio.c`, `vozes.h` | Sons, variações, polifonia, música e fades |
-| `src/salvar.c`, `fonte.c` | Persistência e glifos |
+| `src/salvar.c`, `opcoes.c`, `gravar.c`, `pasta_dados.c`, `fonte.c` | Persistência (progresso, opções, gravação atômica, pasta de dados) e glifos |
 | `src/desempenho.c` | Medição por seção do quadro |
 
 Mac usa NSEvent, Linux/X11 usa XInput2 e Windows usa Raw Input. Gamepad e plataformas sem carimbo confiável usam o meio do quadro. Wine verifica o código de Windows; não substitui equipamento real.

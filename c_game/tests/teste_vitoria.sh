@@ -11,26 +11,22 @@
 # E, em todos, o marco "tela_de_vitoria" ainda não tinha saído: o jogo estava antes da tela de vitória.
 # O jogo roda com um passo de tempo fixo (--rec), mais rápido que o relógio; APARA_VITORIA_LENTA o
 # põe em tempo real a partir da vitória salva, para as teclas de verdade chegarem a tempo.
-# O apara_save.txt e o apara_opcoes.txt de quem roda são guardados e devolvidos.
+# O progresso e as opções vão para uma pasta de dados temporária (APARA_DADOS): os de quem roda não são tocados.
 cd "$(dirname "$0")/.." || exit 1
 
 if [ "$1" != "--dentro" ]; then
     [ -x ./apara ] || { echo "teste_vitoria: falta ./apara (make)"; exit 2; }
     command -v xvfb-run >/dev/null 2>&1 || { echo "teste_vitoria: pulado (sem xvfb-run)"; exit 0; }
     TMP=$(mktemp -d)
-    cp apara_save.txt "$TMP/save.orig" 2>/dev/null
-    cp apara_opcoes.txt "$TMP/opcoes.orig" 2>/dev/null
-    volta() {
-        if [ -f "$TMP/save.orig" ]; then cp "$TMP/save.orig" apara_save.txt; else rm -f apara_save.txt apara_save.txt.tmp apara_save.txt.bak; fi
-        if [ -f "$TMP/opcoes.orig" ]; then cp "$TMP/opcoes.orig" apara_opcoes.txt; else rm -f apara_opcoes.txt; fi
-        rm -rf "$TMP"
-    }
-    trap volta EXIT
+    trap 'rm -rf "$TMP"' EXIT
     cc -std=c11 -O1 -o "$TMP/xtecla" tests/xtecla.c -lX11 2>/dev/null || { echo "teste_vitoria: pulado (sem libX11 para compilar tests/xtecla.c)"; exit 0; }
     TMP="$TMP" xvfb-run -a -s '-screen 0 1280x720x24' sh "$0" --dentro
     exit $?
 fi
 
+export APARA_DADOS="$TMP/dados"
+mkdir -p "$APARA_DADOS"
+SAVE="$APARA_DADOS/apara_save.txt"
 FALHAS=0
 confere() { # descrição, condição (0 = ok)
     if [ "$2" -eq 0 ]; then echo "  ok: $1"; else echo "  FALHA: $1"; FALHAS=$((FALHAS + 1)); fi
@@ -53,14 +49,14 @@ cenario() { # nome, como tirar o jogo do ar (kill | esc_q | fechar | esc_m), sav
     ESPERADO=$4
     MARCO_PROIBIDO=$5
     echo "$NOME"
-    printf '%s\n' "$INICIAL" > apara_save.txt
+    printf '%s\n' "$INICIAL" > "$SAVE"
     printf '%s\n' "$INICIAL" > "$TMP/inicial.txt"
     APARA_AUTO=1 APARA_SEMENTE=11 APARA_VITORIA_LENTA=1 ./apara --rec "$TMP/q" 99999 99999 >"$TMP/$NOME.log" 2>&1 &
     PID=$!
     # espera o arquivo mudar do save inicial: nada além da vitória salva o progresso neste roteiro
     N=0
     while [ "$N" -lt 6000 ]; do
-        cmp -s apara_save.txt "$TMP/inicial.txt" || break
+        cmp -s "$SAVE" "$TMP/inicial.txt" || break
         kill -0 "$PID" 2>/dev/null || break
         sleep 0.05
         N=$((N + 1))
@@ -86,7 +82,7 @@ cenario() { # nome, como tirar o jogo do ar (kill | esc_q | fechar | esc_m), sav
     fi
     confere "a vitória já estava salva antes de '$MARCO_PROIBIDO' (marcos desse tipo vistos ao tirar o jogo do ar: $ANTES_DA_TELA)" "$([ "$ANTES_DA_TELA" -eq 0 ] && grep -q '^TESTE_MARCO vitoria_salva' "$TMP/$NOME.log"; echo $?)"
     grep '^TESTE_MARCO' "$TMP/$NOME.log" | tr '\n' ' '; echo
-    confere "o save guarda a vitória: $(tr '\n' '|' < apara_save.txt)" "$([ "$(cat apara_save.txt)" = "$ESPERADO" ]; echo $?)"
+    confere "o save guarda a vitória: $(tr '\n' '|' < "$SAVE")" "$([ "$(cat "$SAVE")" = "$ESPERADO" ]; echo $?)"
 }
 
 cenario "1. kill -9 no instante da vitória" kill "$INICIAL" "$DEPOIS_DO_PRIMEIRO" tela_de_vitoria
@@ -98,7 +94,7 @@ cenario "5. oboro: o golpe final salva a trilha completa, antes da escolha do fi
 echo "6. reabrir depois de tudo isso: o título carrega o save sem perder nada"
 ASAN_OPTIONS= timeout 60 ./apara --shot "$TMP/titulo.png" 1.0 >"$TMP/reabrir.log" 2>&1
 confere "o jogo abriu e fechou sem erro (código $?)" "$([ "$?" -eq 0 ]; echo $?)"
-confere "o save continua com a vitória" "$([ "$(cat apara_save.txt)" = "$DEPOIS_DO_OBORO" ]; echo $?)"
+confere "o save continua com a vitória" "$([ "$(cat "$SAVE")" = "$DEPOIS_DO_OBORO" ]; echo $?)"
 
 if [ "$FALHAS" -eq 0 ]; then echo "teste_vitoria: tudo certo"; else echo "teste_vitoria: $FALHAS falha(s)"; fi
 exit "$FALHAS"

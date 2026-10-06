@@ -1,5 +1,5 @@
 /*
- * salvar.h - o arquivo de progresso (apara_save.txt), sem raylib.
+ * salvar.h - o arquivo de progresso (apara_save.txt, na pasta de dados do jogador), sem raylib.
  *
  * Formato (texto):   APARA-C 2
  *                    <mestre atual> <máscara dos vencidos> <trilha completa 0/1> <abertura vista 0/1>

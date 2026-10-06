@@ -2,6 +2,7 @@ apara
 core_test
 fonte_test
 save_test
+dados_test
 entrada_test
 desempenho_test
 fuzz_test

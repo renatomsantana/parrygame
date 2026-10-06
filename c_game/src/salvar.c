@@ -1,21 +1,11 @@
-#define _POSIX_C_SOURCE 200809L   /* fileno e fsync com -std=c11 */
 #include "salvar.h"
+
+#include "gravar.h"
 
 #include <ctype.h>
 #include <errno.h>
-#include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-
-#ifdef _WIN32
-#include <io.h>
-#include <windows.h>
-#define SINCRONIZA(f) _commit(_fileno(f))
-#else
-#include <unistd.h>
-#define SINCRONIZA(f) fsync(fileno(f))
-#endif
 
 #define VERSAO 2
 
@@ -68,66 +58,30 @@ static void descreve(char *erro, size_t n, const char *o_que) {
     snprintf(erro, n, "%s: %s", o_que, strerror(errno));
 }
 
-/* Os dois caminhos ficam no mesmo diretório/volume. Nunca apagar o destino
- * antes da troca: um arquivo bloqueado ou uma falha deve conservar o save antigo. */
-static int troca(const char *de, const char *para) {
-#ifdef _WIN32
-    if (MoveFileExA(de, para, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) return 0;
-    DWORD erro = GetLastError();
-    errno = erro == ERROR_FILE_NOT_FOUND || erro == ERROR_PATH_NOT_FOUND ? ENOENT :
-            erro == ERROR_ACCESS_DENIED || erro == ERROR_SHARING_VIOLATION ? EACCES : EIO;
-    return -1;
-#else
-    return rename(de, para);
-#endif
-}
-
 bool save_gravar(const char *caminho, const Campaign *c, char *erro, size_t n) {
-    char tmp[512], texto[96];
-    if (snprintf(tmp, sizeof tmp, "%s.tmp", caminho) >= (int)sizeof tmp) { snprintf(erro, n, "caminho comprido demais"); return false; }
+    char texto[96];
     save_formatar(c, texto, sizeof texto);
-    FILE *f = fopen(tmp, "wb");
-    if (!f) { descreve(erro, n, "não abriu o arquivo temporário"); return false; }
-    bool ok = fputs(texto, f) >= 0;
-    if (ok) ok = fflush(f) == 0;
-    if (ok) ok = SINCRONIZA(f) == 0;
-    if (!ok) descreve(erro, n, "não escreveu");
-    if (fclose(f) != 0 && ok) { descreve(erro, n, "não fechou o arquivo"); ok = false; }
-    if (ok && troca(tmp, caminho) != 0) { descreve(erro, n, "não trocou pelo save"); ok = false; }
-    if (!ok) remove(tmp);
-    return ok;
-}
-
-/* Guarda o arquivo estragado em <caminho>.bak. */
-static bool guarda_bak(const char *caminho) {
-    char bak[512];
-    if (snprintf(bak, sizeof bak, "%s.bak", caminho) >= (int)sizeof bak) return false;
-    return troca(caminho, bak) == 0;
+    return gravar_atomico(caminho, texto, strlen(texto), erro, n);
 }
 
 SaveLeitura save_ler(const char *caminho, Campaign *c, char *aviso, size_t n) {
-    FILE *f = fopen(caminho, "rb");
-    if (!f) {
+    char buf[SAVE_MAX_BYTES + 1];
+    long len = gravar_ler_pequeno(caminho, buf, SAVE_MAX_BYTES);
+    if (len == -1) {
         if (errno == ENOENT) return SAVE_NAO_EXISTE;
         descreve(aviso, n, "não consegui abrir o save");
         return SAVE_ILEGIVEL;
     }
-    char buf[SAVE_MAX_BYTES + 1];
-    size_t len = fread(buf, 1, sizeof buf - 1, f);
-    bool mais = len == sizeof buf - 1 && fgetc(f) != EOF;   /* passou do tamanho de um save */
-    bool erro_de_leitura = ferror(f) != 0;
-    fclose(f);
-    if (erro_de_leitura) {
+    if (len == -3) {
         snprintf(aviso, n, "não consegui ler o save (%s)", strerror(errno));
         return SAVE_ILEGIVEL;
     }
-    buf[len] = 0;
     Campaign lido;
-    if (!mais && memchr(buf, 0, len) == NULL && save_interpretar(buf, &lido)) {
+    if (len >= 0 && memchr(buf, 0, (size_t)len) == NULL && save_interpretar(buf, &lido)) {
         *c = lido;
         return SAVE_OK;
     }
-    if (guarda_bak(caminho)) snprintf(aviso, n, "o save estava corrompido: guardei uma cópia em %s.bak e começo sem ele", caminho);
+    if (gravar_guardar_bak(caminho)) snprintf(aviso, n, "o save estava corrompido: cópia em %s.bak; começo sem ele", gravar_nome(caminho));
     else snprintf(aviso, n, "o save estava corrompido e não consegui guardar a cópia: começo sem ele");
     return SAVE_CORROMPIDO;
 }

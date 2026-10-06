@@ -12,7 +12,7 @@
 #   3. janela sem foco (o jogo pausa): os cliques são carimbados e nenhum vira aperto do duelo;
 #   4. APARA_SEM_CARIMBO=1: nenhum carimbo, nenhum aperto carimbado, o jogo segue vivo;
 #   5. --carimbo: mede 20 cliques e sai sozinho.
-# O apara_save.txt e o apara_opcoes.txt não são tocados (--teste e --carimbo não gravam).
+# O progresso e as opções não são tocados (--teste e --carimbo não gravam).
 cd "$(dirname "$0")/.." || exit 1
 
 if [ "$1" != "--dentro" ]; then

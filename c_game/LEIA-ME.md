@@ -31,8 +31,29 @@ docker run --rm --platform linux/amd64 --mount type=bind,source="$PWD",target=/s
 
 O ambiente Windows compila o jogo completo e executa núcleo, save e Raw Input no Wine.
 Rodar a janela gráfica no Windows real continua sendo uma validação de plataforma.
-O progresso fica em `apara_save.txt` e a calibração em `apara_opcoes.txt`, ao lado do executável.
-Se o save estiver estragado, o jogo avisa, guarda o arquivo em `apara_save.txt.bak` e começa de novo.
+### Onde ficam o progresso e a calibração
+
+O progresso (`apara_save.txt`) e a calibração (`apara_opcoes.txt`) ficam na pasta de dados do usuário, e não ao lado
+do executável (a pasta de um programa instalado pode ser protegida ou de todos os usuários):
+
+| Sistema | Pasta |
+|---|---|
+| Windows | `%LOCALAPPDATA%\Apara` (sem ela, `%APPDATA%\Apara`) |
+| macOS | `~/Library/Application Support/Apara` |
+| Linux | `$XDG_DATA_HOME/apara`, ou `~/.local/share/apara` |
+
+`APARA_DADOS=<pasta>` troca a pasta (instalação portátil, testes); relativa, vale a partir de onde o jogo foi aberto.
+A pasta é criada na primeira gravação, e as de cima também.
+
+**Quem já jogava com o save ao lado do executável não perde nada:** na primeira vez o jogo copia `apara_save.txt` e
+`apara_opcoes.txt` para a pasta nova, se forem arquivos válidos, e o original continua onde estava (é uma cópia, não
+uma mudança). Depois disso a pasta nova manda: o antigo não é lido nem sobrescrito. Com `APARA_DADOS` não há migração.
+Se não der para criar a pasta de dados, o jogo avisa na faixa do canto e guarda ao lado do executável, como antes.
+
+Gravar é atômico, para o progresso e para as opções: escreve em `<arquivo>.tmp` e só então troca; uma queda, um disco
+cheio ou um arquivo bloqueado deixam o arquivo anterior intacto, e o jogo **avisa na faixa do canto** (e no terminal)
+quando não consegue gravar, em vez de perder calado. Um arquivo estragado (`apara_save.txt` ou `apara_opcoes.txt`) é
+guardado em `<arquivo>.bak`, o jogo avisa e começa sem ele.
 
 ## No macOS: o carimbo do clique
 
