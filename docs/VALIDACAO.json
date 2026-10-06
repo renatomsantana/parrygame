@@ -569,5 +569,94 @@
         "teste_rastro.sh"
       ]
     }
+  },
+  "oboro_random_50_2026_10_05": {
+    "baseline_commit": "9c2a7bf",
+    "postures": 12,
+    "distinct_borrowed_sequences": 50,
+    "phase_move_counts": [
+      7,
+      50,
+      50
+    ],
+    "selection": "Uniform posture excluding immediate previous, then uniform attack from that posture; no ordered first lap.",
+    "new_attempts": "Clock plus attempt counter; APARA_SEMENTE preserves deterministic reproduction.",
+    "borrowed_identity": "Explicit sourceIdentity keeps original SFX/VFX and own katana; phase 3 retains flaming sword actions.",
+    "balance": {
+      "third_seal_posture_before": 450,
+      "third_seal_posture_after": 550,
+      "casual_before_percent": 37.9,
+      "casual_new_pool_before_compensation_percent": 48.2,
+      "casual_after_percent": 39.7,
+      "fights_per_master_and_bot": 100000,
+      "fps": [
+        60,
+        144
+      ],
+      "same_results": true,
+      "curve_gate_violations": 0,
+      "perfect_percent": 100,
+      "spam_percent": 0,
+      "pupil_results": "unchanged"
+    },
+    "new_core_tests": {
+      "draws_per_final_phase": 2000,
+      "all_50_reached_per_phase": true,
+      "immediate_posture_repeats": 0,
+      "same_seed_reproducible": true,
+      "different_seed_varies": true,
+      "original_patterns_preserved": true,
+      "isolated_pattern_variants": 100,
+      "isolated_contacts": 216,
+      "latency_ms": 120,
+      "fps": [
+        60,
+        144
+      ],
+      "all_perfect_viable": true,
+      "contact_times_identical": true
+    },
+    "mac": {
+      "core_checks": 26173,
+      "headless_presentation_checks": 55209,
+      "real_asset_checks": 234123,
+      "failures": 0,
+      "fuzz_modes": 4,
+      "scenarios_per_mode": 600,
+      "fuzz_violations": 0,
+      "warnings_as_errors_compilations": 168,
+      "real_game": {
+        "phases": [
+          2,
+          3
+        ],
+        "seeds": [
+          11,
+          12
+        ],
+        "seconds_per_sample": 45,
+        "contacts": [
+          42,
+          45,
+          18,
+          14
+        ],
+        "different_sequences_between_seeds": true,
+        "own_katana_echoes_phase_2": true,
+        "flaming_sword_all_contacts_phase_3": true
+      }
+    },
+    "linux": {
+      "real_asset_checks": 234123,
+      "failures": 0,
+      "real_game_slash_on_off_identical_contacts": 104,
+      "oboro_contacts": 59,
+      "oboro_claw_draws": 102,
+      "test": "teste_slash.sh with 90 second Oboro sample"
+    },
+    "sprite_frames_anchors_and_judgement": "unchanged; move selection and final posture changed",
+    "windows": "not executed for this change",
+    "human_review": "pending",
+    "outputs": "outputs/oboro-50-05out"
   }
 }

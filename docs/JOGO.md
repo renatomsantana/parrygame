@@ -10,7 +10,7 @@ O perfeito causa mais dano de postura, cura uma porcentagem da vida e apaga a br
 
 O aviso varia de 450 ms no Daichi a 320 ms nos últimos; Jinshi tem aviso visual de pelo menos 350 ms e nenhum som de aviso. Hayate e Jinshi conservam variação na preparação. A lâmina viaja em tempo variável do quinto aprendiz (Enjin) em diante, ligável em `ajuste.h`; aviso e contato não se deslocam. Sequências têm piso de 400 ms entre contatos. Hitstop é descontado da preparação seguinte.
 
-Oboro tem três selos: fundamentos de Hanzo, doze ecos e a forma Oni. Recupera a vida do jogador a cada selo; a segunda fase reduz o dano pela metade. A terceira usa os ataques de espada em chamas e preparação ×0,85, com aviso nunca inferior a 320 ms. O HUD não revela selos restantes.
+Oboro tem três selos: fundamentos de Hanzo, devorador de posturas e a forma Oni. Nas fases 2 e 3, sorteia entre 50 sequências de ataque das 12 posturas, desde o primeiro golpe; a postura anterior não se repete na sequência seguinte. Cada nova tentativa recebe uma semente diferente, salvo quando `APARA_SEMENTE` é fixada para testes. Recupera a vida do jogador a cada selo; a segunda fase reduz o dano pela metade. A terceira usa os ataques de espada em chamas e preparação ×0,85, com aviso nunca inferior a 320 ms. O HUD não revela selos restantes.
 
 ## Lutadores
 
@@ -30,7 +30,7 @@ Oboro tem três selos: fundamentos de Hanzo, doze ecos e a forma Oni. Recupera a
 | 12 | Jinshi | Katana branca | Lua |
 | 13 | Oboro | Katana / espada em chamas | Hanzo, doze ecos, Oni |
 
-A posição na trilha determina o nível, as janelas e o progresso salvo. A identidade do personagem mantém sua arma, postura, arena, roupa, efeitos e sons. Os ecos do segundo selo de Oboro seguem essa mesma ordem na primeira volta.
+A posição na trilha determina o nível, as janelas e o progresso salvo. A identidade do personagem mantém sua arma, postura, arena, roupa, efeitos e sons. Os ecos do Oboro são sorteados independentemente da ordem da trilha.
 
 Todos os padrões e seus tempos estão em `c_game/src/roster.c`. Os objetivos da curva estão em `CURVA.md`; a análise de ritmo, em `FLUIDEZ.md`. As propostas de reduzir hitstop em sequência e acelerar Daichi continuam sem aplicação.
 

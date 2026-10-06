@@ -773,6 +773,10 @@ static const SprAnim *fa(const Fighter *f, const char *name) { return spr_anim(f
 
 /* O aprendiz de quem oboro devorou este golpe: "eco da terra" é a "postura da terra". -1 se não é eco. */
 static int echo_of(const Move *mv) {
+    if (mv && mv->sourceIdentity) {
+        const MasterProfile *source = roster_by_identity(mv->sourceIdentity);
+        return source ? source->id - 1 : -1;
+    }
     if (!mv || strncmp(mv->name, "eco ", 4)) return -1;
     for (int i = 0; i < MASTER_COUNT; i++)
         if (!strcmp(mv->name + 4, roster_get(i)->style + 8)) return i;
@@ -1082,7 +1086,13 @@ static void start_duel(void) {
     G.settings.latency = G.latVideo;                  /* calibração: ver update_calibra */
     G.settings.audioLead = G.latAudio - G.latVideo;
     G.special = false;
-    duel_init(&G.duel, &G.settings, G.m, getenv("APARA_SEMENTE") ? (uint32_t)atoi(getenv("APARA_SEMENTE")) : (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919));
+    /* Outra tentativa no mesmo segundo também recebe um roteiro novo. A
+     * semente explícita continua reproduzível para testes e gravações. */
+    static uint32_t duelSerial;
+    uint32_t seed = getenv("APARA_SEMENTE") ? (uint32_t)atoi(getenv("APARA_SEMENTE")) :
+        (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919) ^
+        (++duelSerial * UINT32_C(2654435761)) ^ (uint32_t)(uint64_t)(entrada_relogio() * 1000000);
+    duel_init(&G.duel, &G.settings, G.m, seed);
     robo_iniciar(&G.robo, &G.roboEscolhido, 1);
     setup_actors();
     ren_draw_sword();

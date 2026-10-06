@@ -78,7 +78,7 @@ typedef struct {
  * uma preparação seguida de 1 a MAX_CHAIN golpes, com intervalos sempre iguais
  * entre um contato e o próximo. É isso que o jogador estuda e decora.
  */
-#define MAX_MOVES 32
+#define MAX_MOVES 128 /* Oboro: fundamentos + 50 sequências em cada selo final */
 #define MAX_CHAIN 8
 
 /* Preparação que denuncia a sequência. LOOK_HEAVY é o golpe forte: o salto com a
@@ -108,6 +108,7 @@ typedef struct {
     unsigned dual;
     bool thrustOnly;             /* apresentação: todos os contatos seguem retos, sem alternar para corte */
     bool feint;                  /* apresentação: ameaça sem contato antes da estocada real */
+    int sourceIdentity;          /* eco: identidade do aprendiz copiado (0 = golpe próprio) */
 } Move;
 
 /* Direção visual de cada contato. Não participa do julgamento do parry. */

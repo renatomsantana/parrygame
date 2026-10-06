@@ -261,17 +261,35 @@ static int pick_move(Duel *d) {
             if (k++ == n) return i;
         }
     }
+    /* Nos ecos, sorteia primeiro a postura, depois seu golpe. Ter mais golpes
+     * no repertório não dá mais peso à postura; a anterior não se repete. */
+    int sources[MASTER_COUNT], sourceCount = 0;
+    int previous = d->move >= 0 ? m->moves[d->move].sourceIdentity : 0;
+    for (int i = 0; i < m->moveCount; i++) {
+        const Move *mv = &m->moves[i];
+        if (!move_allowed(d, mv) || mv->sourceIdentity == 0) continue;
+        bool found = false;
+        for (int k = 0; k < sourceCount; k++) found |= sources[k] == mv->sourceIdentity;
+        if (!found && sourceCount < MASTER_COUNT) sources[sourceCount++] = mv->sourceIdentity;
+    }
+    if (sourceCount > 1) {
+        for (int k = 0; k < sourceCount; k++) if (sources[k] == previous) {
+            sources[k] = sources[--sourceCount];
+            break;
+        }
+    }
+    int source = sourceCount > 0 ? sources[(int)(rng_next(&d->rng) * sourceCount)] : 0;
     float total = 0;
     for (int i = 0; i < m->moveCount; i++) {
         const Move *mv = &m->moves[i];
-        if (move_allowed(d, mv)) total += mv->weight;
+        if (move_allowed(d, mv) && (!source || mv->sourceIdentity == source)) total += mv->weight;
     }
     if (total <= 0) return -1;
     double r = rng_next(&d->rng) * total;
     int last = -1;
     for (int i = 0; i < m->moveCount; i++) {
         const Move *mv = &m->moves[i];
-        if (!move_allowed(d, mv)) continue;
+        if (!move_allowed(d, mv) || (source && mv->sourceIdentity != source)) continue;
         last = i;
         if (r < mv->weight) return i;
         r -= mv->weight;

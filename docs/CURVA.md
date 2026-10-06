@@ -261,3 +261,26 @@ Perfeito: 100% em todos antes/depois. Spam: 0% em todos antes/depois. A curva ca
 Validação Mac: 15.379 verificações do núcleo, 45.565 de apresentação sem assets e 173.479 com os PNGs reais, zero falhas. Saves, entradas, fontes, desempenho, ritmo, fuzz (600 cenários em cada um dos quatro modos), assets e 168 compilações com avisos como erro passaram. Todo contato mantém janela viável, inclusive com calibração de 120 ms. A exceção já conhecida das brasas do Enjin entre taxas deu 9 diferenças em 3.200 comparações (0,28%, abaixo de 2%); os demais deram zero em 38.400.
 
 Jogo real: os seis aprendizes trocados e Oboro foram executados no Mac com logs de fonte sonora, efeitos e impactos; Oboro percorreu os doze ecos na nova ordem. No Linux/Xvfb, 173.479 verificações com os PNGs reais passaram, assim como `teste_slash.sh` (84 contatos idênticos com pack ligado/desligado) e `teste_rastro.sh` (90 contatos idênticos com silhuetas ligadas/desligadas). Garfiel e seu eco desenham as garras compradas; Arashi não usa esse pack. Windows e sensação ao jogar não foram revalidados nesta alteração.
+
+## Oboro: 12 posturas e 50 padrões aleatórios (5 de outubro)
+
+Correção solicitada depois da reordenação: Oboro **não percorre a trilha em ordem**. As fases 2 e 3 têm o mesmo repertório de **50 sequências distintas** dos 12 aprendizes, sorteadas desde a primeira. Cada escolha sorteia uma postura com a mesma chance que as outras, exclui a postura imediatamente anterior e então escolhe um golpe dela. A sequência mantém seu ritmo interno; não se sorteia outro golpe no meio de um combo. A fase 1 mantém os sete fundamentos e sua abertura de sete contatos.
+
+| Origem | Sequências disponíveis em cada fase final |
+|---|---|
+| Daichi, Genbu, Hayate, Shizuku, Enjin, Arashi | 4 de cada |
+| Raizo, Suiren, Karasu, Yoru | 4 de cada |
+| Garfiel, Jinshi | 5 de cada |
+| Total | 50 |
+
+As duas fases usam as mesmas 50 sequências; a fase 3 conserva preparação ×0,85, dano ×1,25, aviso mínimo de 320 ms e ações da espada flamejante. O Oboro conserva a própria katana na fase 2 e os sons, partículas, aura e paleta da origem. Não foram adicionados nem alterados quadros de sprite. Uma identidade explícita no golpe resolve sua origem, sem depender do nome mostrado.
+
+Apenas liberar os novos padrões levou o casual a 48,2% (10 mil lutas). A postura do terceiro selo passou de 450 para 550, mantendo vida, dano e janelas: 39,7% em 100 mil lutas, a 60 e 144 Hz, contra 37,9% na versão anterior. Perfeito continua em 100%; primeira vez, reação 250 e spam em 0%. Os 12 aprendizes mantiveram resultados idênticos à medição anterior. Nenhuma faixa do verificador da curva foi relaxada nesta mudança.
+
+Testes novos: cópia dos 50 padrões confrontada com a origem, incluindo intervalos, direção, golpes duplos e finta; 2.000 sequências em cada fase final cobrem todos os golpes e posturas, sem repetição imediata, com reprodução exata para a mesma semente e variação entre sementes. Os 216 contatos dos 100 padrões (50 em cada fase final) foram isolados e testados com atraso máximo de 120 ms a 60 e 144 Hz: parry perfeito viável e tempos idênticos.
+
+A semente normal combina relógio e contador de tentativas para variar também nas reinicializações da luta no mesmo segundo. `APARA_SEMENTE` continua reproduzível, para depuração. O sorteio não garante que todos os 50 padrões apareçam antes da vitória em uma única luta. Medições e logs: `outputs/oboro-50-05out/`.
+
+Validação final: 26.173 verificações do núcleo, 55.209 de apresentação sem assets e 234.123 com os PNGs reais no Mac; 234.123 com os PNGs no Linux. Fontes, save, entrada, desempenho, ritmo, fuzz (600 cenários em cada um dos quatro modos) e 168 compilações com avisos como erro passaram. O jogo real no Linux conservou os mesmos 104 contatos com os efeitos ligados/desligados, incluindo 59 de Oboro; as garras copiadas foram desenhadas 102 vezes. Windows e revisão humana da sensação não foram repetidos nesta mudança.
+
+No Mac, quatro amostras do jogo real (fases 2 e 3, sementes 11 e 12, 45 s cada) produziram roteiros diferentes: 42/45 contatos na fase 2 e 18/14 na fase 3. A fase 2 usou variantes da própria katana e todos os contatos da fase 3 usaram ações `_FURIA` da espada flamejante.

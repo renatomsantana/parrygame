@@ -406,7 +406,7 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
            devorou as doze; e a do oni, de máscara e com a lâmina em chamas, em que ele se perde. */
         .stances = {
             STANCE_EM_ORDEM("postura de hanzo", 0.062f, 0.144f, 0.380f, 1),        /* abre com a lição completa */
-            STANCE_EM_ORDEM("devorador de posturas", 0.051f, 0.124f, 0.350f, 12),  /* os doze na ordem da trilha */
+            STANCE("devorador de posturas", 0.051f, 0.124f, 0.350f), /* sorteio desde a primeira sequência */
             STANCE("postura do oni", 0.042f, 0.108f, 0.320f),
         },
         .stanceCount = 3,
@@ -414,25 +414,64 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
          * Erros até cair, com a vida cheia a cada selo (AJ_SELO_CURA): 5, 10 e 4. */
         .seals = {
             {"primeiro selo", 1.00f, 0, 360, 0, true},
-            {"segundo selo", 1.00f, 0, 1800, 0.5f, true},  /* comprido: os doze inteiros, até só com perfeitos */
-            {"terceiro selo", 0.85f, 0, 450, 1.25f, true},
+            {"segundo selo", 1.00f, 0, 1800, 0.5f, true},  /* preserva a duração e o dano da fase longa */
+            {"terceiro selo", 0.85f, 0, 550, 1.25f, true}, /* 50 padrões: mantém o casual perto de 40% */
         },
         .sealCount = 3,
-        /* Os ecos copiam uma sequência de cada aprendiz (intervalos, aparência, golpe duplo e
-         * preparação), com a janela e o aviso do oboro naquela fase. O teste confere. */
-#define ECOS(p)                                                                               \
-            {"eco da terra", 2, {1.00f}, 1.0f, p, 0, LOOK_LOW, 1.55f}, \
-            {"eco da tartaruga", 2, {0.42f}, 1.0f, p, 0, LOOK_THRUST, 1.00f}, \
-            {"eco do vento", 2, {0.45f}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x2}, \
-            {"eco do gelo", 2, {0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.75f, 0, true, false}, \
-            {"eco da chama", 4, {0.45f, 0.45f, 0.80f}, 1.0f, p, 0, LOOK_LOW, 0.65f}, \
-            {"eco da tempestade", 3, {0.40f, 0.40f}, 1.0f, p, 0, LOOK_LOW, 0.80f, 0x4}, \
-            {"eco da montanha", 2, {0.85f}, 1.0f, p, 0, LOOK_LOW, 1.05f}, \
-            {"eco do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_HIGH, 0.90f}, \
-            {"eco do mar", 3, {0.60f, 0.50f}, 1.0f, p, 0, LOOK_FAR, 1.20f}, \
-            {"eco do corvo", 3, {0.50f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 1.13f, 0x4}, \
-            {"eco da noite", 4, {0.40f, 0.40f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 0.80f}, \
-            {"eco da lua", 5, {0.50f, 0.50f, 0.50f, 0.90f}, 1.0f, p, 0, LOOK_HIGH, 1.05f}
+        /* 50 sequências copiadas dos 12 aprendizes, com seus intervalos, direção,
+         * duplos e fintas. A identidade explícita mantém o som e o VFX corretos.
+         * Sorteia uma postura diferente da anterior, depois um dos seus golpes. */
+#define ECOS(p) \
+            {"eco da terra", 2, {1.00f}, 1.0f, p, 0, LOOK_LOW, 1.55f, 0, false, false, 1}, \
+            {"eco da terra / sulco", 1, {0}, 1.0f, p, 0, LOOK_THRUST, 1.75f, 0, false, false, 1}, \
+            {"eco da terra / pedregulho", 2, {1.10f}, 1.0f, p, 0, LOOK_JUMP, 1.75f, 0, false, false, 1}, \
+            {"eco da terra / terremoto", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.55f, 0, false, false, 1}, \
+            {"eco da tartaruga", 2, {0.42f}, 1.0f, p, 0, LOOK_THRUST, 1.00f, 0, false, false, 2}, \
+            {"eco da tartaruga / carapaça", 2, {0.60f}, 1.0f, p, 0, LOOK_HIGH, 1.25f, 0, false, false, 2}, \
+            {"eco da tartaruga / concha", 1, {0}, 1.0f, p, 0, LOOK_LOW, 1.15f, 0, false, false, 2}, \
+            {"eco da tartaruga / bote da tartaruga", 1, {0}, 1.0f, p, 0, LOOK_DASH, 1.00f, 0, false, false, 2}, \
+            {"eco do vento", 2, {0.45f}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x2, false, false, 7}, \
+            {"eco do vento / tufão", 5, {0.40f, 0.40f, 0.40f, 0.60f}, 1.0f, p, 0, LOOK_LOW, 0.65f, 0, false, false, 7}, \
+            {"eco do vento / lufada", 1, {0}, 1.0f, p, 0, LOOK_DASH, 0.75f, 0, false, false, 7}, \
+            {"eco do vento / ciclone", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.85f, 0, false, false, 7}, \
+            {"eco do gelo", 2, {0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.75f, 0, true, false, 4}, \
+            {"eco do gelo / finta de gelo", 1, {0}, 1.0f, p, 0, LOOK_THRUST, 0.90f, 0, true, true, 4}, \
+            {"eco do gelo / agulha", 3, {0.40f, 0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.80f, 0, true, false, 4}, \
+            {"eco do gelo / deslize", 1, {0}, 1.0f, p, 0, LOOK_DASH, 0.85f, 0, true, false, 4}, \
+            {"eco da chama", 4, {0.45f, 0.45f, 0.80f}, 1.0f, p, 0, LOOK_LOW, 0.65f, 0, false, false, 8}, \
+            {"eco da chama / brasa", 2, {0.50f}, 1.0f, p, 0, LOOK_HIGH, 0.70f, 0, false, false, 8}, \
+            {"eco da chama / chama viva", 1, {0}, 1.0f, p, 0, LOOK_DASH, 0.65f, 0, false, false, 8}, \
+            {"eco da chama / erupção", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.70f, 0, false, false, 8}, \
+            {"eco da tempestade", 3, {0.40f, 0.40f}, 1.0f, p, 0, LOOK_LOW, 0.80f, 0x4, false, false, 10}, \
+            {"eco da tempestade / duas tempestades", 1, {0}, 1.0f, p, 0, LOOK_HIGH, 0.90f, 0x1, false, false, 10}, \
+            {"eco da tempestade / raio duplo", 2, {0.40f}, 1.0f, p, 0, LOOK_JUMP, 0.90f, 0x3, false, false, 10}, \
+            {"eco da tempestade / relâmpago", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.80f, 0x1, false, false, 10}, \
+            {"eco da montanha", 2, {0.85f}, 1.0f, p, 0, LOOK_LOW, 1.05f, 0, false, false, 3}, \
+            {"eco da montanha / ponta da serra", 2, {1.00f}, 1.0f, p, 0, LOOK_THRUST, 1.20f, 0, false, false, 3}, \
+            {"eco da montanha / avalanche", 1, {0}, 1.0f, p, 0, LOOK_DASH, 1.05f, 0, false, false, 3}, \
+            {"eco da montanha / montanha partida", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.20f, 0, false, false, 3}, \
+            {"eco do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_HIGH, 0.90f, 0, false, false, 5}, \
+            {"eco do tigre / garras cruzadas", 2, {0.40f}, 1.0f, p, 0, LOOK_LOW, 0.90f, 0, false, false, 5}, \
+            {"eco do tigre / caçada", 7, {0.40f, 0.40f, 0.45f, 0.40f, 0.40f, 0.70f}, 1.0f, p, 0, LOOK_DASH, 0.75f, 0, false, false, 5}, \
+            {"eco do tigre / salto do tigre", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.75f, 0, false, false, 5}, \
+            {"eco do tigre / duas patas", 1, {0}, 1.0f, p, 0, LOOK_HIGH, 0.80f, 0x1, false, false, 5}, \
+            {"eco do mar", 3, {0.60f, 0.50f}, 1.0f, p, 0, LOOK_FAR, 1.20f, 0, false, false, 9}, \
+            {"eco do mar / arrebentação", 3, {0.45f, 0.45f}, 1.0f, p, 0, LOOK_THRUST, 1.15f, 0, false, false, 9}, \
+            {"eco do mar / maré baixa", 2, {0.45f}, 1.0f, p, 0, LOOK_LOW, 1.05f, 0, false, false, 9}, \
+            {"eco do mar / vagalhão", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.20f, 0, false, false, 9}, \
+            {"eco do corvo", 3, {0.50f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 1.13f, 0x4, false, false, 6}, \
+            {"eco do corvo / sumiço", 1, {0}, 1.0f, p, 0, LOOK_WARP, 0.87f, 0, false, false, 6}, \
+            {"eco do corvo / corte curto", 2, {0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.85f, 0, false, false, 6}, \
+            {"eco do corvo / mergulho", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.83f, 0, false, false, 6}, \
+            {"eco da noite", 4, {0.40f, 0.40f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 0.80f, 0, false, false, 11}, \
+            {"eco da noite / vultos", 3, {0.40f, 0.70f}, 1.0f, p, 0, LOOK_THRUST, 0.80f, 0, false, false, 11}, \
+            {"eco da noite / coruja", 2, {0.45f}, 1.0f, p, 0, LOOK_JUMP, 0.90f, 0, false, false, 11}, \
+            {"eco da noite / tesoura", 1, {0}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x1, false, false, 11}, \
+            {"eco da lua", 5, {0.50f, 0.50f, 0.50f, 0.90f}, 1.0f, p, 0, LOOK_HIGH, 1.05f, 0, false, false, 12}, \
+            {"eco da lua / lua branca", 6, {0.40f, 0.90f, 0.45f, 0.45f, 1.00f}, 1.0f, p, 0, LOOK_THRUST, 0.95f, 0, false, false, 12}, \
+            {"eco da lua / reflexo no lago", 1, {0}, 1.0f, p, 0, LOOK_DASH, 1.20f, 0, false, false, 12}, \
+            {"eco da lua / halo", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.05f, 0, false, false, 12}, \
+            {"eco da lua / minguante", 3, {0.60f, 0.60f}, 1.0f, p, 0, LOOK_LOW, 0.70f, 0, false, false, 12}
         .moves = {
             /* postura de hanzo: a arte como o mestre ensinou; abre com a lição inteira */
             {"lição completa", 7, {0.60f, 0.50f, 0.50f, 0.70f, 0.45f, 0.45f}, 2.0f, 0, 0, LOOK_HIGH, 1.15f},
@@ -442,13 +481,13 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"três lições", 3, {0.50f, 0.60f}, 1.0f, 0, 0, LOOK_HIGH, 1.05f},
             {"passo de hanzo", 1, {0}, 1.0f, 0, 0, LOOK_DASH, 0.95f},
             {"salto do mestre", 2, {0.55f}, 1.0f, 0, 0, LOOK_JUMP, 1.15f},
-            /* devorador de posturas: os doze, na ordem da trilha na primeira volta */
+            /* devorador: 50 sequências aleatórias, sem volta ordenada */
             ECOS(1),
-            /* postura do oni: os mesmos doze, mais rápidos e mais pesados (selo 3) */
+            /* oni: as mesmas 50, mais rápidas e mais pesadas (selo 3) */
             ECOS(2),
         },
 #undef ECOS
-        .moveCount = 31,
+        .moveCount = 107,
         .intro = {{"oboro", "Então é você. O último que ele mandou."},
                   {"kojiro", "Você traiu o mestre."},
                   {"oboro", "Ele não é quem você pensa."},

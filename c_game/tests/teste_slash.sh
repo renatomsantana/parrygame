@@ -8,8 +8,8 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 for master in 7 8 6 13; do
     seconds=12
-    # A primeira volta precisa chegar às posturas de Arashi (6) e Garfiel (8).
-    if [ "$master" -eq 13 ]; then seconds=30; fi
+    # Uma amostra longa visita os ecos sorteados de Arashi e Garfiel.
+    if [ "$master" -eq 13 ]; then seconds=90; fi
     for enabled in 0 1; do
         APARA_SEMENTE=11 APARA_LOG_IMPACTOS=1 APARA_LOG_POSTURAS=1 APARA_LOG_SLASH=1 APARA_SLASH="$enabled" APARA_REC_RAW=/dev/null \
             timeout 180 xvfb-run -a ./apara --demo --master "$master" --duel --fase 2 \
@@ -24,11 +24,11 @@ for master in 7 8 6 13; do
     [ "$off" -eq 0 ]
     if [ "$master" -eq 7 ] || [ "$master" -eq 6 ]; then [ "$on" -eq 0 ]; else [ "$on" -gt 0 ]; fi
     if [ "$master" -eq 13 ]; then
-        # A fase 2 começa com terra: gesto, corte e aviso usam Daichi.
+        # Todo gesto, corte e aviso deve identificar a postura sorteada.
         sed -n '/^POSTURA /p' "$tmp/1.log" > "$tmp/feedback.log"
-        head -1 "$tmp/feedback.log" | grep 'fonte=daichi som=6'
-        grep -q 'fonte=daichi som=5' "$tmp/feedback.log"
-        grep -q 'fonte=daichi som=0' "$tmp/feedback.log"
+        grep -q 'som=6' "$tmp/feedback.log"
+        grep -q 'som=5' "$tmp/feedback.log"
+        grep -q 'som=0' "$tmp/feedback.log"
         ! grep -q 'fonte=oboro' "$tmp/feedback.log"
         grep -q 'quadro ATTACK_[123]_ECO_' "$tmp/1.imp"
     fi
