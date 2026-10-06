@@ -1,5 +1,10 @@
 # A curva de dificuldade, mestre a mestre
 
+> **Como ler este arquivo.** Ele é um diário: cada seção guarda os números do dia em que foi escrita (as primeiras, com o roster antigo, a ordem antiga e vidas
+> diferentes), então as tabelas mais velhas **não valem mais**. A curva em vigor é a da seção **"Ajuste final dos chefes" (a última)**, medida com 100 mil lutas
+> por mestre e robô; as faixas que o `make curva-alvo` exige estão em `tests/curva.c` (`ALVO`). Para refazer qualquer tabela: `make curva CURVA_LUTAS=100000`.
+
+
 Atualização vigente: resistência aumentada em 6 de outubro; os novos valores e referências de regressão estão na última seção. As medições anteriores ficam como histórico.
 
 Medição com robôs (`make curva`, `c_game/tests/curva.c`) e a curva alvo, **aprovada e aplicada** (só o que mudou no `roster.c`: três

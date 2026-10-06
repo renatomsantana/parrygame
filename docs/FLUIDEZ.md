@@ -5,7 +5,7 @@ Só a luta: sem cenas, cutscenes nem mensagens. Quatro frentes, e o que já est�
 | Frente | Estado |
 |---|---|
 | Travadas e FPS | **causa achada e medida**; a pré-carga já está no jogo (`01eeb13` da outra sessão) e o teste que a guarda está no repositório (`tests/teste_desempenho.sh`) |
-| Ritmo do duelo | ferramenta e teste no repositório (`make ritmo`, `make test-ritmo`); duas mudanças propostas, **nenhuma aplicada** |
+| Ritmo do duelo | ferramenta e teste no repositório (`make ritmo`, `make test-ritmo`); duas mudanças propostas, **nenhuma aplicada, e a decisão de 6/out é não aplicar** (seção 5) |
 | Resposta do aperto | o julgamento já é exato (carimbo); o que sobra é visual e está no `main.c`: análise abaixo |
 | Fluxo visual dos golpes | o corpo agora desliza até o contato em vez de saltar (seção 4) |
 
@@ -152,3 +152,10 @@ como proposta se parecer duro jogando.
 1. **Pré-carga de efeitos:** só o teste entrou (a pré-carga já estava no jogo, vinda da outra sessão).
 2. **Ritmo:** nenhuma das duas mudanças (B e A) foi aplicada: a B endurece o casual em até 1,3 ponto e mexe em duas regras aprovadas, e a A mexe na regra do `waitScale`.
 3. **Pose de parry:** resolvida na seção 3 (não há o que mudar no rig).
+
+**Decisão de 6 de outubro (as duas propostas de ritmo, A e B): não aplicar.** O Daichi é o mestre que ensina o jogo: a espera longa dele (abertura de 1,20 s, 43 golpes por minuto)
+é a rampa de entrada, e o ajuste dos chefes de hoje já lhe deu mais especiais (54% das sequências, antes 45%) sem acelerá-lo. O hitstop dentro das sequências (proposta B)
+não é problema medido: o tempo congelado fica entre 6,8% (daichi) e 15,1% (garfiel) da luta, abaixo do limite de 20% que o `make test-ritmo` guarda, e a B endurece o casual em até 1,3 ponto
+e mexe em duas regras aprovadas do núcleo (o pior erro de tempo real do hitstop é 0,007 ms hoje). Se a sensação ao jogar pedir, a A é uma linha em `roster.c` e a B uma mudança em
+`duel_hitstop_for`; as duas voltam a pedir `make curva-alvo`. Revertível: nada foi apagado, só não foi aplicado.
+
