@@ -12,9 +12,9 @@
 
 static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
-        .id = 1, .name = "daichi", .style = "postura da terra", .title = "O que Segue a Tradição", .venue = "Celeiro ao entardecer",
+        .id = 1, .identity = 1, .name = "daichi", .style = "postura da terra", .title = "O que Segue a Tradição", .venue = "Celeiro ao entardecer",
         .special = "Katana, devagar: cada golpe avisa muito antes de chegar.",
-        .arena = ARENA_CELEIRO, .posture = 300, .hitsToFall = 8, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFD8A8FF,
+        .arena = ARENA_CELEIRO, .posture = 360, .hitsToFall = 8, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFD8A8FF,
         .stances = {STANCE("", 0.090f, 0.220f, 0.450f)}, .stanceCount = 1,
         .moves = {
             {"rocha", 1, {0}, 2.0f, -1, 0, LOOK_HIGH, 1.55f},
@@ -41,16 +41,16 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                   {"hanzo", "Não lute contra ele. Entenda ele. Depois, devore."}}, .visitCount = 5,
     },
     {
-        .id = 2, .name = "genbu", .style = "postura da tartaruga", .title = "O que Tem Pena", .venue = "Jardim de pedras do mosteiro",
+        .id = 2, .identity = 2, .name = "genbu", .style = "postura da tartaruga", .title = "O que Tem Pena", .venue = "Jardim de pedras do mosteiro",
         .special = "Katana simples, já mais rápida: demora a sair do casco, e sai de jeitos diferentes.",
-        .arena = ARENA_JARDIM, .posture = 330, .hitsToFall = 8, .cueVisual = 1, .cueAudio = 1, .tint = 0xD8E0C8FF,
+        .arena = ARENA_JARDIM, .posture = 396, .hitsToFall = 8, .cueVisual = 1, .cueAudio = 1, .tint = 0xD8E0C8FF,
         .stances = {STANCE("", 0.082f, 0.203f, 0.437f)}, .stanceCount = 1,
         .moves = {
-            {"casco", 1, {0}, 2.0f, -1, 0, LOOK_THRUST, 1.15f},
-            {"mordida", 2, {0.42f}, 2.0f, -1, 0, LOOK_THRUST, 1.00f},
+            {"casco", 1, {0}, 2.0f, -1, 0, LOOK_HIGH, 1.15f},
+            {"mordida", 2, {0.42f}, 2.0f, -1, 0, LOOK_HIGH, 1.00f},
             {"carapaça", 2, {0.60f}, 1.5f, -1, 0, LOOK_HIGH, 1.25f},
             {"concha", 1, {0}, 1.5f, -1, 0, LOOK_LOW, 1.15f},
-            {"bote da tartaruga", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 1.00f},
+            {"bote da tartaruga", 1, {0}, 1.2f, -1, 0, LOOK_HIGH, 1.00f},
             {"maré lenta", 2, {0.75f}, 1.0f, -1, 0, LOOK_LOW, 1.25f},
             {"casco fechado", 2, {0.90f}, 1.0f, -1, 0, LOOK_HIGH, 1.15f},
         },
@@ -66,138 +66,16 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                   {"hanzo", "O paciente. Chamava de paciência o que era só medo de agir."},
                   {"kojiro", "Ele disse que, depois de oboro, ninguém mais sumiu do dojo."},
                   {"hanzo", "Quem foi embora foi porque não aguentou. A arte não é para todos."},
-                  {"hanzo", "Depois vem raizo, no pátio do dojo. Uma odachi pesada, golpes diretos. Ele avisa antes de bater."},
-                  {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 6,
-    },
-    {
-        .id = 3, .name = "raizo", .style = "postura da montanha", .title = "O Honrado", .venue = "Pátio do dojo",
-        .special = "Odachi pesada: cortes como pedra caindo, lentos e diretos, que avisam antes de chegar.",
-        .arena = ARENA_DOJO, .posture = 350, .hitsToFall = 7, .cueVisual = 1, .cueAudio = 1, .tint = 0xE8D8C8FF,
-        .stances = {STANCE("", 0.075f, 0.185f, 0.424f)}, .stanceCount = 1,
-        .moves = {
-            {"corte do cume", 1, {0}, 3.0f, -1, 0, LOOK_HIGH, 1.20f},
-            {"fenda dupla", 2, {0.85f}, 1.5f, -1, 0, LOOK_LOW, 1.05f},
-            {"rasgo na laje", 1, {0}, 1.2f, -1, 0, LOOK_LOW, 1.15f},
-            {"ponta da serra", 2, {1.00f}, 1.2f, -1, 0, LOOK_THRUST, 1.20f},
-            {"avalanche", 1, {0}, 1.5f, -1, 0, LOOK_DASH, 1.05f},
-            {"queda de pedras", 2, {0.70f}, 1.0f, -1, 0, LOOK_JUMP, 1.15f},
-            {"montanha partida", 1, {0}, 1.0f, -1, 0, LOOK_HEAVY, 1.20f},
-        },
-        .moveCount = 7,
-        .intro = {{"raizo", "Quinze invernos treinando neste pátio com o hanzo. Nunca vi mestre igual."},
-                  {"raizo", "Mas ele perdeu. E um homem honrado segue quem venceu."},
-                  {"kojiro", "Honra não é seguir traidor."},
-                  {"raizo", "Então me mostra o que é. Com a espada."}}, .introCount = 4,
-        .outro = {{"raizo", "Direto, sem desperdício. Ele te ensinou bem."},
-                  {"raizo", "Vou sentir falta do velho."}}, .outroCount = 2,
-        .sensei = {{"hanzo", "A montanha não esconde nada. Veja de onde a lâmina vai cair."},
-                   {"hanzo", "Força demais sempre avisa antes de chegar. Escute o peso."}}, .senseiCount = 2,
-        .visit = {{"kojiro", "Raizo também."},
-                  {"hanzo", "Firme como uma montanha. Nunca aprendeu a ceder."},
-                  {"hanzo", "Shizuku espera na cachoeira do trovão. Florete e gelo: estocadas curtas, rápidas, sem curva."},
-                  {"hanzo", "Ela observa muito. Não deixe que ela te leia primeiro."},
-                  {"hanzo", "Não lute contra ela. Entenda ela. Depois, devore."}}, .visitCount = 5,
-    },
-    {
-        .id = 4, .name = "shizuku", .style = "postura do gelo", .title = "A que Observa", .venue = "Cachoeira do Trovão",
-        .special = "Florete com geada: oito leituras, sempre na linha central; a finta não toca.",
-        .arena = ARENA_CACHOEIRA, .posture = 380, .hitsToFall = 7, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8E8FFFF,
-        .stances = {STANCE("", 0.068f, 0.171f, 0.411f)}, .stanceCount = 1,
-        .moves = {
-            {"floco", 1, {0}, 2.5f, -1, 0, LOOK_THRUST, 0.85f, 0, true, false},
-            {"geada", 2, {0.40f}, 2.0f, -1, 0, LOOK_THRUST, 0.75f, 0, true, false},
-            {"deslize", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.85f, 0, true, false},
-            {"finta de gelo", 1, {0}, 1.0f, -1, 0, LOOK_THRUST, 0.90f, 0, true, true},
-            {"sincelo", 2, {0.50f}, 1.5f, -1, 0, LOOK_THRUST, 0.90f, 0, true, false},
-            {"agulha", 3, {0.40f, 0.40f}, 1.0f, -1, 0, LOOK_THRUST, 0.80f, 0, true, false},
-            {"nevasca", 4, {0.40f, 0.40f, 0.40f}, 0.8f, -1, 0, LOOK_THRUST, 0.75f, 0, true, false},
-            {"glaciar", 1, {0}, 0.8f, -1, 0, LOOK_THRUST, 1.00f, 0, true, false},
-        },
-        .moveCount = 8,
-        .intro = {{"shizuku", "Você segura a espada igual a ele. Os ombros também. Ele te fez no mesmo molde."},
-                  {"shizuku", "O hanzo era um monstro, sabia? Treinava a gente até a última gota de sangue."},
-                  {"kojiro", "Ele me salvou."},
-                  {"shizuku", "Foi o que todos nós pensamos, um dia."}}, .introCount = 4,
-        .outro = {{"shizuku", "Quando chegar lá em cima, olha pra ele. Não pra espada. Pra ele."}}, .outroCount = 1,
-        .sensei = {{"hanzo", "O gelo vem reto. Não procure curva onde não há."},
-                   {"hanzo", "Dois flocos caem quase juntos. Conte o segundo."}}, .senseiCount = 2,
-        .visit = {{"kojiro", "Shizuku falou mal do senhor."},
-                  {"hanzo", "Shizuku sempre pensou demais. Quem pensa demais não corta nada."},
-                  {"hanzo", "O próximo é garfiel, no portão do tigre branco. Garras nas duas mãos, combos longos, e muito barulho."},
-                  {"hanzo", "Cada vez que te acerta, ele respira de novo. Não deixe ele respirar."},
-                  {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 5,
-    },
-    {
-        .id = 5, .name = "garfiel", .style = "postura do tigre", .title = "O que Guarda o Portão", .venue = "Portão do tigre branco",
-        .special = "Garras nas duas mãos: combos longos, de seis a oito golpes seguidos.",
-        .arena = ARENA_TEMPLO, .posture = 530, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFF0D8FF,
-        .stances = {STANCE("", 0.063f, 0.158f, 0.398f)}, .stanceCount = 1,
-        .moves = {
-            {"patada", 1, {0}, 1.5f, -1, 0, LOOK_HIGH, 0.80f},
-            {"garras cruzadas", 2, {0.40f}, 1.5f, -1, 0, LOOK_LOW, 0.90f},
-            {"rasgo", 3, {0.40f, 0.40f}, 1.5f, -1, 0, LOOK_LOW, 0.75f},
-            {"bote do tigre", 3, {0.40f, 0.85f}, 1.0f, -1, 0, LOOK_HIGH, 0.80f},
-            {"fúria do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.2f, -1, 0, LOOK_HIGH, 0.90f},
-            {"caçada", 7, {0.40f, 0.40f, 0.45f, 0.40f, 0.40f, 0.70f}, 1.0f, -1, 0, LOOK_DASH, 0.75f},
-            {"rugido", 8, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f, 0.40f, 0.80f}, 0.8f, -1, 0, LOOK_HIGH, 0.80f},
-            {"pulo do gato", 2, {0.45f}, 1.0f, -1, 0, LOOK_JUMP, 0.90f},
-            {"salto do tigre", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.75f},
-            {"arranhão", 4, {0.40f, 0.40f, 0.40f}, 1.0f, -1, 0, LOOK_LOW, 0.85f},
-            {"duas patas", 1, {0}, 0.3f, -1, 0, LOOK_HIGH, 0.80f, 0x1},
-        },
-        .moveCount = 11,
-        .intro = {{"garfiel", "Hah! Então você é o cachorrinho novo do velho!"},
-                  {"garfiel", "Escuta aqui: o oboro salvou minha vida. Todos nós devemos tudo a ele!"},
-                  {"garfiel", "Ninguém passa por este portão pra machucar ele. Ninguém!"},
-                  {"kojiro", "Eu passo."}}, .introCount = 4,
-        .outro = {{"garfiel", "Tsc... Passou. Mas se encostar um dedo nele, o tigre desce a serra pra te buscar."}}, .outroCount = 1,
-        .sensei = {{"hanzo", "O tigre ataca com as duas patas. Quando uma chega, a outra já está no ar."},
-                   {"hanzo", "Não recue diante do rugido. O golpe vem depois do grito."}}, .senseiCount = 2,
-        .visit = {{"kojiro", "Garfiel."},
-                  {"hanzo", "Muito barulho pra pouca coisa. Sempre foi assim."},
-                  {"hanzo", "Karasu te espera nos telhados da vila do castelo, na chuva. A katana numa mão; às vezes, a wakizashi na outra."},
-                  {"hanzo", "Ele some em penas e volta onde você não olha."},
-                  {"hanzo", "Não lute contra ele. Entenda ele. Depois, devore."}}, .visitCount = 5,
-    },
-    {
-        .id = 6, .name = "karasu", .style = "postura do corvo", .title = "O que Aposta", .venue = "Telhados da vila do castelo, na chuva",
-        .special = "Katana e wakizashi: quase sempre a espada longa numa mão só; de repente, as duas lâminas de uma vez.",
-        .arena = ARENA_TELHADOS, .posture = 490, .hitsToFall = 7, .bladeMax = 0.239f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8C8D8FF,
-        .stances = {STANCE("", 0.058f, 0.148f, 0.385f)}, .stanceCount = 1,
-        .moves = {
-            {"bicada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST, 0.83f},
-            {"garra", 2, {0.55f}, 2.0f, -1, 0, LOOK_HIGH, 1.13f},
-            {"sumiço", 1, {0}, 1.5f, -1, 0, LOOK_WARP, 0.87f},
-            {"corvo fantasma", 2, {0.55f}, 1.0f, -1, 0, LOOK_WARP, 0.83f},
-            {"revoada", 3, {0.50f, 0.90f}, 1.0f, -1, 0, LOOK_LOW, 1.13f, 0x4},
-            {"bando", 4, {0.45f, 0.45f, 0.45f}, 1.0f, -1, 0, LOOK_THRUST, 0.87f, 0x8},
-            {"duas penas", 1, {0}, 0.7f, -1, 0, LOOK_HIGH, 0.83f, 0x1},
-            {"voo rasante", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 1.13f},
-            {"asa quebrada", 2, {0.50f}, 1.0f, -1, 0, LOOK_JUMP, 0.87f},
-            {"mergulho", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.83f},
-            {"cruz de penas", 1, {0}, 0.4f, -1, 0, LOOK_HIGH, 0.95f, 0x1},
-            {"corte curto", 2, {0.40f}, 1.0f, -1, 0, LOOK_THRUST, 0.85f},
-        },
-        .moveCount = 12,
-        .intro = {{"karasu", "Olha só, o novo favorito. O velho sempre tem um favorito. Nunca dura."},
-                  {"karasu", "Ele era um monstro. E depois daquele duelo o oboro perdeu a luz. Tudo mudou. Uma pena, eu gostava de apostar nele."},
-                  {"kojiro", "Aposta em mim."},
-                  {"karasu", "Hah. Nem que me pagassem."}}, .introCount = 4,
-        .outro = {{"karasu", "Tá bom, tá bom, mudei de aposta. Mas lembra: o velho sempre tem um favorito."}}, .outroCount = 1,
-        .sensei = {{"hanzo", "O corvo some em penas e volta onde você não olha. Apare quando ele reaparecer, não quando sumir."},
-                   {"hanzo", "Ele luta com uma mão só, até a outra aparecer. Aí são duas lâminas: só o perfeito segura."}}, .senseiCount = 2,
-        .visit = {{"kojiro", "Karasu."},
-                  {"hanzo", "Um corvo. Vive do que sobra dos outros. Não sobrou nada pra ele."},
                   {"hanzo", "Hayate está na ponte de corda sobre o desfiladeiro. Duas foices, rápido, e o ritmo muda sem avisar."},
                   {"hanzo", "Não decore o ritmo dele. Decore o corpo."},
-                  {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 5,
+                  {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 7,
     },
     {
-        .id = 7, .name = "hayate", .style = "postura do vento", .title = "O Impaciente", .venue = "Ponte de corda sobre o desfiladeiro",
+        .id = 3, .identity = 7, .name = "hayate", .style = "postura do vento", .title = "O Impaciente", .venue = "Ponte de corda sobre o desfiladeiro",
         .special = "Duas foices e o vento: rápido, o ritmo muda sem avisar, e às vezes as duas foices cortam juntas.",
-        .arena = ARENA_PONTE, .posture = 620, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xD0FFE8FF,
+        .arena = ARENA_PONTE, .posture = 360, .hitsToFall = 7, .cueVisual = 1, .cueAudio = 1, .tint = 0xD0FFE8FF,
         .rhythmJitter = 0.12f, .waitScale = AJ_ESPERA_X_IRREGULAR,
-        .stances = {STANCE("", 0.049f, 0.138f, 0.372f)}, .stanceCount = 1,
+        .stances = {STANCE("", 0.075f, 0.185f, 0.424f)}, .stanceCount = 1,
         .moves = {
             {"rajada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST, 0.75f},
             {"redemoinho", 2, {0.45f}, 2.0f, -1, 0, LOOK_HIGH, 0.65f},
@@ -223,15 +101,44 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                    {"hanzo", "Quem é impaciente começa cedo. Termine tarde."}}, .senseiCount = 2,
         .visit = {{"kojiro", "Hayate."},
                   {"hanzo", "Rápido pra tudo, menos pra entender."},
+                  {"hanzo", "Shizuku espera na cachoeira do trovão. Florete e gelo: estocadas curtas, rápidas, sem curva."},
+                  {"hanzo", "Ela observa muito. Não deixe que ela te leia primeiro."},
+                  {"hanzo", "Não lute contra ela. Entenda ela. Depois, devore."}}, .visitCount = 5,
+    },
+    {
+        .id = 4, .identity = 4, .name = "shizuku", .style = "postura do gelo", .title = "A que Observa", .venue = "Cachoeira do Trovão",
+        .special = "Florete com geada: oito leituras, sempre na linha central; a finta não toca.",
+        .arena = ARENA_CACHOEIRA, .posture = 456, .hitsToFall = 7, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8E8FFFF,
+        .stances = {STANCE("", 0.068f, 0.171f, 0.411f)}, .stanceCount = 1,
+        .moves = {
+            {"floco", 1, {0}, 2.5f, -1, 0, LOOK_THRUST, 0.85f, 0, true, false},
+            {"geada", 2, {0.40f}, 2.0f, -1, 0, LOOK_THRUST, 0.75f, 0, true, false},
+            {"deslize", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.85f, 0, true, false},
+            {"finta de gelo", 1, {0}, 1.0f, -1, 0, LOOK_THRUST, 0.90f, 0, true, true},
+            {"sincelo", 2, {0.50f}, 1.5f, -1, 0, LOOK_THRUST, 0.90f, 0, true, false},
+            {"agulha", 3, {0.40f, 0.40f}, 1.0f, -1, 0, LOOK_THRUST, 0.80f, 0, true, false},
+            {"nevasca", 4, {0.40f, 0.40f, 0.40f}, 0.8f, -1, 0, LOOK_THRUST, 0.75f, 0, true, false},
+            {"glaciar", 1, {0}, 0.8f, -1, 0, LOOK_THRUST, 1.00f, 0, true, false},
+        },
+        .moveCount = 8,
+        .intro = {{"shizuku", "Você segura a espada igual a ele. Os ombros também. Ele te fez no mesmo molde."},
+                  {"shizuku", "O hanzo era um monstro, sabia? Treinava a gente até a última gota de sangue."},
+                  {"kojiro", "Ele me salvou."},
+                  {"shizuku", "Foi o que todos nós pensamos, um dia."}}, .introCount = 4,
+        .outro = {{"shizuku", "Quando chegar lá em cima, olha pra ele. Não pra espada. Pra ele."}}, .outroCount = 1,
+        .sensei = {{"hanzo", "O gelo vem reto. Não procure curva onde não há."},
+                   {"hanzo", "Dois flocos caem quase juntos. Conte o segundo."}}, .senseiCount = 2,
+        .visit = {{"kojiro", "Shizuku falou mal do senhor."},
+                  {"hanzo", "Shizuku sempre pensou demais. Quem pensa demais não corta nada."},
                   {"hanzo", "Agora, enjin, na forja dentro da cratera. A katana dele queima: quem leva um golpe fica em brasas."},
                   {"hanzo", "Se pegar fogo, apare perfeito, e a brasa apaga."},
                   {"hanzo", "Não lute contra ele. Entenda ele. Depois, devore."}}, .visitCount = 5,
     },
     {
-        .id = 8, .name = "enjin", .style = "postura da chama", .title = "O que Odeia", .venue = "Forja dentro da cratera",
+        .id = 5, .identity = 8, .name = "enjin", .style = "postura da chama", .title = "O que Odeia", .venue = "Forja dentro da cratera",
         .special = "Katana de fogo: quem leva um golpe fica em brasas e continua perdendo vida; o parry perfeito apaga.",
-        .arena = ARENA_FORJA, .posture = 690, .hitsToFall = 6, .burn = 0.6f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFB890FF,
-        .stances = {STANCE("", 0.046f, 0.131f, 0.359f)}, .stanceCount = 1,
+        .arena = ARENA_FORJA, .bladeMax = 0.260f, .posture = 636, .hitsToFall = 7, .burn = 0.6f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFB890FF,
+        .stances = {STANCE("", 0.063f, 0.158f, 0.398f)}, .stanceCount = 1,
         .moves = {
             {"brasa", 2, {0.50f}, 2.0f, -1, 0, LOOK_HIGH, 0.70f},
             {"labareda", 3, {0.45f, 0.45f}, 2.0f, -1, 0, LOOK_HIGH, 0.80f},
@@ -256,15 +163,108 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                    {"hanzo", "Se pegar fogo, não corra: apare perfeito, e a brasa apaga."}}, .senseiCount = 2,
         .visit = {{"kojiro", "Enjin falou de uma máscara. Uma máscara de oni."},
                   {"hanzo", "..."},
-                  {"kojiro", "O homem que matou meu pai usava uma."},
+                  {"kojiro", "A máscara do assassino de que eles falam?"},
                   {"hanzo", "Então você já sabe o que vai encontrar lá em cima."},
-                  {"hanzo", "A próxima é suiren, no porto do farol. Uma lança: ataca de longe, em ondas."},
-                  {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 6,
+                  {"hanzo", "Arashi está no salão do castelo, numa noite de tempestade. Duas katanas, e ele adora se ouvir."},
+                  {"hanzo", "As duas lâminas descem juntas. Só o parry perfeito segura as duas."},
+                  {"hanzo", "Não lute contra ele. Entenda ele. Depois, devore."}}, .visitCount = 7,
     },
     {
-        .id = 9, .name = "suiren", .style = "postura do mar", .title = "A Amiga de Oboro", .venue = "Porto do farol",
+        .id = 6, .identity = 10, .name = "arashi", .style = "postura da tempestade", .title = "O Orgulhoso", .venue = "Salão do castelo, noite de tempestade",
+        .special = "Duas katanas, golpes pesados: as duas lâminas de uma vez, e só o parry perfeito segura as duas.",
+        .arena = ARENA_SALAO, .posture = 480, .hitsToFall = 11, .damage = 1.2f, .bladeMax = 0.235f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE0D0F0FF,
+        .stances = {STANCE("", 0.058f, 0.148f, 0.385f)}, .stanceCount = 1,
+        .moves = {
+            {"faísca", 1, {0}, 1.0f, -1, 0, LOOK_THRUST, 0.80f},
+            {"duas tempestades", 1, {0}, 1.5f, -1, 0, LOOK_HIGH, 0.90f, 0x1},
+            {"trovoada", 2, {0.45f}, 2.0f, -1, 0, LOOK_HIGH, 0.75f, 0x2},
+            {"tormenta", 3, {0.40f, 0.40f}, 1.5f, -1, 0, LOOK_LOW, 0.80f, 0x4},
+            {"granizo", 4, {0.40f, 0.40f, 0.40f}, 0.8f, -1, 0, LOOK_THRUST, 0.90f},
+            {"ventania", 3, {0.40f, 0.70f}, 1.0f, -1, 0, LOOK_LOW, 0.75f},
+            {"trovão", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.80f, 0x1},
+            {"raio duplo", 2, {0.40f}, 1.0f, -1, 0, LOOK_JUMP, 0.90f, 0x3},
+            {"céu partido", 5, {0.40f, 0.40f, 0.40f, 0.80f}, 0.6f, -1, 0, LOOK_HIGH, 0.75f, 0x10},
+            {"relâmpago", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.80f, 0x1, false, false, 0, true},
+            {"descarga", 2, {0.45f}, 0.5f, -1, 0, LOOK_THRUST, 0.85f},
+            {"cruz elétrica", 1, {0}, 0.8f, -1, 0, LOOK_HIGH, 0.80f, 0x1},
+        },
+        .moveCount = 12,
+        .intro = {{"arashi", "Então o velho arrumou outro cachorro. Achei que ele tinha desistido."},
+                  {"arashi", "Eu era o melhor deste dojo, e mesmo assim o oboro teve que salvar minha vida. Foi a única dívida que eu tive."},
+                  {"arashi", "Não vou deixar você cobrar."},
+                  {"kojiro", "Não vim cobrar nada. Vim passar."}}, .introCount = 4,
+        .outro = {{"arashi", "Impossível... Não. Não é impossível. Eu só não queria que fosse."}}, .outroCount = 1,
+        .sensei = {{"hanzo", "A tempestade é orgulhosa: bate sempre no mesmo ritmo."},
+                   {"hanzo", "Duas lâminas descem num instante só. Meio parry segura uma; a outra corta."}}, .senseiCount = 2,
+        .visit = {{"kojiro", "Arashi."},
+                  {"hanzo", "Orgulhoso, sem nunca ter tido do que se orgulhar."},
+                  {"hanzo", "Depois vem raizo, no pátio do dojo. Uma odachi pesada, golpes diretos. Ele avisa antes de bater."},
+                  {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 4,
+    },
+    {
+        .id = 7, .identity = 3, .name = "raizo", .style = "postura da montanha", .title = "O Honrado", .venue = "Pátio do dojo",
+        .special = "Odachi pesada: cortes como pedra caindo, lentos e diretos, que avisam antes de chegar.",
+        .arena = ARENA_DOJO, .bladeMax = 0.224f, .posture = 552, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE8D8C8FF,
+        .stances = {STANCE("", 0.049f, 0.138f, 0.372f)}, .stanceCount = 1,
+        .moves = {
+            {"corte do cume", 1, {0}, 3.0f, -1, 0, LOOK_HIGH, 1.20f},
+            {"fenda dupla", 2, {0.85f}, 1.5f, -1, 0, LOOK_LOW, 1.05f},
+            {"rasgo na laje", 1, {0}, 1.2f, -1, 0, LOOK_LOW, 1.15f},
+            {"ponta da serra", 2, {1.00f}, 1.2f, -1, 0, LOOK_THRUST, 1.20f},
+            {"avalanche", 1, {0}, 1.5f, -1, 0, LOOK_DASH, 1.05f},
+            {"queda de pedras", 2, {0.70f}, 1.0f, -1, 0, LOOK_JUMP, 1.15f},
+            {"montanha partida", 1, {0}, 1.0f, -1, 0, LOOK_HEAVY, 1.20f},
+        },
+        .moveCount = 7,
+        .intro = {{"raizo", "Quinze invernos treinando neste pátio com o hanzo. Nunca vi mestre igual."},
+                  {"raizo", "Mas ele perdeu. E um homem honrado segue quem venceu."},
+                  {"kojiro", "Honra não é seguir traidor."},
+                  {"raizo", "Então me mostra o que é. Com a espada."}}, .introCount = 4,
+        .outro = {{"raizo", "Direto, sem desperdício. Ele te ensinou bem."},
+                  {"raizo", "Vou sentir falta do velho."}}, .outroCount = 2,
+        .sensei = {{"hanzo", "A montanha não esconde nada. Veja de onde a lâmina vai cair."},
+                   {"hanzo", "Força demais sempre avisa antes de chegar. Escute o peso."}}, .senseiCount = 2,
+        .visit = {{"kojiro", "Raizo também."},
+                  {"hanzo", "Firme como uma montanha. Nunca aprendeu a ceder."},
+                  {"hanzo", "O próximo é garfiel, no portão do tigre branco. Garras nas duas mãos, combos longos, e muito barulho."},
+                  {"hanzo", "Cada vez que te acerta, ele respira de novo. Não deixe ele respirar."},
+                  {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 5,
+    },
+    {
+        .id = 8, .identity = 5, .name = "garfiel", .style = "postura do tigre", .title = "O que Guarda o Portão", .venue = "Portão do tigre branco",
+        .special = "Garras nas duas mãos: combos longos, de seis a oito golpes seguidos.",
+        .arena = ARENA_TEMPLO, .posture = 1620, .hitsToFall = 7, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xFFF0D8FF,
+        .stances = {STANCE("", 0.046f, 0.131f, 0.359f)}, .stanceCount = 1,
+        .moves = {
+            {"patada", 1, {0}, 1.5f, -1, 0, LOOK_HIGH, 0.80f},
+            {"garras cruzadas", 2, {0.40f}, 1.5f, -1, 0, LOOK_LOW, 0.90f},
+            {"rasgo", 3, {0.40f, 0.40f}, 1.5f, -1, 0, LOOK_LOW, 0.75f},
+            {"bote do tigre", 3, {0.40f, 0.85f}, 1.0f, -1, 0, LOOK_HIGH, 0.80f},
+            {"fúria do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.2f, -1, 0, LOOK_HIGH, 0.90f},
+            {"caçada", 7, {0.40f, 0.40f, 0.45f, 0.40f, 0.40f, 0.70f}, 1.0f, -1, 0, LOOK_DASH, 0.75f},
+            {"rugido", 8, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f, 0.40f, 0.80f}, 0.8f, -1, 0, LOOK_HIGH, 0.80f},
+            {"pulo do gato", 2, {0.45f}, 1.0f, -1, 0, LOOK_JUMP, 0.90f},
+            {"salto do tigre", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.75f},
+            {"arranhão", 4, {0.40f, 0.40f, 0.40f}, 1.0f, -1, 0, LOOK_LOW, 0.85f},
+            {"duas patas", 1, {0}, 0.3f, -1, 0, LOOK_HIGH, 0.80f, 0x1},
+        },
+        .moveCount = 11,
+        .intro = {{"garfiel", "Hah! Então você é o cachorrinho novo do velho!"},
+                  {"garfiel", "Escuta aqui: o oboro salvou minha vida. Todos nós devemos tudo a ele!"},
+                  {"garfiel", "Ninguém passa por este portão pra machucar ele. Ninguém!"},
+                  {"kojiro", "Eu passo."}}, .introCount = 4,
+        .outro = {{"garfiel", "Tsc... Passou. Mas se encostar um dedo nele, o tigre desce a serra pra te buscar."}}, .outroCount = 1,
+        .sensei = {{"hanzo", "O tigre ataca com as duas patas. Quando uma chega, a outra já está no ar."},
+                   {"hanzo", "Não recue diante do rugido. O golpe vem depois do grito."}}, .senseiCount = 2,
+        .visit = {{"kojiro", "Garfiel."},
+                  {"hanzo", "Muito barulho pra pouca coisa. Sempre foi assim."},
+                  {"hanzo", "A próxima é suiren, no porto do farol. Uma lança: ataca de longe, em ondas."},
+                  {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 4,
+    },
+    {
+        .id = 9, .identity = 9, .name = "suiren", .style = "postura do mar", .title = "A Amiga de Oboro", .venue = "Porto do farol",
         .special = "Lança: ataca de longe, e a ponta demora mais para chegar do que parece; as ondas aceleram e recuam.",
-        .arena = ARENA_PORTO, .posture = 840, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8D8FFFF,
+        .arena = ARENA_PORTO, .posture = 1092, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8D8FFFF,
         .accelSteps = 5, .accelFactor = 0.82f,
         .stances = {STANCE("", 0.046f, 0.125f, 0.346f)}, .stanceCount = 1,
         .moves = {
@@ -291,47 +291,47 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                    {"hanzo", "A lança parte de longe e demora a chegar. Não apare o susto, apare a ponta."}}, .senseiCount = 2,
         .visit = {{"kojiro", "Suiren."},
                   {"hanzo", "Gentil demais. Gentileza é só um jeito educado de ser fraco."},
-                  {"hanzo", "Arashi está no salão do castelo, numa noite de tempestade. Duas katanas, e ele adora se ouvir."},
-                  {"hanzo", "As duas lâminas descem juntas. Só o parry perfeito segura as duas."},
+                  {"hanzo", "Karasu te espera nos telhados da vila do castelo, na chuva. A katana numa mão; às vezes, a wakizashi na outra."},
+                  {"hanzo", "Ele some em penas e volta onde você não olha."},
                   {"hanzo", "Não lute contra ele. Entenda ele. Depois, devore."}}, .visitCount = 5,
     },
     {
-        .id = 10, .name = "arashi", .style = "postura da tempestade", .title = "O Orgulhoso", .venue = "Salão do castelo, noite de tempestade",
-        .special = "Duas katanas, golpes pesados: as duas lâminas de uma vez, e só o parry perfeito segura as duas.",
-        .arena = ARENA_SALAO, .posture = 550, .hitsToFall = 10, .damage = 1.2f, .bladeMax = 0.220f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE0D0F0FF,
+        .id = 10, .identity = 6, .name = "karasu", .style = "postura do corvo", .title = "O que Aposta", .venue = "Telhados da vila do castelo, na chuva",
+        .special = "Katana e wakizashi: quase sempre a espada longa numa mão só; de repente, as duas lâminas de uma vez.",
+        .arena = ARENA_TELHADOS, .posture = 1014, .hitsToFall = 7, .bladeMax = 0.220f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xC8C8D8FF,
         .stances = {STANCE("", 0.046f, 0.121f, 0.333f)}, .stanceCount = 1,
         .moves = {
-            {"faísca", 1, {0}, 1.0f, -1, 0, LOOK_THRUST, 0.80f},
-            {"duas tempestades", 1, {0}, 1.5f, -1, 0, LOOK_HIGH, 0.90f, 0x1},
-            {"trovoada", 2, {0.45f}, 2.0f, -1, 0, LOOK_HIGH, 0.75f, 0x2},
-            {"tormenta", 3, {0.40f, 0.40f}, 1.5f, -1, 0, LOOK_LOW, 0.80f, 0x4},
-            {"granizo", 4, {0.40f, 0.40f, 0.40f}, 0.8f, -1, 0, LOOK_THRUST, 0.90f},
-            {"ventania", 3, {0.40f, 0.70f}, 1.0f, -1, 0, LOOK_LOW, 0.75f},
-            {"trovão", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 0.80f, 0x1},
-            {"raio duplo", 2, {0.40f}, 1.0f, -1, 0, LOOK_JUMP, 0.90f, 0x3},
-            {"céu partido", 5, {0.40f, 0.40f, 0.40f, 0.80f}, 0.6f, -1, 0, LOOK_HIGH, 0.75f, 0x10},
-            {"relâmpago", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.80f, 0x1, false, false, true},
-            {"descarga", 2, {0.45f}, 0.5f, -1, 0, LOOK_THRUST, 0.85f},
-            {"cruz elétrica", 1, {0}, 0.8f, -1, 0, LOOK_HIGH, 0.80f, 0x1},
+            {"bicada", 1, {0}, 2.0f, -1, 0, LOOK_THRUST, 0.83f},
+            {"garra", 2, {0.55f}, 2.0f, -1, 0, LOOK_HIGH, 1.13f},
+            {"sumiço", 1, {0}, 1.5f, -1, 0, LOOK_WARP, 0.87f},
+            {"corvo fantasma", 2, {0.55f}, 1.0f, -1, 0, LOOK_WARP, 0.83f},
+            {"revoada", 3, {0.50f, 0.90f}, 1.0f, -1, 0, LOOK_LOW, 1.13f, 0x4},
+            {"bando", 4, {0.45f, 0.45f, 0.45f}, 1.0f, -1, 0, LOOK_THRUST, 0.87f, 0x8},
+            {"duas penas", 1, {0}, 0.7f, -1, 0, LOOK_HIGH, 0.83f, 0x1},
+            {"voo rasante", 1, {0}, 1.2f, -1, 0, LOOK_DASH, 1.13f},
+            {"asa quebrada", 2, {0.50f}, 1.0f, -1, 0, LOOK_JUMP, 0.87f},
+            {"mergulho", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.83f},
+            {"cruz de penas", 1, {0}, 0.4f, -1, 0, LOOK_HIGH, 0.95f, 0x1},
+            {"corte curto", 2, {0.40f}, 1.0f, -1, 0, LOOK_THRUST, 0.85f},
         },
         .moveCount = 12,
-        .intro = {{"arashi", "Então o velho arrumou outro cachorro. Achei que ele tinha desistido."},
-                  {"arashi", "Eu era o melhor deste dojo, e mesmo assim o oboro teve que salvar minha vida. Foi a única dívida que eu tive."},
-                  {"arashi", "Não vou deixar você cobrar."},
-                  {"kojiro", "Não vim cobrar nada. Vim passar."}}, .introCount = 4,
-        .outro = {{"arashi", "Impossível... Não. Não é impossível. Eu só não queria que fosse."}}, .outroCount = 1,
-        .sensei = {{"hanzo", "A tempestade é orgulhosa: bate sempre no mesmo ritmo."},
-                   {"hanzo", "Duas lâminas descem num instante só. Meio parry segura uma; a outra corta."}}, .senseiCount = 2,
-        .visit = {{"kojiro", "Arashi."},
-                  {"hanzo", "Orgulhoso, sem nunca ter tido do que se orgulhar."},
+        .intro = {{"karasu", "Olha só, o novo favorito. O velho sempre tem um favorito. Nunca dura."},
+                  {"karasu", "Ele era um monstro. E depois daquele duelo o oboro perdeu a luz. Tudo mudou. Uma pena, eu gostava de apostar nele."},
+                  {"kojiro", "Aposta em mim."},
+                  {"karasu", "Hah. Nem que me pagassem."}}, .introCount = 4,
+        .outro = {{"karasu", "Tá bom, tá bom, mudei de aposta. Mas lembra: o velho sempre tem um favorito."}}, .outroCount = 1,
+        .sensei = {{"hanzo", "O corvo some em penas e volta onde você não olha. Apare quando ele reaparecer, não quando sumir."},
+                   {"hanzo", "Ele luta com uma mão só, até a outra aparecer. Aí são duas lâminas: só o perfeito segura."}}, .senseiCount = 2,
+        .visit = {{"kojiro", "Karasu."},
+                  {"hanzo", "Um corvo. Vive do que sobra dos outros. Não sobrou nada pra ele."},
                   {"hanzo", "Faltam dois. Yoru, no bambuzal, à meia-noite. Duas adagas, e ele apaga as luzes."},
                   {"hanzo", "No escuro, os olhos mentem. Os ouvidos não."},
                   {"hanzo", "Cada um deles aprendeu com aquele homem. Não se deixe enganar pelo que disserem dele."}}, .visitCount = 5,
     },
     {
-        .id = 11, .name = "yoru", .style = "postura da noite", .title = "O que Viu", .venue = "Bambuzal à meia-noite",
+        .id = 11, .identity = 11, .name = "yoru", .style = "postura da noite", .title = "O que Viu", .venue = "Bambuzal à meia-noite",
         .special = "Uma adaga em cada mão: quase sempre as lanternas se apagam e só o som avisa.",
-        .arena = ARENA_BAMBUZAL, .posture = 970, .hitsToFall = 5, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xB8B0E0FF,
+        .arena = ARENA_BAMBUZAL, .posture = 1261, .hitsToFall = 5, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xB8B0E0FF,
         .blackoutChance = 0.7f,
         .stances = {STANCE("", 0.044f, 0.119f, 0.320f)}, .stanceCount = 1,
         .moves = {
@@ -364,9 +364,9 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                   {"hanzo", "Não lute contra ele. Entenda ele. Depois, devore."}}, .visitCount = 5,
     },
     {
-        .id = 12, .name = "jinshi", .style = "postura da lua", .title = "O que Espera", .venue = "Encosta da serra",
+        .id = 12, .identity = 12, .name = "jinshi", .style = "postura da lua", .title = "O que Espera", .venue = "Encosta da serra",
         .special = "Postura da lua, katana branca forjada com ela: o repertório mais variado, ritmo irregular, e na montanha o som não chega.",
-        .arena = ARENA_SERRA, .posture = 630, .hitsToFall = 5, .bladeMax = 0.220f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 0, .tint = 0xE0D8C8FF,
+        .arena = ARENA_SERRA, .posture = 819, .hitsToFall = 5, .bladeMax = 0.220f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 0, .tint = 0xE0D8C8FF,
         .stances = {STANCE("", 0.043f, 0.119f, 0.350f)}, .rhythmJitter = 0.08f, .waitScale = AJ_ESPERA_X_IRREGULAR, .stanceCount = 1,
         .moves = {
             {"crescente", 1, {0}, 1.5f, -1, 0, LOOK_HIGH, 0.95f},
@@ -384,11 +384,11 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
         },
         .moveCount = 12,
         .intro = {{"jinshi", "..."},
-                  {"jinshi", "Eu também vi aquele duelo. Não foi justo. E o oboro nunca mais foi o mesmo."},
+                  {"jinshi", "Eu vi aquele duelo. Hanzo deixou ele vencer. E antes disso, vi a máscara de oni no dojo."},
                   {"jinshi", "Ninguém consegue tirar ele daquele transe. Eu tentei."},
                   {"kojiro", "Não vim ajudar ele."},
                   {"jinshi", "Eu sei. Mesmo assim, tem que ser você."}}, .introCount = 5,
-        .outro = {{"jinshi", "Vai. Ele está te esperando há muito tempo. Mais do que você imagina."}}, .outroCount = 1,
+        .outro = {{"jinshi", "A máscara já estava lá quando Hanzo era o mestre. Lembra disso quando chegar ao topo."}}, .outroCount = 1,
         .sensei = {{"hanzo", "Na montanha, o som demora a chegar. Não espere ouvir. Olhe."},
                    {"hanzo", "A lua muda de forma, mas sempre volta. Decore as fases."}}, .senseiCount = 2,
         .visit = {{"kojiro", "Jinshi."},
@@ -398,41 +398,82 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
                   {"hanzo", "Não lute contra ele. Entenda ele. Depois, devore."}}, .visitCount = 5,
     },
     {
-        .id = 13, .name = "oboro", .style = "o mestre das doze posturas", .title = "O Mestre das Doze Posturas", .venue = "O dojo de Hanzo, no alto da serra",
+        .id = 13, .identity = 13, .name = "oboro", .style = "o mestre das doze posturas", .title = "O Mestre das Doze Posturas", .venue = "O dojo de Hanzo, no alto da serra",
         .special = "Três selos, uma postura em cada: a de hanzo, a de quem devorou as doze, e a do oni, de máscara e lâmina em chamas.",
-        .arena = ARENA_CIDADELA, .posture = 360, .hitsToFall = 5, .healsOnHit = true, .specialChance = 0.25f,
+        .arena = ARENA_CIDADELA, .posture = 504, .hitsToFall = 5, .healsOnHit = true, .specialChance = 0.25f,
         .cueVisual = 1, .cueAudio = 1, .tint = 0xE0C8FFFF, .isBigBoss = true,
         /* Três posturas, uma por selo: a de hanzo, que ele aprendeu primeiro; a de quem
            devorou as doze; e a do oni, de máscara e com a lâmina em chamas, em que ele se perde. */
         .stances = {
             STANCE_EM_ORDEM("postura de hanzo", 0.062f, 0.144f, 0.380f, 1),        /* abre com a lição completa */
-            STANCE_EM_ORDEM("devorador de posturas", 0.051f, 0.124f, 0.350f, 12),  /* os doze na ordem da trilha */
+            STANCE("devorador de posturas", 0.051f, 0.124f, 0.350f), /* sorteio desde a primeira sequência */
             STANCE("postura do oni", 0.042f, 0.108f, 0.320f),
         },
         .stanceCount = 3,
-        /* selo: nome, espera antes do aviso x, troca de postura, postura, dano x, sem especial.
+        /* selo: nome, espera antes do aviso x, troca de postura, postura, dano x, sem especial,
+         * dano do perfeito e dano adicional do bom como frações da vida máxima.
+         * Aumento total de 40%: 2480 -> 3472, proporcionalmente entre os três selos.
          * Erros até cair, com a vida cheia a cada selo (AJ_SELO_CURA): 5, 10 e 4. */
         .seals = {
-            {"primeiro selo", 1.00f, 0, 360, 0, true},
-            {"segundo selo", 1.00f, 0, 1800, 0.5f, true},  /* comprido: os doze inteiros, até só com perfeitos */
-            {"terceiro selo", 0.85f, 0, 450, 1.25f, true},
+            {"primeiro selo", 1.00f, 0, 504, 0, true},
+            {"segundo selo", 1.00f, 0, 2520, 0.5f, true},  /* fase longa, mantém dano pela metade */
+            {"terceiro selo", 0.60f, 0, 448, 1.25f, true, 0.02f, 0.044f}, /* perfeito: 5, bom: 15, erro: 62,5; sem cura */
         },
         .sealCount = 3,
-        /* Os ecos copiam uma sequência de cada aprendiz (intervalos, aparência, golpe duplo e
-         * preparação), com a janela e o aviso do oboro naquela fase. O teste confere. */
-#define ECOS(p)                                                                               \
-            {"eco da terra", 2, {1.00f}, 1.0f, p, 0, LOOK_LOW, 1.55f},                          \
-            {"eco da tartaruga", 2, {0.42f}, 1.0f, p, 0, LOOK_THRUST, 1.00f},                   \
-            {"eco da montanha", 2, {0.85f}, 1.0f, p, 0, LOOK_LOW, 1.05f},                      \
-            {"eco do gelo", 2, {0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.75f, 0, true, false},       \
-            {"eco do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_HIGH, 0.90f}, \
-            {"eco do corvo", 3, {0.50f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 1.13f, 0x4},              \
-            {"eco do vento", 2, {0.45f}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x2},                    \
-            {"eco da chama", 4, {0.45f, 0.45f, 0.80f}, 1.0f, p, 0, LOOK_LOW, 0.65f},            \
-            {"eco do mar", 3, {0.60f, 0.50f}, 1.0f, p, 0, LOOK_FAR, 1.20f},                     \
-            {"eco da tempestade", 3, {0.40f, 0.40f}, 1.0f, p, 0, LOOK_LOW, 0.80f, 0x4},         \
-            {"eco da noite", 4, {0.40f, 0.40f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 0.80f},            \
-            {"eco da lua", 5, {0.50f, 0.50f, 0.50f, 0.90f}, 1.0f, p, 0, LOOK_HIGH, 1.05f}
+        /* 50 sequências copiadas dos 12 aprendizes, com seus intervalos, direção,
+         * duplos e fintas. A identidade explícita mantém o som e o VFX corretos.
+         * Sorteia uma postura diferente da anterior, depois um dos seus golpes. */
+#define ECOS(p) \
+            {"eco da terra", 2, {1.00f}, 1.0f, p, 0, LOOK_LOW, 1.55f, 0, false, false, 1}, \
+            {"eco da terra / sulco", 1, {0}, 1.0f, p, 0, LOOK_THRUST, 1.75f, 0, false, false, 1}, \
+            {"eco da terra / pedregulho", 2, {1.10f}, 1.0f, p, 0, LOOK_JUMP, 1.75f, 0, false, false, 1}, \
+            {"eco da terra / terremoto", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.55f, 0, false, false, 1}, \
+            {"eco da tartaruga", 2, {0.42f}, 1.0f, p, 0, LOOK_HIGH, 1.00f, 0, false, false, 2}, \
+            {"eco da tartaruga / carapaça", 2, {0.60f}, 1.0f, p, 0, LOOK_HIGH, 1.25f, 0, false, false, 2}, \
+            {"eco da tartaruga / concha", 1, {0}, 1.0f, p, 0, LOOK_LOW, 1.15f, 0, false, false, 2}, \
+            {"eco da tartaruga / bote da tartaruga", 1, {0}, 1.0f, p, 0, LOOK_HIGH, 1.00f, 0, false, false, 2}, \
+            {"eco do vento", 2, {0.45f}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x2, false, false, 7}, \
+            {"eco do vento / tufão", 5, {0.40f, 0.40f, 0.40f, 0.60f}, 1.0f, p, 0, LOOK_LOW, 0.65f, 0, false, false, 7}, \
+            {"eco do vento / lufada", 1, {0}, 1.0f, p, 0, LOOK_DASH, 0.75f, 0, false, false, 7}, \
+            {"eco do vento / ciclone", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.85f, 0, false, false, 7}, \
+            {"eco do gelo", 2, {0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.75f, 0, true, false, 4}, \
+            {"eco do gelo / finta de gelo", 1, {0}, 1.0f, p, 0, LOOK_THRUST, 0.90f, 0, true, true, 4}, \
+            {"eco do gelo / agulha", 3, {0.40f, 0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.80f, 0, true, false, 4}, \
+            {"eco do gelo / deslize", 1, {0}, 1.0f, p, 0, LOOK_DASH, 0.85f, 0, true, false, 4}, \
+            {"eco da chama", 4, {0.45f, 0.45f, 0.80f}, 1.0f, p, 0, LOOK_LOW, 0.65f, 0, false, false, 8}, \
+            {"eco da chama / brasa", 2, {0.50f}, 1.0f, p, 0, LOOK_HIGH, 0.70f, 0, false, false, 8}, \
+            {"eco da chama / chama viva", 1, {0}, 1.0f, p, 0, LOOK_DASH, 0.65f, 0, false, false, 8}, \
+            {"eco da chama / erupção", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.70f, 0, false, false, 8}, \
+            {"eco da tempestade", 3, {0.40f, 0.40f}, 1.0f, p, 0, LOOK_LOW, 0.80f, 0x4, false, false, 10}, \
+            {"eco da tempestade / duas tempestades", 1, {0}, 1.0f, p, 0, LOOK_HIGH, 0.90f, 0x1, false, false, 10}, \
+            {"eco da tempestade / raio duplo", 2, {0.40f}, 1.0f, p, 0, LOOK_JUMP, 0.90f, 0x3, false, false, 10}, \
+            {"eco da tempestade / relâmpago", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.80f, 0x1, false, false, 10}, \
+            {"eco da montanha", 2, {0.85f}, 1.0f, p, 0, LOOK_LOW, 1.05f, 0, false, false, 3}, \
+            {"eco da montanha / ponta da serra", 2, {1.00f}, 1.0f, p, 0, LOOK_THRUST, 1.20f, 0, false, false, 3}, \
+            {"eco da montanha / avalanche", 1, {0}, 1.0f, p, 0, LOOK_DASH, 1.05f, 0, false, false, 3}, \
+            {"eco da montanha / montanha partida", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.20f, 0, false, false, 3}, \
+            {"eco do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_HIGH, 0.90f, 0, false, false, 5}, \
+            {"eco do tigre / garras cruzadas", 2, {0.40f}, 1.0f, p, 0, LOOK_LOW, 0.90f, 0, false, false, 5}, \
+            {"eco do tigre / caçada", 7, {0.40f, 0.40f, 0.45f, 0.40f, 0.40f, 0.70f}, 1.0f, p, 0, LOOK_DASH, 0.75f, 0, false, false, 5}, \
+            {"eco do tigre / salto do tigre", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.75f, 0, false, false, 5}, \
+            {"eco do tigre / duas patas", 1, {0}, 1.0f, p, 0, LOOK_HIGH, 0.80f, 0x1, false, false, 5}, \
+            {"eco do mar", 3, {0.60f, 0.50f}, 1.0f, p, 0, LOOK_FAR, 1.20f, 0, false, false, 9}, \
+            {"eco do mar / arrebentação", 3, {0.45f, 0.45f}, 1.0f, p, 0, LOOK_THRUST, 1.15f, 0, false, false, 9}, \
+            {"eco do mar / maré baixa", 2, {0.45f}, 1.0f, p, 0, LOOK_LOW, 1.05f, 0, false, false, 9}, \
+            {"eco do mar / vagalhão", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.20f, 0, false, false, 9}, \
+            {"eco do corvo", 3, {0.50f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 1.13f, 0x4, false, false, 6}, \
+            {"eco do corvo / sumiço", 1, {0}, 1.0f, p, 0, LOOK_WARP, 0.87f, 0, false, false, 6}, \
+            {"eco do corvo / corte curto", 2, {0.40f}, 1.0f, p, 0, LOOK_THRUST, 0.85f, 0, false, false, 6}, \
+            {"eco do corvo / mergulho", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.83f, 0, false, false, 6}, \
+            {"eco da noite", 4, {0.40f, 0.40f, 0.90f}, 1.0f, p, 0, LOOK_LOW, 0.80f, 0, false, false, 11}, \
+            {"eco da noite / vultos", 3, {0.40f, 0.70f}, 1.0f, p, 0, LOOK_THRUST, 0.80f, 0, false, false, 11}, \
+            {"eco da noite / coruja", 2, {0.45f}, 1.0f, p, 0, LOOK_JUMP, 0.90f, 0, false, false, 11}, \
+            {"eco da noite / tesoura", 1, {0}, 1.0f, p, 0, LOOK_HIGH, 0.85f, 0x1, false, false, 11}, \
+            {"eco da lua", 5, {0.50f, 0.50f, 0.50f, 0.90f}, 1.0f, p, 0, LOOK_HIGH, 1.05f, 0, false, false, 12}, \
+            {"eco da lua / lua branca", 6, {0.40f, 0.90f, 0.45f, 0.45f, 1.00f}, 1.0f, p, 0, LOOK_THRUST, 0.95f, 0, false, false, 12}, \
+            {"eco da lua / reflexo no lago", 1, {0}, 1.0f, p, 0, LOOK_DASH, 1.20f, 0, false, false, 12}, \
+            {"eco da lua / halo", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.05f, 0, false, false, 12}, \
+            {"eco da lua / minguante", 3, {0.60f, 0.60f}, 1.0f, p, 0, LOOK_LOW, 0.70f, 0, false, false, 12}
         .moves = {
             /* postura de hanzo: a arte como o mestre ensinou; abre com a lição inteira */
             {"lição completa", 7, {0.60f, 0.50f, 0.50f, 0.70f, 0.45f, 0.45f}, 2.0f, 0, 0, LOOK_HIGH, 1.15f},
@@ -442,13 +483,24 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"três lições", 3, {0.50f, 0.60f}, 1.0f, 0, 0, LOOK_HIGH, 1.05f},
             {"passo de hanzo", 1, {0}, 1.0f, 0, 0, LOOK_DASH, 0.95f},
             {"salto do mestre", 2, {0.55f}, 1.0f, 0, 0, LOOK_JUMP, 1.15f},
-            /* devorador de posturas: os doze, na ordem da trilha na primeira volta */
+            /* devorador: 50 sequências aleatórias, sem volta ordenada */
             ECOS(1),
-            /* postura do oni: os mesmos doze, mais rápidos e mais pesados (selo 3) */
-            ECOS(2),
+            /* Oni: repertório próprio, uma lâmina vermelha; sequências rápidas e apertadas. */
+            {"corte carmesim", 2, {0.40f}, 1.0f, 2, 0, LOOK_HIGH, 0.54f},
+            {"rasgo do oni", 3, {0.40f, 0.40f}, 1.0f, 2, 0, LOOK_LOW, 0.56f},
+            {"presa rubra", 2, {0.42f}, 1.0f, 2, 0, LOOK_THRUST, 0.52f},
+            {"avanço sangrento", 3, {0.40f, 0.44f}, 1.0f, 2, 0, LOOK_DASH, 0.58f},
+            {"queda escarlate", 2, {0.40f}, 1.0f, 2, 0, LOOK_JUMP, 0.60f},
+            {"martelo infernal", 3, {0.44f, 0.40f}, 1.0f, 2, 0, LOOK_HEAVY, 0.64f},
+            {"fúria vermelha", 5, {0.40f, 0.40f, 0.42f, 0.40f}, 1.0f, 2, 0, LOOK_HIGH, 0.54f},
+            {"cicatriz ardente", 4, {0.40f, 0.44f, 0.40f}, 1.0f, 2, 0, LOOK_LOW, 0.56f},
+            {"espinho do inferno", 3, {0.40f, 0.40f}, 1.0f, 2, 0, LOOK_THRUST, 0.52f},
+            {"caçada do demônio", 4, {0.42f, 0.40f, 0.44f}, 1.0f, 2, 0, LOOK_DASH, 0.58f},
+            {"céu em sangue", 4, {0.40f, 0.42f, 0.40f}, 1.0f, 2, 0, LOOK_JUMP, 0.60f},
+            {"último rugido", 6, {0.40f, 0.40f, 0.42f, 0.40f, 0.44f}, 1.0f, 2, 0, LOOK_HEAVY, 0.64f},
         },
 #undef ECOS
-        .moveCount = 31,
+        .moveCount = 69,
         .intro = {{"oboro", "Então é você. O último que ele mandou."},
                   {"kojiro", "Você traiu o mestre."},
                   {"oboro", "Ele não é quem você pensa."},
@@ -465,6 +517,12 @@ const MasterProfile *roster_get(int index) {
     return &ROSTER[index];
 }
 
+const MasterProfile *roster_by_identity(int identity) {
+    for (int i = 0; i < ROSTER_SIZE; i++)
+        if (ROSTER[i].identity == identity) return &ROSTER[i];
+    return NULL;
+}
+
 int roster_size(void) { return ROSTER_SIZE; }
 
 /* A abertura é narrada: cada entrada é um parágrafo que sobe pela tela.
@@ -476,12 +534,12 @@ static const char *LORE[LORE_PAGES] = {
     "O mais promissor era Oboro. Durante anos, Hanzo acreditou nele como em nenhum outro.",
     "Oboro pagou com a lâmina. Desafiou o mestre, venceu e tomou o dojo, como manda a tradição. "
     "Hanzo desceu a serra sozinho.",
-    "Anos depois, numa estrada, Hanzo encontrou um menino. Kojiro tinha visto o pai morrer pelas mãos de um "
-    "homem com máscara de oni, e desde então não tinha paz.",
-    "Hanzo o recolheu e o treinou na metade da arte que se ensina.",
+    "Hanzo adotou Kojiro. O menino cresceu sem saber como chegou até ele. Tudo o que conhece de sua origem veio do mestre.",
+    "Os aprendizes contavam histórias de um assassino com máscara de oni, que levou suas famílias. "
+    "Buscaram Hanzo para ficar mais fortes. Kojiro aprendeu com ele a metade da arte que se ensina.",
     "“A outra metade não se ensina. Tem que vir de você.”",
     "Oboro destruiu tudo o que Hanzo construiu. Os doze aprendizes que ficaram com ele guardam o caminho até o dojo.",
-    "Agora Kojiro sobe a Trilha dos Doze Aprendizes. Pelo mestre. Pela vingança.",
+    "Agora Kojiro sobe a Trilha dos Doze Aprendizes. Pelo mestre. Pelas respostas que nunca teve.",
     "“Não lute contra ele. Entenda ele. Depois, devore.”",
 };
 
@@ -495,14 +553,15 @@ const char *lore_page(int index) {
 static const Beat SEAL_1[] = {
     {"oboro", "Ele te contou do treino? Até a última gota de sangue. Todo dia. Até alguém não levantar mais.", CUE_NONE},
     {"oboro", "E no último duelo... ele parou. No meio do golpe, parou de lutar. Eu venci um homem que não quis lutar.", CUE_NONE},
+    {"oboro", "Eu devorei todas as posturas. Fiz tudo o que ele queria. Por que você é o escolhido? Por que ele desistiu de mim?", CUE_NONE},
     {"kojiro", "Mentira.", CUE_NONE},
 };
 static const Beat SEAL_2[] = {
     {NULL, NULL, CUE_MASK_ON},
-    {"kojiro", "Foi você.", CUE_NONE},
+    {"kojiro", "A máscara do Oni...", CUE_NONE},
     {"oboro", "O homem dessa máscara matou meus pais também.", CUE_NONE},
-    {"oboro", "Eu uso isso pra lembrar do que eu quase me tornei. E pra que o próximo garoto que ele mandasse "
-              "viesse atrás de mim, e não deles.", CUE_NONE},
+    {"oboro", "Só encontrei isso depois que assumi o dojo. Uso pra lembrar da falha que sou. "
+              "Nem com todas as posturas eu fui suficiente pra ele.", CUE_NONE},
     {"oboro", "Eu só não esperava que fosse você.", CUE_NONE},
 };
 static const Beat KNEEL[] = {
@@ -533,6 +592,11 @@ static const Beat NAO[] = {
     {NULL, NULL, CUE_CHASE},
     {"kojiro", "hanzo!", CUE_NONE},
 };
+/* A identidade de quem veste a máscara só é revelada no final. */
+static const Beat PUPIL_AFTER[] = {
+    {NULL, NULL, CUE_LEAVE_PUPIL},
+    {NULL, NULL, CUE_ONI_AMBUSH},
+};
 
 const Beat *story_scene(SceneId id, int *count) {
 #define SCENE(a) do { *count = (int)(sizeof a / sizeof a[0]); return a; } while (0)
@@ -542,6 +606,7 @@ const Beat *story_scene(SceneId id, int *count) {
         case SCENE_KNEEL: SCENE(KNEEL);
         case SCENE_SIM: SCENE(SIM);
         case SCENE_NAO: SCENE(NAO);
+        case SCENE_PUPIL_AFTER: SCENE(PUPIL_AFTER);
         default: break;
     }
 #undef SCENE

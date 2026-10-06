@@ -19,6 +19,9 @@ endif
 ifeq ($(OS),Windows_NT)
   # MSYS2/MinGW (ou make OS=Windows_NT CC=x86_64-w64-mingw32-gcc): o raylib estático pede o OpenGL, o GDI e o multimídia
   RAYLIB_LIBS += -lopengl32 -lgdi32 -lwinmm
+else ifeq ($(shell uname),Linux)
+  # katana3d chama glClear diretamente; a dependência transitiva do raylib não basta.
+  RAYLIB_LIBS += -lGL
 endif
 
 CORE := src/ajuste.c src/core.c src/roster.c src/robo.c
@@ -44,7 +47,7 @@ endif
 all: apara
 
 # Gera os lutadores a partir das pranchas do Samurai #3 (ver ../docs/PERSONAGENS.md).
-personagens: tools/personagens.c
+personagens: tools/personagens.c src/cores_posturas.h
 	$(CC) $(CFLAGS) -ffp-contract=off $(RAYLIB_CFLAGS) tools/personagens.c -o $@ $(RAYLIB_LIBS) -lm
 
 sprites: personagens
@@ -53,6 +56,12 @@ sprites: personagens
 # Põe o zip das animações da Mattz Art nas pastas certas: make packs ZIP=arquivo.zip
 packs:
 	tools/instalar_packs.sh "$(ZIP)"
+
+assets-prontos:
+	sh tools/verificar_assets.sh
+
+pacote-assets:
+	sh tools/empacotar_assets.sh "$(OUT)"
 
 apara: $(CORE) $(GAME) $(ENTRADA_PLAT) src/*.h
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(ENTRADA_CFLAGS) $(CORE) $(GAME) $(ENTRADA_PLAT) -o $@ $(RAYLIB_LIBS) $(ENTRADA_LIBS) -lm
@@ -171,6 +180,18 @@ test-visual: presentation_test
 test-assets: presentation_test
 	./presentation_test --assets
 
+audio_test: $(CORE) src/audio.c src/audio.h src/vozes.h tests/audio_test.c
+	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(CORE) tests/audio_test.c -o $@ $(RAYLIB_LIBS) -lm
+
+test-audio: audio_test
+	sh tests/teste_audio.sh
+
+arena_art_test: $(CORE) src/arenas.c src/arenas.h src/ajuste.h tests/arena_art_test.c
+	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(CORE) tests/arena_art_test.c -o $@ $(RAYLIB_LIBS) -lm
+
+test-arte: arena_art_test
+	sh tests/teste_arte.sh
+
 # O núcleo e as ferramentas de teste compilam para Windows (MinGW-w64) e dão o mesmo resultado que no Linux
 # (roda os .exe no Wine, se houver; sem o MinGW, pula).
 teste-windows:
@@ -185,13 +206,16 @@ teste-windows:
 teste-jogo: apara
 	sh tests/teste_save.sh
 	sh tests/teste_rastro.sh
+	sh tests/teste_slash.sh
 	sh tests/teste_vitoria.sh
 	sh tests/teste_carimbo.sh
 	sh tests/teste_desempenho.sh
 	sh tests/teste_cenas.sh
+	sh tests/teste_historia.sh
 
 # Tudo, com um comando: núcleo, fonte, save, fuzz, taxas de quadros, a ordem da curva, números, avisos e o jogo real.
 teste:
+	$(MAKE) assets-prontos
 	$(MAKE) test
 	$(MAKE) fuzz-rapido
 	$(MAKE) robos-taxas
@@ -202,15 +226,29 @@ teste:
 	$(MAKE) teste-windows
 	$(MAKE) teste-jogo
 	$(MAKE) test-visual
-	@echo "teste: tudo certo"
+	$(MAKE) test-audio
+	$(MAKE) test-arte
+	@echo 'teste: verificações disponíveis concluídas; qualquer teste anunciado como "pulado" continua pendente nesse ambiente'
+
+# Ambiente Linux completo: nenhuma conferência gráfica pode ser pulada silenciosamente.
+teste-linux:
+	@test "$$(uname)" = Linux
+	@command -v xvfb-run >/dev/null && command -v clang >/dev/null
+	@pkg-config --exists raylib xi x11 xtst
+	$(MAKE) assets-prontos test fuzz-rapido robos-taxas curva-ordem
+	$(MAKE) curva-alvo CURVA_LUTAS=100000
+	$(MAKE) numeros avisos teste-jogo test-visual test-audio test-arte
+	xvfb-run -a $(MAKE) test-assets
 
 run: apara
 	./apara
 
 clean:
-	rm -f apara apara.exe core_test fonte_test save_test entrada_test desempenho_test fuzz_test presentation_test robos_relatorio curva_relatorio ritmo_relatorio personagens
+	rm -f apara apara.exe core_test fonte_test save_test entrada_test desempenho_test fuzz_test presentation_test audio_test arena_art_test robos_relatorio curva_relatorio ritmo_relatorio personagens
 
 teste-vitoria: apara
 	sh tests/teste_vitoria.sh
 
 .PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva ritmo test-ritmo curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-entrada test-desempenho test-visual test-assets teste teste-jogo teste-vitoria
+.PHONY: assets-prontos pacote-assets test-audio test-arte
+.PHONY: teste-linux

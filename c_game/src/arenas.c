@@ -5,6 +5,55 @@
 #include "arenas.h"
 
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "ajuste.h"
+
+static Texture2D art[ARENA_COUNT][2];
+static const char *const artNames[ARENA_COUNT] = {
+    "raizo", "jinshi", "daichi", "karasu", "suiren", "arashi", "hayate",
+    "shizuku", "yoru", "enjin", "genbu", "oboro", "garfiel"
+};
+
+void arena_load_art(void) {
+    const char *root = getenv("APARA_ARENA_DIR");
+    if (!root || !root[0]) root = "assets/arenas";
+    for (int id = 0; id < ARENA_COUNT; id++) {
+        for (int layer = 0; layer < 2; layer++) {
+            char path[1024];
+            snprintf(path, sizeof path, "%s/%s/%s.png", root, artNames[id], layer ? "front" : "back");
+            if (!FileExists(path)) continue;
+            Image img = LoadImage(path);
+            if (!img.data || img.height != LOW_H || img.width < LOW_W || img.width > LOW_W * 32 || img.width % LOW_W) {
+                fprintf(stderr, "Cenário ignorado: %s (use quadros de 320 x 180, numa tira horizontal de até 32 quadros)\n", path);
+                if (img.data) UnloadImage(img);
+                continue;
+            }
+            art[id][layer] = LoadTextureFromImage(img);
+            UnloadImage(img);
+            SetTextureFilter(art[id][layer], TEXTURE_FILTER_POINT);
+        }
+    }
+}
+
+void arena_unload_art(void) {
+    for (int id = 0; id < ARENA_COUNT; id++)
+        for (int layer = 0; layer < 2; layer++) {
+            if (art[id][layer].id) UnloadTexture(art[id][layer]);
+            art[id][layer] = (Texture2D){0};
+        }
+}
+
+bool arena_has_art(ArenaId id) { return id >= 0 && id < ARENA_COUNT && art[id][0].id != 0; }
+
+static bool draw_art(ArenaId id, int layer, float t) {
+    if (id < 0 || id >= ARENA_COUNT || !art[id][layer].id) return false;
+    Texture2D tex = art[id][layer];
+    int frames = tex.width / LOW_W;
+    int frame = (int)(fmodf(fmaxf(t, 0) / AJ_CENARIO_QUADRO, (float)frames));
+    DrawTextureRec(tex, (Rectangle){frame * LOW_W, 0, LOW_W, LOW_H}, (Vector2){0, 0}, WHITE);
+    return true;
+}
 
 #define C(r, g, b) ((Color){r, g, b, 255})
 #define CA(r, g, b, a) ((Color){r, g, b, a})
@@ -990,7 +1039,7 @@ static void bambuzal(const ArenaCtx *c) {
 /* ------------------------------------------------------------------ */
 static void forja(const ArenaCtx *c) {
     float t = c->t;
-    float fl = 0.88f + 0.12f * sinf(t * 7) * sinf(t * 3.3f);
+    float fl = 1; /* luz estável; o golpe não compete com lampejos da lava */
     /* O céu pela boca da cratera: fumaça avermelhada e cinza caindo. */
     vgrad(0, 0, LOW_W, 70, C(20, 8, 12), C(72, 24, 20));
     for (int i = 0; i < 7; i++) {
@@ -1027,10 +1076,6 @@ static void forja(const ArenaCtx *c) {
         float cx = fract(hash1(k + 40) + t * 0.01f) * (LOW_W + 40) - 20, cy = 116 + hash1(k + 41) * 14, w = 10 + hash1(k + 42) * 16;
         DrawEllipse((int)cx, (int)cy, w / 2, 1.5f, C(70, 26, 16));
         rect(cx - w / 4, cy - 1, w / 2, 1, C(110, 40, 20));
-    }
-    for (int i = 0; i < 6; i++) {
-        float ph = fract(t * 0.6f + hash1(i + 50)), x = hash1(i + 51) * LOW_W;
-        if (ph < 0.35f) DrawCircleLines((int)x, 118 + (int)(hash1(i + 52) * 10), ph * 8, C(255, 236, 150));
     }
     glow(160, 124, 120, C(110, 30, 8));
     for (int k = 0; k < 9; k++) {   /* as línguas de fogo saindo da crosta do lago */
@@ -1479,6 +1524,7 @@ static void templo(const ArenaCtx *c) {
 }
 
 void arena_draw_back(ArenaId id, const ArenaCtx *c) {
+    if (draw_art(id, 0, c->t)) return;
     switch (id) {
         case ARENA_DOJO: dojo(c); break;
         case ARENA_SERRA: serra(c); break;
@@ -1503,6 +1549,7 @@ void arena_draw_back(ArenaId id, const ArenaCtx *c) {
 /* Frente: por cima dos lutadores                                      */
 /* ------------------------------------------------------------------ */
 void arena_draw_front(ArenaId id, const ArenaCtx *c) {
+    if (draw_art(id, 1, c->t)) return;
     float t = c->t;
     switch (id) {
         case ARENA_DOJO:
@@ -1610,7 +1657,7 @@ void arena_draw_front(ArenaId id, const ArenaCtx *c) {
                 float life = fract(hash1(i + 1) + t * (0.15f + hash1(i + 2) * 0.2f));
                 Color e = life < 0.5f ? C(255, 200, 90) : C(255, 110, 40);
                 DrawPixel((int)x, (int)y, fade(e, 0.95f - life * 0.5f));
-                if (i % 5 == 0) DrawCircleGradient((Vector2){x + 0.5f, y + 0.5f}, 2.5f, fade(C(255, 120, 40), 0.35f), fade(C(255, 120, 40), 0));
+
             }
             EndBlendMode();
             break;

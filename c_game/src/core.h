@@ -71,6 +71,7 @@ typedef struct {
     float posture;                /* postura deste selo (0 = a do mestre) */
     float damageMultiplier;       /* o dano de um erro x isto (0 = 1) */
     bool noSpecial;               /* neste selo, nada de golpe especial */
+    float perfectChip, goodChip;  /* dano atravessa o parry: fração da vida máxima; perfeito com dano não cura */
 } SealRule;
 
 /*
@@ -78,7 +79,7 @@ typedef struct {
  * uma preparação seguida de 1 a MAX_CHAIN golpes, com intervalos sempre iguais
  * entre um contato e o próximo. É isso que o jogador estuda e decora.
  */
-#define MAX_MOVES 32
+#define MAX_MOVES 128 /* Oboro: 7 fundamentos + 50 ecos + 12 sequências Oni */
 #define MAX_CHAIN 8
 
 /* Preparação que denuncia a sequência. LOOK_HEAVY é o golpe forte: o salto com a
@@ -108,6 +109,7 @@ typedef struct {
     unsigned dual;
     bool thrustOnly;             /* apresentação: todos os contatos seguem retos, sem alternar para corte */
     bool feint;                  /* apresentação: ameaça sem contato antes da estocada real */
+    int sourceIdentity;          /* eco: identidade do aprendiz copiado (0 = golpe próprio) */
     bool shock;                  /* choque (arashi, relâmpago): quem leva este golpe (o erro, ou o bom em que a segunda lâmina entra) fica meio paralisado, e a janela perfeita do golpe seguinte encolhe */
 } Move;
 
@@ -127,7 +129,8 @@ typedef struct {
 } Line;
 
 typedef struct {
-    int id;
+    int id;                       /* posição na trilha, 1..13: nível e progresso */
+    int identity;                 /* identidade visual estável, independente da posição */
     const char *name, *title, *venue, *special;
     const char *style;            /* postura de combate, mostrada no lugar de dicas */
     ArenaId arena;
@@ -166,6 +169,7 @@ typedef struct {
 
 #define ROSTER_SIZE 13
 const MasterProfile *roster_get(int index);   /* 0..12; o último é oboro */
+const MasterProfile *roster_by_identity(int identity); /* personagem, sem confundir com o nível */
 int roster_size(void);
 
 #define LORE_PAGES 10
@@ -185,6 +189,8 @@ typedef enum {
     CUE_HANZO_MASK,   /* hanzo pega a máscara do chão e põe no rosto */
     CUE_HANZO_KILL,   /* hanzo pega a katana dele do chão e mata oboro */
     CUE_CHASE,        /* kojiro corre atrás dele, e hanzo some */
+    CUE_LEAVE_PUPIL,  /* kojiro deixa o aprendiz vivo e sai da arena */
+    CUE_ONI_AMBUSH,   /* o assassino mascarado mata o aprendiz depois da saída */
 } Cue;
 
 typedef struct {
@@ -198,6 +204,7 @@ typedef enum {
     SCENE_KNEEL,      /* postura quebrada: de joelhos, sem a máscara */
     SCENE_SIM,        /* matou oboro */
     SCENE_NAO,        /* não matou */
+    SCENE_PUPIL_AFTER, /* o que acontece depois que kojiro vai embora */
     SCENE_COUNT
 } SceneId;
 
@@ -223,7 +230,8 @@ typedef enum {
     EV_PRESS,         /* gesto aceito; i: PressKind; a: antecedência ao contato (CEDO, TENTATIVA) ou atraso
                          depois do contato que entrou (TARDE); b: CEDO, quanto faltava para o aviso */
     EV_IMPACT,        /* judgement, a: antecedência (negativa = depois do contato; -1 = sem defesa), flag: quebrou
-                         postura; b: quanto o aperto ficou fora da janela perfeita (>0 cedo, <0 tarde, 0 dentro) */
+                         postura; b: quanto o aperto ficou fora da janela perfeita (>0 cedo, <0 tarde, 0 dentro);
+                         i: bits 0 duas lâminas, 1 segunda acertou, 2 dano atravessou a defesa */
     EV_STANCE,        /* i: nova postura */
     EV_SEAL,          /* i: novo selo (o BIG BOSS entrou em outra fase) */
     EV_COMBO,         /* i: golpes na sequência (só quando mais de um) */
@@ -248,6 +256,13 @@ typedef struct {
     int i;
     bool flag;
 } DuelEvent;
+
+/* Os bits de `i` no EV_IMPACT. */
+#define IMPACTO_DUPLO 1          /* golpe de duas lâminas */
+#define IMPACTO_SEGUNDA 2        /* a segunda lâmina acertou kojiro */
+#define IMPACTO_ATRAVESSA 4      /* o dano atravessou a defesa (a forma Oni do oboro) */
+#define IMPACTO_CHOQUE 8         /* este golpe deixou kojiro em choque (duel.shock) */
+#define IMPACTO_EM_CHOQUE 16     /* kojiro foi julgado em choque: a janela perfeita estava menor */
 
 typedef enum { SCH_LAUNCH, SCH_CUE, SCH_CUE_SOUND } ScheduleKind;
 typedef struct { double time; ScheduleKind kind; } ScheduleItem;

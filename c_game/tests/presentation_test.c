@@ -14,13 +14,13 @@ static void fake_sprites(void) {
     static const char *names[] = {
         "IDLE", "IDLE_FURIA", "ATTACK_1", "ATTACK_2", "ATTACK_3",
         "ATTACK_1_FURIA", "ATTACK_2_FURIA", "ATTACK_3_FURIA",
-        "STRONG_ATTACK", "STRONG_ATTACK_FURIA", "ESPECIAL", "DASH_ATTACK", "JUMP", "HURT", "HURT_FURIA"
+        "STRONG_ATTACK", "STRONG_ATTACK_FURIA", "ESPECIAL", "DASH_ATTACK", "JUMP", "HURT", "HURT_FURIA", "DEATH", "DEFEND", "RUN"
     };
     fixture.height = 40;
     for (size_t i = 0; i < sizeof names / sizeof names[0]; i++) {
         SprAnim *a = &fixture.anims[fixture.count++];
         snprintf(a->name, sizeof a->name, "%s", names[i]);
-        a->frames = 5; a->frameTime = 0.08f; a->hold = 1; a->contact = 2;
+        a->frames = 5; a->frameTime = 0.08f; a->hold = 1; a->contact = 2; a->stop = -1;
     }
 }
 
@@ -79,6 +79,132 @@ static void sword_attachment(void) {
     REQUIRE(p.x == 4 && p.y == 5, "poeira estacionária passou a seguir o personagem");
 }
 
+/* Os doze ecos e os aprendizes resolvem a mesma identidade de feedback. */
+static void borrowed_feedback(void) {
+    memset(&G, 0, sizeof G);
+    settings_default(&G.settings);
+    G.m = roster_get(12);
+    duel_init(&G.duel, &G.settings, G.m, 11);
+    duel_start_seal(&G.duel, 1);
+    bool seen[MASTER_COUNT] = {0};
+    for (int tick = 0; tick < 50000; tick++) {
+        int echo = echo_of(duel_move(&G.duel));
+        if (echo >= 0) {
+            bool first = !seen[echo];
+            seen[echo] = true;
+            const MasterProfile *source = roster_get(echo);
+            REQUIRE(feedback_master() == source, "eco escolheu som/partículas de outro mestre");
+            if (first) {
+                const MasterProfile *oboro = G.m;
+                fx_init(&G.fx); srand(314); tell_fx();
+                Fx borrowed = G.fx;
+                G.m = source;
+                fx_init(&G.fx); srand(314); tell_fx();
+                REQUIRE(!memcmp(borrowed.p, G.fx.p, sizeof borrowed.p), "partículas do eco diferem da postura original");
+                G.m = oboro;
+            }
+            Color a = cor_rastro(), b = posture_color(echo);
+            REQUIRE(!memcmp(&a, &b, sizeof a), "aura do eco diverge da postura original");
+        }
+        int count = 0;
+        for (int i = 0; i < MASTER_COUNT; i++) count += seen[i];
+        if (count == MASTER_COUNT) break;
+        if (G.duel.phase == PH_FINISHED || G.duel.seal != 1) {
+            /* Não vencer antes de visitar a primeira volta inteira. */
+            duel_start_seal(&G.duel, 1);
+        }
+        G.duel.renPosture = G.settings.renPosture;
+        G.duel.bossPosture = 0;
+        duel_step(&G.duel, .01f, false);
+        duel_drain(&G.duel, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+    }
+    for (int i = 0; i < MASTER_COUNT; i++) REQUIRE(seen[i], "um eco não foi verificado");
+    for (int i = 0; i < MASTER_COUNT; i++) {
+        G.m = roster_get(i);
+        REQUIRE(feedback_master() == G.m, "aprendiz não usa sua própria assinatura");
+    }
+}
+
+static void oni_feedback_proprio(void) {
+    memset(&G, 0, sizeof G);
+    settings_default(&G.settings);
+    G.m = roster_get(12);
+    duel_init(&G.duel, &G.settings, G.m, 11);
+    duel_start_seal(&G.duel, 2);
+    while (G.duel.phase != PH_WINDUP) duel_tick(&G.duel, .01);
+    REQUIRE(echo_of(duel_move(&G.duel)) == -1 && feedback_master() == G.m, "Oni ainda copia postura de aprendiz");
+    begin_posture_aura(-1);
+    REQUIRE(G.auraEcho == -1 && G.auraLeft > 0, "Oni manteve a aura do último aprendiz");
+    Color c = cor_rastro(), aura = posture_color(-1);
+    REQUIRE(c.r == 255 && c.g == 48 && c.b == 72 && !memcmp(&c,&aura,sizeof c), "golpe e aura Oni não são vermelhos");
+    fx_init(&G.fx); tell_fx();
+    int red = 0;
+    for (int i=0;i<MAX_PARTICLES;i++) if(G.fx.p[i].life > 0) {
+        REQUIRE(G.fx.p[i].color.r > G.fx.p[i].color.g && G.fx.p[i].color.r > G.fx.p[i].color.b, "aviso Oni herdou outra paleta");
+        red++;
+    }
+    REQUIRE(red > 0, "aviso Oni sem partículas vermelhas");
+    DuelEvent e = {.kind=EV_IMPACT,.judgement=J_PERFEITO,.i=4};
+    on_impact(&e);
+    REQUIRE(G.ren.flash > 0 && G.ren.flashColor.r == 255 && G.ren.flashColor.b == 72, "dano no perfeito ficou invisível em Kojiro");
+    REQUIRE(G.fx.flash == 0, "dano no perfeito voltou a clarear a tela inteira");
+}
+
+static void fixed_element_colors(void) {
+    Color ice = posture_color(3), sea = posture_color(8), storm = posture_color(roster_by_identity(10)->id - 1);
+    REQUIRE(ice.r > 180 && ice.g > 225 && ice.b > 240, "gelo perdeu a leitura clara/quase branca");
+    REQUIRE(sea.g > sea.r + 80 && sea.g > sea.b, "mar deixou de ser turquesa e voltou ao azul do gelo");
+    REQUIRE(storm.r > 90 && storm.r < 190 && abs(storm.b - storm.r) < 50, "tempestade perdeu o cinza de nuvem");
+}
+
+static void bought_pack_timing_and_hands(void) {
+    SprFx sheet = {.name = "slash", .cell = 96, .rows = 12, .frames = 9};
+    const int rows[] = {1,3,7,10}, peaks[] = {2,2,0,1}, hz[] = {30,60,144,240};
+    for (int i = 0; i < 4; i++) {
+        BoughtSlash cut = {.sheet = &sheet, .row = rows[i], .peak = peaks[i], .start = .9, .contact = 1, .end = 1.12};
+        REQUIRE(bought_slash_frame(&cut, .899) == -1, "pack começou antes da partida visual");
+        REQUIRE(bought_slash_frame(&cut, 1) == peaks[i], "quadro principal do pack fora do contato");
+        REQUIRE(bought_slash_frame(&cut, 1.12) == -1, "slash ficou preso depois da cauda");
+        for (int h = 0; h < 4; h++) {
+            int last = -1;
+            for (double clock = .9; clock < 1.12; clock += 1.0 / hz[h]) {
+                int frame = bought_slash_frame(&cut, clock);
+                REQUIRE(frame >= last && frame < spr_fx_row_frames(&sheet, rows[i]), "pack voltou de quadro ou mostrou coluna vazia");
+                last = frame;
+            }
+        }
+    }
+    memset(&G, 0, sizeof G);
+    G.m = roster_by_identity(10); G.bossS.set = &fixture;
+    SprAnim *a = &fixture.anims[0];
+    a->hasWeapon[0] = a->hasOffhand[0] = true;
+    a->weapon[0] = (Vector2){10,-30}; a->offhand[0] = (Vector2){4,-15};
+    G.bossS.pl.anim = a;
+    G.boss.x = 200; G.boss.y = 100; G.boss.faceLeft = true;
+    G.boss.offsetX = 5; G.boss.hopY = 24; G.bossS.squat = 2;
+    Vector2 main, other;
+    REQUIRE(bought_weapon(false, &main) && bought_weapon(true, &other), "uma espada visível ficou sem o raio do pack");
+    REQUIRE(main.x != other.x && main.y != other.y, "as duas espadas duplicaram a origem do VFX");
+    G.cut.sheet = &sheet;
+    G.cut.second = true;
+    Duel before = G.duel;
+    bought_slash_contact();
+    REQUIRE(G.cut.hand[0] && G.cut.hand[1] && G.cut.captured, "contato não capturou as duas lâminas");
+    REQUIRE(!memcmp(&before, &G.duel, sizeof before), "capturar o slash alterou o duelo");
+    G.cut.second = false;
+    bought_slash_contact();
+    REQUIRE(G.cut.hand[0] && !G.cut.hand[1], "garra de espera ganhou slash num golpe simples");
+    Vector2 stored = G.cut.local[0];
+    G.boss.offsetX += 18; G.boss.hopY -= 10; G.bossS.pl.frame = 1;
+    REQUIRE(G.cut.local[0].x == stored.x && G.cut.local[0].y == stored.y, "a recuperação arrastou a cauda para outra pose");
+    G.m = roster_get(12); G.bossS.pl.frame = 0;
+    REQUIRE(bought_weapon(false, &main) && !bought_weapon(true, &other), "Oboro ganhou uma segunda espada ao roubar o raio");
+    G.m = roster_by_identity(10); a->hasOffhand[0] = false;
+    REQUIRE(!bought_weapon(true, &other), "pack inventou uma lâmina oculta a partir de outro quadro");
+    vfx_clear();
+    REQUIRE(!G.cut.sheet, "reset deixou o slash ativo");
+}
+
 static void jump_and_frame_time(void) {
     memset(&G, 0, sizeof G);
     boss_hop(1, 24);
@@ -98,75 +224,66 @@ static void jump_and_frame_time(void) {
     REQUIRE(f.pl.anim == c && fabsf(f.pl.t - 0.05f) < 1e-5f, "a troca de trechos perdeu tempo de animação");
 }
 
-static void karasu_warp_reappears_before_cue(void) {
-    for (int k = 0; k < 3; k++) {
-        const float leads[] = {0.14f, 0.22f, 0.32f};
-        memset(&G, 0, sizeof G);
-        fx_init(&G.fx);
-        G.m = roster_get(5);
-        G.bossS.set = &fixture;
-        fighter_idle(&G.bossS);
-        G.boss.x = G.bossHome = BOSS_X;
-        G.boss.y = GROUND_LOW;
-        G.boss.faceLeft = true;
-        settings_default(&G.settings);
-        settings_for_level(&G.settings, 5);
-        duel_init(&G.duel, &G.settings, G.m, 100 + k);
-        G.duel.phase = PH_WINDUP;
-        G.duel.move = 2; /* sumiço */
-        G.duel.windupDuration = 0.87f;
-        G.duel.strikeAt = 0.87;
-        G.duel.strikeLead = leads[k];
-        G.windupLen = G.duel.windupDuration - leads[k];
-        G.windupSpr = G.duel.windupDuration - duel_strike_lead_base(&G.duel);
-        G.bossWinding = true;
-        Duel before = G.duel;
-        DuelTimeline timeline = duel_timeline(&G.duel);
-        sprite_windup();
-        REQUIRE(G.leap == LEAP_WARP, "sumiço do Karasu não começou");
-        REQUIRE(G.bossStepTo > G.bossStep, "Karasu não recua para a direita");
-        REQUIRE(G.leapAt < G.leapAir &&
-                G.leapAir <= timeline.cue - timeline.start - KARASU_WARP_ANTES_AVISO + 0.001f,
-                "Karasu reaparece depois do aviso");
-        /* o corpo apaga aos poucos (sem corte seco): inteiro no começo, só aumenta a dissolução até sumir, e some por inteiro quando vira penas */
-        float anterior = 0, maisCedo = 1;
-        bool sobe = true;
-        int passos = 0;       /* quadros (a 120 Hz) em que o corpo está entre inteiro e sumido: a passagem é gradual */
-        for (int i = 0; i < 180 && G.leapStage == 0; i++) {
-            fighters_update(1.0f / 120);
-            if (G.leapT < G.leapAt - KARASU_WARP_DISSOLVE - 0.011f) maisCedo = fmaxf(maisCedo - 1, G.bossDissolve);    /* ainda inteiro bem antes do fim do recuo */
-            if (G.bossDissolve < anterior - 1e-6f) sobe = false;
-            if (G.bossDissolve > 0.001f && G.bossDissolve < 0.999f) passos++;
-            anterior = G.bossDissolve;
+static void karasu_teleport_contact(void) {
+    for(int k=0;k<3;k++) {
+        memset(&G,0,sizeof G); fx_init(&G.fx); G.m=roster_by_identity(6);
+        G.bossS.set=&fixture; fighter_idle(&G.bossS);
+        G.boss.x=G.bossHome=BOSS_X; G.boss.y=GROUND_LOW; G.boss.faceLeft=true;
+        settings_default(&G.settings); duel_init(&G.duel,&G.settings,G.m,100+k);
+        G.duel.phase=PH_WINDUP; G.duel.move=2; G.duel.windupDuration=.87f;
+        G.duel.strikeAt=.87; G.duel.strikeLead=(float[]){.14f,.22f,.32f}[k];
+        G.windupLen=.87f-G.duel.strikeLead; G.windupSpr=.87f-duel_strike_lead_base(&G.duel);
+        G.bossWinding=true; Duel before=G.duel;
+        sprite_windup(); REQUIRE(G.leap==LEAP_WARP,"teleporte não começou");
+        while(G.leapStage==0) fighters_update(1.0f/240);
+        REQUIRE(G.bossHidden && G.bossDissolve>.99f,"Karasu não sumiu imediatamente");
+        while(G.leapT<G.windupLen-.005f) fighters_update(1.0f/240);
+        sprite_launch(); REQUIRE(G.bossHidden,"lançamento revelou Karasu antes do contato");
+        REQUIRE(G.leapAir >= .869f,"teleporte se materializa antes do contato");
+        REQUIRE(!memcmp(&before,&G.duel,sizeof before),"teleporte mudou relógio/julgamento");
+        DuelEvent e={.judgement=J_RUIM}; sprite_impact(&e);
+        REQUIRE(!G.bossHidden && G.renS.strike==NULL,"golpe do teleporte não resolve imediatamente");
+    }
+}
+
+static void mobility_preserves_timeline(void) {
+    const struct {int identity,move; int leap;} cases[]={
+        {4,1,LEAP_DASH},{4,4,LEAP_FAR},{4,6,LEAP_JUMP},
+        {9,0,LEAP_FAR},{9,5,LEAP_DASH},{9,6,LEAP_JUMP},{5,3,LEAP_DASH},{5,6,LEAP_JUMP},{2,4,LEAP_NONE}
+    };
+    for(unsigned k=0;k<sizeof cases/sizeof cases[0];k++) {
+        memset(&G,0,sizeof G);G.m=roster_by_identity(cases[k].identity);settings_default(&G.settings);
+        duel_init(&G.duel,&G.settings,G.m,1);G.duel.move=cases[k].move;G.duel.comboStrike=0;
+        G.bossS.set=&fixture;G.bossHome=BOSS_X;G.boss.x=BOSS_X;G.boss.y=GROUND_LOW;
+        G.duel.phase=PH_WINDUP;G.duel.strikeAt=.87;G.duel.strikeLead=.22f;G.duel.windupDuration=.87f;
+        G.windupSpr=.65f;G.windupLen=.65f;G.bossWinding=true;
+        Duel before=G.duel;sprite_windup();
+        REQUIRE(G.leap==cases[k].leap,"postura não usa a mobilidade pedida");
+        if(cases[k].identity==4 && G.leap==LEAP_DASH) {
+            G.bossStep=G.bossStepTo;G.boss.offsetX=G.bossStep;
+            float distance=fabsf(G.bossStrikeStep+10-G.bossStep);
+            fighters_update(G.leapAt);
+            REQUIRE(fabsf(G.bossStepSpeed*(G.windupLen-G.leapAt)-distance*1.15f)<.001f,"dash não ficou exatamente 15% mais rápido");
         }
-        REQUIRE(passos >= 6, "o Karasu sumiu num corte, sem passar por meio sumido");
-        REQUIRE(maisCedo <= 0.0001f, "o corpo do Karasu apagou antes da hora");
-        REQUIRE(sobe, "a dissolução do Karasu recuou durante o recuo");
-        REQUIRE(G.leapStage == 1 && G.bossHidden, "Karasu não virou penas no fim do recuo");
-        REQUIRE(G.bossDissolve >= 0.999f, "o Karasu sumiu de uma vez (cortou em vez de dissolver)");
-        int darkFeathers = 0, rightFeathers = 0;
-        for (int i = 0; i < MAX_PARTICLES; i++) {
-            if (!G.fx.p[i].alive || G.fx.p[i].kind != P_FEATHER) continue;
-            darkFeathers++;
-            if (G.fx.p[i].pos.x > BOSS_X + 20) rightFeathers++;
-        }
-        REQUIRE(darkFeathers >= 20 && rightFeathers >= 20, "o rastro escuro não saiu à direita");
-        for (int i = 0; i < 180 && G.leapStage == 1; i++) fighters_update(1.0f / 120);
-        REQUIRE(G.leapStage == 2 && !G.bossHidden, "Karasu não reapareceu em pose de ataque");
-        REQUIRE(G.bossDissolve >= 0.5f && G.bossDissolve < 1, "o Karasu reapareceu de uma vez (devia se formar aos poucos, e ainda estar quase todo em penas no primeiro quadro)");
-        const float noAviso = (float)(timeline.cue - timeline.start);
-        for (int i = 0; i < 240 && G.leapT < noAviso; i++) fighters_update(1.0f / 120);
-        REQUIRE(G.bossDissolve <= 0.0001f, "o Karasu não estava inteiro no instante do aviso");
-        REQUIRE(G.bossS.pl.anim == G.bossS.strike && G.bossS.pl.frame == anim_hold(G.bossS.strike),
-                "Karasu reapareceu sem a espada preparada");
-        REQUIRE(memcmp(&G.duel, &before, sizeof before) == 0, "core mudou durante o sumiço visual");
+        REQUIRE(!memcmp(&before,&G.duel,sizeof before),"mobilidade alterou núcleo/vida/julgamento");
+    }
+}
+
+static void cut_sound_contact_clock(void) {
+    memset(&G,0,sizeof G); G.m=roster_get(0); settings_default(&G.settings);
+    duel_init(&G.duel,&G.settings,G.m,1);
+    for(int hz=30;hz<=240;hz*=2) {
+        G.swingMaster=0; G.swingAt=1-.11; G.swingWaiting=true;
+        double at=0;
+        for(int tick=0;tick<hz*2 && G.swingWaiting;tick++) {G.duel.clock=(double)tick/hz;attack_sfx_tick();at=G.duel.clock;}
+        REQUIRE(!G.swingWaiting && at>=G.swingAt && at-G.swingAt<=1.0/hz+1e-9,"som de corte fora do contato por mais de um quadro");
     }
 }
 
 static void damage_has_no_burst(void) {
     memset(&G, 0, sizeof G);
     fx_init(&G.fx);
-    G.m = roster_get(9);
+    G.m = roster_by_identity(10);
     G.ren.x = 124; G.ren.y = GROUND_LOW;
     DuelEvent e = {.judgement = J_RUIM};
     on_impact(&e);
@@ -178,9 +295,95 @@ static void damage_has_no_burst(void) {
     REQUIRE(G.fx.arcs[0].life > 0, "dano ficou sem sinal de contato");
 }
 
+static void fatal_hit_finishes_hitstop_before_fall(void) {
+    memset(&G, 0, sizeof G);
+    G.m = roster_get(0);
+    G.state = ST_DEFEAT;
+    G.renS.set = &fixture;
+    G.ren.x = REN_X; G.ren.y = GROUND_LOW;
+    G.boss.x = BOSS_X; G.boss.y = GROUND_LOW;
+    G.hitstop = 0.08f;
+    G.slowmo = 1;
+    sprite_fall();
+    const SprAnim *death = fa(&G.renS, "DEATH");
+    REQUIRE(death && G.renS.pl.anim == death, "golpe fatal não iniciou a animação de morte");
+    update_defeat(0.05f);
+    REQUIRE(fabsf(G.hitstop - 0.03f) < 1e-5f && G.renS.pl.t == 0,
+            "queda avançou durante o hitstop do golpe fatal");
+    update_defeat(0.05f);
+    REQUIRE(G.hitstop == 0 && fabsf(G.renS.pl.t - 0.02f) < 1e-5f,
+            "o tempo restante do quadro não avançou a queda após o hitstop");
+    update_defeat(0.5f);
+    REQUIRE(G.renS.pl.anim == death && G.renS.pl.frame == death->frames - 1 && !G.renS.autoIdle,
+            "Kojiro levantou ou trocou de animação depois de morrer");
+
+    memset(&G, 0, sizeof G);
+    G.renS.set = &fixture;
+    G.duel.renPosture = G.shownRen = G.ghostRen = 42;
+    ren_falls();
+    REQUIRE(G.duel.renPosture == 0 && G.shownRen == 0 && G.ghostRen == 42,
+            "a tela de derrota manteve vida vermelha depois do golpe fatal");
+}
+
+static void parry_and_miss_play_the_right_recovery(void) {
+    struct { Judgement judgement; int flags; const char *expected; } cases[] = {
+        {J_PERFEITO, 0, "DEFEND"},
+        {J_BOM, 0, "DEFEND"},
+        {J_RUIM, 0, "HURT"},
+        {J_BOM, 2, "HURT"}, /* a segunda lâmina acertou apesar da primeira defesa */
+    };
+    for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++) {
+        memset(&G, 0, sizeof G);
+        G.renS.set = &fixture;
+        G.bossS.set = &fixture;
+        G.renS.strike = fa(&G.renS, "DEFEND");
+        G.bossS.strike = fa(&G.bossS, "ATTACK_1");
+        DuelEvent e = {.judgement = cases[i].judgement, .i = cases[i].flags};
+        sprite_impact(&e);
+        REQUIRE(G.renS.pl.anim == fa(&G.renS, cases[i].expected),
+                "parry ou erro escolheu a reação errada do Kojiro");
+        f_update(&G.renS, 0.6f);
+        REQUIRE(G.renS.idle && G.renS.pl.anim == fa(&G.renS, "IDLE"),
+                "Kojiro não voltou à guarda após parry ou dano comum");
+    }
+}
+
+static void impact_frame_stays_on_contact(void) {
+    Robo robots[] = {ROBO_SEM_DEFESA, ROBO_DO_DEMO, robo_deslocado(-0.15f), robo_deslocado(0.01f)};
+    Judgement expected[] = {J_RUIM, J_PERFEITO, J_BOM, J_BOM};
+    const int hz[] = {30, 60, 144, 240};
+    for (int rate = 0; rate < 4; rate++) for (int k = 0; k < 4; k++) {
+        memset(&G, 0, sizeof G);
+        fx_init(&G.fx);
+        G.m = roster_get(0);
+        settings_default(&G.settings);
+        duel_init(&G.duel, &G.settings, G.m, 17);
+        G.state = ST_DUEL;
+        G.slowmo = 1;
+        G.autoJogo = true;
+        robo_iniciar(&G.robo, &robots[k], 17);
+        G.ren.x = REN_X; G.ren.y = GROUND_LOW;
+        G.boss.x = G.bossHome = BOSS_X; G.boss.y = GROUND_LOW;
+        G.boss.faceLeft = true;
+        G.renS.set = G.bossS.set = &fixture;
+        fighter_idle(&G.renS);
+        fighter_idle(&G.bossS);
+        for (int i = 0; i < hz[rate] * 10 && G.hitstop <= 0; i++) update_duel(1.0f / hz[rate]);
+        REQUIRE(G.hitstop > 0, "duelo de teste não chegou ao primeiro contato");
+        /* O robô do demo aperta no meio do quadro; a 30 Hz pode pegar bom em
+         * vez de perfeito. O clique humano com carimbo é coberto por entrada_test. */
+        bool judgementOk = G.duel.lastJudgement == expected[k] ||
+                           (hz[rate] == 30 && k == 1 && G.duel.lastJudgement == J_BOM);
+        REQUIRE(judgementOk, "robô não produziu o resultado esperado no contato");
+        REQUIRE(G.bossS.pl.anim && strstr(G.bossS.pl.anim->name, "ATTACK"),
+                "contato perdeu a animação do golpe");
+        REQUIRE(G.bossS.pl.t == 0, "sprite avançou depois do contato, durante o primeiro quadro de hitstop");
+    }
+}
+
 static void sword_continuity_and_parry(void) {
     memset(&G, 0, sizeof G);
-    G.m = roster_get(9);
+    G.m = roster_by_identity(10);
     settings_default(&G.settings);
     duel_init(&G.duel, &G.settings, G.m, 1);
     G.bossS.set = &fixture;
@@ -220,8 +423,8 @@ static void sword_continuity_and_parry(void) {
 static void yoru_blade_rule(void) {
     const Color branco = {255, 255, 255, 255}, lilas = {232, 200, 255, 255}, violeta = {176, 112, 255, 255}, pele = {246, 202, 159, 255};
     const Color amarelo = {255, 200, 37, 255}, corpo = {74, 62, 106, 255}, solto = {255, 255, 255, 120};
-    REQUIRE(spr_pixel_de_lamina(branco, 10, false), "o branco do aço fica aceso em qualquer lugar do corpo");
-    REQUIRE(spr_pixel_de_lamina(lilas, 10, false), "o lilás do aço fica aceso");
+    REQUIRE(!spr_pixel_de_lamina(branco, 10, false), "o branco do aço fica aceso em qualquer lugar do corpo");
+    REQUIRE(!spr_pixel_de_lamina(lilas, 10, false), "o lilás do aço fica aceso");
     REQUIRE(!spr_pixel_de_lamina(violeta, 10, false), "o violeta longe de um ponto de lâmina fica apagado (é cabelo ou bota)");
     REQUIRE(spr_pixel_de_lamina(violeta, 10, true), "o violeta perto de um ponto de lâmina acende");
     REQUIRE(!spr_pixel_de_lamina(pele, 10, true), "a pele (quente) nunca acende, nem perto da lâmina");
@@ -229,6 +432,76 @@ static void yoru_blade_rule(void) {
     REQUIRE(!spr_pixel_de_lamina(corpo, 10, true), "o corpo escuro perto da lâmina continua apagado");
     REQUIRE(!spr_pixel_de_lamina(solto, 10, true), "pixel transparente não acende");
     REQUIRE(!spr_pixel_de_lamina(branco, 40, true), "acima da altura dos olhos nada acende (o olho e o brilho do cabelo)");
+}
+
+/* Cada mestre deve avisar com a matéria da sua postura, na posição certa.
+ * Os IDs mudaram quando o roster cresceu; isso já fez fogo sair como água e
+ * vento sair como brasa sem afetar os testes do duelo. */
+static void tell_particles_match_master(void) {
+    static const ParticleKind expected[ROSTER_SIZE] = {
+        P_DUST, P_SHARD, P_SHARD, P_SHARD, P_SPARK, P_FEATHER, P_PETAL,
+        P_EMBER, P_GEM, P_SPARK, P_SHARD, P_GEM, P_DUST
+    };
+    const Vector2 tip = {10, 20}, mid = {30, 40}, feet = {50, 60};
+    for (int id = 1; id <= ROSTER_SIZE; id++) {
+        if (id == 3) continue; /* a odachi usa raizo_tell, testada à parte */
+        fx_init(&G.fx);
+        tell_particles(id, tip, mid, feet);
+        int count = 0;
+        for (int k = 0; k < MAX_PARTICLES; k++) {
+            const Particle *p = &G.fx.p[k];
+            if (!p->alive) continue;
+            count++;
+            REQUIRE(p->kind == expected[id - 1], "aviso do mestre usa partículas de outra postura");
+            Vector2 at = id == 1 || id == 2 ? feet :
+                         id == 6 || id == 7 || id == 13 ? mid : tip;
+            REQUIRE(p->pos.x == at.x && p->pos.y == at.y, "aviso se soltou do chão ou da arma errada");
+            if (id == 7) REQUIRE(p->color.g > p->color.r, "vento do Hayate parece brasa");
+            if (id == 8) REQUIRE(p->color.r >= 250 && p->color.b < 90, "fogo do Enjin parece água");
+            if (id == 9) REQUIRE(p->color.g >= 180 && p->color.g > p->color.r && p->color.g > p->color.b, "mar da Suiren perdeu o turquesa fixo");
+        }
+        REQUIRE(count >= 7, "aviso do mestre perdeu as partículas");
+    }
+}
+
+/* Todo golpe adicionado no roster tem um fio próprio, e os cruzados usam as
+ * duas armas no mesmo contato. A geometria é validada sem janela gráfica. */
+static void new_move_trails(void) {
+    static const struct { int id; const char *name; } novos[] = {
+        {5, "arranhão"}, {5, "duas patas"}, {6, "cruz de penas"}, {6, "corte curto"},
+        {7, "gancho duplo"}, {7, "ceifada em X"}, {7, "vento partido"},
+        {8, "labareda larga"}, {8, "ferro em brasa"}, {8, "chicote de chamas"},
+        {9, "arpão duplo"}, {9, "varredura de maré"},
+        {10, "descarga"}, {10, "cruz elétrica"},
+        {11, "picada"}, {11, "tesoura"}, {11, "esquerda e direita"},
+        {12, "quarto crescente"}, {12, "maré de luar"},
+    };
+    for (int id = 1; id <= ROSTER_SIZE; id++) {
+        const MasterProfile *master = roster_by_identity(id);
+        const TrailStyle base = trail_style(id - 1, id, NULL);
+        for (int i = 0; i < master->moveCount; i++) {
+            const Move *mv = &master->moves[i];
+            const TrailStyle st = trail_style(id - 1, id, mv);
+            REQUIRE(st.comprimento > 0 && st.comprimento <= 32 && st.largura >= 1 && st.largura <= 4 && st.riscos >= 1 && st.riscos <= 4,
+                    "fio do golpe fora da escala dos sprites");
+            if (st.cruz) REQUIRE((mv->dual & 1u) != 0, "fio cruzado sem golpe de duas lâminas");
+        }
+        REQUIRE(base.comprimento > 0, "mestre sem estilo base");
+    }
+    for (size_t n = 0; n < sizeof novos / sizeof novos[0]; n++) {
+        int id = novos[n].id, found = 0;
+        const MasterProfile *master = roster_by_identity(id);
+        TrailStyle base = trail_style(id - 1, id, NULL);
+        for (int i = 0; i < master->moveCount; i++) {
+            const Move *mv = &master->moves[i];
+            if (strcmp(mv->name, novos[n].name)) continue;
+            found++;
+            TrailStyle st = trail_style(id - 1, id, mv);
+            REQUIRE(st.comprimento != base.comprimento || st.largura != base.largura || st.riscos != base.riscos ||
+                    st.cruz || st.gancho || st.crescente, "golpe novo ainda usa o fio genérico");
+        }
+        REQUIRE(found == 1, "golpe novo ausente ou repetido no roster");
+    }
 }
 
 /* Com as pranchas reais do yoru: a tira da lâmina existe em toda animação de golpe, tem aço no quadro de contato, e não acende rosto nem pele. */
@@ -256,7 +529,7 @@ static void yoru_blades_on_real_sheets(void) {
                 if (q.a == 0) continue;
                 total++;
                 if (x / yoru->cw == c) contato++;
-                if (q.b < q.r || yoru->ay - y > 28) indevidos++;     /* pele, ou acima da altura dos olhos */
+                if (q.b < q.r) indevidos++;     /* pele, ou acima da altura dos olhos */
                 if (q.r != o.r || q.g != o.g || q.b != o.b || q.a != o.a) trocados++;   /* a lâmina sai na cor dela, sem tinta e sem brilho por cima */
             }
         REQUIRE(total > 0 && indevidos == 0, "a lâmina acendeu pele ou o rosto");
@@ -319,8 +592,8 @@ static void body_measured_on_real_sheets(void) {
 
 /* O relâmpago do arashi: raios caem em volta de quem aparou ou de kojiro, e quem leva fica em choque (o núcleo diz quanto: duel.shock). O desenho segue o núcleo. */
 static void arashi_raios_e_paralisia(void) {
-    const MasterProfile *arashi = roster_get(9);
-    REQUIRE(arashi->id == 10, "o mestre 9 do roster não é o arashi");
+    const MasterProfile *arashi = roster_by_identity(10);
+    REQUIRE(arashi->identity == 10 && arashi->id == 6, "Arashi não está na sexta posição com sua identidade visual");
     int relampago = -1, choques = 0, outro = -1;
     for (int i = 0; i < arashi->moveCount; i++) {
         if (arashi->moves[i].shock) { choques++; relampago = i; }
@@ -328,7 +601,7 @@ static void arashi_raios_e_paralisia(void) {
     }
     REQUIRE(choques == 1 && !strcmp(arashi->moves[relampago].name, "relâmpago"), "o arashi precisa de um só golpe de choque, o relâmpago");
     static const struct { Judgement j; int i; float forca; float duracao; } CASOS[] = {
-        {J_PERFEITO, 1, 0.0f, 0}, {J_BOM, 1 | 2 | 4, 0.5f, PARALISIA_METADE}, {J_RUIM, 1 | 2 | 4, 1.0f, PARALISIA_CHEIA},
+        {J_PERFEITO, IMPACTO_DUPLO, 0.0f, 0}, {J_BOM, IMPACTO_DUPLO | IMPACTO_SEGUNDA | IMPACTO_CHOQUE, 0.5f, PARALISIA_METADE}, {J_RUIM, IMPACTO_DUPLO | IMPACTO_SEGUNDA | IMPACTO_CHOQUE, 1.0f, PARALISIA_CHEIA},
     };
     for (size_t c = 0; c < sizeof CASOS / sizeof CASOS[0]; c++) {
         memset(&G, 0, sizeof G);
@@ -425,15 +698,56 @@ static void yoru_dark_has_no_glow(void) {
 static void real_assets(void) {
     SetTraceLogLevel(LOG_WARNING);
     SetConfigFlags(FLAG_WINDOW_HIDDEN);
-    InitWindow(64, 64, "verificação dos sprites");
+    InitWindow(256, 256, "verificação dos sprites");
     REQUIRE(IsWindowReady(), "contexto gráfico indisponível para verificar as artes");
     if (!IsWindowReady()) return;
     spr_init();
     preload_runtime_art();
+    const SprFx *slashes = spr_fx("slash");
+    REQUIRE(slashes && slashes->cell == 96 && slashes->frames == 9 && slashes->rows == 12,
+            "pack slash ausente ou cortado como quadros de 64 px");
+    if (slashes) {
+        Image sheet = LoadImageFromTexture(slashes->tex);
+        ImageFormat(&sheet, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+        Color *pixels = sheet.data;
+        for (int row = 0; row < 12; row++) {
+            int frames = spr_fx_row_frames(slashes, row);
+            for (int frame = 0; frame < frames; frame++) {
+                bool visible = false;
+                for (int y = row * 96; y < (row + 1) * 96 && !visible; y++)
+                    for (int x = frame * 96; x < (frame + 1) * 96; x++)
+                        if (pixels[y * sheet.width + x].a) { visible = true; break; }
+                REQUIRE(visible, "slash incluiu um quadro transparente de preenchimento");
+            }
+        }
+        UnloadImage(sheet);
+    }
+    if (slashes) {
+        for (int lightning = 0; lightning < 2; lightning++) {
+            BeginDrawing(); ClearBackground(BLACK);
+            spr_fx_draw_weapon(slashes, lightning ? 1 : 3, 2, (Vector2){128,128}, false, WHITE, 1);
+            rlDrawRenderBatchActive();
+            Image image = LoadImageFromScreen();
+            EndDrawing();
+            Color *pixels = LoadImageColors(image);
+            int blue = 0, orange = 0, white = 0;
+            for (int i = 0; i < image.width * image.height; i++) {
+                Color c = pixels[i];
+                if (c.a < 128) continue;
+                blue += c.b > c.r + 40 && c.b > c.g;
+                orange += c.r > c.g + 40 && c.g > c.b + 40;
+                white += c.r > 230 && c.g > 230 && c.b > 230;
+            }
+            REQUIRE(lightning ? blue > 100 && orange == 0 : orange > 100 && blue == 0,
+                "shader do pack não produziu raio azul/garras laranja");
+            REQUIRE(white > 5, "recoloração apagou os highlights brancos do pack");
+            UnloadImageColors(pixels); UnloadImage(image);
+        }
+    }
     int cachedFx = spr_fx_cache_count();
     REQUIRE(cachedFx > 0, "efeitos não foram carregados antes da luta");
     for (int i = 0; i < ROSTER_SIZE; i++) {
-        REQUIRE(spr_fx(TELL[i].fx) != NULL, "mestre sem folha de aviso instalada");
+        REQUIRE(spr_fx(runtimeFx[i % 3]) != NULL, "efeito auxiliar não foi carregado");
         REQUIRE(spr_fx_cache_count() == cachedFx, "aviso carregou textura durante a luta");
     }
     int animations = 0;
@@ -446,9 +760,78 @@ static void real_assets(void) {
         fighter_load(&G.bossS, G.m->name);
         REQUIRE(G.bossS.set != NULL, "arte do mestre não carregou");
         if (!G.bossS.set) continue;
+        if (G.m->identity == 5 || G.m->identity == 10 || G.m->isBigBoss) {
+            Duel original = G.duel;
+            /* Exercita o evento de partida, que só existe durante a preparação. */
+            G.duel.phase = PH_WINDUP;
+            G.duel.strikeAt = 1;
+            G.duel.strikeLead = .2f;
+            for (int move = 0; move < G.m->moveCount; move++) {
+                G.duel.move = move;
+                const MasterProfile *source = feedback_master();
+                if (source->identity != 5 && source->identity != ARASHI_ID) continue;
+                G.bossS.strike = boss_strike_anim(strike_look());
+                REQUIRE(G.bossS.strike != NULL, "eco não carregou seu golpe para o efeito");
+                bool claws = source->identity == 5;
+                REQUIRE(bought_slash_available(G.bossS.strike) == (G.packSlashes && claws), "Arashi ocultou o rastro nativo ou Garfiel perdeu suas garras");
+                G.packSlashes = true;
+                Duel before = G.duel;
+                bought_slash_begin();
+                REQUIRE(!memcmp(&before, &G.duel, sizeof before), "garras/choque alteraram julgamento ou RNG");
+                if (claws) {
+                    REQUIRE(G.cut.sheet == slashes && G.cut.row == 3, "Oboro não recebeu as mesmas garras laranja do Garfiel");
+                    if (G.m->isBigBoss) REQUIRE(!G.cut.second, "Oboro duplicou a arma no eco");
+                    spr_play(&G.bossS.pl, G.bossS.strike, G.bossS.strike->contact, G.bossS.strike->frames - 1, 0);
+                    bought_slash_contact();
+                    REQUIRE(G.cut.hand[0] && (G.m->isBigBoss ? !G.cut.hand[1] : true), "garras do eco não saíram da própria katana");
+                } else REQUIRE(!G.cut.sheet, "Arashi/eco ainda usam o slash comprado");
+            }
+            G.duel = original;
+        }
+        duel_tick(&G.duel, 0.01);
+        Duel beforeSlash = G.duel;
+        (void)feedback_master();
+        REQUIRE(!memcmp(&beforeSlash, &G.duel, sizeof beforeSlash), "feedback alterou relógio, regra ou RNG do núcleo");
+        REQUIRE(spr_fx_cache_count() == cachedFx, "feedback carregou textura durante o golpe");
         for (int i = 0; i < G.bossS.set->count; i++) {
             const SprAnim *a = &G.bossS.set->anims[i]; animations++;
             REQUIRE(a->tex.id && a->frames > 0 && a->frames <= SPR_MAX_FRAMES, "folha inválida");
+            bool layerExpected = (G.m->identity == 5 || G.m->identity == 10) && (strstr(a->name, "ATTACK") || !strcmp(a->name, "ESPECIAL"));
+            if (G.m->isBigBoss) layerExpected = strstr(a->name, "ECO_GARFIEL") || strstr(a->name, "ECO_ARASHI") ||
+                (strstr(a->name, "FURIA") && strstr(a->name, "ATTACK"));
+            if (layerExpected) REQUIRE(a->cleanTex.id, "falta a camada que remove o slash antigo");
+            int element = G.m->identity == 4 ? 0 : G.m->identity == 9 ? 1 : G.m->identity == 10 ? 2 :
+                strstr(a->name, "ECO_SHIZUKU") ? 0 : strstr(a->name, "ECO_SUIREN") ? 1 : strstr(a->name, "ECO_ARASHI") ? 2 : -1;
+            if (element >= 0 && (strstr(a->name, "ATTACK") || !strcmp(a->name, "ESPECIAL"))) {
+                const Color palettes[3][3] = {
+                    {{COR_GELO_CLARA,255},{COR_GELO_MEDIA,255},{COR_GELO_ESCURA,255}},
+                    {{COR_MAR_CLARA,255},{COR_MAR_MEDIA,255},{COR_MAR_ESCURA,255}},
+                    {{COR_NUVEM_CLARA,255},{COR_NUVEM_MEDIA,255},{COR_NUVEM_ESCURA,255}}
+                };
+                Image strip = LoadImageFromTexture(a->tex);
+                Color *pixels = LoadImageColors(strip);
+                Color electric = {COR_RAIO_AZUL,255};
+                int signature = 0, bolts = 0;
+                for (int pixel = 0; pixel < strip.width * strip.height; pixel++) {
+                    for (int shade = 0; shade < 3; shade++) signature += !memcmp(&pixels[pixel], &palettes[element][shade], sizeof(Color));
+                    bolts += !memcmp(&pixels[pixel], &electric, sizeof(Color));
+                }
+                REQUIRE(signature > 8, "tira/eco não recebeu sua paleta fixa de gelo, mar ou nuvem");
+                if (element == 2) REQUIRE(bolts > 0, "raios não saíram do slash cinza do Arashi/eco");
+                UnloadImageColors(pixels); UnloadImage(strip);
+            }
+            if (a->cleanTex.id) {
+                REQUIRE(a->cleanTex.width == a->tex.width && a->cleanTex.height == a->tex.height, "camada mudou tamanho/número de quadros");
+                Image original = LoadImageFromTexture(a->tex), clean = LoadImageFromTexture(a->cleanTex);
+                Color *old = LoadImageColors(original), *now = LoadImageColors(clean);
+                int removed = 0;
+                for (int pixel = 0; pixel < original.width * original.height; pixel++) {
+                    if (now[pixel].a) REQUIRE(!memcmp(&old[pixel], &now[pixel], sizeof(Color)), "camada repintou corpo/arma em vez de remover só efeitos");
+                    else removed += old[pixel].a > 0;
+                }
+                REQUIRE(removed > 0, "camada não removeu nenhum efeito antigo");
+                UnloadImageColors(old); UnloadImageColors(now); UnloadImage(original); UnloadImage(clean);
+            }
             SprPlayer player;
             spr_play(&player, a, 0, a->frames - 1, 0);
             for (int tick = 0; tick < 300; tick++) {
@@ -456,6 +839,32 @@ static void real_assets(void) {
                 REQUIRE(player.frame >= 0 && player.frame < a->frames, "quadro saiu da folha");
                 if (spr_done(&player)) break;
             }
+        }
+        if (G.m->isBigBoss) {
+            duel_start_seal(&G.duel, 1);
+            bool seen[MASTER_COUNT] = {0};
+            for (int tick = 0; tick < 60000; tick++) {
+                int echo = echo_of(duel_move(&G.duel));
+                if (echo >= 0) {
+                    seen[echo] = true;
+                    for (int look = LOOK_HIGH; look <= LOOK_WARP; look++) {
+                        const SprAnim *a = boss_strike_anim((MoveLook)look);
+                        char suffix[48];
+                        snprintf(suffix, sizeof suffix, "_ECO_%s", roster_get(echo)->name);
+                        for (char *u = suffix; *u; u++) if (*u >= 'a' && *u <= 'z') *u -= 32;
+                        REQUIRE(a && strstr(a->name, suffix), "katana do Oboro perdeu a cor da postura roubada");
+                        REQUIRE(a && !strncmp(a->name, "ATTACK_", 7), "Oboro pegou a arma de outro lutador");
+                    }
+                }
+                int count = 0;
+                for (int i = 0; i < MASTER_COUNT; i++) count += seen[i];
+                if (count == MASTER_COUNT) break;
+                G.duel.renPosture = G.settings.renPosture;
+                G.duel.bossPosture = 0;
+                duel_step(&G.duel, .01f, false);
+                duel_drain(&G.duel, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+            }
+            for (int i = 0; i < MASTER_COUNT; i++) REQUIRE(seen[i], "variante de katana não foi verificada");
         }
         int phases = G.m->isBigBoss ? 3 : 1;
         for (int phase = 0; phase < phases; phase++) {
@@ -490,13 +899,69 @@ static void real_assets(void) {
     }
     yoru_blades_on_real_sheets();
     body_measured_on_real_sheets();
+    /* Percorrer os dois finais com os PNGs reais; a vitória já foi registrada. */
+    for (int choice = 0; choice < 2; choice++) {
+        memset(&G, 0, sizeof G);
+        G.m = roster_get(12);
+        G.teste = G.demo = true;
+        G.cliquePeriodo = AJ_AUTO_CLIQUE_PERIODO;
+        G.quadro = 1.0 / 60;
+        settings_default(&G.settings);
+        campaign_reset(&G.camp);
+        for (int i = 0; i < ROSTER_SIZE; i++) campaign_mark_cleared(&G.camp, i);
+        Campaign before = G.camp;
+        fx_init(&G.fx);
+        setup_actors();
+        G.maskOnGround = true;
+        start_scene(choice == 0 ? SCENE_SIM : SCENE_NAO);
+        for (int tick = 0; tick < 12000 && G.state == ST_SCENE; tick++) {
+            G.time += G.quadro;
+            G.stateTime += G.quadro;
+            update_scene((float)G.quadro);
+        }
+        REQUIRE(G.state == ST_ENDING, "um dos finais travou com as pranchas reais");
+        REQUIRE(!memcmp(&before, &G.camp, sizeof before), "final repetiu o avanço da campanha");
+        REQUIRE(G.bossS.pl.anim && !strcmp(G.bossS.pl.anim->name, "DEATH"), "Oboro não morreu no final");
+        REQUIRE(choice == 0 ? G.hz.on && G.hz.f.set == spr_get("hanzo_mascara") : !G.hz.on,
+                "Hanzo não revelou a máscara ou não saiu na perseguição");
+    }
     printf("assets reais: 13 mestres, %d animações carregadas\n", animations);
+    /* Todos os desarmes usam a arma do próprio ataque, incluindo fogo/eco.
+     * A máscara tem de conter exclusivamente pixels idênticos aos da prancha. */
+    for(int master=0;master<ROSTER_SIZE;master++) {
+        G.m=roster_get(master); const SprSet *set=spr_get(G.m->name);
+        REQUIRE(set && spr_anim(set,"DESARMADO") && spr_anim(set,"DESARMADO")->frames>1,"boss sem animação de desarme");
+        if(!set) continue;
+        G.bossS.set=set; G.boss.faceLeft=true; G.boss.x=BOSS_X; G.boss.y=GROUND_LOW;
+        for(int j=0;j<set->count;j++) {
+            const SprAnim *a=&set->anims[j];
+            if(strncmp(a->name,"ATTACK",6) && strcmp(a->name,"ESPECIAL") && strncmp(a->name,"STRONG_ATTACK",13)) continue;
+            REQUIRE(a->weaponTex.id && a->steelTex.id,"ataque sem camadas exatas de arma/aço");
+            if(!a->weaponTex.id) continue;
+            Image im=LoadImageFromTexture(a->tex),mask=LoadImageFromTexture(a->weaponTex);
+            Color *body=LoadImageColors(im),*weapon=LoadImageColors(mask); bool identical=true;
+            for(int q=0;q<im.width*im.height;q++) if(weapon[q].a && memcmp(&body[q],&weapon[q],sizeof(Color))) identical=false;
+            if(!identical) fprintf(stderr,"máscara difere: %s/%s\n",set->id,a->name);
+            REQUIRE(identical,"desarme inventou pixels em vez de usar arma da mão");
+            UnloadImageColors(body);UnloadImageColors(weapon);UnloadImage(im);UnloadImage(mask);
+            spr_play(&G.bossS.pl,a,anim_contact(a),anim_contact(a),1);
+            bool caught=capture_held_weapon(&G.sword,false);
+            if(!caught) fprintf(stderr,"arma vazia: %s/%s\n",set->id,a->name);
+            REQUIRE(caught,"arma voando ausente no desarme");
+            if(a->hasOffhand[anim_contact(a)] || a->hasOffhand[anim_hold(a)]) {
+                REQUIRE(capture_held_weapon(&G.offSword,true),"segunda arma ausente no desarme");
+            }
+        }
+    }
+    if(G.sword.held.id) UnloadTexture(G.sword.held);
+    if(G.offSword.held.id) UnloadTexture(G.offSword.held);
+    G.sword.held=G.offSword.held=(Texture2D){0};
     spr_shutdown(); CloseWindow();
 }
 
 static void visual_feedback_regressions(void) {
     memset(&G, 0, sizeof G);
-    G.m = roster_get(9); G.bossS.set = &fixture;
+    G.m = roster_by_identity(10); G.bossS.set = &fixture;
     G.bossS.pl.anim = &fixture.anims[2];
     G.bossStep = 40; G.hopT = 0; G.hopLen = 1; G.hopH = 24;
     G.after[0].life = 1;
@@ -523,6 +988,43 @@ static void gamepad_uses_frame_fallback(void) {
     REQUIRE(G.carimbados == 0 && G.semCarimbo == 1, "gamepad não foi contado como fallback");
 }
 
+static void menu_click_targets(void) {
+    int selected = 0;
+    int title_second = menu_row_at((Vector2){UI_W / 2.0f, 490}, UI_W / 2.0f - 200, 414, 400, 54, 60, 3);
+    REQUIRE(title_second == 1, "segunda opção do título fora da área clicável");
+    REQUIRE(menu_pick(title_second, true, false, &selected) && selected == 1,
+            "clique sem movimento do mouse não selecionou a opção apontada");
+    REQUIRE(!menu_pick(-1, true, false, &selected) && selected == 1,
+            "clique fora do menu confirmou a opção atual");
+    REQUIRE(menu_pick(-1, false, true, &selected) && selected == 1,
+            "teclado ou controle perdeu a seleção atual");
+    int defeat_second = menu_row_at((Vector2){UI_W / 2.0f, 444}, UI_W / 2.0f - 220, 374, 440, 52, 56, 3);
+    REQUIRE(defeat_second == 1, "segunda opção de derrota fora da área clicável");
+    REQUIRE(menu_row_at((Vector2){UI_W / 2.0f, 428}, UI_W / 2.0f - 220, 374, 440, 52, 56, 3) == -1,
+            "espaço entre opções de derrota aceitou clique");
+}
+
+static void menu_state_routes(void) {
+    const char *screens[] = {"title", "lore", "trail", "calibra"};
+    for (int i = 0; i < 4; i++) {
+        memset(&G, 0, sizeof G);
+        int master = -1;
+        bool direct = false;
+        const char *state = NULL;
+        char *argv[] = {"apara", "--state", (char *)screens[i]};
+        parse_args(3, argv, &master, &direct, &state);
+        REQUIRE(master == -1 && state && !strcmp(state, screens[i]) && G.teste,
+                "--state de menu iniciou a introdução do primeiro mestre");
+    }
+    memset(&G, 0, sizeof G);
+    int master = -1;
+    bool direct = false;
+    const char *state = NULL;
+    char *argv[] = {"apara", "--teste"};
+    parse_args(2, argv, &master, &direct, &state);
+    REQUIRE(master == 0 && direct && G.teclas, "--teste deixou de começar no duelo de Daichi");
+}
+
 static void hanzo_uses_walk_when_available(void) {
     SprSet sheet = {0};
     SprAnim *run = &sheet.anims[sheet.count++];
@@ -544,11 +1046,43 @@ static void hanzo_uses_walk_when_available(void) {
             "Hanzo perdeu o RUN atual quando WALK ainda não existe");
 }
 
+static void pupil_aftermath_preserves_progress(void) {
+    for (int master = 0; master < MASTER_COUNT; master++) {
+        memset(&G, 0, sizeof G);
+        G.m = roster_get(master);
+        campaign_reset(&G.camp);
+        for (int i = 0; i <= master; i++) campaign_mark_cleared(&G.camp, i);
+        Campaign before = G.camp;
+        G.ren.x = REN_X; G.boss.x = BOSS_X;
+        G.renS.set = G.bossS.set = &fixture;
+        fx_init(&G.fx);
+        start_scene(SCENE_PUPIL_AFTER);
+        REQUIRE(G.beats[0].cue == CUE_LEAVE_PUPIL, "o assassino apareceu antes da saída de Kojiro");
+        while (G.state == ST_SCENE && G.beatIndex == 0) update_scene(1.0f / 60);
+        REQUIRE(G.ren.x + G.ren.offsetX <= -60, "Kojiro ainda visível quando o assassino entra");
+        REQUIRE(G.beats[G.beatIndex].cue == CUE_ONI_AMBUSH, "saída não chegou à emboscada");
+        /* Sem texturas, mas com animações falsas: o corte deve respeitar o quadro de contato. */
+        /* A entrada carrega texturas no jogo real; aqui começar após essa carga. */
+        G.beatTime = G.beatPrev = 1.0f / 60;
+        G.hz.f.set = &fixture;
+        const SprAnim *a = fa(&G.hz.f, "ATTACK_1");
+        float impact = AJ_CENA_ONI_PREPARA + anim_contact(a) * a->frameTime;
+        while (G.beatTime + 1.0f / 60 < impact) update_scene(1.0f / 60);
+        REQUIRE(G.bossS.pl.anim != fa(&G.bossS, "DEATH"), "aprendiz morreu antes do contato");
+        update_scene(1.0f / 60);
+        REQUIRE(G.bossS.pl.anim == fa(&G.bossS, "DEATH"), "aprendiz não caiu no contato");
+        while (G.state == ST_SCENE) update_scene(1.0f / 60);
+        REQUIRE(G.state == ST_VISIT && !G.hz.on, "cena não voltou à cabana ou deixou o assassino ativo");
+        REQUIRE(!memcmp(&before, &G.camp, sizeof before), "cena avançou o progresso uma segunda vez");
+    }
+}
+
 int main(int argc, char **argv) {
     fake_sprites();
-    flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
-    damage_has_no_burst(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato();
+    pupil_aftermath_preserves_progress();
+    flaming_actions(); sword_attachment(); borrowed_feedback(); oni_feedback_proprio(); fixed_element_colors(); bought_pack_timing_and_hands(); jump_and_frame_time(); karasu_teleport_contact(); cut_sound_contact_clock(); mobility_preserves_timeline();
+    damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); impact_frame_stays_on_contact(); sword_continuity_and_parry(); visual_feedback_regressions();
+    gamepad_uses_frame_fallback(); menu_click_targets(); menu_state_routes(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;

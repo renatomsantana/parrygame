@@ -102,10 +102,15 @@ static void test_ajuste(void) {
 static void test_roster(const Settings *s) {
     CHECK(roster_size() == 13, "doze aprendizes e oboro");
     CHECK(roster_get(-1) == NULL && roster_get(13) == NULL, "índices fora da trilha");
+    static const char *ORDER[] = {"daichi", "genbu", "hayate", "shizuku", "enjin", "arashi",
+                                 "raizo", "garfiel", "suiren", "karasu", "yoru", "jinshi", "oboro"};
+    CHECK(roster_by_identity(0) == NULL && roster_by_identity(14) == NULL, "identidades fora da trilha");
     float lastPerfect = 1, lastGood = 1;
     for (int i = 0; i < roster_size(); i++) {
         const MasterProfile *m = roster_get(i);
         CHECK(m->id == i + 1, "id em ordem (%s)", m->name);
+        CHECK(!strcmp(m->name, ORDER[i]), "nova ordem: posição %d é %s", i + 1, ORDER[i]);
+        CHECK(roster_by_identity(m->identity) == m, "identidade única e estável (%s)", m->name);
         CHECK(m->name && m->name[0], "nome do mestre %d", i + 1);
         CHECK(m->style && (m->isBigBoss || strncmp(m->style, "postura d", 9) == 0), "cada aprendiz tem uma postura (%s)", m->name);
         CHECK(m->posture > 0, "postura positiva (%s)", m->name);
@@ -128,9 +133,9 @@ static void test_roster(const Settings *s) {
     /* Quantos erros kojiro aguenta é de cada mestre (a curva de dificuldade, conferida
      * pelos robôs em test_curva); arashi bate mais pesado que o próprio erro dele. */
     Duel da;
-    duel_init(&da, s, roster_get(9), 1);
-    CHECK(roster_get(9)->damage > 1 && duel_ren_damage(&da) > s->renPosture / roster_get(9)->hitsToFall, "arashi bate mais pesado");
-    static const int HITS[13] = {8, 8, 7, 7, 6, 7, 6, 6, 6, 10, 5, 5, 5};
+    duel_init(&da, s, roster_by_identity(10), 1);
+    CHECK(roster_by_identity(10)->damage > 1 && duel_ren_damage(&da) > s->renPosture / roster_by_identity(10)->hitsToFall, "arashi bate mais pesado");
+    static const int HITS[13] = {8, 8, 7, 7, 7, 11, 6, 7, 6, 7, 5, 5, 5};
     for (int i = 0; i < roster_size(); i++) {
         CHECK(roster_get(i)->hitsToFall == HITS[i], "Ren aguenta %d erros contra %s", HITS[i], roster_get(i)->name);
         CHECK(roster_get(i)->senseiCount >= 1, "hanzo tem conselho para %s", roster_get(i)->name);
@@ -208,6 +213,10 @@ static void test_story(void) {
     CHECK(scene_has(SCENE_NAO, CUE_HANZO_KILL) && scene_has(SCENE_NAO, CUE_CHASE), "não: hanzo mata e some");
     CHECK(!scene_has(SCENE_NAO, CUE_KILL), "no não, kojiro não mata");
     CHECK(scene_has(SCENE_SIM, CUE_HANZO_MASK) && scene_has(SCENE_NAO, CUE_HANZO_MASK), "nos dois finais, hanzo põe a máscara");
+    CHECK(scene_has(SCENE_PUPIL_AFTER, CUE_LEAVE_PUPIL) && scene_has(SCENE_PUPIL_AFTER, CUE_ONI_AMBUSH),
+          "aprendiz: kojiro sai e o assassino aparece depois");
+    for (int i = 0; i < LORE_PAGES; i++)
+        CHECK(!strstr(lore_page(i), "visto o pai morrer"), "a abertura não inventa lembranças de Kojiro");
     int n;
     story_scene(SCENE_COUNT, &n);
     CHECK(n == 0, "cena fora da lista");
@@ -301,7 +310,7 @@ static void test_bad_recovers_boss(void) {
     Duel d;
     for (int i = 0; i < ROSTER_SIZE; i++) CHECK(roster_get(i)->healsOnHit == (i >= 4), "%s %s postura ao acertar", roster_get(i)->name,
                                                 i >= 4 ? "recupera" : "não recupera");
-    const MasterProfile *tetsu = roster_get(0), *kaelen = roster_get(4);
+    const MasterProfile *tetsu = roster_get(0), *kaelen = roster_by_identity(5);
     float a = posture_after_perfect_then_miss(tetsu, &d);
     CHECK(fabsf(a - (tetsu->posture - s.perfectBossDamage)) < 1e-4, "os quatro primeiros não recuperam postura ao acertar (%.1f)", a);
     CHECK(fabsf(d.renPosture - (s.renPosture - duel_ren_damage(&d))) < 1e-4, "perfeito não passa de 100; o erro tira o dano do mestre");
@@ -371,10 +380,10 @@ static void test_accelerando(void) {
 }
 
 static void test_combos(void) {
-    Tally kira = play(roster_get(9), 21, 0.02, 300);
+    Tally kira = play(roster_by_identity(10), 21, 0.02, 300);
     CHECK(kira.combos > 0, "Kira abre golpes duplos");
     CHECK(kira.victory, "perfeitos vencem a Kira mesmo nos compostos");
-    Tally magna = play(roster_get(7), 21, 0.02, 300); /* enjin */
+    Tally magna = play(roster_by_identity(8), 21, 0.02, 300); /* enjin */
     CHECK(magna.combos > 0, "Magna abre golpes triplos");
 }
 
@@ -997,6 +1006,34 @@ static void test_cura_em_porcentagem(void) {
  * de folga para o sorteio de 300 lutas), chega a uns 55% no jinshi (faixa aprovada de 52 a 58) e a uns 40% no oboro. A ordem
  * exata, com folga de 0,5 ponto, é o make curva-ordem (tests/robos.c --ordem). E apertar sem
  * olhar, em qualquer ritmo de 0,05 a 0,8 s, perde de todos. */
+/* Resistência pedida em 6/out: +20% nos oito primeiros, +30% nos quatro
+ * últimos aprendizes; +40% de Oboro distribuído proporcionalmente pelos selos. */
+static void test_resistencia_bosses(void) {
+    static const float before[MASTER_COUNT] = {300,330,300,380,530,400,460,1350,840,780,970,630};
+    Settings s;
+    settings_default(&s);
+    for (int i = 0; i < MASTER_COUNT; i++) {
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 11);
+        float expected = before[i] * (i < 8 ? 1.20f : 1.30f);
+        CHECK(fabsf(duel_posture_max(&d) - expected) < .001f, "%s: resistência aumentada na faixa certa", d.m->name);
+        d.bossPosture = 1;
+        duel_refill(&d, false, true);
+        CHECK(fabsf(d.bossPosture - expected) < .001f && d.renPosture == 250, "%s: reset usa a nova postura e mantém vida de Kojiro", d.m->name);
+    }
+    static const float beforeSeals[3] = {360,1800,320};
+    Duel d;
+    duel_init(&d, &s, roster_get(12), 11);
+    float total = 0;
+    for (int seal = 0; seal < 3; seal++) {
+        duel_start_seal(&d, seal);
+        float expected = beforeSeals[seal] * 1.40f;
+        CHECK(fabsf(d.bossPosture - expected) < .001f && d.renPosture == 250, "Oboro: selo %d recebe sua parcela dos 40%%", seal + 1);
+        total += d.bossPosture;
+    }
+    CHECK(fabsf(total - 3472) < .001f, "Oboro: soma dos três selos é 3472");
+}
+
 static void test_curva(void) {
     double anterior = 101, vit[ROSTER_SIZE];
     bool crescente = true;
@@ -1009,11 +1046,13 @@ static void test_curva(void) {
     }
     for (int i = 0; i < 4; i++) CHECK(vit[i] >= 95, "o humano casual vence %s em 95%% ou mais (%.0f%%)", roster_get(i)->name, vit[i]);
     CHECK(crescente, "a dificuldade só cresce pela trilha");
-    /* a ordem fina (yoru nunca mais fácil que o arashi, jinshi nunca mais fácil que o yoru) precisa de muitas lutas: make curva-ordem */
-    CHECK(vit[9] <= vit[8] + 4 && vit[10] <= vit[9] + 4 && vit[11] <= vit[9] + 4, "yoru e jinshi não são mais fáceis que o arashi (%.0f, %.0f, %.0f)",
+    /* a ordem fina (yoru nunca mais fácil que o décimo mestre, jinshi nunca mais fácil que o yoru) precisa de muitas lutas: make curva-ordem */
+    CHECK(vit[9] <= vit[8] + 4 && vit[10] <= vit[9] + 4 && vit[11] <= vit[9] + 4, "yoru e jinshi não são mais fáceis que o décimo mestre (%.0f, %.0f, %.0f)",
           vit[9], vit[10], vit[11]);
-    CHECK(vit[11] >= 52 && vit[11] <= 75, "uns 55%% no jinshi, a faixa aprovada é de 52 a 58 e o sorteio de 300 lutas varia 3 pontos (%.0f%%)", vit[11]);
-    CHECK(vit[12] >= 30 && vit[12] <= 55 && vit[12] <= vit[11], "uns 40%% no oboro (%.0f%%)", vit[12]);
+    /* Referência de regressão após o aumento de postura pedido em 6/out,
+     * medida em 10 mil lutas; aqui 300 lutas precisam de margem maior. */
+    CHECK(vit[11] >= 31 && vit[11] <= 43, "Jinshi mais resistente: referência casual 34–40%%, com margem para 300 lutas (%.0f%%)", vit[11]);
+    CHECK(vit[12] >= 19 && vit[12] <= 31 && vit[12] <= vit[11], "Oboro mais resistente: referência casual 22–28%%, com margem para 300 lutas (%.0f%%)", vit[12]);
     static const float PERIODOS[12] = {0.05f, 0.10f, 0.15f, 0.20f, 0.25f, 0.30f, 0.35f, 0.40f, 0.45f, 0.50f, 0.60f, 0.80f};
     int spam = 0;
     for (int i = 0; i < roster_size(); i++)
@@ -1058,13 +1097,13 @@ static void test_robos_deslocados(void) {
     }
 }
 
-/* Oboro. Fase 1: abre com a lição completa, sete golpes. Fase 2: os doze padrões dos
+/* Oboro. Fase 1: abre com a lição completa, sete golpes. Fase 2: 50 padrões dos
  * aprendizes, cada um igual ao do aprendiz (intervalos, aparência, duplo e preparação),
- * na ordem da trilha na primeira volta e depois sorteados. Fase 3: os mesmos doze com a
- * espera antes do aviso x0,85, dano x1,25, aviso nunca abaixo de 320 ms e sem especial. */
+ * sorteados desde a abertura. Fase 3: 12 sequências novas com a
+ * espera antes do aviso x0,60, dano x1,25, aviso nunca abaixo de 320 ms e sem especial. */
 static const struct { int aprendiz; const char *golpe; } ECO[12] = {
-    {0, "desabamento"}, {1, "mordida"}, {2, "fenda dupla"}, {3, "geada"}, {4, "fúria do tigre"}, {5, "revoada"},
-    {6, "foices gêmeas"}, {7, "incêndio"}, {8, "maré longa"}, {9, "tormenta"}, {10, "meia-noite"}, {11, "lua cheia"},
+    {0, "desabamento"}, {1, "mordida"}, {2, "foices gêmeas"}, {3, "geada"}, {4, "incêndio"}, {5, "tormenta"},
+    {6, "fenda dupla"}, {7, "fúria do tigre"}, {8, "maré longa"}, {9, "revoada"}, {10, "meia-noite"}, {11, "lua cheia"},
 };
 
 static const Move *move_named(const MasterProfile *m, const char *name, int stance) {
@@ -1083,7 +1122,7 @@ static void test_oboro_fases(void) {
         const Move *src = move_named(a, ECO[e].golpe, -2);
         char nome[64];
         snprintf(nome, sizeof nome, "eco %s", a->style + 8);
-        for (int f = 1; f <= 2; f++) {
+        for (int f = 1; f <= 1; f++) {
             const Move *eco = move_named(o, nome, f);
             bool igual = src && eco && eco->strikes == src->strikes && eco->look == src->look && eco->dual == src->dual &&
                          fabsf(eco->windup - src->windup) < 1e-6f;
@@ -1091,9 +1130,9 @@ static void test_oboro_fases(void) {
             CHECK(igual, "fase %d: %s é o %s de %s", f + 1, nome, ECO[e].golpe, a->name);
         }
     }
-    CHECK(o->stances[0].ordered == 1 && o->stances[1].ordered == 12 && o->stances[2].ordered == 0, "ordem: 1 na fase 1, 12 na fase 2");
-    CHECK(fabsf(o->seals[2].speedMultiplier - 0.85f) < 1e-6f && fabsf(o->seals[2].damageMultiplier - 1.25f) < 1e-6f,
-          "fase 3: x0,85 na preparação, x1,25 no dano");
+    CHECK(o->stances[0].ordered == 1 && o->stances[1].ordered == 0 && o->stances[2].ordered == 0, "só a abertura de Hanzo tem ordem fixa");
+    CHECK(fabsf(o->seals[2].speedMultiplier - 0.60f) < 1e-6f && fabsf(o->seals[2].damageMultiplier - 1.25f) < 1e-6f,
+          "fase 3: x0,60 na preparação, x1,25 no dano");
     CHECK(o->seals[0].noSpecial && o->seals[1].noSpecial && o->seals[2].noSpecial, "nenhuma fase tem o especial x2");
     CHECK(fabsf(o->seals[1].damageMultiplier - 0.5f) < 1e-6f, "fase 2: dano x0,5");
     /* erros até cair em cada fase, com a vida cheia a cada selo: 5, 10 e 4 */
@@ -1117,7 +1156,7 @@ static void test_oboro_fases(void) {
     Settings s;
     settings_default(&s);
     settings_for_level(&s, MASTER_COUNT);
-    bool abre = true, ordem = true, fase3 = true, semEspecial = true, dano = true;
+    bool abre = true, aleatorio = true, fase3 = true, semEspecial = true, dano = true;
     int vistosFase2 = 0, especiaisAntes = 0;
     for (uint32_t seed = 1; seed <= 40; seed++) {
         Duel d;
@@ -1132,16 +1171,14 @@ static void test_oboro_fases(void) {
                 if (d.comboStrike == 0) {
                     int n = seqFase[d.seal]++;
                     if (d.seal == 0 && n == 0 && mv != licao) abre = false;
-                    if (d.seal == 1 && n < 12) {
-                        char nome[64];
-                        snprintf(nome, sizeof nome, "eco %s", roster_get(ECO[n].aprendiz)->style + 8);
-                        if (strcmp(mv->name, nome) || mv->stance != 1) ordem = false;
+                    if (d.seal == 1) {
+                        if (mv->sourceIdentity <= 0 || mv->stance != 1) aleatorio = false;
                         vistosFase2++;
                     }
                     if (d.seal == 2) {
-                        double antes = (mv->windup - o->stances[2].aviso) * 0.85 * s.waitScale;
+                        double antes = (mv->windup - o->stances[2].aviso) * 0.60 * s.waitScale;
                         double esperado = duel_aviso(&d) + (antes < AJ_PREPARO_ANTES_DO_AVISO ? AJ_PREPARO_ANTES_DO_AVISO : antes);
-                        if (mv->stance != 2 || strncmp(mv->name, "eco ", 4) || fabs(d.windupDuration - esperado) > 1e-4) fase3 = false;
+                        if (mv->stance != 2 || mv->sourceIdentity != 0 || !strncmp(mv->name, "eco ", 4) || fabs(d.windupDuration - esperado) > 1e-4) fase3 = false;
                         float base = s.renPosture / o->hitsToFall;
                         if (fabsf(duel_ren_damage(&d) - base * 1.25f) > 1e-3f) dano = false;
                     } else if (d.seal == 1 && fabsf(duel_ren_damage(&d) - s.renPosture / o->hitsToFall * 0.5f) > 1e-3f) {
@@ -1157,10 +1194,158 @@ static void test_oboro_fases(void) {
         }
     }
     CHECK(abre, "a fase 1 sempre abre com a lição completa");
-    CHECK(ordem && vistosFase2 == 40 * 12, "na fase 2, os doze saem na ordem da trilha (%d de %d)", vistosFase2, 40 * 12);
-    CHECK(fase3, "na fase 3, os doze ecos com a espera antes do aviso x0,85");
+    CHECK(aleatorio && vistosFase2 > 0, "fase 2 usa ecos sorteados desde o primeiro (%d sequências)", vistosFase2);
+    CHECK(fase3, "na fase 3, doze sequências próprias com espera x0,60");
     CHECK(semEspecial && especiaisAntes > 0, "o especial x2 nunca sai (%d sequências)", especiaisAntes);
     CHECK(dano, "o dano de um erro: x0,5 na fase 2, x1,25 na fase 3");
+}
+
+
+/* O sorteio precisa alcançar os 50 golpes, preservar sua origem e variar entre
+ * sementes. Semente igual mantém reprodução exata para depurar uma luta. */
+static void test_oboro_repertorio_aleatorio(void) {
+    const MasterProfile *o = roster_get(12);
+    int totals[3] = {0};
+    for (int k = 0; k < o->moveCount; k++) {
+        const Move *mv = &o->moves[k];
+        totals[mv->stance]++;
+        if (!mv->sourceIdentity) continue;
+        const MasterProfile *source = roster_by_identity(mv->sourceIdentity);
+        const Move *original = NULL;
+        const char *suffix = strstr(mv->name, " / ");
+        if (suffix) original = move_named(source, suffix + 3, -2);
+        else for (int e = 0; e < MASTER_COUNT; e++)
+            if (source == roster_get(ECO[e].aprendiz)) original = move_named(source, ECO[e].golpe, -2);
+        bool same = original && mv->strikes == original->strikes && mv->look == original->look &&
+            mv->dual == original->dual && mv->thrustOnly == original->thrustOnly && mv->feint == original->feint &&
+            fabsf(mv->windup - original->windup) < 1e-6f;
+        for (int g = 0; same && g + 1 < mv->strikes; g++) same = fabsf(mv->gaps[g] - original->gaps[g]) < 1e-6f;
+        CHECK(same, "%s: selo %d copia o padrão original completo", mv->name, mv->stance + 1);
+    }
+    CHECK(totals[0] == 7 && totals[1] == 50 && totals[2] == 12, "7 fundamentos + 50 ecos na fase 2 + 12 padrões Oni");
+    for (int seal = 1; seal <= 2; seal++) {
+        Settings s;
+        settings_default(&s);
+        settings_for_level(&s, MASTER_COUNT);
+        Duel a, b, c;
+        duel_init(&a, &s, o, 713); duel_start_seal(&a, seal);
+        duel_init(&b, &s, o, 713); duel_start_seal(&b, seal);
+        duel_init(&c, &s, o, 991); duel_start_seal(&c, seal);
+        bool seen[MAX_MOVES] = {0}, repeat = false, same = true, different = false;
+        int previous = 0, last = -1, draws = 0, counts[ROSTER_SIZE + 1] = {0};
+        while (draws < 2000 && a.clock < 20000) {
+            if (a.phase == PH_WINDUP && a.comboStrike == 0 && a.attacks != last) {
+                last = a.attacks; draws++;
+                const Move *mv = duel_move(&a);
+                seen[a.move] = true;
+                repeat |= seal == 1 && previous == mv->sourceIdentity;
+                previous = mv->sourceIdentity;
+                counts[previous]++;
+                different |= a.move != c.move;
+            }
+            same &= a.move == b.move && a.phase == b.phase && a.strikeAt == b.strikeAt;
+            Duel *duels[] = {&a, &b, &c};
+            for (int k = 0; k < 3; k++) {
+                duels[k]->renPosture = s.renPosture;
+                duels[k]->bossPosture = 1e6f;
+                duel_tick(duels[k], .05);
+                duel_drain(duels[k], (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
+            }
+        }
+        CHECK(draws == 2000 && same && different, "selo %d: 2000 sorteios reproduzíveis; outra semente muda a luta", seal + 1);
+        if (seal == 1) CHECK(!repeat, "selo %d: nenhuma postura se repete imediatamente", seal + 1);
+        for (int k = 0; k < o->moveCount; k++) if (o->moves[k].stance == seal)
+            CHECK(seen[k], "selo %d: %s pode ser sorteado", seal + 1, o->moves[k].name);
+        for (int k = 0; seal == 1 && k < MASTER_COUNT; k++) {
+            int count = counts[roster_get(k)->identity];
+            CHECK(count >= 80 && count <= 260, "selo %d: postura de %s participa sem dominar (%d/2000)", seal + 1, roster_get(k)->name, count);
+        }
+    }
+}
+
+/* Cada contato dos 50 ecos e 12 padrões Oni, no atraso máximo.
+ * Isolar o padrão garante cobertura; não depende de ele aparecer no sorteio. */
+static void test_oboro_cinquenta_viaveis(void) {
+    const MasterProfile *o = roster_get(12);
+    int patterns = 0, contacts = 0;
+    for (int k = 0; k < o->moveCount; k++) {
+        const Move *mv = &o->moves[k];
+        if (mv->stance == 0) continue;
+        MasterProfile one = *o;
+        one.moveCount = 1;
+        one.moves[0] = *mv;
+        one.moves[0].stance = -1;
+        int results[2] = {0};
+        double times[2][MAX_CHAIN] = {{0}};
+        for (int h = 0; h < 2; h++) {
+            Settings s;
+            settings_default(&s);
+            settings_for_level(&s, MASTER_COUNT);
+            s.latency = AJ_LATENCIA_MAX;
+            Duel d;
+            duel_init(&d, &s, &one, 811);
+            duel_start_seal(&d, mv->stance);
+            d.bossPosture = 1e6f;
+            double dt = 1.0 / (h ? 144 : 60);
+            while (results[h] < mv->strikes && d.clock < 30 && d.phase != PH_FINISHED) {
+                double contact = d.strikeAt;
+                /* A mão chega 120 ms depois; o julgamento desconta a latência.
+                 * O robô padrão não simula esse atraso físico da mão. */
+                double press = d.strikeAt + s.latency - .020 - d.clock;
+                if (d.phase != PH_WINDUP || d.attempted || press < 0 || press >= dt) press = -1;
+                duel_step_at(&d, dt, press);
+                DuelEvent ev[MAX_EVENTS];
+                int n = duel_drain(&d, ev, MAX_EVENTS);
+                for (int e = 0; e < n; e++) if (ev[e].kind == EV_IMPACT) {
+                    CHECK(ev[e].judgement == J_PERFEITO, "selo %d/%s contato %d: perfeito viável a %d Hz com 120 ms", mv->stance + 1, mv->name, results[h] + 1, h ? 144 : 60);
+                    if (results[h] < MAX_CHAIN) times[h][results[h]] = contact;
+                    results[h]++;
+                }
+            }
+            CHECK(results[h] == mv->strikes, "%s: todos os contatos saem a %d Hz", mv->name, h ? 144 : 60);
+        }
+        for (int h = 0; h < mv->strikes; h++) CHECK(fabs(times[0][h] - times[1][h]) < 1e-6, "%s: contato %d igual a 60 e 144 Hz", mv->name, h + 1);
+        patterns++; contacts += mv->strikes;
+    }
+    CHECK(patterns == 62, "50 ecos e 12 padrões Oni verificados individualmente");
+    printf("oboro: %d padrões / %d contatos viáveis com 120 ms, iguais a 60 e 144 Hz\n", patterns, contacts);
+}
+
+
+static void test_oni_dano_na_defesa(void) {
+    const MasterProfile *o = roster_get(12);
+    Settings s;
+    settings_default(&s); settings_for_level(&s, MASTER_COUNT);
+    const float expected[] = {5, 15, 62.5f};
+    for (int outcome = 0; outcome < 3; outcome++) {
+        Duel d;
+        duel_init(&d, &s, o, 401); duel_start_seal(&d, 2);
+        d.renPosture = 230;
+        while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+        CHECK(duel_move(&d)->sourceIdentity == 0 && duel_move(&d)->stance == 2, "Oni usa golpe próprio");
+        if (outcome < 2) {
+            duel_tick(&d, d.strikeAt - (outcome == 0 ? .02 : .08) - d.clock);
+            duel_press(&d);
+        }
+        while (d.lastStrikeAt < 0 && d.phase != PH_FINISHED) duel_tick(&d, DT);
+        CHECK(fabsf(230 - d.renPosture - expected[outcome]) < 1e-4, "Oni resultado %d tira %.1f de vida, sem cura", outcome, expected[outcome]);
+        CHECK(d.lastJudgement == (outcome == 0 ? J_PERFEITO : outcome == 1 ? J_BOM : J_RUIM), "Oni preserva julgamento %d", outcome);
+        DuelEvent ev[MAX_EVENTS]; int n = duel_drain(&d, ev, MAX_EVENTS); bool chip = false;
+        for (int k=0;k<n;k++) if (ev[k].kind == EV_IMPACT) chip = (ev[k].i & IMPACTO_ATRAVESSA) != 0;
+        CHECK(chip == (outcome < 2), "Oni marca o dano que atravessa o parry");
+    }
+    /* Mesmo quebrando a postura no último perfeito, vida zero é derrota. */
+    Duel d;
+    duel_init(&d, &s, o, 401); duel_start_seal(&d, 2);
+    d.renPosture = 5; d.bossPosture = s.perfectBossDamage / 2;
+    while (d.phase != PH_WINDUP) duel_tick(&d, DT);
+    duel_tick(&d, d.strikeAt - .02 - d.clock); duel_press(&d);
+    while (d.phase != PH_FINISHED && d.clock < 10) duel_tick(&d, DT);
+    bool win=false, lose=false;
+    DuelEvent ev[MAX_EVENTS]; int n=duel_drain(&d,ev,MAX_EVENTS);
+    for(int k=0;k<n;k++) if(ev[k].kind==EV_FINISHED) {win |= ev[k].flag; lose |= !ev[k].flag;}
+    CHECK(d.phase == PH_FINISHED && d.renPosture == 0 && lose && !win, "perfeito fatal derrota Kojiro, mesmo no golpe final");
+    for(int phase=0;phase<2;phase++) CHECK(o->seals[phase].perfectChip == 0 && o->seals[phase].goodChip == 0, "selos anteriores não recebem dano Oni");
 }
 
 /* Vantagem: quando falta só um perfeito para quebrar a postura, o duelo avisa (e o
@@ -1198,7 +1383,7 @@ static void test_vantagem(void) {
     }
     /* quem se cura sai da vantagem */
     Duel d;
-    duel_init(&d, &s, roster_get(4), 3);   /* garfiel se recupera quando acerta */
+    duel_init(&d, &s, roster_by_identity(5), 3);   /* garfiel se recupera quando acerta */
     while (d.phase != PH_WINDUP) duel_tick(&d, DT);
     d.bossPosture = s.perfectBossDamage * 0.5f;
     d.advantage = true;
@@ -1343,7 +1528,7 @@ static void test_florete(void) {
     }
     CHECK(fintas == 1, "só uma sequência tem finta visual");
     CHECK(fabsf(m->moves[1].gaps[0] - 0.40f) < 1e-6f, "a dupla deixa 400 ms para o segundo parry");
-    for (int seal = 1; seal <= 2; seal++) {
+    for (int seal = 1; seal <= 1; seal++) {
         const Move *echo = move_named(o, "eco do gelo", seal);
         const Move *src = &m->moves[1];
         CHECK(echo && echo->stance == seal && echo->strikes == src->strikes &&
@@ -1352,7 +1537,7 @@ static void test_florete(void) {
               "eco de gelo do selo %d copia a dupla do florete", seal + 1);
         if (echo) CHECK(move_contact_look(echo, 1) == LOOK_THRUST, "eco de gelo do selo %d não vira corte alto", seal + 1);
     }
-    CHECK(o->moveCount == 31, "oboro preserva 31 padrões com os doze ecos em cada selo");
+    CHECK(o->moveCount == 69, "oboro tem 7 fundamentos, 50 ecos e 12 padrões Oni");
 
     /* O campo feint só chega ao desenho: removê-lo de uma cópia do roster não
      * pode mudar nenhum resultado ou duração do núcleo. */
@@ -1367,10 +1552,10 @@ static void test_florete(void) {
     }
     CHECK(iguais == 60, "finta é só apresentação: 60 lutas idênticas");
 
-    /* Cada padrão novo e os dois ecos: perfeita e boa ainda existem no atraso
+    /* Cada padrão novo e seu eco: perfeita e boa ainda existem no atraso
      * máximo; o mesmo roteiro produz os mesmos contatos a 60 e 144 Hz. */
     int cobertos = 0, fpsIguais = 0;
-    for (int grupo = 0; grupo < 3; grupo++) {
+    for (int grupo = 0; grupo < 2; grupo++) {
         const MasterProfile *base = grupo == 0 ? m : o;
         int seal = grupo == 0 ? 0 : grupo;
         int moves = grupo == 0 ? m->moveCount : 1;
@@ -1425,10 +1610,10 @@ static void test_florete(void) {
             fpsIguais += igual;
         }
     }
-    int esperados = 2 * 2;      /* a dupla do eco, nos dois selos */
+    int esperados = 2;          /* dupla do eco, só no segundo selo */
     for (int k = 0; k < nflorete; k++) esperados += FLORETE[k].contatos;
-    CHECK(cobertos == esperados, "todos os contatos dos padrões de florete e dos dois ecos conferidos no atraso máximo (%d de %d)", cobertos, esperados);
-    CHECK(fpsIguais == m->moveCount + 2, "os padrões de florete e os dois ecos iguais a 60 e 144 Hz com atraso máximo (%d de %d)", fpsIguais, m->moveCount + 2);
+    CHECK(cobertos == esperados, "todos os contatos dos padrões de florete e do eco conferidos no atraso máximo (%d de %d)", cobertos, esperados);
+    CHECK(fpsIguais == m->moveCount + 1, "os padrões de florete e o eco iguais a 60 e 144 Hz com atraso máximo (%d de %d)", fpsIguais, m->moveCount + 1);
 }
 
 /* Cada golpe de cada mestre comum, sozinho num repertório de um golpe só (assim o sorteio não esconde nenhum): com o atraso máximo de 120 ms, a perfeita e a boa
@@ -1503,7 +1688,7 @@ static void test_traco_aleatorio(void) {
     for (int volta = 0; volta < 3; volta++) {
         /* 0: hayate, 1: jinshi, 2: hayate com traço de ±5 s (só para provar o piso) */
         int id = volta == 1 ? 11 : 6;
-        MasterProfile m = *roster_get(id);
+        MasterProfile m = *roster_by_identity(id + 1);
         if (volta == 2) m.rhythmJitter = 5.0f;
         CHECK(volta == 2 || (volta == 0 && fabsf(m.rhythmJitter - 0.12f) < 1e-6f) || (volta == 1 && fabsf(m.rhythmJitter - 0.08f) < 1e-6f),
               "%s: traço de ±%.0f ms", m.name, m.rhythmJitter * 1000);
@@ -1885,10 +2070,8 @@ static void test_teste_a_mao(void) {
               "começa direto na fase %d do oboro: postura %.0f, postura de luta %d, vida cheia", f + 1, o->seals[f].posture, f);
         while (d.phase != PH_WINDUP) duel_tick(&d, DT);
         const Move *mv = duel_move(&d);
-        char eco[64];
-        snprintf(eco, sizeof eco, "eco %s", roster_get(0)->style + 8);
         if (f == 0) CHECK(mv && !strcmp(mv->name, "lição completa"), "fase 1 começa pela lição completa");
-        if (f == 1) CHECK(mv && !strcmp(mv->name, eco), "fase 2 começa pelo padrão do primeiro aprendiz (%s)", mv ? mv->name : "-");
+        if (f == 1) CHECK(mv && mv->sourceIdentity > 0 && mv->stance == 1, "fase 2 começa com uma postura sorteada (%s)", mv ? mv->name : "-");
         if (f == 2) CHECK(fabsf(duel_ren_damage(&d) - s.renPosture / o->hitsToFall * 1.25f) < 1e-3f, "fase 3: o erro dói x1,25");
     }
     Duel d;
@@ -1903,7 +2086,7 @@ static void test_teste_a_mao(void) {
     Settings s7;
     settings_default(&s7);
     settings_for_level(&s7, 7);
-    duel_init(&d, &s7, roster_get(7), 3);
+    duel_init(&d, &s7, roster_by_identity(8), 3);
     while (d.bads == 0 && d.phase != PH_FINISHED) duel_tick(&d, DT);
     CHECK(d.renPosture < s7.renPosture && d.burnLeft > 0, "enjin: o erro tira vida e deixa em brasas");
     duel_drain(&d, (DuelEvent[MAX_EVENTS]){0}, MAX_EVENTS);
@@ -2127,10 +2310,11 @@ static void test_special(void) {
 static void test_movesets(void) {
     Settings s;
     settings_default(&s);
-    /* Os três primeiros são simples: sete sequências, nenhuma com mais de dois contatos. */
+    /* Terra, tartaruga e montanha mantêm sete sequências simples, em qualquer posição. */
     for (int i = 0; i < 3; i++) {
-        CHECK(roster_get(i)->moveCount == 7, "%s tem sete sequências", roster_get(i)->name);
-        for (int k = 0; k < roster_get(i)->moveCount; k++) CHECK(roster_get(i)->moves[k].strikes <= 2, "%s: nada acima de dois contatos", roster_get(i)->name);
+        const MasterProfile *m = roster_by_identity(i + 1);
+        CHECK(m->moveCount == 7, "%s tem sete sequências", m->name);
+        for (int k = 0; k < m->moveCount; k++) CHECK(m->moves[k].strikes <= 2, "%s: nada acima de dois contatos", m->name);
     }
     /* Cada golpe tem nome próprio: nenhum mestre repete o de outro. */
     for (int a = 0; a < roster_size(); a++)
@@ -2164,7 +2348,8 @@ static void test_movesets(void) {
             dash |= m->moves[k].look == LOOK_DASH;
             jump |= m->moves[k].look == LOOK_JUMP;
         }
-        CHECK(dash, "%s tem uma investida correndo", m->name);
+        if(m->identity == 2) CHECK(!dash, "genbu permanece firme, sem corrida");
+        else CHECK(dash, "%s tem uma investida correndo", m->name);
         if (i != 1 && i != 3) CHECK(jump, "%s tem um golpe saltando", m->name);
     }
     /* O intervalo entre contatos de uma sequência é exatamente o do moveset. */
@@ -2448,8 +2633,8 @@ static void test_traits(void) {
     for (int k = 0; k < genbu->moveCount; k++) wg += genbu->moves[k].windup / genbu->moveCount;
     CHECK(wd > wg, "daichi prepara mais devagar que genbu (%.2f x %.2f s)", wd, wg);
     int longest = 0;
-    for (int k = 0; k < roster_get(4)->moveCount; k++)
-        if (roster_get(4)->moves[k].strikes > longest) longest = roster_get(4)->moves[k].strikes;
+    for (int k = 0; k < roster_by_identity(5)->moveCount; k++)
+        if (roster_by_identity(5)->moves[k].strikes > longest) longest = roster_by_identity(5)->moves[k].strikes;
     CHECK(longest >= 7, "garfiel tem combo de sete golpes ou mais (%d)", longest);
     for (int i = 5; i <= 9; i += 4) {
         bool dual = false;
@@ -2457,12 +2642,12 @@ static void test_traits(void) {
         CHECK(dual, "%s ataca com as duas lâminas", roster_get(i)->name);
     }
     int arashiDual = 0, karasuDual = 0;
-    for (int k = 0; k < roster_get(9)->moveCount; k++) arashiDual += roster_get(9)->moves[k].dual != 0;
-    for (int k = 0; k < roster_get(5)->moveCount; k++) karasuDual += roster_get(5)->moves[k].dual != 0;
+    for (int k = 0; k < roster_by_identity(10)->moveCount; k++) arashiDual += roster_by_identity(10)->moves[k].dual != 0;
+    for (int k = 0; k < roster_by_identity(6)->moveCount; k++) karasuDual += roster_by_identity(6)->moves[k].dual != 0;
     CHECK(arashiDual > karasuDual, "arashi usa as duas lâminas mais que karasu (%d x %d)", arashiDual, karasuDual);
     bool far = false, warp = false;
     for (int k = 0; k < roster_get(8)->moveCount; k++) far |= roster_get(8)->moves[k].look == LOOK_FAR;
-    for (int k = 0; k < roster_get(5)->moveCount; k++) warp |= roster_get(5)->moves[k].look == LOOK_WARP;
+    for (int k = 0; k < roster_by_identity(6)->moveCount; k++) warp |= roster_by_identity(6)->moves[k].look == LOOK_WARP;
     CHECK(far, "suiren ataca de longe");
     CHECK(warp, "karasu some em penas e reaparece na frente de kojiro");
     CHECK(roster_get(10)->blackoutChance >= 0.6f, "yoru apaga as luzes quase sempre");
@@ -2479,7 +2664,7 @@ static void test_traits(void) {
 static void test_dual(void) {
     Settings s;
     settings_default(&s);
-    const MasterProfile *arashi = roster_get(9);
+    const MasterProfile *arashi = roster_by_identity(10);
     static const double LEADS[3] = {0.02, 0.12, -1};   /* perfeito, bom, sem gesto */
     for (int c = 0; c < 3; c++) {
         Duel d;
@@ -2524,15 +2709,15 @@ static int impacto_do_golpe(Duel *d, double lead, DuelEvent *out) {
 static void test_choque(void) {
     Settings s;
     settings_default(&s);
-    const MasterProfile *arashi = roster_get(9);
+    const MasterProfile *arashi = roster_by_identity(10);
     int choques = 0;
     for (int i = 0; i < roster_size(); i++)
         for (int k = 0; k < roster_get(i)->moveCount; k++) choques += roster_get(i)->moves[k].shock;
     CHECK(choques == 1, "só o relâmpago do arashi deixa em choque (%d golpes)", choques);
     static const struct { double lead; Judgement j; float choque; int bits; const char *nome; } CASOS[3] = {
-        {0.02, J_PERFEITO, 0.0f, 1, "perfeito apara as duas lâminas e não choca"},
-        {0.10, J_BOM, 0.5f, 1 | 2 | 4, "bom: a segunda lâmina entra e é meio choque"},
-        {-1, J_RUIM, 1.0f, 1 | 2 | 4, "erro: as duas entram e é o choque cheio"},
+        {0.02, J_PERFEITO, 0.0f, IMPACTO_DUPLO, "perfeito apara as duas lâminas e não choca"},
+        {0.10, J_BOM, 0.5f, IMPACTO_DUPLO | IMPACTO_SEGUNDA | IMPACTO_CHOQUE, "bom: a segunda lâmina entra e é meio choque"},
+        {-1, J_RUIM, 1.0f, IMPACTO_DUPLO | IMPACTO_SEGUNDA | IMPACTO_CHOQUE, "erro: as duas entram e é o choque cheio"},
     };
     for (int c = 0; c < 3; c++) {
         Duel d;
@@ -2552,7 +2737,7 @@ static void test_choque(void) {
             visto = true;
             CHECK(ev.judgement == CASOS[c].j, "%s: julgamento %d", CASOS[c].nome, (int)ev.judgement);
             CHECK(fabsf(d.shock - CASOS[c].choque) < 1e-6f, "%s: choque %.2f", CASOS[c].nome, d.shock);
-            CHECK((ev.i & 7) == CASOS[c].bits, "%s: bits do evento %d", CASOS[c].nome, ev.i);
+            CHECK((ev.i & (IMPACTO_DUPLO | IMPACTO_SEGUNDA | IMPACTO_CHOQUE)) == CASOS[c].bits, "%s: bits do evento %d", CASOS[c].nome, ev.i);
             if (CASOS[c].choque <= 0) continue;
             /* o golpe seguinte: com o choque a janela perfeita é menor, e o aperto que era perfeito vira bom; passado esse golpe, o choque acaba */
             for (int m = 0; m < 40; m++) {
@@ -2572,7 +2757,7 @@ static void test_choque(void) {
                 CHECK(impacto_do_golpe(&d, aperto, &com) && impacto_do_golpe(&sem, aperto, &livre), "o golpe seguinte foi julgado");
                 CHECK(livre.judgement == J_PERFEITO, "sem choque, o aperto a 90%% da janela é perfeito");
                 CHECK(com.judgement == J_BOM, "com choque, o mesmo aperto já não é perfeito (%d)", (int)com.judgement);
-                CHECK((com.i & 8) && !(livre.i & 8), "o evento diz que foi julgado em choque");
+                CHECK((com.i & IMPACTO_EM_CHOQUE) && !(livre.i & IMPACTO_EM_CHOQUE), "o evento diz que foi julgado em choque");
                 CHECK(d.shock == 0, "o choque vale um golpe só");
                 break;
             }
@@ -2617,10 +2802,10 @@ static void test_far_lead(void) {
 static void test_burn(void) {
     Settings s;
     settings_default(&s);
-    const MasterProfile *enjin = roster_get(7);
+    const MasterProfile *enjin = roster_by_identity(8);
     CHECK(enjin->burn > 0, "enjin queima");
     for (int i = 0; i < roster_size(); i++)
-        if (i != 7) CHECK(roster_get(i)->burn == 0, "só o enjin queima (%s)", roster_get(i)->name);
+        if (roster_get(i) != enjin) CHECK(roster_get(i)->burn == 0, "só o enjin queima (%s)", roster_get(i)->name);
     Duel d;
     duel_init(&d, &s, enjin, 3);
     while (d.phase != PH_WINDUP) duel_tick(&d, DT);
@@ -2678,8 +2863,12 @@ int main(void) {
     test_tolerancia_tardia();
     test_calibracao();
     test_cura_em_porcentagem();
+    test_resistencia_bosses();
     test_curva();
     test_oboro_fases();
+    test_oboro_repertorio_aleatorio();
+    test_oboro_cinquenta_viaveis();
+    test_oni_dano_na_defesa();
     test_vantagem();
     test_lamina_variavel();
     test_taxa_de_quadros();

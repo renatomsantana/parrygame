@@ -262,17 +262,35 @@ static int pick_move(Duel *d) {
             if (k++ == n) return i;
         }
     }
+    /* Nos ecos, sorteia primeiro a postura, depois seu golpe. Ter mais golpes
+     * no repertório não dá mais peso à postura; a anterior não se repete. */
+    int sources[MASTER_COUNT], sourceCount = 0;
+    int previous = d->move >= 0 ? m->moves[d->move].sourceIdentity : 0;
+    for (int i = 0; i < m->moveCount; i++) {
+        const Move *mv = &m->moves[i];
+        if (!move_allowed(d, mv) || mv->sourceIdentity == 0) continue;
+        bool found = false;
+        for (int k = 0; k < sourceCount; k++) found |= sources[k] == mv->sourceIdentity;
+        if (!found && sourceCount < MASTER_COUNT) sources[sourceCount++] = mv->sourceIdentity;
+    }
+    if (sourceCount > 1) {
+        for (int k = 0; k < sourceCount; k++) if (sources[k] == previous) {
+            sources[k] = sources[--sourceCount];
+            break;
+        }
+    }
+    int source = sourceCount > 0 ? sources[(int)(rng_next(&d->rng) * sourceCount)] : 0;
     float total = 0;
     for (int i = 0; i < m->moveCount; i++) {
         const Move *mv = &m->moves[i];
-        if (move_allowed(d, mv)) total += mv->weight;
+        if (move_allowed(d, mv) && (!source || mv->sourceIdentity == source)) total += mv->weight;
     }
     if (total <= 0) return -1;
     double r = rng_next(&d->rng) * total;
     int last = -1;
     for (int i = 0; i < m->moveCount; i++) {
         const Move *mv = &m->moves[i];
-        if (!move_allowed(d, mv)) continue;
+        if (!move_allowed(d, mv) || (source && mv->sourceIdentity != source)) continue;
         last = i;
         if (r < mv->weight) return i;
         r -= mv->weight;
@@ -411,6 +429,7 @@ float duel_hitstop_for(const Settings *s, Judgement j, bool broke, bool secondBl
  * Kojiro só tem uma tentativa por golpe, depois do aviso; antes dele o aperto não trava nada. */
 static void resolve(Duel *d) {
     const Settings *s = &d->s;
+    const SealRule *rule = duel_seal_rule(d);
     /* Consumir o golpe antes dos eventos impede julgamento duplicado. */
     d->phase = PH_RECOVERY;
     /* O instante do impacto: o contato; se o aperto veio na tolerância tardia, quando ele veio;
@@ -435,12 +454,14 @@ static void resolve(Duel *d) {
             emit(d, EV_BURN, J_NONE, 0, 0, false);
         }
         d->bossPosture -= s->perfectBossDamage;
-        d->renPosture = clampf(d->renPosture + s->perfectHeal * s->renPosture, 0, s->renPosture);
+        d->renPosture = rule->perfectChip > 0 ?
+            clampf(d->renPosture - rule->perfectChip * s->renPosture, 0, s->renPosture) :
+            clampf(d->renPosture + s->perfectHeal * s->renPosture, 0, s->renPosture);
     } else if (d->attempted && lead >= -s->lateGrace - AJ_EPS_JANELA && lead <= st->goodWindow + AJ_EPS_JANELA) {
         j = J_BOM;
         d->goods++;
         d->bossPosture -= s->goodBossDamage;
-        d->renPosture = clampf(d->renPosture - s->goodRenCost, 0, s->renPosture);
+        d->renPosture = clampf(d->renPosture - s->goodRenCost - rule->goodChip * s->renPosture, 0, s->renPosture);
         /* duas lâminas: o bom apara uma, a outra entra */
         if (dual) {
             d->renPosture = clampf(d->renPosture - duel_ren_damage(d), 0, s->renPosture);
@@ -482,8 +503,10 @@ static void resolve(Duel *d) {
         d->bossPosture = 0;
         d->comboRemaining = 0; /* a quebra interrompe o composto */
     }
-    /* i: bit 0 = golpe de duas lâminas, bit 1 = a segunda lâmina acertou kojiro, bit 2 = este golpe deixou kojiro em choque, bit 3 = kojiro foi julgado em choque */
-    DuelEvent *ev = emit(d, EV_IMPACT, j, (float)lead, (dual ? 1 : 0) | (second ? 2 : 0) | (d->shock > 0 ? 4 : 0) | (chocado ? 8 : 0), broke);
+    /* i: bits IMPACTO_* (core.h) */
+    bool chip = (j == J_PERFEITO && rule->perfectChip > 0) || (j == J_BOM && rule->goodChip > 0);
+    DuelEvent *ev = emit(d, EV_IMPACT, j, (float)lead, (dual ? IMPACTO_DUPLO : 0) | (second ? IMPACTO_SEGUNDA : 0) | (chip ? IMPACTO_ATRAVESSA : 0) |
+                                                        (d->shock > 0 ? IMPACTO_CHOQUE : 0) | (chocado ? IMPACTO_EM_CHOQUE : 0), broke);
     if (ev && d->attempted) ev->b = lead > perfeita ? (float)(lead - perfeita) : lead < 0 ? (float)lead : 0;
 
     /* vantagem: falta só um perfeito (a postura cabe num perfeito) */
@@ -491,6 +514,15 @@ static void resolve(Duel *d) {
     if (vantagem != d->advantage) {
         d->advantage = vantagem;
         emit(d, EV_ADVANTAGE, J_NONE, 0, 0, vantagem);
+    }
+    /* Na forma Oni, um parry fatal não pode salvar a vitória nem o progresso,
+     * mesmo se o mesmo impacto também zerou a postura do adversário. */
+    if (chip && d->renPosture <= AJ_EPS_VIDA) {
+        d->renPosture = 0;
+        d->phase = PH_FINISHED;
+        d->comboRemaining = 0;
+        emit(d, EV_FINISHED, J_NONE, 0, 0, false);
+        return;
     }
     if (broke) {
         d->advantage = false;

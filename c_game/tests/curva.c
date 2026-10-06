@@ -68,7 +68,7 @@ static void *trabalha(void *arg) {
     }
 }
 
-/* ---- a curva alvo (docs/CURVA.md) ---- */
+/* ---- referência de regressão (docs/CURVA.md): aumento de postura em 6/out ---- */
 typedef struct { double lo, hi; } Faixa;
 #define F(a, b) {a, b}
 #define F100 F(97, 100)
@@ -76,11 +76,11 @@ typedef struct { double lo, hi; } Faixa;
 #define FPOUCO F(0, 1.5)      /* "≤ 1%": o sorteio de 10 mil lutas dá ~0,3 ponto de sobra */
 static const Faixa ALVO[NROBOS][NMESTRES] = {
     /* primeira vez: vence os quatro primeiros como hoje e perde quase sempre do garfiel em diante */
-    {F(85, 91), F(83, 89), F(72, 78), F(67, 73), FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, F0},
+    {F(77, 83), F(74, 81), F(62, 68), F(54, 60), FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, F0},
     /* casual que decora: saturado na entrada, depois cai em degraus até o oboro */
-    {F100, F100, F(98, 100), F(98, 100), F(98, 100), F(88, 94), F(81, 87), F(76, 82), F(70, 76), F(62, 68), F(57, 63), F(52, 58), F(37, 43)},
-    /* reação 250: o precipício do garfiel, sempre descendo (sem os picos do karasu, do arashi e do jinshi) */
-    {F100, F100, F100, F100, F(7, 13), F(5, 11), F(3, 9), F(0.5, 6), FPOUCO, FPOUCO, FPOUCO, FPOUCO, F0},
+    {F100, F100, F(98, 100), F(98, 100), F(97, 100), F(83, 89), F(75, 81), F(68, 74), F(53, 59), F(44, 50), F(39, 45), F(34, 40), F(22, 28)},
+    /* Reação 250 cai a partir do quinto; os combos longos do Garfiel, agora oitavo, podem zerar essa reação. */
+    {F100, F100, F100, F100, F(3, 8), F(1.5, 6.5), F(0, 5), FPOUCO, FPOUCO, FPOUCO, FPOUCO, FPOUCO, F0},
     /* perfeito e spam: sempre */
     {F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100), F(100, 100)},
     {F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0), F(0, 0)},
@@ -335,12 +335,12 @@ static int testes(int lutas) {
             for (int b = 0; b < NROBOS; b++)
                 for (int i = 0; i < NMESTRES; i++) E.vit[h][b][i] = (long)((ALVO[b][i].lo + ALVO[b][i].hi) * 0.5 * 10 + 0.5);
         int limpa = confere_alvo(false);
-        long guarda = E.vit[0][REACAO_250][5];      /* karasu */
-        E.vit[0][REACAO_250][5] = 170;              /* 17%: fora da faixa e mais fácil que o garfiel (10%) */
+        long guarda = E.vit[0][REACAO_250][5];      /* arashi */
+        E.vit[0][REACAO_250][5] = 170;              /* 17%: fora da faixa e mais fácil que Enjin */
         int pico = confere_alvo(false);
         E.vit[0][REACAO_250][5] = guarda;
         long guardaJ = E.vit[1][CASUAL][11];        /* jinshi */
-        E.vit[1][CASUAL][11] = 585;                 /* 58,5%: cai só 1,5 ponto do yoru (60%) e passa da faixa */
+        E.vit[1][CASUAL][11] = E.vit[1][CASUAL][10] - 15; /* cai só 1,5 ponto de Yoru e passa da faixa */
         int degrau = confere_alvo(false);
         E.vit[1][CASUAL][11] = guardaJ;
         long guardaP = E.vit[0][PERFEITO][3];
@@ -348,7 +348,7 @@ static int testes(int lutas) {
         int perfeito = confere_alvo(false);
         E.vit[0][PERFEITO][3] = guardaP;
         CONFERE(limpa == 0, "a tabela no meio das faixas devia passar (%d itens fora)", limpa);
-        CONFERE(pico == 2, "um pico do reação 250 no karasu devia dar 2 itens (faixa e ordem), deu %d", pico);
+        CONFERE(pico == 2, "um pico do reação 250 no arashi devia dar 2 itens (faixa e ordem), deu %d", pico);
         CONFERE(degrau == 2, "o jinshi do casual caindo só 1,5 ponto devia dar 2 itens (faixa e degrau), deu %d", degrau);
         CONFERE(perfeito == 1, "o perfeito perdendo 1%% devia dar 1 item, deu %d", perfeito);
         CONFERE(confere_alvo(false) == 0, "desfeitos os defeitos, a tabela devia voltar a passar");

@@ -50,14 +50,14 @@ mesmos pixels.
 | — | **Kojiro** | katana (fora da luta, **embainhada** na cintura; no começo de cada luta, o saque) | sem chapéu e **sem máscara**, como o Musashi de Vagabond: cabelo rente, todo puxado para cima e amarrado com fita vermelha no alto da cabeça, de onde sai um tufo curto e desgrenhado, com fiapos caindo para trás (como o Musashi rezando em Vagabond), nuca curta (nada descendo até o ombro), rosto liso sem nariz nem olho e barba por fazer, clarinha, no maxilar | original (branco e preto) | branco, sem aura |
 | 1 | **Daichi** (terra) | katana (o primeiro da trilha é de katana, e bem lento) | **chapéu de palha**, barba; 1 px mais largo | verde oliva, ocre | rastro grosso, poeira no chão |
 | 2 | **Genbu** (tartaruga) | katana simples + casco nas costas | careca com a cabeça em três tons, sobrancelha grossa grisalha, bigode e barbicha brancos; atarracado (a cabeça não alarga com o corpo) | verde musgo | verde, esporos |
-| 3 | **Raizo** (montanha) | **odachi** do próprio pack, do jeito que vem | **corpo do samurai da odachi**, chapéu de palha; a roupa preta virou marrom | marrom, amarelo | cinza-pedra, ocre e lascas na lâmina |
+| 3 | **Hayate** (vento) | **duas foicinhas** (kama) pequenas, uma em cada mão: cabo curto e a lâmina curva de 7 px | **corpo do samurai de duas espadas**, sem o pano, **chapéu de palha** igual ao do Daichi (fica na cabeça até girando de costas), mechas verde-escuras voando por baixo dele, cachecol; parado, a foice descansa com a lâmina para baixo | verde claro, limão | vento; no golpe, **dois arcos curtos e finos** e **cortes de vento** duplos voando para a frente |
 | 4 | **Shizuku** (gelo) | **florete de esgrima**: lâmina reta e fina, copo na mão, com geada no fio, na mão em todos os quadros; os golpes são estocadas retas e finas (a baixa sai do corte baixo) | **corpo do Samurai #4**, cabelo prateado preso num coque baixo com um grampo de cristal de gelo (o rabo de cavalo sai), olhos azul-claros, a tsuba prateada | branco, prata, azul-gelo | gelo: brilho azul-claro, flocos descendo, o bafo gelado saindo da boca, lascas e cristais no rastro |
-| 5 | **Garfiel** (tigre branco, Byakko) | **garras nas duas mãos** (três lâminas em cada, com brilho, saindo dos punhos; a de trás mais escura, atrás do corpo); o golpe deixa **três riscos de arranhão** | **corpo do samurai de duas espadas**, sem o pano, juba loira de tigre espetada para cima, com listras escuras, roupa preta listrada de vermelho; parado, fica na guarda com as mãos à frente, mostrando as garras | preto e vermelho, cabelo loiro | terra, três riscos de garra (sem o arco de espada do pack) |
-| 6 | **Karasu** (corvo) | **katana e wakizashi**: a longa (0,95× a katana) na mão da frente, a curta (13 px) na outra, as duas em todos os quadros (também na guarda e caído) | **corpo do samurai de duas espadas**, sem o pano (rosto à mostra), cabelo preto em mechas de pena varridas para trás, trapo vermelho | preto e vermelho | **dois arcos cruzados em X** (o da katana maior que o da wakizashi), penas caindo |
-| 7 | **Hayate** (vento) | **duas foicinhas** (kama) pequenas, uma em cada mão: cabo curto e a lâmina curva de 7 px | **corpo do samurai de duas espadas**, sem o pano, **chapéu de palha** igual ao do Daichi (fica na cabeça até girando de costas), mechas verde-escuras voando por baixo dele, cachecol; parado, a foice descansa com a lâmina para baixo | verde claro, limão | vento; no golpe, **dois arcos curtos e finos** e **cortes de vento** duplos voando para a frente |
-| 8 | **Enjin** (chama) | katana de fogo | cabelo em chamas; rosto do Kojiro com a sobrancelha descendo para a frente (sempre bravo) e queixo quadrado; 1 px mais largo (a cabeça não) | vermelho e amarelo | fogo, labaredas e brasas |
+| 5 | **Enjin** (chama) | katana de fogo | cabelo em chamas; rosto do Kojiro com a sobrancelha descendo para a frente (sempre bravo) e queixo quadrado; 1 px mais largo (a cabeça não) | vermelho e amarelo | fogo, labaredas e brasas |
+| 6 | **Arashi** (tempestade) | duas katanas com raios | **corpo do Samurai #5**, sem o pano, juba prateada comprida e desgrenhada, voando para trás com as pontas em azul elétrico, olhos de raio | preto, azul elétrico | **raio em zigue-zague** no caminho de cada espada (no lugar da meia-lua do pack), raios no corpo |
+| 7 | **Raizo** (montanha) | **odachi** do próprio pack, do jeito que vem | **corpo do samurai da odachi**, chapéu de palha; a roupa preta virou marrom | marrom, amarelo | cinza-pedra, ocre e lascas na lâmina |
+| 8 | **Garfiel** (tigre branco, Byakko) | **garras nas duas mãos** (três lâminas em cada, com brilho, saindo dos punhos; a de trás mais escura, atrás do corpo); o golpe deixa **três riscos de arranhão** | **corpo do samurai de duas espadas**, sem o pano, juba loira de tigre espetada para cima, com listras escuras, roupa preta listrada de vermelho; parado, fica na guarda com as mãos à frente, mostrando as garras | preto e vermelho, cabelo loiro | terra, três riscos de garra (sem o arco de espada do pack) |
 | 9 | **Suiren** (mar) | lança com ponta em folha, anel e fita, em todos os quadros; parada, correndo e pulando, fica em pé na mão da frente; os golpes são **estocadas** de braço esticado e uma **varrida baixa**; caída, a lança fica no chão | **corpo do Samurai #4**, o visual que era da Shizuku: mulher, rabo de cavalo azul petróleo, quimono claro e hakama azul do mar; a katana embainhada do pack sai | azul claro, azul mar, turquesa | água, bolhas |
-| 10 | **Arashi** (tempestade) | duas katanas com raios | **corpo do Samurai #5**, sem o pano, juba prateada comprida e desgrenhada, voando para trás com as pontas em azul elétrico, olhos de raio | preto, azul elétrico | **raio em zigue-zague** no caminho de cada espada (no lugar da meia-lua do pack), raios no corpo |
+| 10 | **Karasu** (corvo) | **katana e wakizashi**: a longa (0,95× a katana) na mão da frente, a curta (13 px) na outra, as duas em todos os quadros (também na guarda e caído) | **corpo do samurai de duas espadas**, sem o pano (rosto à mostra), cabelo preto em mechas de pena varridas para trás, trapo vermelho | preto e vermelho | **dois arcos cruzados em X** (o da katana maior que o da wakizashi), penas caindo |
 | 11 | **Yoru** (noite) | uma adaga em cada mão, **empunhadas ao contrário** (lâmina para trás, ao longo do antebraço) em todos os quadros, brilho roxo | **corpo do samurai de duas espadas**, ninja preto e roxo, o único de pano no rosto, cabelo comprido caindo pelas costas com mechas roxas | preto azulado e roxo | **cortes pequenos e secos** (traços retos curtos, sem arco), fumaça roxa |
 | 12 | **Jinshi** (lua) | **katana bem branca, forjada com a lua**, com halo de luar | **corpo do Samurai #4** (o da Shizuku e da Suiren), cabelo roxo do pack solto e comprido, até a cintura (o rabo de cavalo sai), inteiro em todos os quadros; caído, o cabelo fica deitado no chão | roxo e verde | o rastro de cada golpe é uma lua crescente (branca, prata na borda); halo pálido e poeira de prata subindo |
 | — | **Oboro** | katana de Hanzo, dourada | **corpo do Demon**, de rosto descoberto (`oboro`: sem elmo e sem capuz, o rosto do Hanzo jovem, cabelo preto curto, barba curta e aparada, a gola da armadura no lugar da barba longa do pack; de frente, de costas e caído, em todos os quadros) e de máscara oni (`oboro_mascara`: o elmo aparece em todos os quadros, também de costas), com as versões de fúria (o fogo da lâmina limpo: sem os pontos soltos, laranja no fio e vermelho em volta) | azul e vermelho do pack | sombra; nos ecos, o de cada aprendiz |
@@ -454,8 +454,7 @@ rastro e a aura do elemento, o golpe especial.
 | **Arashi** | Samurai #5 (mascarado, duas espadas) | `_packs/samurai5/` | 96 × 64 | roupa verde → preta, cinto e botas azul elétrico, cabelo prateado, olhos de raio; as **duas espadas** do pack ficam, com raios nas lâminas e rastro azul |
 | **Oboro** | Demon (máscara oni) | `_packs/demon/` | 128 × 108 | cores do pack; ganha os ecos das posturas dos outros e a cena do grito |
 
-Como montar a pasta (os PNGs são do pack pago e ficam fora do git; os
-`sprite.txt` já estão no repositório):
+Como montar a pasta dos packs-fonte para regenerar a arte (esses PNGs-fonte ficam locais; os `sprite.txt` já estão no repositório):
 
 ```
 c_game/assets/sprites/_packs/
@@ -582,13 +581,31 @@ personagem em `CHARS` e conferir a `deteccao_<nome>.png`.
 
 O Hanzo de barba branca (pack B) já está encaixado em `_packs/hanzo/`.
 
+## Roupas e paletas dos cortes
+
+As roupas e faixas de Daichi, Genbu, Raizo, Shizuku, Hayate, Enjin e Arashi,
+e da Suiren, seguem a família de cores de `COR7` em
+`tools/personagens.c`. `roupa_postura` deriva tons de tecido e sombras dessa
+paleta e recolore somente o corpo, depois de montar o quadro. A leitura do
+golpe continua usando as cores anteriores, para uma troca de roupa não mudar
+o recorte do slash, a cintura ou o arco lunar. Pele, cabelo e lâminas mantêm
+suas cores.
+
+Shizuku usa branco/ciano de gelo, Suiren turquesa/verde água, e Arashi cinza
+de nuvem; os raios do Arashi continuam azul/branco. Karasu, Garfiel, Yoru,
+Jinshi e Oboro conservaram o figurino anterior por escolha do autor. Isso
+inclui Oboro com máscara e seus ecos: só os efeitos herdam a postura roubada.
+Kojiro e Hanzo também conservam suas roupas.
+
+Na verificação de 05/10, as 286 tiras comparadas mantiveram dimensões e
+transparência idênticas; os 17 manifestos em uso ficaram intactos. Os PNGs
+recoloridos foram copiados das pastas `*_gerado` para as pastas em uso,
+preservando os manifestos com tempos, âncoras e pontos das armas.
+
 ## Arte e repositório
 
-O repositório é público e as pranchas são do pack pago da Mattz Art, então os
-PNGs de `c_game/assets/sprites/` (os originais e os gerados, que saem deles)
-(e os efeitos de `_fx/` e as teclas de `_ui/`, do mesmo zip) estão no
-`.gitignore`. O programa e os `sprite.txt` das pranchas de origem
-(`_original/` e `_packs/`) vão para o git; os `sprite.txt` gerados em cada pasta
-de personagem saem do `make sprites`, como as tiras.
+As artes usadas pelo jogo estão versionadas por autorização do responsável pelo projeto: os 17 conjuntos de personagens, os `sprite.txt` de execução, as camadas `_weapon_*`, `_steel_*` e `_clean_*`, os VFX `64`, `70`, `197` e `slash`, e os dois spritesheets de botões carregados pelo jogo. Um clone pode compilar e jogar com esses arquivos.
+
+Os PNGs-fonte de `_original/` e `_packs/`, as pranchas de estudo `_folhas/`, as pastas auxiliares `*_gerado` e os efeitos não integrados continuam locais. As regras de `c_game/.gitignore` liberam os diretórios e arquivos de execução e preservam essa separação. Para regenerar os PNGs, a máquina ainda precisa dos packs-fonte.
 
 Os pontos `arma2 ANIMAÇÃO QUADRO X Y` seguem a segunda lâmina visível dos packs de duas armas. O teste `make -C c_game test-assets` carrega as folhas reais dos 13 mestres em uma janela oculta e verifica as animações e os pontos das duas espadas do Arashi.

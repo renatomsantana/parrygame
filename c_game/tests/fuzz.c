@@ -148,9 +148,10 @@ static void confere_dano(const DuelEvent *ev, int n, const char *rotulo, float v
         float dv = vidaAntes - d.renPosture, esperado;
         bool dual = ev[i].i & 1;
         if (ev[i].judgement == J_PERFEITO) {
-            esperado = -fminf(S.perfectHeal * S.renPosture, S.renPosture - vidaAntes);
+            esperado = duel_seal_rule(&d)->perfectChip > 0 ? fminf(duel_seal_rule(&d)->perfectChip * S.renPosture, vidaAntes) :
+                -fminf(S.perfectHeal * S.renPosture, S.renPosture - vidaAntes);
         } else if (ev[i].judgement == J_BOM) {
-            esperado = S.goodRenCost + (dual ? danoAntes : 0);
+            esperado = S.goodRenCost + duel_seal_rule(&d)->goodChip * S.renPosture + (dual ? danoAntes : 0);
             if (esperado > vidaAntes) esperado = vidaAntes;
         } else {
             esperado = danoAntes * (dual ? 2 : 1);

@@ -10,6 +10,7 @@
 
 #ifdef _WIN32
 #include <io.h>
+#include <windows.h>
 #define SINCRONIZA(f) _commit(_fileno(f))
 #else
 #include <unistd.h>
@@ -67,12 +68,18 @@ static void descreve(char *erro, size_t n, const char *o_que) {
     snprintf(erro, n, "%s: %s", o_que, strerror(errno));
 }
 
-/* Troca `de` por `para` (no Windows, rename não sobrescreve). */
+/* Os dois caminhos ficam no mesmo diretório/volume. Nunca apagar o destino
+ * antes da troca: um arquivo bloqueado ou uma falha deve conservar o save antigo. */
 static int troca(const char *de, const char *para) {
 #ifdef _WIN32
-    remove(para);
-#endif
+    if (MoveFileExA(de, para, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) return 0;
+    DWORD erro = GetLastError();
+    errno = erro == ERROR_FILE_NOT_FOUND || erro == ERROR_PATH_NOT_FOUND ? ENOENT :
+            erro == ERROR_ACCESS_DENIED || erro == ERROR_SHARING_VIOLATION ? EACCES : EIO;
+    return -1;
+#else
     return rename(de, para);
+#endif
 }
 
 bool save_gravar(const char *caminho, const Campaign *c, char *erro, size_t n) {

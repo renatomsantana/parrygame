@@ -1,10 +1,11 @@
 /*
- * audio.c - todos os sons nascem aqui, sem arquivos.
+ * audio.c - sons embutidos, substituíveis pelos arquivos da equipe em assets/audio.
  * Efeitos: ondas geradas uma vez no início. Trilha: sintetizador simples
  * rodando no callback da raylib (drone + sequenciador de 16 passos por cenário).
  */
 #include "audio.h"
 #include "vozes.h"
+#include "core.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -16,12 +17,194 @@
 #define RATE 44100
 #define TAU 6.28318530718f
 
+#define AUDIO_VARIANTS 4
 static Sound sounds[SND_COUNT];
+static Sound variations[SND_COUNT][AUDIO_VARIANTS - 1];
+static Sound variationVoices[SND_COUNT][AUDIO_VARIANTS - 1][VOZES_MAX];
+static int variationCount[SND_COUNT], variationNext[SND_COUNT];
+static float swingPeaks[AUDIO_VARIANTS], lastFilePeak;
+static int variationVoiceNext[SND_COUNT][AUDIO_VARIANTS - 1];
 /* Vozes extras dos golpes: numa sequência, um parry não corta a cauda do anterior (vozes.h). */
 static Sound voices[SND_COUNT][VOZES_MAX];
 static int voiceCount[SND_COUNT], voiceNext[SND_COUNT];
+/* Aviso, gesto e corte por postura. Os ecos usam o mesmo banco, nunca uma cópia. */
+#define POSTURE_SOUNDS 3
+static const SoundId postureIds[POSTURE_SOUNDS] = {SND_CUE, SND_GESTURE, SND_SWING};
+typedef struct {
+    Sound clip[AUDIO_VARIANTS];
+    float peak[AUDIO_VARIANTS];
+    Sound voice[AUDIO_VARIANTS][VOZES_PADRAO];
+    int count, next, voiceCount, voiceNext[AUDIO_VARIANTS];
+} PostureBank;
+static PostureBank postureBanks[ROSTER_SIZE][POSTURE_SOUNDS];
 static AudioStream stream;
 static float master = 0.85f;
+static const char *const soundNames[SND_COUNT] = {
+    "cue", "perfect", "good", "bad", "break", "swing", "gesture", "ui", "type",
+    "gem", "seal", "drum", "thunder", "victory", "defeat", "thud", "clap", "koiguchi", "saque"
+};
+static const char *const musicNames[MUSIC_TITLE + 1] = {
+    [ARENA_DOJO] = "raizo", [ARENA_SERRA] = "jinshi", [ARENA_CELEIRO] = "daichi",
+    [ARENA_TELHADOS] = "karasu", [ARENA_PORTO] = "suiren", [ARENA_SALAO] = "arashi",
+    [ARENA_PONTE] = "hayate", [ARENA_CACHOEIRA] = "shizuku", [ARENA_BAMBUZAL] = "yoru",
+    [ARENA_FORJA] = "enjin", [ARENA_JARDIM] = "genbu", [ARENA_CIDADELA] = "oboro",
+    [ARENA_TEMPLO] = "garfiel", [MUSIC_LORE] = "hanzo", [MUSIC_TITLE] = "title"
+};
+static Music tracks[MUSIC_TITLE + 1];
+static int trackCurrent = -1, trackTarget = -1;
+static float trackGain;
+
+static const char *audio_directory(void) {
+    const char *p = getenv("APARA_AUDIO_DIR");
+    return p && p[0] ? p : "assets/audio";
+}
+
+static bool polyphonic(SoundId id) {
+    return id == SND_PERFECT || id == SND_GOOD || id == SND_BAD || id == SND_SWING;
+}
+
+/* Antes de substituir o som, validar a duração que o banco de vozes comporta.
+ * Arquivo inválido nunca elimina o som embutido. A cauda já deve vir no WAV. */
+/* Energia em blocos de 5 ms: localiza o ataque audível, sem fazer o corte
+ * soar grave/agudo quando a viagem da lâmina muda. */
+static float wave_attack_peak(Wave w) {
+    if(!w.data || !w.sampleRate || !w.channels || !w.frameCount) return .11f;
+    float *samples=LoadWaveSamples(w); if(!samples || !w.sampleRate || !w.channels) { if(samples) UnloadWaveSamples(samples);return .11f; }
+    unsigned block=w.sampleRate/200; if(!block) block=1;
+    double best=0; unsigned at=0;
+    for(unsigned i=0;i<w.frameCount;i+=block) {
+        double energy=0; unsigned end=i+block<w.frameCount?i+block:w.frameCount;
+        for(unsigned frame=i;frame<end;frame++) for(unsigned c=0;c<w.channels;c++) {
+            float x=samples[frame*w.channels+c]; energy+=x*x;
+        }
+        if(energy>best) {best=energy;at=i;}
+    }
+    UnloadWaveSamples(samples);
+    return best>1e-12 ? (at+block*.5f)/w.sampleRate : .11f;
+}
+
+static Sound sound_file(const char *path, SoundId id) {
+    if (!FileExists(path) || !IsAudioDeviceReady()) return (Sound){0};
+    Wave w = LoadWave(path);
+    double duration = w.sampleRate ? (double)w.frameCount / w.sampleRate : 0;
+    double limit = id == SND_PERFECT ? SOM_PERFEITO_CAUDA : VOZES_PADRAO * AJ_CADEIA_MIN;
+    if (!w.data || duration <= 0 || (polyphonic(id) && duration > limit + 0.0001)) {
+        fprintf(stderr, "Áudio ignorado (inválido ou cauda longa demais): %s\n", path);
+        if (w.data) UnloadWave(w);
+        return (Sound){0};
+    }
+    lastFilePeak=wave_attack_peak(w);
+    Sound s = LoadSoundFromWave(w);
+    UnloadWave(w);
+    if (s.stream.buffer && getenv("APARA_LOG_AUDIO")) fprintf(stderr, "AUDIO arquivo %s\n", path);
+    return s;
+}
+
+static void load_team_audio(void) {
+    char path[1024];
+    for (int id = 0; id < SND_COUNT; id++) {
+        Sound loaded[AUDIO_VARIANTS] = {0};
+        int count = 0;
+        for (int v = 1; v <= AUDIO_VARIANTS; v++) {
+            snprintf(path, sizeof path, "%s/sfx/%s_%02d.wav", audio_directory(), soundNames[id], v);
+            Sound s = sound_file(path, (SoundId)id);
+            if (s.stream.buffer) { if(id==SND_SWING) swingPeaks[count]=lastFilePeak; loaded[count++]=s; }
+        }
+        if (!count) {
+            snprintf(path, sizeof path, "%s/sfx/%s.wav", audio_directory(), soundNames[id]);
+            Sound s = sound_file(path, (SoundId)id);
+            if (s.stream.buffer) { if(id==SND_SWING) swingPeaks[count]=lastFilePeak; loaded[count++]=s; }
+        }
+        if (!count) continue;
+        UnloadSound(sounds[id]);
+        sounds[id] = loaded[0];
+        variationCount[id] = count - 1;
+        for (int v = 1; v < count; v++) variations[id][v - 1] = loaded[v];
+    }
+    if (!IsAudioDeviceReady()) return;
+    for (int i = 0; i <= MUSIC_TITLE; i++) {
+        const char *extensions[] = {"ogg", "wav"};
+        for (int ext = 0; ext < 2; ext++) {
+            snprintf(path, sizeof path, "%s/music/%s.%s", audio_directory(), musicNames[i], extensions[ext]);
+            if (!FileExists(path)) continue;
+            Music m = LoadMusicStream(path);
+            if (!m.stream.buffer || !m.frameCount) {
+                if (m.stream.buffer) UnloadMusicStream(m);
+                fprintf(stderr, "Música ignorada (inválida): %s\n", path);
+                continue;
+            }
+            m.looping = true;
+            tracks[i] = m;
+            if (getenv("APARA_LOG_AUDIO")) fprintf(stderr, "AUDIO música %s\n", path);
+            break;
+        }
+    }
+}
+
+static int posture_slot(SoundId id) {
+    for (int i = 0; i < POSTURE_SOUNDS; i++) if (postureIds[i] == id) return i;
+    return -1;
+}
+static void load_posture_audio(void) {
+    char path[1024];
+    for (int source = 0; source < ROSTER_SIZE; source++) for (int slot = 0; slot < POSTURE_SOUNDS; slot++) {
+        PostureBank *b = &postureBanks[source][slot];
+        SoundId id = postureIds[slot];
+        for (int v = 1; v <= AUDIO_VARIANTS; v++) {
+            snprintf(path, sizeof path, "%s/sfx/%s/%s_%02d.wav", audio_directory(), roster_get(source)->name, soundNames[id], v);
+            Sound clip = sound_file(path, id);
+            if (clip.stream.buffer) { b->peak[b->count]=lastFilePeak; b->clip[b->count++]=clip; }
+        }
+        if (!b->count) {
+            snprintf(path, sizeof path, "%s/sfx/%s/%s.wav", audio_directory(), roster_get(source)->name, soundNames[id]);
+            Sound clip = sound_file(path, id);
+            if (clip.stream.buffer) { b->peak[b->count]=lastFilePeak; b->clip[b->count++]=clip; }
+        }
+        b->voiceCount = 1;
+#if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
+        if (id == SND_SWING) b->voiceCount = VOZES_PADRAO;
+        for (int v = 0; v < b->count; v++) for (int k = 1; k < b->voiceCount; k++)
+            b->voice[v][k] = LoadSoundAlias(b->clip[v]);
+#endif
+    }
+}
+static void unload_posture_audio(void) {
+    for (int source = 0; source < ROSTER_SIZE; source++) for (int slot = 0; slot < POSTURE_SOUNDS; slot++) {
+        PostureBank *b = &postureBanks[source][slot];
+        for (int v = 0; v < b->count; v++) {
+#if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
+            for (int k = 1; k < b->voiceCount; k++) UnloadSoundAlias(b->voice[v][k]);
+#endif
+            UnloadSound(b->clip[v]);
+        }
+    }
+    memset(postureBanks, 0, sizeof postureBanks);
+}
+float audio_swing_peak(int source) {
+    int slot=posture_slot(SND_SWING);
+    if(source>=0 && source<ROSTER_SIZE && postureBanks[source][slot].count) {
+        PostureBank *b=&postureBanks[source][slot]; return b->peak[b->next];
+    }
+    float p=swingPeaks[variationNext[SND_SWING]]; return p>0 ? p : .11f;
+}
+void audio_play_master(int source, SoundId id, float volume, float pitch) {
+    if (volume <= .001f) return;
+    int slot = posture_slot(id);
+    if (source < 0 || source >= ROSTER_SIZE || slot < 0 || !postureBanks[source][slot].count) {
+        audio_play(id, volume, pitch);
+        return;
+    }
+    PostureBank *b = &postureBanks[source][slot];
+    int v = b->next, k = b->voiceNext[v];
+    Sound clip = k ? b->voice[v][k] : b->clip[v];
+    b->next = (v + 1) % b->count;
+    b->voiceNext[v] = (k + 1) % b->voiceCount;
+    SetSoundVolume(clip, volume * master);
+    /* WAVs da equipe preservam o timbre: pitch só no som embutido de fallback. */
+    SetSoundPitch(clip, 1);
+    PlaySound(clip);
+    if (getenv("APARA_LOG_AUDIO")) fprintf(stderr, "AUDIO postura %s %s variante=%d\n", roster_get(source)->name, soundNames[id], v + 1);
+}
 
 /* ------------------------------------------------------------------ */
 /* Efeitos                                                             */
@@ -555,6 +738,8 @@ void audio_init(void) {
     sounds[SND_CLAP] = make_sound_room(0.4f, s_clap, 0.55f, 0.3f);
     sounds[SND_KOIGUCHI] = make_sound_room(0.04f, s_koiguchi, 0.5f, 0.03f);
     sounds[SND_SAQUE] = make_sound_room(1.3f, s_saque, 0.6f, 0.1f);
+    load_team_audio();
+    load_posture_audio();
 #if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
     static const struct { SoundId id; int vozes; } POLI[] = {
         {SND_PERFECT, VOZES_PERFEITO_N}, {SND_GOOD, VOZES_PADRAO}, {SND_BAD, VOZES_PADRAO}, {SND_SWING, VOZES_PADRAO},
@@ -566,6 +751,8 @@ void audio_init(void) {
         voices[id][0] = sounds[id];
         for (int k = 1; k < POLI[i].vozes; k++) voices[id][k] = LoadSoundAlias(sounds[id]);
         voiceCount[id] = POLI[i].vozes;
+        for (int v = 0; v < variationCount[id]; v++)
+            for (int k = 1; k < voiceCount[id]; k++) variationVoices[id][v][k] = LoadSoundAlias(variations[id][v]);
     }
 #endif
 
@@ -579,20 +766,35 @@ void audio_init(void) {
 }
 
 void audio_shutdown(void) {
+    unload_posture_audio();
+    for (int i = 0; i <= MUSIC_TITLE; i++)
+        if (tracks[i].stream.buffer) UnloadMusicStream(tracks[i]);
     StopAudioStream(stream);
     UnloadAudioStream(stream);
 #if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
     for (int i = 0; i < SND_COUNT; i++)
         for (int k = 1; k < voiceCount[i]; k++) UnloadSoundAlias(voices[i][k]);
+    for (int i = 0; i < SND_COUNT; i++)
+        for (int v = 0; v < variationCount[i]; v++)
+            for (int k = 1; k < voiceCount[i]; k++) UnloadSoundAlias(variationVoices[i][v][k]);
 #endif
     for (int i = 0; i < SND_COUNT; i++) UnloadSound(sounds[i]);
+    for (int i = 0; i < SND_COUNT; i++)
+        for (int v = 0; v < variationCount[i]; v++) UnloadSound(variations[i][v]);
     CloseAudioDevice();
 }
 
 void audio_play(SoundId id, float volume, float pitch) {
-    if (volume <= 0.001f) return;
+    if (id < 0 || id >= SND_COUNT || volume <= 0.001f) return;
     Sound s = sounds[id];
-    if (voiceCount[id]) {
+    int variant = variationNext[id];
+    variationNext[id] = (variant + 1) % (variationCount[id] + 1);
+    if (variant > 0) {
+        int v = variant - 1;
+        int k = variationVoiceNext[id][v];
+        s = k ? variationVoices[id][v][k] : variations[id][v];
+        if (voiceCount[id]) variationVoiceNext[id][v] = (k + 1) % voiceCount[id];
+    } else if (voiceCount[id]) {
         s = voices[id][voiceNext[id]];
         voiceNext[id] = (voiceNext[id] + 1) % voiceCount[id];
     }
@@ -601,8 +803,30 @@ void audio_play(SoundId id, float volume, float pitch) {
     SetSoundVolume(s, volume * master);
     SetSoundPitch(s, pitch);
     PlaySound(s);
+    if (getenv("APARA_LOG_AUDIO")) fprintf(stderr, "AUDIO play %s variante=%d\n", soundNames[id], variant + 1);
 }
 
-void audio_music(int style) { M.target = style; }
+void audio_music(int style) {
+    trackTarget = style >= 0 && style <= MUSIC_TITLE && tracks[style].stream.buffer ? style : -1;
+    M.target = trackTarget >= 0 ? MUSIC_SILENCE : style;
+}
+void audio_update(float dt) {
+    float delta = fminf(fmaxf(dt, 0), 0.1f) * 2;
+    if (trackCurrent != trackTarget) {
+        trackGain = fmaxf(0, trackGain - delta);
+        if (trackGain <= 0) {
+            if (trackCurrent >= 0) StopMusicStream(tracks[trackCurrent]);
+            trackCurrent = trackTarget;
+            if (trackCurrent >= 0) {
+                SetMusicVolume(tracks[trackCurrent], 0);
+                PlayMusicStream(tracks[trackCurrent]);
+            }
+        }
+    } else trackGain = fminf(1, trackGain + delta);
+    if (trackCurrent >= 0) {
+        UpdateMusicStream(tracks[trackCurrent]);
+        SetMusicVolume(tracks[trackCurrent], trackGain * (1 - M.duck * 0.7f) * master);
+    }
+}
 void audio_music_intensity(float x) { M.intensity = x; }
 void audio_music_duck(float x) { M.duck = x < 0 ? 0 : (x > 1 ? 1 : x); }

@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "portavel.h"
 
@@ -140,6 +143,21 @@ static void teste_falhas_de_gravacao(void) {
     CHECK(strcmp(antes, depois) == 0, "e o save antigo continua intacto");
     CHECK(save_ler(caminho, &b, aviso, sizeof aviso) == SAVE_OK && b.index == 2, "e ainda carrega");
     rmdir(tmp);
+
+#ifdef _WIN32
+    /* O leitor não compartilha DELETE: a substituição deve falhar conservando
+     * o arquivo antigo, inclusive quando o .tmp já foi escrito por inteiro. */
+    HANDLE leitor = CreateFileA(caminho, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    CHECK(leitor != INVALID_HANDLE_VALUE, "abre o save bloqueando a substituição");
+    if (leitor != INVALID_HANDLE_VALUE) {
+        erro[0] = 0;
+        CHECK(!save_gravar(caminho, &n, erro, sizeof erro) && erro[0], "save bloqueado falha com aviso");
+        CloseHandle(leitor);
+        le(caminho, depois, sizeof depois);
+        CHECK(strcmp(antes, depois) == 0, "save bloqueado continua intacto");
+        CHECK(!existe(tmp), "troca bloqueada limpa somente o temporário");
+    }
+#endif
 
     /* o destino é uma pasta: o rename falha, o .tmp é apagado */
     remove(caminho);

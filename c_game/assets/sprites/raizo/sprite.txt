@@ -1,0 +1,127 @@
+# Gerado por tools/personagens.c a partir do sprite.txt das pranchas de origem.
+# ancora: ponto dos pés (IDLE quadro 0). alcance dx dy: ponta da arma ou do
+# rastro no quadro de contato, a partir da âncora (dy negativo = acima dos pés).
+# ms: duração de cada quadro do golpe (sem ms, 80). Leves são rápidos, pesados lentos.
+cell 114 64
+ancora 48 55
+guarda 9 -19
+anim IDLE           loop
+anim ATTACK_1       hold 1  contact 2  alcance 40 -27  ms 100
+anim ATTACK_2       hold 1  contact 2  alcance 31 -11  ms 100
+anim ATTACK_3       hold 2  contact 3  alcance 47 -11  ms 100
+anim DEFEND         contact 1  alcance 9 -19
+anim HURT
+anim DEATH          stop 8
+anim RUN            loop
+anim JUMP
+anim ESPECIAL       hold 4  contact 5  alcance 49 -11  ms 100
+anim DESARMADO      stop 3
+arma ATTACK_1 0 8 -33
+arma ATTACK_1 1 9 -34
+arma ATTACK_1 2 -3 -26
+arma ATTACK_1 3 2 -30
+arma ATTACK_1 4 -8 -31
+arma ATTACK_2 0 -16 -22
+arma ATTACK_2 1 -16 -21
+arma ATTACK_2 2 3 -28
+arma ATTACK_2 3 8 -6
+arma ATTACK_2 4 -14 -10
+arma ATTACK_3 0 14 -28
+arma ATTACK_3 1 16 -14
+arma ATTACK_3 2 17 -12
+arma ATTACK_3 3 3 -19
+arma ATTACK_3 4 11 -10
+arma ATTACK_3 5 12 -10
+arma ATTACK_3 6 14 -28
+arma DEATH 0 1 -7
+arma DEATH 1 26 -1
+arma DEATH 2 25 -2
+arma DEATH 3 26 -1
+arma DEATH 4 25 -1
+arma DEATH 5 5 -5
+arma DEATH 6 28 0
+arma DEFEND 0 9 -10
+arma DEFEND 1 5 -10
+arma DEFEND 2 6 -10
+arma DEFEND 3 7 -10
+arma DEFEND 4 8 -10
+arma DEFEND 5 9 -10
+arma HURT 1 -16 -23
+arma HURT 2 -15 -22
+arma HURT 3 -14 -20
+arma IDLE 0 -14 -20
+arma IDLE 1 -14 -19
+arma IDLE 2 -14 -18
+arma IDLE 3 -14 -18
+arma IDLE 4 -14 -18
+arma JUMP 0 12 -42
+arma JUMP 1 13 -42
+arma JUMP 2 14 -42
+arma RUN 0 8 -33
+arma RUN 1 8 -35
+arma RUN 2 8 -34
+arma RUN 3 8 -32
+arma RUN 4 8 -33
+arma RUN 5 8 -35
+arma RUN 6 8 -34
+arma RUN 7 8 -32
+arma ESPECIAL 0 14 -28
+arma ESPECIAL 1 16 -14
+arma ESPECIAL 2 17 -12
+arma ESPECIAL 3 16 -12
+arma ESPECIAL 4 15 -12
+arma ESPECIAL 5 5 -19
+arma ESPECIAL 6 13 -10
+arma ESPECIAL 7 12 -10
+arma ESPECIAL 8 14 -28
+arma2 ATTACK_1 0 -1 -9
+arma2 ATTACK_1 1 -2 -9
+arma2 ATTACK_1 2 11 -7
+arma2 ATTACK_1 3 6 -10
+arma2 ATTACK_1 4 6 -10
+arma2 ATTACK_2 0 2 -9
+arma2 ATTACK_2 1 3 -9
+arma2 ATTACK_2 2 -10 -11
+arma2 ATTACK_3 0 -1 -8
+arma2 ATTACK_3 1 -2 -8
+arma2 ATTACK_3 2 -2 -7
+arma2 ATTACK_3 3 25 -2
+arma2 ATTACK_3 4 25 -2
+arma2 ATTACK_3 5 31 -2
+arma2 ATTACK_3 6 -1 -8
+arma2 DEATH 0 19 -4
+arma2 DEATH 5 19 0
+arma2 DEFEND 0 -2 -9
+arma2 DEFEND 1 -6 -8
+arma2 DEFEND 2 -6 -9
+arma2 DEFEND 3 -4 -9
+arma2 DEFEND 4 -3 -9
+arma2 DEFEND 5 -2 -9
+arma2 HURT 1 -5 -11
+arma2 HURT 2 -3 -11
+arma2 HURT 3 -1 -9
+arma2 IDLE 0 -1 -9
+arma2 IDLE 1 0 -10
+arma2 IDLE 2 -1 -7
+arma2 IDLE 3 -1 -7
+arma2 IDLE 4 0 -8
+arma2 JUMP 0 5 -18
+arma2 JUMP 1 5 -17
+arma2 JUMP 2 6 -18
+arma2 RUN 0 3 -12
+arma2 RUN 1 2 -14
+arma2 RUN 2 2 -11
+arma2 RUN 3 4 -11
+arma2 RUN 4 4 -12
+arma2 RUN 5 3 -13
+arma2 RUN 6 3 -11
+arma2 RUN 7 3 -10
+arma2 ESPECIAL 0 -1 -8
+arma2 ESPECIAL 1 -2 -8
+arma2 ESPECIAL 2 -2 -7
+arma2 ESPECIAL 3 -3 -7
+arma2 ESPECIAL 4 -4 -7
+arma2 ESPECIAL 5 27 -2
+arma2 ESPECIAL 6 27 -2
+arma2 ESPECIAL 7 31 -2
+arma2 ESPECIAL 8 -1 -8

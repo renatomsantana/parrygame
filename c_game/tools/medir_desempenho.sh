@@ -48,8 +48,8 @@ done
 roda "oboro, 3ª fase" "" --demo --master 13 --duel --fase 3
 if [ -n "$RASTRO" ]; then
     roda "oboro 3ª fase, sem rastro" "APARA_RASTRO=0" --demo --master 13 --duel --fase 3
-    roda "karasu (6)" "" --demo --master 6 --duel
-    roda "karasu (6), sem rastro" "APARA_RASTRO=0" --demo --master 6 --duel
+    roda "karasu (10)" "" --demo --master 10 --duel
+    roda "karasu (10), sem rastro" "APARA_RASTRO=0" --demo --master 10 --duel
 fi
 echo
 echo "carga até o primeiro quadro:"

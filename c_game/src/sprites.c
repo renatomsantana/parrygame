@@ -15,6 +15,9 @@ static bool tried[MAX_SETS];
 static int nsets;
 static Shader flat;
 static bool flatOk;
+static Shader slashColour;
+static int slashColourMode;
+static bool slashColourOk;
 
 #define MAX_FX 24
 static SprFx fxs[MAX_FX];     /* efeitos em folha, carregados na primeira vez */
@@ -32,6 +35,17 @@ static const char *FLAT_FS =
 void spr_init(void) {
     flat = LoadShaderFromMemory(NULL, FLAT_FS);
     flatOk = flat.id != 0;
+    /* Preserva os brancos do pack; converte somente a paleta quente dos efeitos. */
+    static const char *slashFS =
+        "#version 330\n"
+        "in vec2 fragTexCoord; in vec4 fragColor; uniform sampler2D texture0;\n"
+        "uniform int lightning; out vec4 finalColor;\n"
+        "void main() { vec4 c=texture(texture0,fragTexCoord); float w=max(c.r,c.g);\n"
+        "vec3 rgb=lightning==1 ? vec3(c.b,.65*w+.35*c.b,w) : vec3(w,.48*w+.52*c.b,.06*w+.94*c.b);\n"
+        "finalColor=vec4(rgb,c.a)*fragColor; }\n";
+    slashColour = LoadShaderFromMemory(NULL, slashFS);
+    slashColourOk = slashColour.id != 0;
+    slashColourMode = GetShaderLocation(slashColour, "lightning");
 }
 
 static void solta_laminas(void);
@@ -39,7 +53,12 @@ static void solta_laminas(void);
 void spr_shutdown(void) {
     solta_laminas();
     for (int i = 0; i < nsets; i++)
-        for (int k = 0; k < sets[i].count; k++) UnloadTexture(sets[i].anims[k].tex);
+        for (int k = 0; k < sets[i].count; k++) {
+            UnloadTexture(sets[i].anims[k].tex);
+            if (sets[i].anims[k].cleanTex.id) UnloadTexture(sets[i].anims[k].cleanTex);
+            if (sets[i].anims[k].weaponTex.id) UnloadTexture(sets[i].anims[k].weaponTex);
+            if (sets[i].anims[k].steelTex.id) UnloadTexture(sets[i].anims[k].steelTex);
+        }
     nsets = 0;
     for (int i = 0; i < nfx; i++)
         if (fxs[i].tex.id) UnloadTexture(fxs[i].tex);
@@ -47,7 +66,8 @@ void spr_shutdown(void) {
     if (uiOk) { UnloadTexture(keysTex[0]); UnloadTexture(keysTex[1]); }
     uiOk = false;
     if (flatOk) UnloadShader(flat);
-    flatOk = false;
+    if (slashColourOk) UnloadShader(slashColour);
+    flatOk = slashColourOk = false;
 }
 
 /* Altura do corpo no primeiro quadro: da âncora dos pés até o pixel mais alto. */
@@ -120,6 +140,35 @@ static void parse_anim(SprSet *s, char *line, const char *dir) {
     a.tex = LoadTextureFromImage(im);
     UnloadImage(im);
     SetTextureFilter(a.tex, TEXTURE_FILTER_POINT);
+    Texture2D *layers[2] = {&a.weaponTex, &a.steelTex};
+    const char *names[2] = {"weapon", "steel"};
+    for(int k=0;k<2;k++) {
+        snprintf(path,sizeof path,"%s/_%s_%s.png",dir,names[k],a.name);
+        if (!FileExists(path)) continue;
+        Texture2D t=LoadTexture(path);
+        if(t.id && t.width==a.tex.width && t.height==a.tex.height) {
+            *layers[k]=t; SetTextureFilter(t,TEXTURE_FILTER_POINT);
+        } else if(t.id) UnloadTexture(t);
+    }
+    snprintf(path, sizeof path, "%s/_clean_%s.png", dir, a.name);
+    if (FileExists(path)) {
+        Texture2D clean = LoadTexture(path);
+        if (clean.id && clean.width == a.tex.width && clean.height == a.tex.height) {
+            a.cleanTex = clean;
+            SetTextureFilter(clean, TEXTURE_FILTER_POINT);
+            snprintf(path, sizeof path, "%s/_clean_%s.txt", dir, a.name);
+            FILE *points = fopen(path, "r");
+            if (points) {
+                char line[128], kind[8]; int frame; float x, y;
+                while (fgets(line, sizeof line, points)) {
+                    if (sscanf(line, "%7s %d %f %f", kind, &frame, &x, &y) != 4 || frame < 0 || frame >= a.frames || frame >= SPR_MAX_FRAMES) continue;
+                    if (!strcmp(kind, "arma")) { a.weapon[frame] = (Vector2){x, y}; a.hasWeapon[frame] = true; }
+                    if (!strcmp(kind, "arma2")) { a.offhand[frame] = (Vector2){x, y}; a.hasOffhand[frame] = true; }
+                }
+                fclose(points);
+            }
+        } else if (clean.id) UnloadTexture(clean);
+    }
     if (a.hold >= a.frames) a.hold = a.frames - 1;
     if (a.contact >= a.frames) a.contact = a.frames - 1;
     if (a.stop >= a.frames) a.stop = a.frames - 1;
@@ -172,7 +221,12 @@ const SprSet *spr_get(const char *id) {
     int i = nsets++;
     tried[i] = true;
     if (!load_set(&sets[i], id)) {
-        for (int k = 0; k < sets[i].count; k++) UnloadTexture(sets[i].anims[k].tex);
+        for (int k = 0; k < sets[i].count; k++) {
+            UnloadTexture(sets[i].anims[k].tex);
+            if (sets[i].anims[k].cleanTex.id) UnloadTexture(sets[i].anims[k].cleanTex);
+            if (sets[i].anims[k].weaponTex.id) UnloadTexture(sets[i].anims[k].weaponTex);
+            if (sets[i].anims[k].steelTex.id) UnloadTexture(sets[i].anims[k].steelTex);
+        }
         sets[i].count = 0;
         snprintf(sets[i].id, sizeof sets[i].id, "%s", id);
         return NULL;
@@ -191,7 +245,6 @@ const SprAnim *spr_anim(const SprSet *s, const char *name) {
 /* A lâmina sozinha (as adagas do yoru, as únicas que aparecem no apagão) */
 /* ------------------------------------------------------------------ */
 
-#define LAMINA_LUZ_BRANCA 190     /* o brilho do aço: luminância de 190 ou mais (0 a 255), em qualquer lugar do corpo abaixo dos olhos */
 #define LAMINA_LUZ_VIOLETA 75     /* o violeta da lâmina: de 75 ou mais, mas só perto de um ponto de lâmina */
 #define LAMINA_ACIMA_MAX 28       /* abaixo da altura dos olhos: nada acima disto, a partir dos pés */
 #define LAMINA_RAIO 10            /* px em volta de um ponto de lâmina */
@@ -200,7 +253,7 @@ const SprAnim *spr_anim(const SprSet *s, const char *name) {
 bool spr_pixel_de_lamina(Color c, int acimaDosPes, bool pertoDoPonto) {
     if (c.a < 200 || acimaDosPes > LAMINA_ACIMA_MAX || c.b < c.r) return false;
     float luz = 0.30f * c.r + 0.59f * c.g + 0.11f * c.b;
-    return luz >= LAMINA_LUZ_BRANCA || (pertoDoPonto && luz >= LAMINA_LUZ_VIOLETA);
+    return pertoDoPonto && luz >= LAMINA_LUZ_VIOLETA;
 }
 
 static struct { const SprAnim *src; SprAnim lamina; bool ok; } lam[LAMINA_MAX];
@@ -243,7 +296,12 @@ const SprAnim *spr_lamina(const SprSet *s, const SprAnim *a) {
     int i = nlam++;
     lam[i].src = a;
     lam[i].lamina = *a;
-    lam[i].lamina.tex = tira_da_lamina(s, a);
+    if(a->steelTex.id) {
+        Image steel=LoadImageFromTexture(a->steelTex);
+        lam[i].lamina.tex=LoadTextureFromImage(steel);
+        UnloadImage(steel);
+        SetTextureFilter(lam[i].lamina.tex,TEXTURE_FILTER_POINT);
+    } else lam[i].lamina.tex = tira_da_lamina(s, a);
     lam[i].ok = lam[i].lamina.tex.id != 0;
     return lam[i].ok ? &lam[i].lamina : NULL;
 }
@@ -261,6 +319,8 @@ static void blit(const SprAnim *a, Rectangle src, Rectangle dst, bool faceLeft, 
 
 void spr_draw(const SprSet *s, const SprAnim *a, int frame, Vector2 feet, SprDraw o) {
     if (!s || !a || a->frames <= 0) return;
+    SprAnim clean;
+    if (o.withoutTrail && a->cleanTex.id) { clean = *a; clean.tex = a->cleanTex; a = &clean; }
     if (frame < 0) frame = 0;
     if (frame >= a->frames) frame = a->frames - 1;
     float x = floorf(feet.x + 0.5f) - (o.faceLeft ? s->cw - 1 - s->ax : s->ax);
@@ -298,26 +358,81 @@ const SprFx *spr_fx(const char *name) {
     f->tex = LoadTexture(path);
     if (!f->tex.id) return NULL;
     SetTextureFilter(f->tex, TEXTURE_FILTER_POINT);
-    f->cell = 64;
+    f->cell = !strcmp(name, "slash") ? 96 : 64;
+    if (f->tex.width % f->cell || f->tex.height % f->cell ||
+        (!strcmp(name, "slash") && (f->tex.width != 864 || f->tex.height != 1152))) {
+        TraceLog(LOG_WARNING, "Folha de efeito inválida: %s", path);
+        UnloadTexture(f->tex);
+        f->tex = (Texture2D){0};
+        return NULL;
+    }
     f->frames = f->tex.width / f->cell;
     f->rows = f->tex.height / f->cell;
+    if (!strcmp(name, "slash")) {
+        Image image = LoadImage(path);
+        Color *pixels = LoadImageColors(image);
+        static const int peak[12] = {1,2,1,2,2,2,0,0,1,1,1,0};
+        if (pixels) {
+            for (int row = 0; row < 12; row++) {
+                double weight = 0, xsum = 0, ysum = 0;
+                for (int y = 0; y < 96; y++) for (int x = 0; x < 96; x++) {
+                    unsigned a = pixels[(row * 96 + y) * image.width + peak[row] * 96 + x].a;
+                    weight += a; xsum += (x + .5) * a; ysum += (y + .5) * a;
+                }
+                f->pivot[row] = weight ? (Vector2){xsum / weight, ysum / weight} : (Vector2){48,48};
+            }
+            UnloadImageColors(pixels);
+        }
+        UnloadImage(image);
+    }
     return f->frames > 0 ? f : NULL;
 }
 
 int spr_fx_cache_count(void) { return nfx; }
+
+int spr_fx_row_frames(const SprFx *f, int row) {
+    if (!f || row < 0 || row >= f->rows) return 0;
+    static const int slashFrames[] = {8, 8, 5, 9, 9, 5, 7, 7, 4, 8, 6, 4};
+    return !strcmp(f->name, "slash") && row < 12 ? slashFrames[row] : f->frames;
+}
 
 void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint) {
     spr_fx_draw_scaled(f, row, frame, center, flip, tint, 1);
 }
 
 void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale) {
-    if (!f || frame < 0 || frame >= f->frames) return;
+    spr_fx_draw_rotated(f, row, frame, center, flip, tint, scale, 0, false);
+}
+
+void spr_fx_draw_rotated(const SprFx *f, int row, int frame, Vector2 center, bool flip,
+                         Color tint, float scale, float rotation, bool flatTint) {
+    if (!f) return;
     if (row < 0) row = 0;
     if (row >= f->rows) row = f->rows - 1;
+    if (frame < 0 || frame >= spr_fx_row_frames(f, row)) return;
     float c = (float)f->cell, d = floorf(c * scale + 0.5f);
     Rectangle src = {frame * c, row * c, flip ? -c : c, c};
-    Rectangle dst = {floorf(center.x + 0.5f) - floorf(d / 2), floorf(center.y + 0.5f) - floorf(d / 2), d, d};
-    DrawTexturePro(f->tex, src, dst, (Vector2){0, 0}, 0, tint);
+    Rectangle dst = {floorf(center.x + 0.5f), floorf(center.y + 0.5f), d, d};
+    if (flatTint && flatOk) BeginShaderMode(flat);
+    DrawTexturePro(f->tex, src, dst, (Vector2){floorf(d / 2), floorf(d / 2)}, rotation, tint);
+    if (flatTint && flatOk) EndShaderMode();
+}
+
+/* Pivô pintado no quadro principal, fixo durante a animação: a cauda não
+ * salta ao centro de uma célula transparente nem é recentrada a cada quadro. */
+void spr_fx_draw_weapon(const SprFx *f, int row, int frame, Vector2 at, bool flip, Color tint, float scale) {
+    if (!f || row < 0 || row >= 12 || frame < 0 || frame >= spr_fx_row_frames(f, row)) return;
+    float c = (float)f->cell, d = floorf(c * scale + .5f);
+    Vector2 p = f->pivot[row];
+    Rectangle src = {frame * c, row * c, flip ? -c : c, c};
+    Rectangle dst = {floorf(at.x + .5f), floorf(at.y + .5f), d, d};
+    if (slashColourOk) {
+        int lightning = row == 1 || row == 7 || row == 10;
+        BeginShaderMode(slashColour);
+        SetShaderValue(slashColour, slashColourMode, &lightning, SHADER_UNIFORM_INT);
+    }
+    DrawTexturePro(f->tex, src, dst, (Vector2){(flip ? c - p.x : p.x) * d / c, p.y * d / c}, 0, tint);
+    if (slashColourOk) EndShaderMode();
 }
 
 static void ui_load(void) {

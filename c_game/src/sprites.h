@@ -20,6 +20,9 @@
 typedef struct {
     char name[40];
     Texture2D tex;
+    Texture2D weaponTex;          /* pixels reais da arma, cabo e lâmina; sem corpo/aura */
+    Texture2D steelTex;           /* só o aço; apagão do Yoru */
+    Texture2D cleanTex;           /* mesma tira, sem rastro; corpo e arma intactos */
     int frames;
     int hold, contact, stop;     /* -1 = não tem */
     int reachX, reachY;          /* ponta da arma no contato, a partir dos pés */
@@ -57,6 +60,7 @@ typedef struct {
     int breath;                  /* px que o tronco desce (respiração) */
     bool flat;                   /* silhueta de uma cor só: contorno, apagão, clarão */
     Color color;                 /* tinta (ou a cor da silhueta) */
+    bool withoutTrail;           /* substituição: não desenhar o arco antigo junto */
 } SprDraw;
 
 /* Desenha o quadro com os pés em `feet` (arredondado para o pixel). */
@@ -78,10 +82,9 @@ void spr_loop(SprPlayer *p, const SprAnim *a);
 void spr_cycle(SprPlayer *p, const SprAnim *a, float time);  /* o laço por `time` segundos */
 void spr_update(SprPlayer *p, float dt);
 bool spr_done(const SprPlayer *p);
-/* A tira só com a lâmina, para o apagão do yoru: do corpo ficam só as adagas, nas cores delas. É aço o pixel frio (o azul igual ou maior que o vermelho, o que deixa
- * a pele de fora) que está abaixo da altura dos olhos e é bem claro (branco e lilás) em qualquer lugar, ou é violeta mas perto de um ponto de lâmina
- * (`arma` e `arma2` do sprite.txt: o violeta também é do cabelo e das botas, e longe da lâmina fica apagado). Cada tira é feita na primeira vez que se pede,
- * e fica guardada. NULL se a tira não está lá. */
+/* Aço isolado pelo gerador (_steel_<animação>.png): só as adagas no apagão.
+ * Para packs antigos sem máscara, o fallback exige cor fria e proximidade da
+ * lâmina; olhos, barba e roupa clara não acendem por luminância sozinha. */
 const SprAnim *spr_lamina(const SprSet *s, const SprAnim *a);
 bool spr_pixel_de_lamina(Color c, int acimaDosPes, bool pertoDoPonto);   /* a regra de cor e altura, aberta para o teste */
 /* Quanto o corpo avança (px, + para onde o lutador olha) do quadro `de` para o quadro `para`; 0 se algum dos dois não tem corpo. */
@@ -96,14 +99,22 @@ typedef struct {
     char name[16];
     Texture2D tex;
     int frames, rows, cell;
+    Vector2 pivot[12];            /* centro dos pixels no quadro principal do slash */
 } SprFx;
 
 const SprFx *spr_fx(const char *name);
+/* O pack slash usa células de 96 px e linhas com durações diferentes; as
+ * colunas transparentes de preenchimento não pertencem à animação. */
+int spr_fx_row_frames(const SprFx *f, int row);
 int spr_fx_cache_count(void);    /* diagnóstico: quantas folhas já foram consultadas */
 void spr_ui_preload(void);       /* ícones carregados antes do primeiro quadro */
 void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint);
 /* O mesmo, em outra escala (a poeira menor que a folha do pack). */
 void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale);
+void spr_fx_draw_rotated(const SprFx *f, int row, int frame, Vector2 center, bool flip,
+                         Color tint, float scale, float rotation, bool flatTint);
+
+void spr_fx_draw_weapon(const SprFx *f, int row, int frame, Vector2 at, bool flip, Color tint, float scale);
 
 /* Teclas e mouse de pixel (assets/sprites/_ui/): "A".."Z", "0".."9", "ESC",
  * "ENTER", "TAB", "SHIFT", "DEL", "CAPS", "SPACE"; mouse 0..3. `unit` é quantas

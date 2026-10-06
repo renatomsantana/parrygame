@@ -47,6 +47,7 @@
 #endif
 
 #include "raylib.h"
+#include "../src/cores_posturas.h"
 
 /* Contas de ponto flutuante sem FMA, para sair igual em qualquer máquina. */
 #ifdef __clang__
@@ -738,6 +739,7 @@ typedef struct {
     Rgb chapeu_cor[3];
     const char *rosto;   /* debaixo do chapéu */
     Rgb camisa[4], hakama[5], pele[3], cabelo[3];
+    Rgb tecido[3];                          /* paleta fixa da roupa, mesmo quando Oboro troca o elemento */
     Rgb saya;
     bool sem_saya;
     Rgb cabo, lamina[2], rastro[3], destaque[2], destaque2, obi, olho, mascara[2];
@@ -770,6 +772,7 @@ typedef struct {
     const Row *cab_frente, *cab_costas; /* Samurai #5: cabelo novo (de frente e de costas), em volta do olho */
     int cab_balanco;                        /* quanto o cabelo acompanha o movimento: 1 curto e duro, 2 médio, 3 comprido */
     bool sem_rastro_pack;                   /* tira o corte de katana do pack (cores de rastro_pack longe do corpo) */
+    bool rastro_original;                   /* conserva o formato do slash do pack */
     bool rastro_pack_solto;                 /* o rastro do pack tem cor própria: sai inteiro (menos as lâminas) e o
                                                buraco que ele deixa no corpo é tapado com a cor em volta */
     Remonta remonta[3];
@@ -1035,7 +1038,7 @@ static Char CHARS[] = {
      .destaque = {HEX(0x9ef0ff), HEX(0x3aa6d8)}, .obi = HEX(0x3aa6d8),
      .saya = HEX(0xe8f4ff), .cabo = HEX(0x3aa6d8),
      .lamina = {HEX(0xffffff), HEX(0xbfe8ff)},
-     .rastro = {HEX(0xffffff), HEX(0xc8f0ff), HEX(0x7ec8f0)}, .elemento = EL_GELO, .largura = -1,
+     .rastro = {{COR_GELO_CLARA}, {COR_GELO_MEDIA}, {COR_GELO_ESCURA}}, .elemento = EL_GELO, .largura = -1,
      .especial = SP_ESTOCADA, .efeito = FX_CRISTAL,
      /* o florete fica na mão em todos os quadros (em guarda, para baixo); os golpes
         são estocadas retas com rastro fino: a do meio e a alta saem do arremesso do
@@ -1079,7 +1082,7 @@ static Char CHARS[] = {
                {HEX(0x272727), HEX(0xb88428)}, {HEX(0x3d3d3d), HEX(0xe8b83c)}, {HEX(0x5ac54f), HEX(0xffb020)}}},
     /* 6. Corvo. Katana na mão da frente e wakizashi (a curta) na outra. Preto e vermelho. */
     {.id = "karasu", .titulo = "Karasu",
-     .arma = {.kind = W_KATANA, .escala = 0.95, .par = true, .par_comprimento = 13, .cor_par = HEX(0xece4e6),
+     .arma = {.kind = W_KATANA, .escala = 0.95, .par = true, .par_comprimento = 11, .cor_par = HEX(0xece4e6),
               .guarda = HEX(0x8c1018)},
      .cabeca = "corvo",
      .acessorios = {AC_TRAPO},
@@ -1103,7 +1106,7 @@ static Char CHARS[] = {
                {HEX(0x272727), HEX(0x100c10)}, {HEX(0x3d3d3d), HEX(0x241c26)}, {HEX(0x5ac54f), HEX(0xff2a2a)}}},
     /* 7. Vento. Duas foices (kama), uma em cada mão, e cortes de vento. Verde claro e limão, cachecol. */
     {.id = "hayate", .titulo = "Hayate",
-     .arma = {.kind = W_FOICE, .comprimento = 7, .par = true, .haste = {HEX(0x8a6a44), HEX(0x5a4228)}},
+     .arma = {.kind = W_FOICE, .comprimento = 9, .par = true, .haste = {HEX(0x8a6a44), HEX(0x5a4228)}},
      .cabeca = "vento", .acessorios = {AC_CACHECOL}, .sem_saya = true,
      .camisa = {HEX(0xeefce0), HEX(0xc2eca8), HEX(0x8ccc78), HEX(0x5c9c54)},
      .hakama = {HEX(0x4a6448), HEX(0x384e38), HEX(0x283a2a), HEX(0x1c2a1e), HEX(0x131e15)},
@@ -1136,7 +1139,7 @@ static Char CHARS[] = {
      .especial = SP_SALTO, .efeito = FX_FOGO},
     /* 9. Mar. Lança de água. Azul mar e turquesa. */
     {.id = "suiren", .titulo = "Suiren",
-     .arma = {.kind = W_LANCA, .escala = 1.2, .atras = 14, .ponta = 5, .haste = {HEX(0x5a9cc0), HEX(0x24506e)}},
+     .arma = {.kind = W_LANCA, .escala = 1.2, .atras = 20, .ponta = 8, .haste = {HEX(0x5a9cc0), HEX(0x24506e)}},
      .camisa = {HEX(0xeef8ff), HEX(0xbfe2f6), HEX(0x86bde6), HEX(0x5a8cc4)},
      .hakama = {HEX(0x4a78b0), HEX(0x36609a), HEX(0x284a7c), HEX(0x1d3862), HEX(0x142848)},
      .pele = {HEX(0xf2c29c), HEX(0xd69a74), HEX(0xa86a4e)},
@@ -1144,7 +1147,7 @@ static Char CHARS[] = {
      .destaque = {HEX(0x3cf0d8), HEX(0x14a8a0)}, .obi = HEX(0x3cf0d8),
      .sem_saya = true, .cabo = HEX(0x14a8a0),
      .lamina = {HEX(0xd8fffa), HEX(0x3cf0d8)},
-     .rastro = {HEX(0xe0fffc), HEX(0x5cf0e0), HEX(0x1c9cc8)}, .elemento = EL_AGUA, .largura = -1,
+     .rastro = {{COR_MAR_CLARA}, {COR_MAR_MEDIA}, {COR_MAR_ESCURA}}, .elemento = EL_AGUA, .largura = -1,
      .especial = SP_ESTOCADA, .efeito = FX_ONDA,
      /* golpes de lança: a estocada (e a alta) sai do arremesso do pack, com o braço
         esticado; a varrida baixa, do corte baixo (ATTACK_3) sem o rastro de katana */
@@ -1173,12 +1176,12 @@ static Char CHARS[] = {
      .destaque = {HEX(0x3ca8ff), HEX(0x1a5ad0)}, .obi = HEX(0x3ca8ff),
      .saya = HEX(0x111219), .cabo = HEX(0x1a5ad0),
      .lamina = {HEX(0xeef8ff), HEX(0x5cb4ff)},
-     .rastro = {HEX(0xf4faff), HEX(0x7cc8ff), HEX(0x2a6cf0)}, .elemento = EL_RAIO,
+     .rastro = {{COR_NUVEM_CLARA}, {COR_NUVEM_MEDIA}, {COR_NUVEM_ESCURA}}, .elemento = EL_RAIO,
      .especial = SP_INVESTIDA, .efeito = FX_RAIO,
      /* corpo do Samurai #5 (já com as duas espadas): o verde vira preto, cinto e botas em azul
         elétrico, cabelo prateado e olhos de raio */
-     /* golpes: sem a meia-lua do pack, um raio em zigue-zague no caminho de cada espada */
-     .golpe = GP_RAIO, S5_REMONTA,
+     /* Slash branco original do Samurai #5, recolorido em azul; sem remontagem ou arco extra. */
+     .rastro_original = true,
      .sem_pano = true, .pack = "samurai5", .cab_frente = CAB_ARASHI_FRENTE, .cab_costas = CAB_ARASHI_COSTAS, .cab_balanco = 3, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x3a4056)}, {HEX(0x134c4c), HEX(0x252a3a)}, {HEX(0x0c2e44), HEX(0x14161f)},
@@ -1371,6 +1374,7 @@ typedef struct {
     unsigned char tag[CH][CW];
     bool empty[CH][CW];  /* vazio no quadro original: dá para desenhar atrás */
     bool wpx[CH][CW];    /* pixels da arma nova */
+    bool hpx[CH][CW];    /* cabos do pack, acompanhando os deslocamentos do quadro */
     int pen;             /* camada de quem está desenhando agora */
     const Seg *seg;
     const Frame *orig;   /* o quadro como veio do pack */
@@ -1388,11 +1392,13 @@ static void cv_put(Canvas *cv, int x, int y, Rgb c) {
     if (!cv_ok(x, y)) return;
     cv->a[y][x] = (Color){c.r, c.g, c.b, 255};
     cv->tag[y][x] = (unsigned char)cv->pen;
+    if(cv->pen == T_BODY) cv->hpx[y][x] = false;
 }
 static void cv_clear(Canvas *cv, int x, int y) {
     if (!cv_ok(x, y)) return;
     cv->a[y][x] = (Color){0, 0, 0, 0};
     cv->tag[y][x] = T_NONE;
+    cv->hpx[y][x] = false;
 }
 static bool cv_is_empty(const Canvas *cv, int x, int y) { return cv_ok(x, y) && cv->a[y][x].a == 0; }
 /* Pinta só onde não havia nada (fica atrás do corpo). */
@@ -1581,7 +1587,7 @@ static void paint_smear(Canvas *cv, const Char *ch, const char *anim, int idx) {
             set_rgb(cv, x, y, in_set(s->c[y][x], "Lg") ? ch->rastro[2] : inner ? ch->rastro[0] : ch->rastro[1]);
         }
     Element el = ch->elemento;
-    if (el == EL_NONE) return;
+    if (el == EL_NONE || ch->rastro_original) return;
     /* Partículas soltas perto da borda de fora do rastro. */
     mask_dilate(ring, sm, 2, false);
     for (int y = 0; y < CH; y++)
@@ -1591,7 +1597,7 @@ static void paint_smear(Canvas *cv, const Char *ch, const char *anim, int idx) {
             if (el == EL_FOGO && r < 0.07) {
                 cv_put(cv, x, y, r < 0.035 ? (Rgb){255, 120, 30} : (Rgb){255, 200, 70});
             } else if (el == EL_AGUA && r < 0.05) {
-                cv_put(cv, x, y, (Rgb){150, 230, 255});
+                cv_put(cv, x, y, (Rgb){COR_MAR_MEDIA});
             } else if (el == EL_GELO && r < 0.05) {
                 /* lasca de gelo: um ponto branco e, às vezes, a cruz de um cristal */
                 cv_put(cv, x, y, (Rgb){236, 250, 255});
@@ -1688,6 +1694,7 @@ static void remove_smear_px(Canvas *cv, int x, int y) {
 /* O formato do rastro conta a arma: adaga corta duplo, garra deixa três
    riscos, arma pesada abre um rastro grosso, duas espadas deixam um eco. */
 static void smear_style(Canvas *cv, const Char *ch) {
+    if (ch->rastro_original) return;
     static int d[CH][CW];
     const Seg *s = cv->seg;
     WeaponKind k = ch->arma.kind;
@@ -1722,6 +1729,27 @@ static void smear_style(Canvas *cv, const Char *ch) {
                 int ex = x - 3, ey = y + 3;
                 if (cv_ok(ex, ey) && cv->a[ey][ex].a == 0) cv_put(cv, ex, ey, ch->rastro[2]);
             }
+    }
+}
+
+static void fx_put_clean(Canvas *cv, int x, int y, Rgb c);
+/* Dois ramos curtos saem de pixels da borda do slash original. Sem arco novo,
+ * sem pintar por cima do corpo/aço e sem raio quando a tira não mostra corte. */
+static void slash_lightning(Canvas *cv) {
+    int rightX = -1, rightY = -1, topX = -1, topY = CH;
+    for (int y = 1; y < CH - 1; y++) for (int x = 1; x < CW - 1; x++) {
+        if (!cv->a[y][x].a || cv->tag[y][x] != T_WEAPON || cv->wpx[y][x] || cv->seg->lab[y][x] != SMEAR) continue;
+        if (!cv->a[y][x + 1].a && x > rightX) { rightX = x; rightY = y; }
+        if (!cv->a[y - 1][x].a && y < topY) { topX = x; topY = y; }
+    }
+    for (int branch = 0; branch < 2; branch++) {
+        int x = branch ? topX : rightX, y = branch ? topY : rightY;
+        if (x < 0 || y < 0 || y >= CH) continue;
+        for (int j = 1; j <= 6; j++) {
+            int nx = x + (branch ? ((j / 2) % 2) : j);
+            int ny = y + (branch ? -j : ((j / 2) % 2));
+            fx_put_clean(cv, nx, ny, j == 6 ? (Rgb){COR_RAIO_LUZ} : (Rgb){COR_RAIO_AZUL});
+        }
     }
 }
 
@@ -2713,7 +2741,7 @@ static void blade_fx(Canvas *cv, const Char *ch, const char *anim, int idx) {
                 if (r < 0.12) {
                     static const int d[4][2] = {{0, -2}, {1, -1}, {-1, 1}, {0, 2}};
                     int k = (int)(r * 100) % 4, dx = d[k][0], dy = d[k][1];
-                    if (cv_is_empty(cv, x + dx, y + dy)) cv_put(cv, x + dx, y + dy, (Rgb){150, 235, 255});
+                    if (cv_is_empty(cv, x + dx, y + dy)) cv_put(cv, x + dx, y + dy, (Rgb){COR_MAR_MEDIA});
                 }
             }
         }
@@ -2771,7 +2799,7 @@ static void thrust(Canvas *cv, const Char *ch, const Ctx *ctx) {
     int reach_tbl[5][2] = {{22, 12}, {22, 12}, {16, 16}, {34, 12}, {26, 12}};  /* lança: frente, trás */
     int foil_tbl[5][2] = {{20, 2}, {20, 2}, {15, 2}, {30, 2}, {24, 2}};
     int ph = ctx->phase;
-    int front = lanca ? reach_tbl[ph][0] : foil_tbl[ph][0], back = lanca ? reach_tbl[ph][1] : foil_tbl[ph][1];
+    int front = lanca ? reach_tbl[ph][0] : foil_tbl[ph][0], back = lanca ? (w->atras ? w->atras : reach_tbl[ph][1]) : foil_tbl[ph][1];
     if (ph == PH_RECOVERY && ctx->idx > ctx->contact + 1) front -= 4;
     if (hx + front > cellw - 4) front = cellw - 4 - (int)hx;  /* a ponta não passa da borda do quadro */
     Blade b = {0};
@@ -2783,8 +2811,9 @@ static void thrust(Canvas *cv, const Char *ch, const Ctx *ctx) {
         int head = w->ponta ? w->ponta : 5;
         stroke(cv, &b, -back, front - head, w->haste[0], NULL, 0, 0, 2, false);
         stroke(cv, &b, front - head, front, core, &edge, 0, 0, 1, false);
-        for (int k = -1; k <= 1; k += 2) {
-            int x = pyround(hx + front - head + 1.5), y = (int)hy + k;
+        for (int k = -2; k <= 2; k += 1) {
+            if(!k) continue;
+            int x = pyround(hx + front - head + 2.5), y = (int)hy + k;
             if (empty_orig(cv, x, y) || (cv_ok(x, y) && cv->a[y][x].a == 0)) { cv_put(cv, x, y, edge); mark(cv, x, y); }
         }
     } else {
@@ -4231,9 +4260,9 @@ static void body_aura(Canvas *cv, const Char *ch, const Ctx *ctx, bool only_dust
             break;
         }
         case EL_AGUA:
-            glow(cv, ctx, 0.14 * pw, ymid, (Rgb){150, 235, 255}, (Rgb){60, 170, 230}, false);
+            glow(cv, ctx, 0.14 * pw, ymid, (Rgb){COR_MAR_MEDIA}, (Rgb){COR_MAR_ESCURA}, false);
             particles(cv, ctx, "bolha", (int)(4 * pw), 10, bx0, bx1, ymid, by1, 0, -1.2, 0.8,
-                      (Rgb){200, 250, 255}, (Rgb){120, 220, 250}, (Rgb){60, 160, 220}, 1);
+                      (Rgb){COR_MAR_CLARA}, (Rgb){COR_MAR_MEDIA}, (Rgb){COR_MAR_ESCURA}, 1);
             break;
         case EL_RAIO: {
             glow(cv, ctx, 0.1 * pw, ymid, (Rgb){170, 220, 255}, (Rgb){60, 130, 255}, false);
@@ -4350,9 +4379,12 @@ static void body_aura(Canvas *cv, const Char *ch, const Ctx *ctx, bool only_dust
 static void resize_body(Canvas *cv, int cx, int wy, int dw, int dh, int head_y) {
     static Color a[CH][CW];
     static unsigned char t[CH][CW];
+    static bool w[CH][CW], h[CH][CW];
     if (dw && cx > 0 && cx < CW - 1) {
         memcpy(a, cv->a, sizeof a);
         memcpy(t, cv->tag, sizeof t);
+        memcpy(w,cv->wpx,sizeof w);
+        memcpy(h,cv->hpx,sizeof h);
         for (int y = 0; y < CH; y++) {
             bool head = y <= head_y;
             for (int x = head ? 0 : cx + 1; x < CW; x++) {
@@ -4360,22 +4392,24 @@ static void resize_body(Canvas *cv, int cx, int wy, int dw, int dh, int head_y) 
                 /* na altura da cabeça só a arma e os efeitos andam; o corpo fica */
                 if (head) {
                     bool moved = sx < CW && t[y][sx] != T_BODY && a[y][sx].a;
-                    if (moved) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; }
+                    if (moved) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; cv->wpx[y][x] = w[y][sx]; cv->hpx[y][x] = h[y][sx]; }
                     else if (t[y][x] == T_BODY) { cv->a[y][x] = a[y][x]; cv->tag[y][x] = T_BODY; }
-                    else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; }
-                } else if (sx < CW) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; }
-                else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; }
+                    else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; cv->wpx[y][x] = false; cv->hpx[y][x] = false; }
+                } else if (sx < CW) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; cv->wpx[y][x] = w[y][sx]; cv->hpx[y][x] = h[y][sx]; }
+                else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; cv->wpx[y][x] = false; cv->hpx[y][x] = false; }
             }
         }
     }
     if (dh && wy > 1 && wy < CH) {
         memcpy(a, cv->a, sizeof a);
         memcpy(t, cv->tag, sizeof t);
+        memcpy(w,cv->wpx,sizeof w);
+        memcpy(h,cv->hpx,sizeof h);
         for (int y = 0; y < wy; y++) {
             int sy = y + dh;  /* mais alto: a parte de cima sobe dh linhas */
             if (dh > 0 && sy >= wy) sy = wy - 1;
-            if (sy >= 0 && sy < wy) { memcpy(cv->a[y], a[sy], sizeof a[0]); memcpy(cv->tag[y], t[sy], sizeof t[0]); }
-            else { memset(cv->a[y], 0, sizeof a[0]); memset(cv->tag[y], 0, sizeof t[0]); }
+            if (sy >= 0 && sy < wy) { memcpy(cv->a[y], a[sy], sizeof a[0]); memcpy(cv->tag[y], t[sy], sizeof t[0]); memcpy(cv->wpx[y],w[sy],sizeof w[0]); memcpy(cv->hpx[y],h[sy],sizeof h[0]); }
+            else { memset(cv->a[y], 0, sizeof a[0]); memset(cv->tag[y], 0, sizeof t[0]); memset(cv->wpx[y],0,sizeof w[0]); memset(cv->hpx[y],0,sizeof h[0]); }
         }
     }
 }
@@ -4385,13 +4419,16 @@ static void translate(Canvas *cv, int dx) {
     if (!dx) return;
     static Color a[CH][CW];
     static unsigned char t[CH][CW];
+    static bool w[CH][CW], h[CH][CW];
     memcpy(a, cv->a, sizeof a);
     memcpy(t, cv->tag, sizeof t);
+    memcpy(w,cv->wpx,sizeof w);
+        memcpy(h,cv->hpx,sizeof h);
     for (int y = 0; y < CH; y++)
         for (int x = 0; x < CW; x++) {
             int sx = x - dx;
-            if (sx >= 0 && sx < CW) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; }
-            else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; }
+            if (sx >= 0 && sx < CW) { cv->a[y][x] = a[y][sx]; cv->tag[y][x] = t[y][sx]; cv->wpx[y][x] = w[y][sx]; cv->hpx[y][x] = h[y][sx]; }
+            else { cv->a[y][x] = (Color){0, 0, 0, 0}; cv->tag[y][x] = T_NONE; cv->wpx[y][x] = false; cv->hpx[y][x] = false; }
         }
 }
 
@@ -4609,7 +4646,7 @@ static void special_fx(Canvas *cv, const Char *ch, SpecialFx fx, int ax, int rdx
             }
             for (int k = 0; k < 5; k++) {
                 double ang = -1.2 - k * 0.2;
-                fx_px(cv, tx + (int)(cos(ang) * (r + 3)), ty + (int)(sin(ang) * (r + 3)) + age, (Rgb){200, 250, 255});
+                fx_px(cv, tx + (int)(cos(ang) * (r + 3)), ty + (int)(sin(ang) * (r + 3)) + age, (Rgb){COR_MAR_CLARA});
             }
             break;
         }
@@ -4707,6 +4744,8 @@ static void scream_fx(Canvas *cv, int age) {
         if (cv_ok(x, y) && cv->a[y][x].a == 0) cv_put(cv, x, y, k % 3 ? (Rgb){196, 36, 48} : (Rgb){255, 190, 190});
     }
 }
+
+static void roupa_postura(Canvas *cv, const Char *ch);
 
 static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ctx, Canvas *cv);
 
@@ -5535,6 +5574,7 @@ static void round_top(Canvas *cv) {
 
 static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ctx, Canvas *cv) {
     const char *anim = ctx->anim;
+    bool originalSlash = ch->rastro_original && (strstr(anim, "ATTACK") || !strcmp(anim, "ESPECIAL"));
     int idx = ctx->idx;
     memcpy(cv->a, f->p, sizeof cv->a);
     cv->seg = seg;
@@ -5543,6 +5583,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         for (int x = 0; x < CW; x++) {
             int lb = seg->lab[y][x];
             cv->empty[y][x] = lb == NONE;
+            cv->hpx[y][x] = lb == HANDLE;
             cv->tag[y][x] = lb == NONE ? T_NONE : (lb == SMEAR || lb == BLADE) ? T_WEAPON : T_BODY;
         }
     cv->pen = T_BODY;
@@ -5585,11 +5626,12 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         cv->pen = T_FX;
         paint_smear(cv, ch, anim, idx);
         smear_style(cv, ch);
+        if (originalSlash && ch->elemento == EL_RAIO) slash_lightning(cv);
         /* o rastro preto do Karasu (e o do eco dele no Oboro, que herda o rastro) ganha o fio cinza */
         if (ch->rastro[0].r == 0x34 && ch->rastro[0].g == 0x34 && ch->rastro[0].b == 0x3e) trail_rim(cv, ch);
         /* a aura na arma vem depois dos cortes de vento e de lua: o halo tem a cor do rastro e
            mudaria o desenho (e o alcance) do corte */
-        if (!cor7(ch)) aura(cv, ch, ctx);
+        if (!cor7(ch) && !originalSlash) aura(cv, ch, ctx);
         if (ch->elemento == EL_VENTO) wind_slash(cv, ch, ctx);
         if (ch->elemento == EL_LUA) {
             /* o corte em lua sempre contou o pó de prata da aura do corpo (branco, a cor do
@@ -5604,7 +5646,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
                     for (int x = 0; x < CW; x++)
                         if (cv->tag[y][x] == T_FX && !a0[y][x].a && cv->a[y][x].a) cv_clear(cv, x, y);
         }
-        if (cor7(ch)) aura(cv, ch, ctx);
+        if (cor7(ch) && !originalSlash) aura(cv, ch, ctx);
     }
     for (int i = 0; i < seg->nerase; i++)
         for (int y = seg->erase[i][1] < 0 ? 0 : seg->erase[i][1]; y <= seg->erase[i][3] && y < CH; y++)
@@ -5618,6 +5660,7 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
         translate(cv, lunge(ch, ctx));
     }
     round_top(cv);
+    roupa_postura(cv, ch);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -5804,6 +5847,45 @@ static void save_strip(const char *path, Frame *frames, int n, int cw, int ch) {
             for (int x = 0; x < cw; x++) px[y * im.width + k * cw + x] = frames[k].p[y][x];
     ExportImage(im, path);
     UnloadImage(im);
+}
+
+/* Camada sem o rastro antigo, para substituição pelo pack comprado.
+ * A seleção usa as tags semânticas do gerador, nunca a cor do cabelo/roupa. */
+static bool replacement_layer(const Char *ch, const char *anim) {
+    bool attack = strstr(anim, "ATTACK") || !strcmp(anim, "ESPECIAL");
+    if (!attack) return false;
+    return !strcmp(ch->id, "garfiel") || !strcmp(ch->id, "arashi") ||
+        ((!strcmp(ch->id, "oboro") || !strcmp(ch->id, "oboro_mascara")) &&
+         (strstr(anim, "ECO_GARFIEL") || strstr(anim, "ECO_ARASHI") || strstr(anim, "FURIA")));
+}
+static Frame cleanFrames[MAX_FRAMES];
+static void clean_frame(int frame, const Canvas *cv, const Char *ch) {
+    if (frame < 0 || frame >= MAX_FRAMES) return;
+    for (int y = 0; y < CH; y++) for (int x = 0; x < CW; x++) {
+        Color c = cv->a[y][x];
+        bool trail = false;
+        for (int i = 0; i < 3; i++)
+            trail |= c.r == ch->rastro[i].r && c.g == ch->rastro[i].g && c.b == ch->rastro[i].b;
+        bool remove = !cv->wpx[y][x] &&
+            (cv->tag[y][x] == T_FX || (cv->tag[y][x] == T_WEAPON && trail));
+        cleanFrames[frame].p[y][x] = remove ? (Color){0} : c;
+    }
+}
+static void save_clean(const char *dir, const char *name, int n, int cw, int ch,
+    const Vector2 *weapon, const bool *hasWeapon, const Vector2 *offhand, const bool *hasOffhand) {
+    char path[PATHLEN], filename[128];
+    snprintf(filename, sizeof filename, "_clean_%s.png", name);
+    path_join(path, dir, filename);
+    save_strip(path, cleanFrames, n, cw, ch);
+    snprintf(filename, sizeof filename, "_clean_%s.txt", name);
+    path_join(path, dir, filename);
+    FILE *points = fopen(path, "w");
+    if (!points) return;
+    for (int f = 0; f < n; f++) {
+        if (hasWeapon[f]) fprintf(points, "arma %d %.0f %.0f\n", f, weapon[f].x, weapon[f].y);
+        if (hasOffhand[f]) fprintf(points, "arma2 %d %.0f %.0f\n", f, offhand[f].x, offhand[f].y);
+    }
+    fclose(points);
 }
 
 static void copy_dir(const char *from, const char *to) {
@@ -5996,16 +6078,38 @@ static const Color INK2 = {150, 150, 170, 255};
 
 typedef struct {
     const char *name; int n; Frame *frames;
+    Frame *weapons, *steel;
     Vector2 weapon[64];
     bool hasWeapon[64];
     Vector2 offhand[64];
     bool hasOffhand[64];
 } Rendered;
 
+/* Camadas exatas da arma: sem seleção por cor do rosto/roupa. */
+static void save_rendered(const char *path, const Rendered *r, int cw, int ch) {
+    save_strip(path, r->frames, r->n, cw, ch);
+    if (!r->weapons) return;
+    char file[PATHLEN]; const char *dir=GetDirectoryPath(path);
+    snprintf(file,sizeof file,"%s/_weapon_%s.png",dir,r->name);
+    save_strip(file,r->weapons,r->n,cw,ch);
+    snprintf(file,sizeof file,"%s/_steel_%s.png",dir,r->name);
+    save_strip(file,r->steel,r->n,cw,ch);
+}
+
 /* Só os pixels da lâmina, sem a aura: os VFX acompanham a arma desenhada.
  * A metade da frente evita centrar o efeito entre as duas mãos dos espadachins. */
 static void weapon_point(Rendered *r, int frame, const Canvas *cv, int ax, int ay) {
     if (frame >= 64) return;
+    if (!r->weapons) r->weapons = calloc((size_t)r->n, sizeof(Frame));
+    if (!r->steel) r->steel = calloc((size_t)r->n, sizeof(Frame));
+    if (!r->weapons || !r->steel) { fprintf(stderr, "sem memória para separar armas\n"); exit(1); }
+    for (int y=0;y<CH;y++) for(int x=0;x<CW;x++) {
+        Color c=cv->a[y][x];
+        bool blade=cv->wpx[y][x] && c.a && cv->tag[y][x] != T_FX;
+        bool handle=cv->hpx[y][x] && c.a && cv->tag[y][x] != T_FX;
+        r->weapons[frame].p[y][x] = blade || handle ? c : (Color){0};
+        r->steel[frame].p[y][x] = blade ? c : (Color){0};
+    }
     int lo = CW, hi = -1;
     for (int y = 0; y < CH; y++) for (int x = 0; x < CW; x++)
         if (cv->wpx[y][x] && cv->a[y][x].a) { if (x < lo) lo = x; if (x > hi) hi = x; }
@@ -6449,7 +6553,7 @@ static int NSOURCES;
  * espalhados, e em cima da armadura, também vermelha, o fogo some no meio do corpo.
  * O fogo é o que muda do quadro normal para o da fúria nas cores da máscara. Saem os
  * pontos soltos (manchas com menos de 6 px), sai o fogo em cima do corpo longe da
- * lâmina, e o que fica ganha uma rampa pela distância até a lâmina: laranja no fio,
+ * lâmina, e o que fica ganha uma rampa pela distância até a lâmina: vermelho no fio,
  * vermelho vivo perto, vermelho escuro longe e a borda mais escura. Nos golpes (o rastro
  * vermelho tem outro desenho, e às vezes outro número de quadros) só saem as manchas
  * soltas no ar, de até 23 px (o arco do rastro é bem maior). */
@@ -6565,7 +6669,7 @@ static void clean_fury(Source *s) {
                         int nx = x + d4[i][0], ny = y + d4[i][1];
                         edge = nx < 0 || ny < 0 || nx >= W || ny >= H || (!fire[ny][nx] && !p[ny][nx].a);
                     }
-                    uint32_t v = dist[y][x] <= 1 ? 0xff6a20 : edge ? 0x571c27 : dist[y][x] <= 4 ? 0xc42430 : 0x891e2b;
+                    uint32_t v = dist[y][x] <= 1 ? 0xff3048 : edge ? 0x571c27 : dist[y][x] <= 4 ? 0xc42430 : 0x891e2b;
                     out[y][x] = (Color){(unsigned char)(v >> 16), (unsigned char)(v >> 8), (unsigned char)v, 255};
                 }
             for (int y = 0; y < H; y++) memcpy(p[y], out[y], sizeof(Color) * (size_t)W);
@@ -6846,13 +6950,13 @@ static const struct { const char *id; Rgb c[3]; } COR7[] = {
     {"daichi", {HEX(0xfaf0d8), HEX(0xdcc49a), HEX(0xa88c64)}},
     {"genbu", {HEX(0x6aa85a), HEX(0x2e6a2a), HEX(0x163e18)}},
     {"raizo", {HEX(0xfffac8), HEX(0xffe030), HEX(0xc8a010)}},
-    {"shizuku", {HEX(0xffffff), HEX(0xc8ecff), HEX(0x80c4f0)}},
+    {"shizuku", {{COR_GELO_CLARA}, {COR_GELO_MEDIA}, {COR_GELO_ESCURA}}},
     {"garfiel", {HEX(0xffe4c0), HEX(0xff8c20), HEX(0xc05010)}},
-    {"suiren", {HEX(0xc8dcff), HEX(0x2c5cd0), HEX(0x142c80)}},
+    {"suiren", {{COR_MAR_CLARA}, {COR_MAR_MEDIA}, {COR_MAR_ESCURA}}},
     {"karasu", {HEX(0x34343e), HEX(0x1c1c24), HEX(0x0c0c10)}},
     {"hayate", {HEX(0xf0ffe8), HEX(0xa8f0a0), HEX(0x58c060)}},
     {"enjin", {HEX(0xffd0c0), HEX(0xff3020), HEX(0xa00c10)}},
-    {"arashi", {HEX(0xf4faff), HEX(0x7cc8ff), HEX(0x2a6cf0)}},
+    {"arashi", {{COR_NUVEM_CLARA}, {COR_NUVEM_MEDIA}, {COR_NUVEM_ESCURA}}},
     {"yoru", {HEX(0xf6e6ff), HEX(0xb070ff), HEX(0x6a2cc8)}},
     {"jinshi", {HEX(0xffffff), HEX(0xe6ecff), HEX(0xb8c4ec)}},   /* o branco que ele já tinha: o alcance mede o rastro por estas cores */
 };
@@ -6863,10 +6967,71 @@ static bool cor7(const Char *ch) {
     return false;
 }
 
+/* Tecido na família do corte, recolorido DEPOIS de montar o quadro. A leitura
+   da espada, da cintura e do arco lunar ainda usa a paleta original do corpo:
+   roupa diferente não pode alterar a geometria de um golpe. */
+static Rgb tom_tecido(Rgb cor, int percent) {
+    return (Rgb){cor.r * percent / 100, cor.g * percent / 100, cor.b * percent / 100};
+}
+
+static Rgb cor_pack(const Char *ch, Rgb de) {
+    for (int i = 0; i < 24 && rgb_set(ch->troca[i].de); i++)
+        if (ch->troca[i].de.r == de.r && ch->troca[i].de.g == de.g && ch->troca[i].de.b == de.b)
+            return ch->troca[i].para;
+    return de;
+}
+
+static void roupa_postura(Canvas *cv, const Char *ch) {
+    /* Estes mantêm o figurino anterior, independente da cor dos efeitos.
+       Oboro (incluindo máscara e ecos) também não recebe recoloração. */
+    if (!cor7(ch) || !strcmp(ch->id, "karasu") || !strcmp(ch->id, "garfiel") ||
+        !strcmp(ch->id, "yoru") || !strcmp(ch->id, "jinshi")) return;
+    const Rgb *paleta = ch->tecido;
+    Rgb camisa[] = {tom_tecido(paleta[0], 90), tom_tecido(paleta[1], 85),
+                    tom_tecido(paleta[2], 80), tom_tecido(paleta[2], 55)};
+    Rgb hakama[5];
+    static const int sombras[] = {75, 58, 42, 30, 20};
+    for (int i = 0; i < 5; i++) hakama[i] = tom_tecido(paleta[2], sombras[i]);
+    Rgb de[16], para[16];
+    int n = 0;
+#define TECIDO(A, B) do { de[n] = (A); para[n++] = (B); } while (0)
+#define PACK(A, B) TECIDO(cor_pack(ch, (Rgb)HEX(A)), B)
+    if (!ch->pack) {
+        for (int i = 0; i < 4; i++) TECIDO(ch->camisa[i], camisa[i]);
+        for (int i = 0; i < 5; i++) TECIDO(ch->hakama[i], hakama[i]);
+        TECIDO(ch->obi, paleta[1]);
+    } else if (!strcmp(ch->pack, "samurai5")) {
+        PACK(0x1e6f50, camisa[1]); PACK(0x134c4c, camisa[2]); PACK(0x0c2e44, camisa[3]);
+        PACK(0x391f21, paleta[2]); PACK(0x5d2c28, paleta[1]);
+    } else if (!strcmp(ch->pack, "samurai4")) {
+        PACK(0xffffff, camisa[0]); PACK(0xc7cfdd, camisa[1]);
+        PACK(0x92a1b9, camisa[2]); PACK(0x657392, camisa[3]);
+        PACK(0x424c6e, hakama[0]); PACK(0x2a2f4e, hakama[1]); PACK(0x1a1932, hakama[3]);
+        PACK(0x571c27, paleta[2]); PACK(0x891e2b, paleta[1]);
+    } else if (!strcmp(ch->pack, "espadao")) {
+        PACK(0x3d3d3d, camisa[1]); PACK(0x272727, camisa[2]); PACK(0x131313, camisa[3]);
+    }
+    TECIDO(ch->destaque[0], paleta[1]);
+    TECIDO(ch->destaque[1], paleta[2]);
+#undef PACK
+#undef TECIDO
+    for (int y = 0; y < CH; y++)
+        for (int x = 0; x < CW; x++) {
+            Color c = cv->a[y][x];
+            if (!c.a || cv->tag[y][x] != T_BODY || cv->wpx[y][x]) continue;
+            for (int i = 0; i < n; i++)
+                if (c.r == de[i].r && c.g == de[i].g && c.b == de[i].b) {
+                    set_rgb(cv, x, y, para[i]);
+                    break;
+                }
+        }
+}
+
 static void cor_prova(void) {
     for (size_t i = 0; i < sizeof COR7 / sizeof COR7[0]; i++)
         for (int c = 0; c < NCHARS; c++)
             if (!strcmp(CHARS[c].id, COR7[i].id)) memcpy(CHARS[c].rastro, COR7[i].c, sizeof CHARS[c].rastro);
+    for (int c = 0; c < NCHARS; c++) memcpy(CHARS[c].tecido, CHARS[c].rastro, sizeof CHARS[c].tecido);
 }
 
 /* A aura na arma: um halo de 1 px na cor do meio colado na lâmina, pontos soltos na cor da borda
@@ -6882,9 +7047,9 @@ static void weapon_aura(Canvas *cv, const Char *ch, const Ctx *ctx) {
             if (!w[y][x]) continue;
             for (int k = 0; k < 4; k++) {
                 int nx = x + d4[k][0], ny = y + d4[k][1];
-                if (hsh6("aura7", ctx->anim, ctx->idx, x, y, k, 0) < 0.55 * pw) fx_put_clean(cv, nx, ny, ch->rastro[1]);
+                if (hsh6("aura7", ctx->anim, !strcmp(ch->id,"yoru") ? 0 : ctx->idx, x, y, k, 0) < (!strcmp(ch->id,"yoru") ? .22 : .55) * pw) fx_put_clean(cv, nx, ny, ch->rastro[1]);
                 int fx = x + 2 * d4[k][0], fy = y + 2 * d4[k][1];
-                if (hsh6("aura7b", ctx->anim, ctx->idx, x, y, k, 0) < 0.12 * pw) fx_put_clean(cv, fx, fy, ch->rastro[2]);
+                if (strcmp(ch->id,"yoru") && hsh6("aura7b", ctx->anim, ctx->idx, x, y, k, 0) < 0.12 * pw) fx_put_clean(cv, fx, fy, ch->rastro[2]);
             }
             double r = hsh4("aura7c", ctx->anim, ctx->idx, x, y);
             if (ch->elemento == EL_FOGO && r < 0.35 * pw)
@@ -7063,6 +7228,7 @@ int main(int argc, char **argv) {
                     render(sf, sg, ch, &cx, &cv);
                 }
                 weapon_point(r, j, &cv, ax, ay);
+                if (replacement_layer(ch, st->name)) clean_frame(j, &cv, ch);
                 memcpy(r->frames[j].p, cv.a, sizeof cv.a);
                 if (pose && (j / 2) % 2) {
                     int top = CH, bot = 0;
@@ -7124,7 +7290,8 @@ int main(int argc, char **argv) {
             }
             snprintf(fn, sizeof fn, "%.63s.png", st->name);
             path_join(p, d, fn);
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
+            if (replacement_layer(ch, st->name)) save_clean(d, st->name, r->n, OUT_W(sc), sc->ch, r->weapon, r->hasWeapon, r->offhand, r->hasOffhand);
             nr++;
         }
         path_join(p, d, "sprite.txt");
@@ -7195,11 +7362,14 @@ int main(int argc, char **argv) {
                 }
                 for (int y = 0; y < CH; y++)
                     for (int x = 0; x < CW; x++) sil[k % 3][y][x] = cv.tag[y][x] == T_BODY && cv.a[y][x].a;
-                if (ci >= 0 && hr) special_fx(&cv, ch, ch->efeito, ax, rdx, ty, ay, k - ci);
+                if (ci >= 0 && hr && !ch->rastro_original) special_fx(&cv, ch, ch->efeito, ax, rdx, ty, ay, k - ci);
+                weapon_point(r, k, &cv, ax, ay);
+                if (replacement_layer(ch, "ESPECIAL")) clean_frame(k, &cv, ch);
                 memcpy(r->frames[k].p, cv.a, sizeof cv.a);
             }
             path_join(p, d, "ESPECIAL.png");
-            save_strip(p, r->frames, nst, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
+            if (replacement_layer(ch, "ESPECIAL")) save_clean(d, "ESPECIAL", nst, OUT_W(sc), sc->ch, r->weapon, r->hasWeapon, r->offhand, r->hasOffhand);
             if (mf) {
                 fprintf(mf, "anim %-13s  hold %d  contact %d", "ESPECIAL", hold, ci);
                 if (hr) fprintf(mf, "  alcance %d %d", rdx, rdy);
@@ -7219,11 +7389,11 @@ int main(int argc, char **argv) {
             const char *out = ch->sem_arma ? "PARADO" : "DESARMADO";
             if (ch->sem_arma) {
                 if (!source_strip(sc, "IDLE") && (ss = source_strip(sc, "DASH"))) f0 = f1 = ss->nframes - 1;
-            } else if ((ss = source_strip(sc, "DASH_ATTACK"))) {
-                f0 = f1 = ss->nframes > 1 ? 1 : 0;
             } else if ((ss = source_strip(sc, "DEATH"))) {
-                f1 = ss->nframes * 2 / 5;          /* o quadro em que chega aos joelhos */
-                if (ch->ecos) f1 = ss->nframes / 3; /* o Oboro ainda de cabeça erguida (depois ela pende) */
+                f1 = ss->nframes * 2 / 5;          /* reação até chegar aos joelhos; sem a arma */
+                if (ch->ecos) f1 = ss->nframes / 3;
+            } else if ((ss = source_strip(sc, "DASH_ATTACK"))) {
+                f0=0; f1=ss->nframes > 1 ? 1 : 0;
             } else if ((ss = source_strip(sc, "HURT"))) {
                 f0 = ss->nframes > 1 ? 1 : 0;       /* o primeiro é o clarão do golpe */
                 f1 = ss->nframes - 1;
@@ -7243,7 +7413,7 @@ int main(int argc, char **argv) {
                 }
                 snprintf(fn, sizeof fn, "%s.png", out);
                 path_join(p, d, fn);
-                save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                save_rendered(p, r, OUT_W(sc), sc->ch);
                 if (mf) {
                     if (r->n > 1) fprintf(mf, "anim %-13s  stop %d\n", out, r->n - 1);
                     else fprintf(mf, "anim %s\n", out);
@@ -7270,7 +7440,7 @@ int main(int argc, char **argv) {
                 memcpy(r->frames[j].p, cv.a, sizeof cv.a);
             }
             path_join(p, d, "EMBAINHADO.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim EMBAINHADO     loop\n");
             nr++;
             r = &rend[si][nr];
@@ -7291,7 +7461,7 @@ int main(int argc, char **argv) {
             }
             memcpy(r->frames[5].p, rend[si][iq].frames[0].p, sizeof r->frames[5].p);
             path_join(p, d, "DESEMBAINHAR.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             /* o preparo devagar, o saque num quadro curto, a pausa no brilho e a volta */
             if (mf) fprintf(mf, "anim DESEMBAINHAR   stop 5  tempos 120 150 40 110 70 100\n");
             nr++;
@@ -7313,7 +7483,7 @@ int main(int argc, char **argv) {
             }
             snprintf(fn, sizeof fn, "%s.png", r->name);
             path_join(p, d, fn);
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim %s\n", r->name);
             nr++;
         }
@@ -7343,7 +7513,7 @@ int main(int argc, char **argv) {
                 }
             }
             path_join(p, d, "PROVA_GUARDA.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim PROVA_GUARDA    loop  ms 170\n");
             nr++;
             r = &rend[si][nr];
@@ -7367,7 +7537,7 @@ int main(int argc, char **argv) {
             }
             g_koj_spark = 0;
             path_join(p, d, "PROVA_PARRY.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim PROVA_PARRY     contact 1\n");
             nr++;
             /* o storyboard do saque: 10 quadros, do embainhado até a guarda nova */
@@ -7390,7 +7560,7 @@ int main(int argc, char **argv) {
                     memcpy(r->frames[j].p, cv.a, sizeof cv.a);
                 }
                 path_join(p, d, "PROVA_SAQUE.png");
-                save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                save_rendered(p, r, OUT_W(sc), sc->ch);
                 if (mf) fprintf(mf, "anim PROVA_SAQUE     stop 9  tempos 140 120 150 60 35 90 70 70 80 120\n");
                 nr++;
             }
@@ -7410,7 +7580,7 @@ int main(int argc, char **argv) {
             r->frames = calloc((size_t)r->n, sizeof(Frame));
             for (int j = 0; j < src->n; j++) seated_frame(&src->frames[j], &r->frames[j], ch);
             path_join(p, d, "SENTADO.png");
-            save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            save_rendered(p, r, OUT_W(sc), sc->ch);
             if (mf) fprintf(mf, "anim SENTADO        loop  ms 190\n");   /* a respiração lenta */
             nr++;
         }
@@ -7424,6 +7594,7 @@ int main(int argc, char **argv) {
                 /* a espada é a dele; só a aura, o rastro e o brilho do elemento são do aprendiz */
                 Char tmp = *ch;
                 tmp.elemento = ap->elemento;
+                tmp.rastro_original = ap->rastro_original;
                 memcpy(tmp.rastro, ap->rastro, sizeof tmp.rastro);
                 tmp.destaque[0] = ap->destaque[0];
                 tmp.destaque[1] = ap->destaque[1];
@@ -7449,12 +7620,14 @@ int main(int argc, char **argv) {
                         Ctx cx = make_ctx(st->name, j, st->nframes, info, k);
                         render(&st->frames[j], &st->segs[j], &tmp, &cx, &cv);
                         weapon_point(r, j, &cv, ax, ay);
+                        if (replacement_layer(ch, r->name)) clean_frame(j, &cv, &tmp);
                         memcpy(r->frames[j].p, cv.a, sizeof cv.a);
                         if (j == k) hr = reach(&cv, ax, ay, &rx, &ry);
                     }
                     snprintf(fn, sizeof fn, "%.63s.png", r->name);
                     path_join(p, d, fn);
-                    save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                    save_rendered(p, r, OUT_W(sc), sc->ch);
+                    if (replacement_layer(ch, r->name)) save_clean(d, r->name, r->n, OUT_W(sc), sc->ch, r->weapon, r->hasWeapon, r->offhand, r->hasOffhand);
                     if (mf) {
                         int hold;
                         fprintf(mf, "anim %-24s", r->name);
@@ -7478,7 +7651,7 @@ int main(int argc, char **argv) {
                 r->frames = calloc(32, sizeof(Frame));
                 r->n = grito(&sc->strips[ii], &sc->strips[fi], ch, &cv, r->frames);
                 path_join(p, d, "GRITO.png");
-                save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                save_rendered(p, r, OUT_W(sc), sc->ch);
                 if (mf) fprintf(mf, "anim GRITO                     ms 90\n");
                 nr++;
             }
@@ -7551,7 +7724,7 @@ int main(int argc, char **argv) {
             printf("%s é de antes da troca de nomes (gerada pelo programa); pode apagar\n", od);
     }
     for (int si = 0; si < nsel; si++)
-        for (int i = 0; i < nrend[si]; i++) free(rend[si][i].frames);
+        for (int i = 0; i < nrend[si]; i++) { free(rend[si][i].frames); free(rend[si][i].weapons); free(rend[si][i].steel); }
     free_sources();
     return 0;
 }

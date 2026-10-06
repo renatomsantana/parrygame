@@ -47,6 +47,9 @@
  * (nunca perfeito). Sem aperto, o golpe só entra quando ela acaba. */
 #define AJ_TOLERANCIA_TARDIA       0.030f
 
+/* Velocidade do deslocamento visual; não altera quadros, aviso ou contato. */
+#define AJ_SHIZUKU_DASH_X          1.15f
+
 /* ---- Calibração de latência (opções: tela de teste) -------------------- */
 /* O atraso de vídeo entra no julgamento: o aperto conta esse tanto mais cedo. O de
  * áudio adianta o som do aviso para chegar junto com o brilho. Um golpe sem defesa só é
@@ -130,11 +133,17 @@
 #define AJ_DESLIZE_GOLPE             1      /* 0 = desligado (o corpo salta de uma vez no contato, como antes). A prancha traz o avanço do golpe pronto, no quadro de contato, sem quadro no meio: na partida da lâmina o mestre desliza esse avanço (só desenho; no contato ele está exatamente onde a prancha põe) */
 #define AJ_DESLIZE_MIN            6.0f      /* px: um salto menor que isto fica como a prancha tem */
 #define AJ_DESLIZE_MAX           40.0f      /* px: o maior avanço que se espalha */
-#define AJ_RASTRO_FANTASMA           1      /* 0 = desligado (o golpe como antes) */
+#define AJ_RASTRO_FANTASMA           0      /* cópias do corpo: opcionais; os PNGs já têm rastros */
 #define AJ_RASTRO_FANTASMAS          3      /* quantos, atrás do mestre */
 #define AJ_RASTRO_ESPACO          5.0f      /* px de um para o outro, no fim da partida */
 #define AJ_RASTRO_ALFA           0.72f      /* opacidade do primeiro, no fim da partida */
 #define AJ_RASTRO_FIO_ALFA       0.84f      /* brilho do traço preso à arma, no fim da partida */
+
+/* Substituição do pack comprado: garras laranja do Garfiel e seu eco. */
+#define AJ_PACK_SLASH              1       /* APARA_SLASH=0 compara com a tira original */
+#define AJ_PACK_SLASH_ANTES     0.10f       /* começa após a partida, até isto antes do contato */
+#define AJ_PACK_SLASH_CAUDA     0.12f       /* relógio do duelo: acompanha o hitstop */
+#define AJ_PACK_SLASH_ALFA      0.92f
 
 /* ---- Robô do demo (--demo) e dos testes -------------------------------- */
 #define AJ_ROBO_ANTECEDENCIA       0.030f   /* aperta no máximo este tempo antes do contato (menos que a menor janela perfeita) */
@@ -157,6 +166,9 @@
 #define AJ_SILENCIO_QUEBRA          0.5f    /* a música abaixa depois de quebrar a postura */
 #define AJ_SILENCIO_DESARME         1.0f    /* ...depois do desarme */
 #define AJ_SILENCIO_MORTE_OBORO     1.5f    /* ...e no golpe que mata o oboro */
+#define AJ_CENA_SAIDA_APRENDIZ      1.8f    /* kojiro sai antes de o assassino aparecer */
+#define AJ_CENA_ONI_PREPARA         0.5f    /* entrada da figura mascarada antes de sacar o golpe */
+#define AJ_CENA_ONI_DURACAO         2.5f    /* golpe e queda do aprendiz; não faz parte do duelo */
 /* Quem aperta sem parar, sem ler, tem de ver o resultado: a palavra "derrota" e o pergaminho da vitória entram em fade
  * (AJ_FADE_RESULTADO) e têm de estar inteiros antes do primeiro clique que vale: na derrota, o título já inteiro com uma
  * margem de 0,06 s antes de as opções aceitarem clique (como sempre foi: 0,07 s); na vitória, o pergaminho inteiro por
@@ -178,6 +190,9 @@
 
 /* ---- Jogo automático (APARA_AUTO e --demo): o robô também clica nas telas ------------------ */
 #define AJ_AUTO_CLIQUE_PERIODO      0.9f    /* fora do duelo, um clique a cada isto */
+#define AJ_FPS_ALVO                 60     /* limite normal, mesmo em monitor de 120/144 Hz */
+#define AJ_FPS_MARGEM_PRECISA       0.002  /* últimos 2 ms evitam ultrapassar o prazo por precisão do sleep */
+#define AJ_CENARIO_QUADRO           0.125f /* animação opcional do fundo: 8 quadros/s, independente do combate */
 #define AJ_AUTO_TEMPO_MAX           900.0f  /* o jogo automático para depois disto (s de jogo) */
 #define AJ_AUTO_VISITA_FIM          1.5f    /* ...ou este tempo depois de entrar na cabana do hanzo */
 #define AJ_AUTO_ESCOLHA_ESCOLHE     3.0f    /* a escolha do final: o robô escolhe depois disto */

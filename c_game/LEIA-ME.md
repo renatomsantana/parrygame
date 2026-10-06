@@ -7,14 +7,30 @@ o moveset e o visual estão em `../docs/JOGO.md`; a história, em `../aparar_lor
 
 ```sh
 brew install raylib                     # uma vez (Linux: o pacote raylib do sistema)
-make packs ZIP=all_the_animations.zip   # uma vez: põe as tiras dos packs pagos nas pastas
+make assets-prontos                    # confere os 17 conjuntos antes de abrir
 make run                                # compila e abre o jogo
 ```
 
-Os packs pagos não entram no Git. `tools/instalar_packs.sh` organiza as tiras em
-`assets/sprites/_original/`, `_packs/`, `_fx/` e `_ui/`. Os personagens são
-desenhados apenas pelos PNGs de animação; sem os packs, eles não aparecem.
+As animações de execução, máscaras das armas, VFX ativos e botões já vêm no Git.
+Os personagens são desenhados apenas pelos PNGs de animação. Para regenerar a
+arte, instale os packs-fonte locais com `make packs ZIP=all_the_animations.zip`
+e execute `make sprites`; `_original/` e `_packs/` continuam fora do runtime versionado.
 Os cenários e as partículas embutidas continuam disponíveis.
+Entregas de fundos, SFX e músicas, e o pacote para outro clone: `../docs/ENTREGAS_EQUIPE.md`.
+`make teste` pode pular verificações cuja plataforma não existe na máquina. A conferência
+completa de Linux é `make teste-linux`; ela exige Xvfb, XInput2, XTest, raylib e clang.
+Os ambientes reproduzíveis estão em `tests/Dockerfile.linux` e `tests/Dockerfile.windows`:
+
+```sh
+# Da raiz do repositório:
+docker build -t apara-linux -f c_game/tests/Dockerfile.linux .
+docker run --rm --mount type=bind,source="$PWD",target=/src,readonly apara-linux
+docker build --platform linux/amd64 -t apara-windows -f c_game/tests/Dockerfile.windows .
+docker run --rm --platform linux/amd64 --mount type=bind,source="$PWD",target=/src,readonly apara-windows
+```
+
+O ambiente Windows compila o jogo completo e executa núcleo, save e Raw Input no Wine.
+Rodar a janela gráfica no Windows real continua sendo uma validação de plataforma.
 O progresso fica em `apara_save.txt` e a calibração em `apara_opcoes.txt`, ao lado do executável.
 Se o save estiver estragado, o jogo avisa, guarda o arquivo em `apara_save.txt.bak` e começa de novo.
 
@@ -32,8 +48,8 @@ quadro. O módulo compila no macOS e os testes de conversão passam; confira o c
 4. Compare o toque: `APARA_SEM_CARIMBO=1 ./apara --teste --master 6 --duel` aperta no meio do quadro, como antes.
 
 **Se o `.m` não compilar:** `make clean && make ENTRADA_PLAT=src/entrada_stub.c` compila sem o carimbo (o jogo fica como era, com o
-aperto no meio do quadro) e não perde mais nada. Mande as primeiras linhas do erro do compilador. No Windows e no Linux sem
-XInput2 (Wayland puro) o Makefile já usa esse mesmo `src/entrada_stub.c`: lá o aperto vale no meio do quadro, de propósito.
+aperto no meio do quadro) e não perde mais nada. No Linux sem XInput2 (Wayland puro), o Makefile usa esse
+mesmo `src/entrada_stub.c`. No Windows, `src/entrada_win.c` usa Raw Input; gamepad usa o meio do quadro.
 
 ## Teclas
 
