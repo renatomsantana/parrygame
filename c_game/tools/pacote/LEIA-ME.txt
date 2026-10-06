@@ -1,0 +1,42 @@
+APARAR - a trilha dos doze aprendizes
+=====================================
+
+Um duelo de um botão: leia o aviso do adversário e aparar no instante certo.
+Kojiro sobe a trilha da serra, enfrenta os doze aprendizes de Hanzo e, no fim, Oboro.
+
+COMO ABRIR
+  Windows   dê dois cliques em apara.exe
+  Linux     ./apara   (precisa de uma placa de vídeo com OpenGL 3.3 e das bibliotecas X11 do sistema)
+  macOS     abra o apara (ao baixar, o macOS pode pedir para liberar: clique com o botão direito > Abrir)
+Não precisa instalar nada e não precisa de compilador. Mantenha a pasta assets ao lado do executável.
+
+COMO JOGAR
+  clique, Espaço, J ou Enter     aparar (e avançar as falas)
+  botão inferior do controle     o mesmo
+  Esc                            pausa  (T trilha, L calibra o atraso, M menu, Q sai)
+  F  /  F11                      liga e desliga o tremor de tela / tela cheia
+  segurar Esc ou o clique        na abertura: pula / acelera
+
+CALIBRAR O ATRASO (faça uma vez)
+  Na tela do título, aperte L e siga as batidas. O jogo mede o atraso da sua tela e do seu som e passa a
+  descontá-lo do seu clique. Vale a pena principalmente com TV, monitor lento ou fone sem fio.
+
+ONDE FICA O SEU PROGRESSO
+  O jogo guarda o progresso e a calibração na pasta de dados do seu usuário, não ao lado do executável:
+    Windows   %LOCALAPPDATA%\Apara                          (cole isso na barra do Explorador de Arquivos)
+    macOS     ~/Library/Application Support/Apara
+    Linux     ~/.local/share/apara    (ou $XDG_DATA_HOME/apara)
+  Arquivos: apara_save.txt (progresso) e apara_opcoes.txt (calibração).
+  Para recomeçar do zero, apague apara_save.txt com o jogo fechado. Apagar a pasta inteira também serve.
+  Quem jogava uma versão antiga, com o progresso ao lado do executável, não perde nada: o jogo copia os
+  arquivos antigos para a pasta nova na primeira vez e deixa os originais onde estavam.
+  Se o jogo não conseguir gravar, ele avisa numa faixa no canto da tela; nunca perde o progresso calado.
+  APARA_DADOS=<pasta> troca a pasta (por exemplo, para rodar de um pendrive).
+
+SE ALGO DER ERRADO
+  - "não consegui gravar o progresso": a pasta de dados está protegida, sem espaço ou aberta em outro programa.
+  - "o save estava corrompido": o jogo guardou uma cópia em apara_save.txt.bak e começou sem ele.
+  - Tela preta ou erro de OpenGL: atualize o driver de vídeo.
+  - O terminal (ou apara.exe pelo Prompt de Comando) mostra mensagens mais detalhadas.
+
+Versão e créditos: veja VERSAO.txt e CREDITOS.txt. Licenças de terceiros: pasta LICENCAS.

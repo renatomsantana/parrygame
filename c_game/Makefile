@@ -63,6 +63,11 @@ assets-prontos:
 pacote-assets:
 	sh tools/empacotar_assets.sh "$(OUT)"
 
+# O pacote de distribuição (executável + assets + leia-me, créditos e licenças; abre sem compilador nem raylib):
+#   make pacote PLATAFORMA=windows EXE=apara.exe OUT=dist     (windows | linux | macos; ver tools/empacotar_jogo.sh)
+pacote:
+	sh tools/empacotar_jogo.sh "$(PLATAFORMA)" "$(EXE)" "$(OUT)"
+
 apara: $(CORE) $(GAME) $(ENTRADA_PLAT) src/*.h
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(ENTRADA_CFLAGS) $(CORE) $(GAME) $(ENTRADA_PLAT) -o $@ $(RAYLIB_LIBS) $(ENTRADA_LIBS) -lm
 
@@ -215,6 +220,7 @@ teste-jogo: apara
 	sh tests/teste_rastro.sh
 	sh tests/teste_slash.sh
 	sh tests/teste_vitoria.sh
+	sh tests/teste_pacote.sh
 	sh tests/teste_carimbo.sh
 	sh tests/teste_desempenho.sh
 	sh tests/teste_cenas.sh
@@ -257,5 +263,5 @@ teste-vitoria: apara
 	sh tests/teste_vitoria.sh
 
 .PHONY: all packs sprites run clean robos robos-taxas curva curva-alvo test-curva ritmo test-ritmo curva-ordem fuzz fuzz-rapido numeros avisos teste-windows test test-fonte test-save test-dados test-entrada test-desempenho test-visual test-assets teste teste-jogo teste-vitoria
-.PHONY: assets-prontos pacote-assets test-audio test-arte
+.PHONY: assets-prontos pacote-assets pacote test-audio test-arte
 .PHONY: teste-linux

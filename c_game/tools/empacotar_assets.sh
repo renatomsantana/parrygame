@@ -9,15 +9,7 @@ case "$out" in /*) ;; *) out="$PWD/$out";; esac
 sh tools/verificar_assets.sh
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/assets/sprites"
-for pasta in assets/sprites/*; do
-    [ -d "$pasta" ] || continue
-    case "${pasta##*/}" in _original|_packs|_folhas) continue;; esac
-    cp -R "$pasta" "$tmp/assets/sprites/"
-done
-for pasta in fonts katana audio arenas; do
-    [ ! -d "assets/$pasta" ] || cp -R "assets/$pasta" "$tmp/assets/"
-done
+sh tools/copiar_assets_runtime.sh "$tmp"
 mkdir -p "$(dirname "$out")"
 (cd "$tmp" && zip -qr "$out" assets)
 echo "Pacote de runtime: $out (descompactar na pasta c_game do clone)"

@@ -72,6 +72,8 @@ make pacote-assets OUT=/caminho/assets-runtime.zip
 
 Descompactar o ZIP na pasta `c_game` do clone. O pacote inclui assets de execução, sem pranchas-fonte dos packs, saves ou opções. Compilar o binário na plataforma de destino. A validação completa dos PNGs é `make test-assets`.
 
+O pacote para quem só quer jogar (executável + assets + leia-me + créditos + licenças, sem compilador) é `make pacote PLATAFORMA=windows EXE=apara.exe OUT=dist` (ver `c_game/LEIA-ME.md`). Ele leva sozinho o `assets/audio` e o `assets/arenas` que estiverem na pasta no momento de empacotar: **a música e os efeitos finais entram assim que os arquivos da equipe estiverem em `c_game/assets/audio`**, sem mudar código (`make test-audio` confere o formato).
+
 ## Cores fixas de gelo, mar e tempestade
 
 As cores de efeitos ficam em `c_game/src/cores_posturas.h` e no quadro de `JOGO.md`. Shizuku usa branco/ciano claro, Suiren usa turquesa e Arashi usa cinza de nuvem com descarga azul-elétrico. PNGs de golpes, aura e partículas do aviso devem seguir a mesma família, incluindo as cópias de postura do Oboro. Esta revisão preserva as cores de roupa e pele dos personagens.

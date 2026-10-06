@@ -1,0 +1,31 @@
+APARAR - créditos
+=================
+
+(RASCUNHO: a equipe revisa os nomes e as licenças marcadas "a equipe confirma" antes de publicar o jogo.)
+
+Jogo, regras, código e conjunto de testes: Renato Santana, com programação assistida por Claude (Anthropic).
+
+Programas e dados de terceiros que vão junto com o jogo:
+
+  raylib 6.0 (compilada dentro do executável)
+      Copyright (c) 2013-2026 Ramon Santamaria (@raysan5) e colaboradores. Licença zlib: LICENCAS/raylib-zlib.txt.
+      https://www.raylib.com
+
+  Tiny5 (assets/fonts/Tiny5-Regular.ttf)
+      Copyright 2022-2024 The Tiny5 Project Authors. SIL Open Font License 1.1: LICENCAS/OFL-Tiny5.txt.
+      https://github.com/Gissio/font_tiny5
+
+  Animações dos personagens (assets/sprites)
+      Derivadas dos packs de animação de samurai da Mattz Art, recoloridas e recortadas pelo gerador do projeto.
+      ATENÇÃO (a equipe confirma antes de publicar): os termos da licença comprada valem para esta distribuição.
+
+  Efeitos de corte (vfx_slash) e botões (assets/sprites/_fx, assets/sprites/_ui, se presentes)
+      Packs comprados; mesmo aviso acima.
+
+  Modelo 3D da katana (assets/katana)
+      Origem e licença: a equipe confirma antes de publicar.
+
+  Sons e músicas (assets/audio, se presentes) e cenários (assets/arenas, se presentes)
+      Entregas da equipe do projeto. Sem esses arquivos o jogo usa sons e cenários embutidos.
+
+Se você é dono de algum material acima e vê algo errado aqui, avise para corrigirmos.

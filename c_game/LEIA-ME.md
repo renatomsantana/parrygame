@@ -72,6 +72,27 @@ quadro. O módulo compila no macOS e os testes de conversão passam; confira o c
 aperto no meio do quadro) e não perde mais nada. No Linux sem XInput2 (Wayland puro), o Makefile usa esse
 mesmo `src/entrada_stub.c`. No Windows, `src/entrada_win.c` usa Raw Input; gamepad usa o meio do quadro.
 
+## Distribuir: o pacote para quem só quer jogar
+
+```sh
+make pacote PLATAFORMA=windows EXE=apara.exe OUT=dist     # windows | linux | macos
+```
+
+Monta `dist/apara-<versão>-windows-x64.zip` (Linux: `.tar.gz`): o executável, os assets de execução (sprites, fonte, modelo da
+katana e, se existirem, o `assets/audio` e o `assets/arenas` da equipe), um `LEIA-ME.txt` para o jogador, `CREDITOS.txt`,
+`VERSAO.txt` e `LICENCAS/`. Abre sem compilador, sem raylib e sem instalar nada. `VERSAO=1.0` troca o nome da versão. Antes de
+entregar, o script (`tools/empacotar_jogo.sh`) confere: os assets completos; o executável só depende do sistema (Windows: nenhuma
+DLL fora da lista do sistema; Linux: nenhuma biblioteca faltando e nenhuma `libraylib` dinâmica); e o pacote montado **abre** (de dentro
+da pasta dele, de outra pasta de trabalho, tira uma captura) **sem gravar nada ao lado do executável**. O teste de abertura roda no Wine
+(Windows) e sob o xvfb (Linux); sem as ferramentas ele avisa "SEM TESTE DE ABERTURA" (`APARA_PACOTE_EXIGE_TESTE=1` o torna erro).
+`tests/teste_pacote.sh` (no `make teste-jogo`) confere o pacote de Linux e que cada recusa recusa.
+
+O executável de cada plataforma se compila nela (ou cruzado): **Windows**, `tests/Dockerfile.windows` (MinGW + raylib estática) ou
+MSYS2 com `make`; **Linux**, `make` com a raylib estática (o destino só precisa de libGL, libX11 e libXi); **macOS**, `make` com a
+raylib estática, em Mac (o script confere com `otool`). O que o pacote **não** faz: instalador, assinatura de código (o Windows pode avisar
+"editor desconhecido" na primeira abertura) e notarização do macOS (que pede o botão direito > Abrir). `CREDITOS.txt` é um rascunho com
+as licenças marcadas "a equipe confirma" (os packs de arte comprados e o modelo da katana): o script avisa enquanto elas estiverem lá.
+
 ## Teclas
 
 | Tecla | O que faz |
