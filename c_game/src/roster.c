@@ -20,10 +20,10 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"rocha", 1, {0}, 2.0f, -1, 0, LOOK_HIGH, 1.55f},
             {"raiz", 1, {0}, 2.0f, -1, 0, LOOK_LOW, 1.35f},
             {"sulco", 1, {0}, 1.5f, -1, 0, LOOK_THRUST, 1.75f},
-            {"desabamento", 2, {1.00f}, 1.5f, -1, 0, LOOK_LOW, 1.55f},
-            {"arado", 1, {0}, 1.0f, -1, 0, LOOK_DASH, 1.35f},
-            {"pedregulho", 2, {1.10f}, 1.0f, -1, 0, LOOK_JUMP, 1.75f},
-            {"terremoto", 1, {0}, 1.0f, -1, 0, LOOK_HEAVY, 1.55f},
+            {"desabamento", 2, {1.00f}, 2.0f, -1, 0, LOOK_LOW, 1.55f},
+            {"arado", 1, {0}, 1.5f, -1, 0, LOOK_DASH, 1.35f},
+            {"pedregulho", 2, {1.10f}, 1.5f, -1, 0, LOOK_JUMP, 1.75f},
+            {"terremoto", 1, {0}, 1.5f, -1, 0, LOOK_HEAVY, 1.55f},
         },
         .moveCount = 7,
         .intro = {{"daichi", "Você é o garoto do hanzo. Dá pra ver pela guarda."},
@@ -204,16 +204,16 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
     {
         .id = 7, .identity = 3, .name = "raizo", .style = "postura da montanha", .title = "O Honrado", .venue = "Pátio do dojo",
         .special = "Odachi pesada: cortes como pedra caindo, lentos e diretos, que avisam antes de chegar.",
-        .arena = ARENA_DOJO, .bladeMax = 0.224f, .posture = 552, .hitsToFall = 6, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE8D8C8FF,
+        .arena = ARENA_DOJO, .bladeMax = 0.224f, .posture = 768, .hitsToFall = 6, .damage = 0.63f, .healsOnHit = true, .cueVisual = 1, .cueAudio = 1, .tint = 0xE8D8C8FF,
         .stances = {STANCE("", 0.049f, 0.138f, 0.372f)}, .stanceCount = 1,
         .moves = {
-            {"corte do cume", 1, {0}, 3.0f, -1, 0, LOOK_HIGH, 1.20f},
-            {"fenda dupla", 2, {0.85f}, 1.5f, -1, 0, LOOK_LOW, 1.05f},
-            {"rasgo na laje", 1, {0}, 1.2f, -1, 0, LOOK_LOW, 1.15f},
-            {"ponta da serra", 2, {1.00f}, 1.2f, -1, 0, LOOK_THRUST, 1.20f},
-            {"avalanche", 1, {0}, 1.5f, -1, 0, LOOK_DASH, 1.05f},
-            {"queda de pedras", 2, {0.70f}, 1.0f, -1, 0, LOOK_JUMP, 1.15f},
-            {"montanha partida", 1, {0}, 1.0f, -1, 0, LOOK_HEAVY, 1.20f},
+            {"corte do cume", 1, {0}, 3.0f, -1, 0, LOOK_HIGH, 1.50f},
+            {"fenda dupla", 2, {1.10f}, 1.5f, -1, 0, LOOK_LOW, 1.31f},
+            {"rasgo na laje", 1, {0}, 1.2f, -1, 0, LOOK_LOW, 1.44f},
+            {"ponta da serra", 2, {1.30f}, 1.2f, -1, 0, LOOK_THRUST, 1.50f},
+            {"avalanche", 1, {0}, 1.5f, -1, 0, LOOK_DASH, 1.31f},
+            {"queda de pedras", 2, {0.91f}, 1.0f, -1, 0, LOOK_JUMP, 1.44f},
+            {"montanha partida", 1, {0}, 1.0f, -1, 0, LOOK_HEAVY, 1.50f},
         },
         .moveCount = 7,
         .intro = {{"raizo", "Quinze invernos treinando neste pátio com o hanzo. Nunca vi mestre igual."},
@@ -240,9 +240,9 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"garras cruzadas", 2, {0.40f}, 1.5f, -1, 0, LOOK_LOW, 0.90f},
             {"rasgo", 3, {0.40f, 0.40f}, 1.5f, -1, 0, LOOK_LOW, 0.75f},
             {"bote do tigre", 3, {0.40f, 0.85f}, 1.0f, -1, 0, LOOK_HIGH, 0.80f},
-            {"fúria do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.2f, -1, 0, LOOK_HIGH, 0.90f},
-            {"caçada", 7, {0.40f, 0.40f, 0.45f, 0.40f, 0.40f, 0.70f}, 1.0f, -1, 0, LOOK_DASH, 0.75f},
-            {"rugido", 8, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f, 0.40f, 0.80f}, 0.8f, -1, 0, LOOK_HIGH, 0.80f},
+            {"fúria do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 2.0f, -1, 0, LOOK_HIGH, 0.90f},
+            {"caçada", 7, {0.40f, 0.40f, 0.45f, 0.40f, 0.40f, 0.70f}, 1.8f, -1, 0, LOOK_DASH, 0.75f},
+            {"rugido", 8, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f, 0.40f, 0.80f}, 1.6f, -1, 0, LOOK_HIGH, 0.80f},
             {"pulo do gato", 2, {0.45f}, 1.0f, -1, 0, LOOK_JUMP, 0.90f},
             {"salto do tigre", 1, {0}, 0.8f, -1, 0, LOOK_HEAVY, 0.75f},
             {"arranhão", 4, {0.40f, 0.40f, 0.40f}, 1.0f, -1, 0, LOOK_LOW, 0.85f},
@@ -448,10 +448,10 @@ static const MasterProfile ROSTER[ROSTER_SIZE] = {
             {"eco da tempestade / duas tempestades", 1, {0}, 1.0f, p, 0, LOOK_HIGH, 0.90f, 0x1, false, false, 10}, \
             {"eco da tempestade / raio duplo", 2, {0.40f}, 1.0f, p, 0, LOOK_JUMP, 0.90f, 0x3, false, false, 10}, \
             {"eco da tempestade / relâmpago", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 0.80f, 0x1, false, false, 10}, \
-            {"eco da montanha", 2, {0.85f}, 1.0f, p, 0, LOOK_LOW, 1.05f, 0, false, false, 3}, \
-            {"eco da montanha / ponta da serra", 2, {1.00f}, 1.0f, p, 0, LOOK_THRUST, 1.20f, 0, false, false, 3}, \
-            {"eco da montanha / avalanche", 1, {0}, 1.0f, p, 0, LOOK_DASH, 1.05f, 0, false, false, 3}, \
-            {"eco da montanha / montanha partida", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.20f, 0, false, false, 3}, \
+            {"eco da montanha", 2, {1.10f}, 1.0f, p, 0, LOOK_LOW, 1.31f, 0, false, false, 3}, \
+            {"eco da montanha / ponta da serra", 2, {1.30f}, 1.0f, p, 0, LOOK_THRUST, 1.50f, 0, false, false, 3}, \
+            {"eco da montanha / avalanche", 1, {0}, 1.0f, p, 0, LOOK_DASH, 1.31f, 0, false, false, 3}, \
+            {"eco da montanha / montanha partida", 1, {0}, 1.0f, p, 0, LOOK_HEAVY, 1.50f, 0, false, false, 3}, \
             {"eco do tigre", 6, {0.40f, 0.40f, 0.40f, 0.40f, 0.40f}, 1.0f, p, 0, LOOK_HIGH, 0.90f, 0, false, false, 5}, \
             {"eco do tigre / garras cruzadas", 2, {0.40f}, 1.0f, p, 0, LOOK_LOW, 0.90f, 0, false, false, 5}, \
             {"eco do tigre / caçada", 7, {0.40f, 0.40f, 0.45f, 0.40f, 0.40f, 0.70f}, 1.0f, p, 0, LOOK_DASH, 0.75f, 0, false, false, 5}, \

@@ -222,6 +222,8 @@ O aviso, as janelas perfeita e boa e a menor partida da lâmina (140 ms) não mu
 | postura do mestre (duração da luta: nº de golpes) | sim | sim |
 | peso dos padrões (mais sequências, mais golpes por luta) | sim | sim |
 | faixa da partida da lâmina por mestre (`MasterProfile.bladeMax`: 0 é o global, nunca sobe o teto global) | **não** (ele mede pelo aviso) | **sim**, é a que derruba o karasu, o arashi e o jinshi sem mexer no casual |
+| intervalos entre os golpes de uma sequência (`gaps`) e preparação (`windup`) | os intervalos **sim**, mas só para quem decora o ritmo (o erro dele é uma fração do intervalo, então o intervalo maior erra mais contra a mesma janela); a preparação **não** | **não** (ele reage ao último sinal) |
+| dano de um erro (`MasterProfile.damage`, um fator sobre vida ÷ `hitsToFall`) | sim, muito | sim, muito |
 
 Nada de aviso abaixo de 300 ms, nenhuma janela perfeita mais estreita que a já medida como viável. Se um dia a curva sair do lugar (outro mestre
 ganha golpes, outra regra muda), o `make curva-alvo` reprova e mostra qual célula, qual ordem ou qual degrau quebrou.
@@ -346,3 +348,43 @@ As referências antigas (Jinshi 52–58%, Oboro 37–43%) ficaram incompatíveis
 A luta mais longa expôs um erro de medição de ritmo: na semente 1025, o verificador contava o brilho e o som do mesmo aviso duas vezes e incluía a cena do selo no segundo. Passou a medir apenas o aviso visual; o limite de 3 segundos fora da cena permanece. Nenhum tempo do jogo foi alterado nessa correção.
 
 Validação: 20.964 verificações do núcleo; 36.170 de apresentação sem assets; 215.038 com PNGs reais no Mac e no Linux; zero falhas. Fuzz com 600 cenários em cada um de quatro modos: zero violações. Save, fonte, entrada, desempenho, ritmo, taxas de quadros, curva e compilação com avisos como erro passaram. Windows e sensação ao jogar não foram repetidos. Logs e tabelas completos: `outputs/postura-06out/`.
+
+## Ajuste final dos chefes: Raizo, Daichi e Garfiel (6 de outubro)
+
+A proposta que estava suspensa (Raizo com erro de **26,25** e golpes mais lentos; mais especiais do Daichi; mais combos longos do Garfiel) foi aplicada **sem quebrar a curva**. Só `roster.c` (e a cópia dos padrões do Raizo nos ecos do Oboro); o núcleo, as janelas, o aviso e a menor partida da lâmina não mudaram.
+
+**Por que a primeira simulação quebrou.** Com o erro a 26,25 (`damage = 0,63`: 250 ÷ 6 × 0,63; o erro de Oboro na fase 2 custa 25), o Raizo aguenta 9,5 erros em vez de 6: sozinho, isso leva o casual de 77,8 para **96,5%** (alvo 75 a 81) e o Reação 250 de 2,5 para 11,1% (alvo 0 a 5). Ficar mais lento não resolve sozinho: a preparação (`windup`) não pesa para nenhum dos dois robôs. O que pesa é (a) a luta ficar mais longa e (b) o intervalo entre os golpes de uma sequência, que o casual mede com 8% de erro.
+
+| Raizo, 20 mil lutas por linha | casual (%) | Reação 250 (%) |
+|---|---|---|
+| antes (postura 552, erro 41,7) | 78,0 | 2,6 |
+| só o erro a 26,25 | 96,5 | 11,1 |
+| erro 26,25, postura 552, intervalos ×1,3 e preparação ×1,25 | 90,1 | 11,1 |
+| erro 26,25, postura 760, sem mudar o ritmo | 91,3 | 2,6 |
+| erro 26,25, postura 1100, sem mudar o ritmo | 77,8 | 0,2 |
+| **erro 26,25, postura 768, intervalos ×1,3 e preparação ×1,25** | **77,7** | **2,6** |
+
+**O que mudou:**
+
+| Mestre | Mudança | Efeito |
+|---|---|---|
+| raizo | erro 41,7 → **26,25** (`damage = 0,63`); postura 552 → **768**; preparação ×1,25 (1,05 a 1,20 s → 1,31 a 1,50 s); intervalos ×1,3 (fenda dupla 0,85 → 1,10 s, ponta da serra 1,00 → 1,30 s, queda de pedras 0,70 → 0,91 s) | luta de 20,8 para 31,6 s e de 51,9 para 45,6 golpes por minuto, aviso (0,37 s) e janelas iguais |
+| oboro | os quatro ecos da montanha copiam os padrões novos do Raizo (o teste exige a cópia completa) | o Oboro fica um pouco mais difícil: casual 24,5 → 23,7 (faixa 22 a 28) |
+| daichi | peso de sorteio: desabamento 1,5 → 2,0, arado, pedregulho e terremoto 1,0 → 1,5 | os especiais (duas pancadas, avanço, salto, golpe pesado) saem em **54%** das sequências (antes 45%); a curva não mexe: o robô da primeira vez erra por aperto falho, não pelo tipo de golpe |
+| garfiel | peso de sorteio: fúria do tigre 1,2 → 2,0, caçada 1,0 → 1,8, rugido 0,8 → 1,6 | os combos de seis a oito golpes saem em **39%** das sequências (antes 26%); luta de 30,7 para 29,1 s, 14,3% → 15,1% do tempo congelado (limite 20%); o casual **sobe** de 71,3 para 72,5 (mais golpes por sequência, menos pausas entre elas) |
+
+### Antes e depois (100 mil lutas por mestre e robô, 60 e 144 Hz idênticos)
+
+| # | Mestre | Casual antes → depois (%) | Reação 250 antes → depois (%) | Primeira vez (%) |
+|---|---|---|---|---|
+| 1 | daichi | 100,0 → 100,0 | 100,0 → 100,0 | 79,7 → 79,7 |
+| 6 | arashi | 85,5 → 85,5 | 3,6 → 3,6 | 0,0 |
+| 7 | raizo | 77,8 → **77,7** | 2,5 → **2,6** | 0,0 |
+| 8 | garfiel | 71,3 → **72,5** | 0,0 → 0,0 | 0,0 |
+| 9 | suiren | 55,3 → 55,3 | 0,0 | 0,0 |
+| 13 | oboro | 24,5 → **23,7** | 0,0 | 0,0 |
+
+Os outros mestres não mudaram (mesmas sementes, mesma tabela). Os degraus do casual do sexto ao Oboro ficam 7,8 / 5,2 / 17,3 / 8,8 / 5,4 / 4,0 / 13,4 (o mínimo é 3,96; a regra pede 3). Perfeito 100% e spam 0% em todos. As faixas de regressão **não foram relaxadas**: Raizo 75 a 81, Garfiel 68 a 74, Oboro 22 a 28, Reação 250 do Raizo 0 a 5.
+
+Testes: `test_ajuste_dos_chefes` (core_test) trava o erro de 26,25 (e os 5% acima do Oboro na fase 2), a preparação e o intervalo médios do Raizo, a fração de especiais do Daichi e a de combos longos do Garfiel; cada um reprova se o valor antigo voltar. O teste de resistência passou a esperar 640 como base do Raizo (768 = 640 × 1,2). Julgamento de jogo real (sensação de um Raizo de 32 s com erros baratos) não foi medido por humano.
+

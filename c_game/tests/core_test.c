@@ -1006,10 +1006,57 @@ static void test_cura_em_porcentagem(void) {
  * de folga para o sorteio de 300 lutas), chega a uns 55% no jinshi (faixa aprovada de 52 a 58) e a uns 40% no oboro. A ordem
  * exata, com folga de 0,5 ponto, é o make curva-ordem (tests/robos.c --ordem). E apertar sem
  * olhar, em qualquer ritmo de 0,05 a 0,8 s, perde de todos. */
+/* O ajuste dos chefes de 6/out (docs/CURVA.md): o erro do raizo custa 26,25 (5% acima do oboro na fase 2) e os golpes dele ficam
+ * lentos, o daichi mostra seus especiais com mais frequência e o garfiel, seus combos longos. O que o raizo perde em perigo por erro,
+ * ele devolve em luta longa (postura) e em intervalos maiores entre os golpes: a curva é medida em make curva-alvo. */
+static void test_ajuste_dos_chefes(void) {
+    Settings s;
+    settings_default(&s);
+    const MasterProfile *raizo = roster_get(6), *daichi = roster_get(0), *garfiel = roster_get(7), *oboro = roster_get(12);
+    Duel d;
+    duel_init(&d, &s, raizo, 11);
+    float erro = duel_ren_damage(&d);
+    CHECK(fabsf(erro - 26.25f) < 0.001f, "raizo: um erro custa 26,25 da vida (custa %.3f)", erro);
+    duel_init(&d, &s, oboro, 11);
+    d.seal = 1;
+    float oboroFase2 = duel_ren_damage(&d);
+    CHECK(fabsf(erro / oboroFase2 - 1.05f) < 0.001f, "raizo: 5%% acima do oboro na fase 2 (%.3f contra %.3f)", erro, oboroFase2);
+
+    float pesoTotal = 0, espera = 0, intervalo = 0, pesoIntervalo = 0;
+    for (int i = 0; i < raizo->moveCount; i++) {
+        const Move *mv = &raizo->moves[i];
+        pesoTotal += mv->weight;
+        espera += mv->weight * mv->windup;
+        for (int g = 0; g + 1 < mv->strikes; g++) { intervalo += mv->weight * mv->gaps[g]; pesoIntervalo += mv->weight; }
+    }
+    CHECK(espera / pesoTotal >= 1.30f, "raizo: preparação média de %.2f s (golpes lentos, a de antes era 1,15)", espera / pesoTotal);
+    CHECK(pesoIntervalo > 0 && intervalo / pesoIntervalo >= 1.0f, "raizo: intervalo médio de %.2f s entre os golpes de uma sequência (era 0,85)", pesoIntervalo > 0 ? intervalo / pesoIntervalo : 0);
+
+    /* daichi: os golpes que não são um corte simples (duas pancadas, avanço, salto, golpe pesado) saem em metade ou mais das sequências */
+    float simples = 0;
+    pesoTotal = 0;
+    for (int i = 0; i < daichi->moveCount; i++) {
+        const Move *mv = &daichi->moves[i];
+        pesoTotal += mv->weight;
+        if (mv->strikes == 1 && (mv->look == LOOK_HIGH || mv->look == LOOK_LOW || mv->look == LOOK_THRUST)) simples += mv->weight;
+    }
+    CHECK((pesoTotal - simples) / pesoTotal >= 0.50f, "daichi: especiais em %.0f%% das sequências (queremos 50%% ou mais; eram 45%%)", 100 * (pesoTotal - simples) / pesoTotal);
+
+    /* garfiel: as sequências de seis golpes ou mais saem em mais de um terço das sorteadas */
+    float longos = 0;
+    pesoTotal = 0;
+    for (int i = 0; i < garfiel->moveCount; i++) {
+        const Move *mv = &garfiel->moves[i];
+        pesoTotal += mv->weight;
+        if (mv->strikes >= 6) longos += mv->weight;
+    }
+    CHECK(longos / pesoTotal > 1.0f / 3, "garfiel: combos de seis golpes ou mais em %.0f%% das sequências (queremos mais de um terço; eram 26%%)", 100 * longos / pesoTotal);
+}
+
 /* Resistência pedida em 6/out: +20% nos oito primeiros, +30% nos quatro
  * últimos aprendizes; +40% de Oboro distribuído proporcionalmente pelos selos. */
 static void test_resistencia_bosses(void) {
-    static const float before[MASTER_COUNT] = {300,330,300,380,530,400,460,1350,840,780,970,630};
+    static const float before[MASTER_COUNT] = {300,330,300,380,530,400,640,1350,840,780,970,630};   /* o raizo, de 460 para 640, quando o erro dele passou a custar menos (ver docs/CURVA.md) */
     Settings s;
     settings_default(&s);
     for (int i = 0; i < MASTER_COUNT; i++) {
@@ -2864,6 +2911,7 @@ int main(void) {
     test_calibracao();
     test_cura_em_porcentagem();
     test_resistencia_bosses();
+    test_ajuste_dos_chefes();
     test_curva();
     test_oboro_fases();
     test_oboro_repertorio_aleatorio();
