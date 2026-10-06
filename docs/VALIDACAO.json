@@ -224,6 +224,83 @@
     "runtime_fallback": "Pack ausente ou APARA_SLASH=0 mantém o fio anterior; texturas carregadas antes da luta.",
     "windows": "Validacao anterior do jogo registrada em c_game; este update visual foi executado em Mac e Linux.",
     "previews": "outputs/slashes-05out: Raizo, Garfiel, Arashi e Oboro fase 3, com sons basicos de impacto",
-    "human_review": "pending"
+    "human_review": "pending",
+    "status": "historical: overlay removed by d577ba3 after visual feedback"
+  },
+  "posturas_nativas": {
+    "date": "2026-10-05",
+    "source_commit": "d577ba3",
+    "approach": "Rastros coloridos nativos dos PNGs; sobreposição do pack slash removida; fantasmas desligados por padrão.",
+    "oboro_phase_2": "Katana e ações próprias em variantes ECO, inclusive duplos e finais; aura, partículas e sons resolvidos pela postura de origem.",
+    "oboro_phase_3": "Ações FLAMING SWORD preservadas; feedback sonoro e partículas continuam consultando o eco.",
+    "unchanged": [
+      "PNG assets",
+      "sprite frame durations",
+      "anchors",
+      "hitboxes",
+      "core judgement"
+    ],
+    "mac": {
+      "build_warnings": 0,
+      "presentation_checks": 45054,
+      "failures": 0
+    },
+    "linux": {
+      "environment": "apara-linux-stable-test:latest, cópia fresca da árvore atual em diretório temporário único; raylib 6 e Xvfb",
+      "presentation_checks": 45054,
+      "real_asset_checks": 96114,
+      "masters": 13,
+      "attack_animations": 202,
+      "failures": 0,
+      "borrowed_postures": 12,
+      "particle_comparison": "mesma semente e posição: eco e aprendiz produzem partículas idênticas",
+      "native_katana_variants": "todas as posturas e tipos de corte conferidos com PNGs reais",
+      "real_game_legacy_flag_comparison": {
+        "masters": [
+          3,
+          5,
+          10,
+          13
+        ],
+        "oboro_phase": 2,
+        "identical_contacts": 58,
+        "result": "APARA_SLASH=0/1 não restaura a sobreposição retirada; som do Oboro começa na postura da terra, não no banco próprio"
+      },
+      "audio": "WAVs por postura, rodízio de duas variantes, quatro vozes por corte, fallback para pasta ausente e WAV inválido/cauda longa: 0 falhas",
+      "core_checks": 15352,
+      "viable_strikes": 20280,
+      "frame_rate_strikes": 30680,
+      "max_contact_difference_ms": 0,
+      "fuzz_scenarios": 2400,
+      "fuzz_violations": 0,
+      "curve_target_items_outside_range": 0,
+      "other_gates": [
+        "fonte",
+        "save",
+        "entrada",
+        "desempenho",
+        "ritmo",
+        "curva 10000 lutas por mestre a 60 e 144 Hz",
+        "cenários opcionais"
+      ]
+    },
+    "previews": {
+      "directory": "outputs/posturas-nativas-05out",
+      "masters": [
+        5,
+        10,
+        13
+      ],
+      "oboro_phase": 2,
+      "seconds_each": 8,
+      "resolution": [
+        640,
+        360
+      ],
+      "fps": 60,
+      "audio": "Sons básicos sintetizados de aviso, gesto, corte com pitch da postura e impactos; sem trilha ou gravação do mix final."
+    },
+    "windows": "Não executado nesta revisão. Validações de Windows anteriores permanecem históricas.",
+    "remaining": "Avaliação artística dos vídeos; Garfiel mantém o rastro nativo nesta tentativa. Substituir apenas seu rastro pelo pack novo não foi aplicado."
   }
 }
