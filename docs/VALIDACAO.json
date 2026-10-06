@@ -742,5 +742,100 @@
     "human_review": "pending",
     "outputs": "outputs/oni-novo-05out",
     "preview": "outputs/oni-novo-05out/video/13_oboro.mp4"
+  },
+  "boss_resistance_2026_10_06": {
+    "baseline_commit": "b0bed2b",
+    "first_eight_percent_increase": 20,
+    "last_four_pupils_percent_increase": 30,
+    "last_four_pupils": [
+      "suiren",
+      "karasu",
+      "yoru",
+      "jinshi"
+    ],
+    "pupil_posture_before": [
+      300,
+      330,
+      300,
+      380,
+      530,
+      400,
+      460,
+      1350,
+      840,
+      780,
+      970,
+      630
+    ],
+    "pupil_posture_after": [
+      360,
+      396,
+      360,
+      456,
+      636,
+      480,
+      552,
+      1620,
+      1092,
+      1014,
+      1261,
+      819
+    ],
+    "oboro_total_percent_increase": 40,
+    "oboro_distribution": "proportional across three phases",
+    "oboro_seals_before": [
+      360,
+      1800,
+      320
+    ],
+    "oboro_seals_after": [
+      504,
+      2520,
+      448
+    ],
+    "oboro_total_before": 2480,
+    "oboro_total_after": 3472,
+    "oni_damage": {
+      "perfect": 5,
+      "good": 15,
+      "miss": 62.5,
+      "life": 250,
+      "perfect_heals": false
+    },
+    "curve": {
+      "comparison_fights_per_master_and_bot": 10000,
+      "fps": [
+        60,
+        144
+      ],
+      "same_results": true,
+      "casual_before_oboro_percent": 38.3,
+      "casual_after_oboro_percent": 24.8,
+      "order_fights_per_master": 100000,
+      "order_passed": true,
+      "order_jinshi_percent": 37.17,
+      "order_oboro_percent": 24.53,
+      "perfect_percent": 100,
+      "spam_percent": 0,
+      "regression_ranges_updated_for_explicit_resistance_request": true,
+      "windows_timing_and_judgement_unchanged": true
+    },
+    "tests": {
+      "core_checks": 20964,
+      "headless_presentation_checks": 36170,
+      "mac_real_asset_checks": 215038,
+      "linux_real_asset_checks": 215038,
+      "failures": 0,
+      "fuzz_modes": 4,
+      "scenarios_per_mode": 600,
+      "fuzz_violations": 0,
+      "warnings_as_errors_compilations": 168
+    },
+    "rhythm_measurement_fix": "Measure visual cue only; duplicate audio cue incorrectly included the seal cutscene at seed 1025. Existing 3s gate and game timing unchanged.",
+    "real_game_good_parry_damage_verified": 15,
+    "sprite_frames_durations_anchors": "unchanged",
+    "windows": "not executed for this change",
+    "human_review": "pending",
+    "outputs": "outputs/postura-06out"
   }
 }

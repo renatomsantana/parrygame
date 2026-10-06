@@ -66,7 +66,10 @@ static void mede(const MasterProfile *m, int vencidos, int lutas, Medida *r) {
             int n = duel_drain(&d, ev, MAX_EVENTS);
             const double agora = d.clock + parado;      /* tempo real: o núcleo mais o que o hitstop congelou */
             for (int i = 0; i < n; i++) {
-                if (ev[i].kind == EV_CUE && ev[i].i == 0) {
+                /* O som e o brilho são eventos do mesmo aviso. Contar ambos
+                 * consome aposSelo no brilho e inclui a cena do selo no som.
+                 * A medida usa só o brilho, inclusive com latência de áudio. */
+                if (ev[i].kind == EV_CUE && ev[i].i == 0 && !ev[i].flag) {
                     cueDoPrimeiro = agora;
                     if (primeiraSequencia) {
                         r->abertura += agora;

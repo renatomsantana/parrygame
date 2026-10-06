@@ -1,5 +1,7 @@
 # A curva de dificuldade, mestre a mestre
 
+Atualização vigente: resistência aumentada em 6 de outubro; os novos valores e referências de regressão estão na última seção. As medições anteriores ficam como histórico.
+
 Medição com robôs (`make curva`, `c_game/tests/curva.c`) e a curva alvo, **aprovada e aplicada** (só o que mudou no `roster.c`: três
 mestres, ver "O que mudou"). Os robôs são estimativa, não verdade: o humano deles não vê a arte, não sofre com a escuridão do
 Yoru e não se distrai.
@@ -305,3 +307,37 @@ Validação: 20.936 verificações do núcleo, incluindo dano de perfeito/bom/er
 Apresentação com PNGs reais: 208.450 verificações no Mac e no Linux, zero falhas. No Linux/Xvfb, 96 contatos do jogo real foram idênticos com pack ligado/desligado, incluindo 51 de Oboro; a fase 2 usou sons das posturas e a fase 3 só os de Oboro, com ações `_FURIA`. No Mac, oito perfeitos consecutivos na fase 3 baixaram a vida de 250 para 210. O fio da espada em espera foi recolorido de laranja para vermelho em oito tiras locais de Oboro/com máscara; dimensões, alfa, corpo, duração, número de quadros e âncoras permaneceram iguais. Gerador atualizado para reproduzir a cor. Amostra de oito segundos com SFX básicos em `outputs/oni-novo-05out/video/13_oboro.mp4`.
 
 Windows e avaliação humana não foram repetidos nessa mudança. Logs e tabelas em `outputs/oni-novo-05out/`.
+
+
+## Aumento de resistência dos bosses (6 de outubro)
+
+Pedido aplicado: primeiros oito aprendizes +20%; últimos quatro aprendizes (Suiren, Karasu, Yoru e Jinshi) +30%; Oboro +40% no total, distribuído proporcionalmente entre as três fases. A barra dos adversários é postura: os valores foram aumentados nela. Vida de Kojiro, janelas, dano de postura dos parrys, padrões, hitstop e sprites não mudaram.
+
+Oboro: fases **360 → 504**, **1800 → 2520**, **320 → 448**; total **2480 → 3472**. Na fase Oni, o bom agora custa **15** de vida (4 normais + 11 adicionais = 4,4% de 250); perfeito continua custando 5, sem cura, e erro 62,5. O jogo real confirmou descontos de 15 nos bons.
+
+Antes/depois: 10 mil lutas por mestre e robô, mesmos parâmetros e sementes, aperto em ms exato. Resultados idênticos a 60 e 144 Hz.
+
+| Mestre | Postura antes → depois | Casual antes → depois (%) |
+|---|---|---|
+| daichi | 300 → 360 | 100.0 → 100.0 |
+| genbu | 330 → 396 | 100.0 → 100.0 |
+| hayate | 300 → 360 | 100.0 → 100.0 |
+| shizuku | 380 → 456 | 100.0 → 100.0 |
+| enjin | 530 → 636 | 99.2 → 98.6 |
+| arashi | 400 → 480 | 91.4 → 86.0 |
+| raizo | 460 → 552 | 84.7 → 77.9 |
+| garfiel | 1350 → 1620 | 80.1 → 71.1 |
+| suiren | 840 → 1092 | 71.2 → 55.8 |
+| karasu | 780 → 1014 | 64.6 → 46.5 |
+| yoru | 970 → 1261 | 58.6 → 41.9 |
+| jinshi | 630 → 819 | 55.4 → 37.3 |
+| oboro | 2480 → 3472 | 38.3 → 24.8 |
+
+
+O robô perfeito vence todos; spam perde de todos. A curva casual continua crescente em dificuldade. A verificação independente de ordem em 100 mil lutas por mestre mediu Jinshi em **37,17%** e Oboro em **24,53%**. O aumento de resistência pedido torna as lutas mais longas e reduz essas taxas; são estimativas dos robôs.
+
+As referências antigas (Jinshi 52–58%, Oboro 37–43%) ficaram incompatíveis com o novo pedido. As novas faixas de regressão ficam em 34–40% e 22–28%; as demais acompanham a tabela medida com margem de cerca de 3 pontos. Essas faixas documentam a nova configuração, não uma avaliação humana de dificuldade. O teste mantém a ordem, o degrau mínimo de 3 pontos, perfeito 100%, spam 0% e viabilidade dos golpes. O próprio teste do verificador continua provando que detecta pico de reação, degrau insuficiente e derrota do perfeito.
+
+A luta mais longa expôs um erro de medição de ritmo: na semente 1025, o verificador contava o brilho e o som do mesmo aviso duas vezes e incluía a cena do selo no segundo. Passou a medir apenas o aviso visual; o limite de 3 segundos fora da cena permanece. Nenhum tempo do jogo foi alterado nessa correção.
+
+Validação: 20.964 verificações do núcleo; 36.170 de apresentação sem assets; 215.038 com PNGs reais no Mac e no Linux; zero falhas. Fuzz com 600 cenários em cada um de quatro modos: zero violações. Save, fonte, entrada, desempenho, ritmo, taxas de quadros, curva e compilação com avisos como erro passaram. Windows e sensação ao jogar não foram repetidos. Logs e tabelas completos: `outputs/postura-06out/`.

@@ -1006,6 +1006,34 @@ static void test_cura_em_porcentagem(void) {
  * de folga para o sorteio de 300 lutas), chega a uns 55% no jinshi (faixa aprovada de 52 a 58) e a uns 40% no oboro. A ordem
  * exata, com folga de 0,5 ponto, é o make curva-ordem (tests/robos.c --ordem). E apertar sem
  * olhar, em qualquer ritmo de 0,05 a 0,8 s, perde de todos. */
+/* Resistência pedida em 6/out: +20% nos oito primeiros, +30% nos quatro
+ * últimos aprendizes; +40% de Oboro distribuído proporcionalmente pelos selos. */
+static void test_resistencia_bosses(void) {
+    static const float before[MASTER_COUNT] = {300,330,300,380,530,400,460,1350,840,780,970,630};
+    Settings s;
+    settings_default(&s);
+    for (int i = 0; i < MASTER_COUNT; i++) {
+        Duel d;
+        duel_init(&d, &s, roster_get(i), 11);
+        float expected = before[i] * (i < 8 ? 1.20f : 1.30f);
+        CHECK(fabsf(duel_posture_max(&d) - expected) < .001f, "%s: resistência aumentada na faixa certa", d.m->name);
+        d.bossPosture = 1;
+        duel_refill(&d, false, true);
+        CHECK(fabsf(d.bossPosture - expected) < .001f && d.renPosture == 250, "%s: reset usa a nova postura e mantém vida de Kojiro", d.m->name);
+    }
+    static const float beforeSeals[3] = {360,1800,320};
+    Duel d;
+    duel_init(&d, &s, roster_get(12), 11);
+    float total = 0;
+    for (int seal = 0; seal < 3; seal++) {
+        duel_start_seal(&d, seal);
+        float expected = beforeSeals[seal] * 1.40f;
+        CHECK(fabsf(d.bossPosture - expected) < .001f && d.renPosture == 250, "Oboro: selo %d recebe sua parcela dos 40%%", seal + 1);
+        total += d.bossPosture;
+    }
+    CHECK(fabsf(total - 3472) < .001f, "Oboro: soma dos três selos é 3472");
+}
+
 static void test_curva(void) {
     double anterior = 101, vit[ROSTER_SIZE];
     bool crescente = true;
@@ -1021,8 +1049,10 @@ static void test_curva(void) {
     /* a ordem fina (yoru nunca mais fácil que o décimo mestre, jinshi nunca mais fácil que o yoru) precisa de muitas lutas: make curva-ordem */
     CHECK(vit[9] <= vit[8] + 4 && vit[10] <= vit[9] + 4 && vit[11] <= vit[9] + 4, "yoru e jinshi não são mais fáceis que o décimo mestre (%.0f, %.0f, %.0f)",
           vit[9], vit[10], vit[11]);
-    CHECK(vit[11] >= 52 && vit[11] <= 75, "uns 55%% no jinshi, a faixa aprovada é de 52 a 58 e o sorteio de 300 lutas varia 3 pontos (%.0f%%)", vit[11]);
-    CHECK(vit[12] >= 30 && vit[12] <= 55 && vit[12] <= vit[11], "uns 40%% no oboro (%.0f%%)", vit[12]);
+    /* Referência de regressão após o aumento de postura pedido em 6/out,
+     * medida em 10 mil lutas; aqui 300 lutas precisam de margem maior. */
+    CHECK(vit[11] >= 31 && vit[11] <= 43, "Jinshi mais resistente: referência casual 34–40%%, com margem para 300 lutas (%.0f%%)", vit[11]);
+    CHECK(vit[12] >= 19 && vit[12] <= 31 && vit[12] <= vit[11], "Oboro mais resistente: referência casual 22–28%%, com margem para 300 lutas (%.0f%%)", vit[12]);
     static const float PERIODOS[12] = {0.05f, 0.10f, 0.15f, 0.20f, 0.25f, 0.30f, 0.35f, 0.40f, 0.45f, 0.50f, 0.60f, 0.80f};
     int spam = 0;
     for (int i = 0; i < roster_size(); i++)
@@ -1286,7 +1316,7 @@ static void test_oni_dano_na_defesa(void) {
     const MasterProfile *o = roster_get(12);
     Settings s;
     settings_default(&s); settings_for_level(&s, MASTER_COUNT);
-    const float expected[] = {5, 24, 62.5f};
+    const float expected[] = {5, 15, 62.5f};
     for (int outcome = 0; outcome < 3; outcome++) {
         Duel d;
         duel_init(&d, &s, o, 401); duel_start_seal(&d, 2);
@@ -2754,6 +2784,7 @@ int main(void) {
     test_tolerancia_tardia();
     test_calibracao();
     test_cura_em_porcentagem();
+    test_resistencia_bosses();
     test_curva();
     test_oboro_fases();
     test_oboro_repertorio_aleatorio();
