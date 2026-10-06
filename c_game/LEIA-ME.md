@@ -29,7 +29,13 @@ docker build --platform linux/amd64 -t apara-windows -f c_game/tests/Dockerfile.
 docker run --rm --platform linux/amd64 --mount type=bind,source="$PWD",target=/src,readonly apara-windows
 ```
 
-O ambiente Windows compila o jogo completo e executa núcleo, save e Raw Input no Wine.
+O ambiente Windows compila o jogo completo e executa núcleo, save, Raw Input e os arquivos do jogador (com o `apara.exe` de verdade) no Wine,
+e monta o pacote de Windows (`make pacote`) se houver uma pasta `/out` montada.
+
+**Validação a cada commit:** `tools/ci/ci.yml` é um workflow do GitHub Actions que roda esses dois ambientes em todo push e pull request; o do Windows guarda
+o pacote `apara-<versão>-windows-x64.zip` como artefato do run. **Para ativar**, copie-o para `.github/workflows/ci.yml` (quem escreveu o arquivo não tinha o
+escopo `workflow` do GitHub, que a pasta `.github/workflows` exige para receber um push). Ele foi escrito e a sintaxe conferida, mas **ainda não rodou**: o primeiro
+run pode pedir ajuste de tempo ou de espaço em disco, já que o `make teste-linux` leva uns vinte minutos.
 Rodar a janela gráfica no Windows real continua sendo uma validação de plataforma.
 ### Onde ficam o progresso e a calibração
 

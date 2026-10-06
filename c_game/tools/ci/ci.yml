@@ -1,0 +1,52 @@
+# Para ativar: copie este arquivo para .github/workflows/ci.yml (o token da sessão que o escreveu não tinha o escopo "workflow" do GitHub,
+# que é exigido para criar arquivos nessa pasta; quem tem permissão no repositório faz o commit).
+#
+# Validação automática a cada commit: os mesmos ambientes reproduzíveis que a equipe usa à mão
+# (c_game/tests/Dockerfile.linux e Dockerfile.windows; ver c_game/LEIA-ME.md).
+#   linux    make teste-linux: núcleo, fuzz, curva (100 mil lutas), avisos do gcc e do clang como erro, o jogo de verdade sob xvfb,
+#            apresentação com a arte real, áudio
+#   windows  compila o jogo para Windows (MinGW + raylib estática), roda o núcleo e os testes no Wine, confere os arquivos do jogador
+#            com o apara.exe no Wine, monta o pacote de Windows e o guarda como artefato do run
+# Não substitui jogar: a sensação, o áudio final e o Windows de verdade continuam à mão (docs/WINDOWS.md).
+name: ci
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Imagem de teste do Linux (raylib 6.0 compilada)
+        run: docker build -t apara-linux -f c_game/tests/Dockerfile.linux .
+      - name: make teste-linux
+        run: docker run --rm --mount type=bind,source="$PWD",target=/src,readonly apara-linux
+
+  windows:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Imagem de teste do Windows (MinGW, Wine e raylib 6.0 estática)
+        run: docker build --platform linux/amd64 -t apara-windows -f c_game/tests/Dockerfile.windows .
+      - name: Compilar para Windows, testar no Wine e montar o pacote
+        run: |
+          mkdir -p "$PWD/pacote"
+          docker run --rm --platform linux/amd64 \
+            --mount type=bind,source="$PWD",target=/src,readonly \
+            --mount type=bind,source="$PWD/pacote",target=/out \
+            apara-windows
+      - name: Guardar o pacote de Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: apara-windows
+          path: pacote/*.zip
+          if-no-files-found: error
+          retention-days: 14

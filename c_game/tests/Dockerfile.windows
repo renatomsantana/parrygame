@@ -1,11 +1,11 @@
 FROM ubuntu:24.04
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential git cmake pkg-config gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 \
-    wine64 make xvfb xauth libx11-dev libxtst-dev && rm -rf /var/lib/apt/lists/*
+    wine64 make xvfb xauth libx11-dev libxtst-dev zip unzip && rm -rf /var/lib/apt/lists/*
 RUN git clone --depth 1 --branch 6.0 https://github.com/raysan5/raylib.git /opt/raylib \
     && cmake -S /opt/raylib -B /opt/raylib-win -DCMAKE_SYSTEM_NAME=Windows \
     -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
     -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Release \
     && cmake --build /opt/raylib-win -j4
 WORKDIR /check
-CMD ["sh", "-c", "cp -a /src/. /check/ && cd /check/c_game && make clean && make apara OS=Windows_NT CC=x86_64-w64-mingw32-gcc RAYLIB_CFLAGS=-I/opt/raylib/src RAYLIB_LIBS='/opt/raylib-win/raylib/libraylib.a -lopengl32 -lgdi32 -lwinmm' && make teste-windows"]
+CMD ["sh", "-c", "cp -a /src/. /check/ && cd /check/c_game && make clean && make apara OS=Windows_NT CC=x86_64-w64-mingw32-gcc RAYLIB_CFLAGS=-I/opt/raylib/src RAYLIB_LIBS='/opt/raylib-win/raylib/libraylib.a -lopengl32 -lgdi32 -lwinmm' && make teste-windows && if [ -d /out ]; then APARA_PACOTE_EXIGE_TESTE=1 make pacote PLATAFORMA=windows EXE=apara.exe OUT=/out; fi"]

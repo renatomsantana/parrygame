@@ -23,6 +23,11 @@ empacota() { # plataforma, executável: saída em $T/saida.txt, pacotes em $T/di
 
 echo "1. o pacote de Linux de verdade"
 rm -rf "$T/dist"
+if ldd ./apara 2>/dev/null | grep -qi libraylib; then
+    echo "  (o ./apara usa a libraylib dinâmica do sistema: o pacote de Linux exige a raylib estática, então o script o recusa; compile com a estática para conferir este cenário)"
+    empacota linux ./apara
+    confere "o script recusa o executável com a libraylib dinâmica (código $?)" "$(grep -q 'libraylib como biblioteca dinâmica' "$T/saida.txt"; echo $?)"
+else
 empacota linux ./apara
 confere "empacotou (código $?)" "$([ -f "$T/dist/apara-teste-linux-x64.tar.gz" ]; echo $?)"
 confere "abriu o jogo de dentro do pacote e ele não gravou ao lado do executável" "$(grep -q 'abre de dentro da pasta' "$T/saida.txt" && grep -q 'abre: sim' "$T/saida.txt"; echo $?)"
@@ -34,6 +39,7 @@ confere "tem os sprites de todos os mestres, a fonte e o modelo da katana" "$([ 
 confere "sem pranchas-fonte, código, Makefile, save nem opções" "$(! echo "$LISTA" | grep -q -e '/_original/' -e '/_packs/' -e '/_folhas/' -e '\.c$' -e '\.h$' -e 'Makefile' -e 'apara_save' -e 'apara_opcoes' -e '\.tmp$' -e '\.bak$'; echo $?)"
 confere "o leia-me do jogador diz onde fica o progresso" "$(grep -q 'LOCALAPPDATA' "$P/LEIA-ME.txt" && grep -q 'apara_save.txt' "$P/LEIA-ME.txt"; echo $?)"
 confere "recusa empacotar por cima de um pacote que já existe" "$(empacota linux ./apara; [ "$?" -ne 0 ]; echo $?)"
+fi
 
 echo "2. recusa um executável que depende de uma biblioteca que não vem com o sistema"
 mkdir -p "$T/falsa"
@@ -42,7 +48,7 @@ printf 'int soma(int, int);\nint main(void) { return soma(1, 2) == 3 ? 0 : 1; }\
 cc -shared -fPIC -o "$T/falsa/libfaltando.so" "$T/falsa/lib.c" && cc -o "$T/falsa/apara_falta" "$T/falsa/main.c" -L"$T/falsa" -lfaltando -Wl,-rpath,"$T/falsa/nao_existe" && rm "$T/falsa/libfaltando.so"
 rm -rf "$T/dist"
 empacota linux "$T/falsa/apara_falta"
-confere "recusou (código $?) e disse que faltam bibliotecas" "$([ "$?" -ne 0 ] || true; grep -q 'bibliotecas que faltam' "$T/saida.txt"; echo $?)"
+confere "recusou (código $?) e disse que faltam bibliotecas" "$(grep -q 'bibliotecas que faltam' "$T/saida.txt"; echo $?)"
 confere "nada foi empacotado" "$([ ! -e "$T/dist" ] || [ -z "$(ls "$T/dist")" ]; echo $?)"
 
 echo "3. recusa um jogo que grava ao lado do executável"
