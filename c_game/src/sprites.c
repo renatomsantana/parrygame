@@ -298,7 +298,14 @@ const SprFx *spr_fx(const char *name) {
     f->tex = LoadTexture(path);
     if (!f->tex.id) return NULL;
     SetTextureFilter(f->tex, TEXTURE_FILTER_POINT);
-    f->cell = 64;
+    f->cell = !strcmp(name, "slash") ? 96 : 64;
+    if (f->tex.width % f->cell || f->tex.height % f->cell ||
+        (!strcmp(name, "slash") && (f->tex.width != 864 || f->tex.height != 1152))) {
+        TraceLog(LOG_WARNING, "Folha de efeito inválida: %s", path);
+        UnloadTexture(f->tex);
+        f->tex = (Texture2D){0};
+        return NULL;
+    }
     f->frames = f->tex.width / f->cell;
     f->rows = f->tex.height / f->cell;
     return f->frames > 0 ? f : NULL;
@@ -306,18 +313,32 @@ const SprFx *spr_fx(const char *name) {
 
 int spr_fx_cache_count(void) { return nfx; }
 
+int spr_fx_row_frames(const SprFx *f, int row) {
+    if (!f || row < 0 || row >= f->rows) return 0;
+    static const int slashFrames[] = {8, 8, 5, 9, 9, 5, 7, 7, 4, 8, 6, 4};
+    return !strcmp(f->name, "slash") && row < 12 ? slashFrames[row] : f->frames;
+}
+
 void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint) {
     spr_fx_draw_scaled(f, row, frame, center, flip, tint, 1);
 }
 
 void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale) {
-    if (!f || frame < 0 || frame >= f->frames) return;
+    spr_fx_draw_rotated(f, row, frame, center, flip, tint, scale, 0, false);
+}
+
+void spr_fx_draw_rotated(const SprFx *f, int row, int frame, Vector2 center, bool flip,
+                         Color tint, float scale, float rotation, bool flatTint) {
+    if (!f) return;
     if (row < 0) row = 0;
     if (row >= f->rows) row = f->rows - 1;
+    if (frame < 0 || frame >= spr_fx_row_frames(f, row)) return;
     float c = (float)f->cell, d = floorf(c * scale + 0.5f);
     Rectangle src = {frame * c, row * c, flip ? -c : c, c};
-    Rectangle dst = {floorf(center.x + 0.5f) - floorf(d / 2), floorf(center.y + 0.5f) - floorf(d / 2), d, d};
-    DrawTexturePro(f->tex, src, dst, (Vector2){0, 0}, 0, tint);
+    Rectangle dst = {floorf(center.x + 0.5f), floorf(center.y + 0.5f), d, d};
+    if (flatTint && flatOk) BeginShaderMode(flat);
+    DrawTexturePro(f->tex, src, dst, (Vector2){floorf(d / 2), floorf(d / 2)}, rotation, tint);
+    if (flatTint && flatOk) EndShaderMode();
 }
 
 static void ui_load(void) {

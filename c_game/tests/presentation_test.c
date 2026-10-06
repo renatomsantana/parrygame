@@ -79,6 +79,63 @@ static void sword_attachment(void) {
     REQUIRE(p.x == 4 && p.y == 5, "poeira estacionária passou a seguir o personagem");
 }
 
+static void slash_timing_and_weapons(void) {
+    SprFx fx = {.name = "slash", .frames = 9, .rows = 12, .cell = 96};
+    const int counts[] = {8, 8, 5, 9, 9, 5, 7, 7, 4, 8, 6, 4};
+    const int rates[] = {30, 60, 144, 240};
+    for (int id = 1; id <= ROSTER_SIZE; id++) {
+        for (int fury = 0; fury <= 1; fury++) {
+            for (int look = LOOK_HIGH; look <= LOOK_WARP; look++) {
+                SlashStyle s = slash_style(id, fury != 0, (MoveLook)look);
+                if (id == 4 || id == 9 || look == LOOK_THRUST || look == LOOK_FAR || look == LOOK_DASH)
+                    REQUIRE(s.row == -1, "estocada voltou a desenhar arco de corte");
+                if (s.row < 0) continue;
+                REQUIRE(s.row < 12 && s.peak < counts[s.row], "slash escolheu uma linha/quadro inválido");
+                REQUIRE(spr_fx_row_frames(&fx, s.row) == counts[s.row], "slash contou colunas transparentes como quadros");
+                if (fury) REQUIRE(s.row == 0 || s.row == 3 || s.row == 6 || s.row == 9, "Oboro em fúria voltou a usar slash sem fogo");
+                SlashCut cut = {&fx, s, 1 - AJ_SLASH_ANTES, 1, 1 + AJ_SLASH_CAUDA, false, false};
+                REQUIRE(slash_frame(&cut, cut.start - 0.001) == -1, "slash nasceu antes do corte");
+                REQUIRE(slash_frame(&cut, cut.contact) == s.peak, "arco principal fora do contato");
+                REQUIRE(slash_frame(&cut, cut.end) == -1, "cauda do slash ficou presa na tela");
+                REQUIRE(cut.end < 1 + 0.300, "slash alcançou o contato seguinte de uma sequência");
+                for (size_t hz = 0; hz < sizeof rates / sizeof rates[0]; hz++) {
+                    int previous = -1;
+                    for (double t = cut.start; t < cut.end; t += 1.0 / rates[hz]) {
+                        int frame = slash_frame(&cut, t);
+                        REQUIRE(frame >= previous && frame < counts[s.row], "slash voltou de quadro ou saiu da animação");
+                        previous = frame;
+                    }
+                }
+                cut.hidden = true;
+                REQUIRE(slash_frame(&cut, 1) == -1, "slash iluminou o apagão do Yoru");
+            }
+        }
+    }
+    memset(&G, 0, sizeof G);
+    G.bossS.set = &fixture;
+    SprAnim *a = &fixture.anims[0];
+    a->hasWeapon[0] = a->hasWeapon[1] = true;
+    a->weapon[0] = (Vector2){10, -30}; a->weapon[1] = (Vector2){20, -10};
+    a->hasOffhand[0] = a->hasOffhand[1] = true;
+    a->offhand[0] = (Vector2){4, -15}; a->offhand[1] = (Vector2){14, -5};
+    G.bossS.pl.anim = a;
+    G.boss.x = 200; G.boss.y = 100; G.boss.faceLeft = true;
+    G.boss.offsetX = 5; G.boss.hopY = 24; G.bossS.squat = 2;
+    Vector2 main, other;
+    REQUIRE(slash_position(false, &main) && slash_position(true, &other), "slash não encontrou as duas lâminas");
+    REQUIRE(main.x != other.x && main.y != other.y, "slashes das duas armas duplicaram a mesma posição");
+    G.boss.offsetX += 19; G.boss.hopY -= 12;
+    Vector2 moved;
+    REQUIRE(slash_position(true, &moved) && moved.x == other.x + 19 && moved.y == other.y + 12,
+            "slash da segunda arma ficou estacionário no salto");
+    G.bossS.pl.frame = 1;
+    REQUIRE(slash_position(true, &moved) && moved.x == other.x + 9 && moved.y == other.y + 22,
+            "slash não acompanhou o novo quadro da segunda lâmina");
+    G.cut.fx = &fx;
+    vfx_clear();
+    REQUIRE(G.cut.fx == NULL, "slash sobreviveu ao reset da luta");
+}
+
 static void jump_and_frame_time(void) {
     memset(&G, 0, sizeof G);
     boss_hop(1, 24);
@@ -576,6 +633,25 @@ static void real_assets(void) {
     if (!IsWindowReady()) return;
     spr_init();
     preload_runtime_art();
+    const SprFx *slashes = spr_fx("slash");
+    REQUIRE(slashes && slashes->cell == 96 && slashes->frames == 9 && slashes->rows == 12,
+            "pack slash ausente ou cortado como quadros de 64 px");
+    if (slashes) {
+        Image sheet = LoadImageFromTexture(slashes->tex);
+        ImageFormat(&sheet, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+        Color *pixels = sheet.data;
+        for (int row = 0; row < 12; row++) {
+            int frames = spr_fx_row_frames(slashes, row);
+            for (int frame = 0; frame < frames; frame++) {
+                bool visible = false;
+                for (int y = row * 96; y < (row + 1) * 96 && !visible; y++)
+                    for (int x = frame * 96; x < (frame + 1) * 96; x++)
+                        if (pixels[y * sheet.width + x].a) { visible = true; break; }
+                REQUIRE(visible, "slash incluiu um quadro transparente de preenchimento");
+            }
+        }
+        UnloadImage(sheet);
+    }
     int cachedFx = spr_fx_cache_count();
     REQUIRE(cachedFx > 0, "efeitos não foram carregados antes da luta");
     for (int i = 0; i < ROSTER_SIZE; i++) {
@@ -592,6 +668,12 @@ static void real_assets(void) {
         fighter_load(&G.bossS, G.m->name);
         REQUIRE(G.bossS.set != NULL, "arte do mestre não carregou");
         if (!G.bossS.set) continue;
+        G.slashes = true;
+        duel_tick(&G.duel, 0.01);
+        Duel beforeSlash = G.duel;
+        slash_begin();
+        REQUIRE(!memcmp(&beforeSlash, &G.duel, sizeof beforeSlash), "slash alterou relógio, regra ou RNG do núcleo");
+        REQUIRE(spr_fx_cache_count() == cachedFx, "slash carregou textura durante o golpe");
         for (int i = 0; i < G.bossS.set->count; i++) {
             const SprAnim *a = &G.bossS.set->anims[i]; animations++;
             REQUIRE(a->tex.id && a->frames > 0 && a->frames <= SPR_MAX_FRAMES, "folha inválida");
@@ -787,7 +869,7 @@ static void pupil_aftermath_preserves_progress(void) {
 int main(int argc, char **argv) {
     fake_sprites();
     pupil_aftermath_preserves_progress();
-    flaming_actions(); sword_attachment(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
+    flaming_actions(); sword_attachment(); slash_timing_and_weapons(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); impact_frame_stays_on_contact(); sword_continuity_and_parry(); visual_feedback_regressions();
     gamepad_uses_frame_fallback(); menu_click_targets(); menu_state_routes(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();

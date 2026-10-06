@@ -41,6 +41,20 @@ Há fade de entrada/saída e redução durante falas e impactos. A escolha final
 
 ## Passar o projeto para outra máquina
 
+### Pack de slash
+
+O pack comprado `vfx_slash` entra sem modificar o PNG original: copiar
+`sprite_sheets_96x96/vfx_slash-Sheet.png` para
+`c_game/assets/sprites/_fx/slash.png`. São células de 96 × 96 numa folha de
+864 × 1152. O arquivo permanece privado, fora do Git; `make pacote-assets` o inclui.
+
+Cortes limpos entram nas katanas, odachi e foices; garras no Garfiel, raios no
+Arashi e fogo no Enjin/Oboro em fúria. Estocadas e o apagão do Yoru conservam sua
+leitura. O arco principal coincide com o contato, congela no hitstop e a cauda
+dura no máximo 120 ms do relógio do duelo. Cada arma usa seu próprio ponto no PNG.
+`APARA_SLASH=0 ./apara` compara com o fio anterior. Sem o arquivo válido, esse fio
+continua disponível. Não altera dano, parry, hitboxes ou cadência dos sprites.
+
 O Git não contém os PNGs pagos nem as novas entregas. Na máquina que tem os arquivos:
 
 ```sh

@@ -219,6 +219,20 @@ typedef struct {
 /* Um raio do relâmpago do arashi: cai em x depois de `espera` s e fica `vida` s na tela. */
 typedef struct { float x, espera, vida; unsigned semente; bool principal; } Raio;
 
+typedef struct {
+    int row, peak;
+    float scale, rotation;
+    Color tint;
+    bool flatTint;
+} SlashStyle;
+
+typedef struct {
+    const SprFx *fx;
+    SlashStyle style;
+    double start, contact, end;
+    bool dual, hidden;
+} SlashCut;
+
 /* F3: um aperto anotado (resultado, quando, erro em ms). */
 typedef struct {
     char res[12], quando[40], erro[80];
@@ -261,6 +275,9 @@ static struct {
     int auraEcho;
     bool gritoPending;
     struct { const SprFx *fx; int row; Vector2 pos; float t, fps, scale; bool flip, back, glow, sword, body, offhand; Color tint; } vfx[VFX_MAX];
+    SlashCut cut;              /* um contato, uma ou duas armas; nunca um projétil */
+    bool slashes;
+    int slashesDrawn;          /* diagnóstico de APARA_LOG_SLASH, sem efeito no duelo */
     Fx fx;
     FlySword sword;
 
@@ -980,7 +997,10 @@ static void vfx_draw(bool back) {
     }
 }
 
-static void vfx_clear(void) { memset(G.vfx, 0, sizeof G.vfx); }
+static void vfx_clear(void) {
+    memset(G.vfx, 0, sizeof G.vfx);
+    memset(&G.cut, 0, sizeof G.cut);
+}
 
 /* Onde a lâmina de kojiro espera o golpe, a partir dos pés dele. */
 static int ren_guard_x(void) { return G.renS.set && G.renS.set->hasGuard ? G.renS.set->guardX : 12; }
@@ -1040,6 +1060,8 @@ static void start_lines(const Line *lines, int count, State s) {
 static void teste_selo(int selo);
 static void desenha_rastro_do_golpe(bool escuro, bool fio);
 static Color cor_rastro(void);
+static int mestre_do_rastro(void);
+static bool yoru_no_escuro(void);
 
 static void start_duel(void) {
     settings_default(&G.settings);
@@ -1240,6 +1262,93 @@ static void boss_blade(Vector2 *butt, Vector2 *tip) {
 /* Tipo visual do golpe k da sequência. Algumas armas mantêm sempre a mesma direção. */
 static MoveLook strike_look(void) {
     return move_contact_look(duel_move(&G.duel), G.duel.comboStrike);
+}
+
+/* Linhas do PNG original (96 px): fogo, raio e aço, cada um em três direções,
+ * mais garras. Estocadas conservam o fio estreito: um arco não descreve a ponta
+ * de um florete ou lança. Não muda nenhum tempo do sprite ou do núcleo. */
+static SlashStyle slash_style(int id, bool fury, MoveLook look) {
+    SlashStyle s = {.row = -1, .scale = 0.43f, .tint = {240, 237, 225, 255}};
+    if (id == 4 || id == 9 || look == LOOK_THRUST || look == LOOK_FAR || look == LOOK_DASH) return s;
+    bool wide = id == 3 || look == LOOK_HEAVY;
+    bool high = look == LOOK_HIGH || look == LOOK_JUMP;
+    s.row = wide ? 2 : high ? 8 : 11;
+    s.rotation = wide && high ? 25 : look == LOOK_LOW ? -15 : 0;
+    if (id == 1) s.tint = (Color){248, 224, 184, 255};
+    if (id == 2) s.tint = (Color){200, 226, 205, 255};
+    if (id == 3) { s.scale = 0.60f; s.tint = (Color){242, 226, 196, 255}; }
+    if (id == 5) { s.row = 5; s.scale = 0.36f; s.flatTint = true; s.tint = (Color){255, 218, 157, 255}; }
+    if (id == 6) { s.scale = 0.35f; s.tint = (Color){184, 188, 202, 255}; }
+    if (id == 7) { s.scale = 0.36f; s.tint = (Color){177, 230, 189, 255}; }
+    if (id == 10) { s.row = wide ? 1 : high ? 7 : 10; s.tint = (Color){184, 220, 255, 255}; }
+    if (id == 11) { s.scale = 0.27f; s.tint = (Color){199, 171, 230, 255}; }
+    if (id == 12) s.tint = (Color){221, 206, 255, 255};
+    if (id == 13) s.tint = (Color){220, 186, 243, 255};
+    /* A fúria tem prioridade sobre o eco: Oboro sempre risca fogo na fase 3. */
+    if (id == 8 || fury) {
+        s.row = id == 5 ? 3 : wide ? 0 : high ? 6 : 9;
+        s.scale = 0.48f;
+        s.tint = WHITE;
+        s.flatTint = false;
+    }
+    static const int peak[] = {1, 2, 1, 2, 2, 2, 0, 0, 1, 1, 1, 0};
+    s.peak = peak[s.row];
+    return s;
+}
+
+static void slash_begin(void) {
+    memset(&G.cut, 0, sizeof G.cut); /* a nova lâmina substitui a cauda anterior */
+    if (!G.slashes || !G.bossS.set) return;
+    SlashStyle s = slash_style(mestre_do_rastro() + 1, G.bossS.furia, strike_look());
+    if (s.row < 0) return;
+    const SprFx *fx = spr_fx("slash");
+    if (!fx) return; /* o fio antigo continua disponível sem o pack */
+    DuelTimeline t = duel_timeline(&G.duel);
+    if (!t.active) return;
+    G.cut = (SlashCut){fx, s, fmax(t.launch, t.strike - AJ_SLASH_ANTES), t.strike,
+                      t.strike + AJ_SLASH_CAUDA, duel_strike_dual(&G.duel), yoru_no_escuro()};
+}
+
+static int slash_frame(const SlashCut *cut, double now) {
+    if (!cut->fx || cut->hidden || now < cut->start || now >= cut->end) return -1;
+    int frames = spr_fx_row_frames(cut->fx, cut->style.row), peak = cut->style.peak;
+    if (frames <= peak || cut->contact <= cut->start || cut->end <= cut->contact) return -1;
+    if (now < cut->contact) {
+        double u = (now - cut->start) / (cut->contact - cut->start);
+        return peak > 0 ? (int)(u * peak) : 0;
+    }
+    double u = (now - cut->contact) / (cut->end - cut->contact);
+    int frame = peak + (int)(u * (frames - peak));
+    return frame < frames ? frame : frames - 1;
+}
+
+static bool slash_position(bool offhand, Vector2 *at) {
+    Vector2 h, tip;
+    boss_blade(&h, &tip);
+    if (offhand && !spr_offhand_point(&G.bossS.pl,
+            (Vector2){G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY},
+            G.boss.faceLeft, (int)G.bossS.squat, &tip)) return false;
+    /* O centro do arco fica logo atrás da ponta, no espaço varrido pela lâmina. */
+    *at = (Vector2){tip.x + (G.boss.faceLeft ? 7 : -7), tip.y + 2};
+    return true;
+}
+
+static void slash_draw(bool dark) {
+    if (G.state != ST_DUEL || G.bossHidden || (dark && G.m->id == 11)) return;
+    int frame = slash_frame(&G.cut, G.duel.clock);
+    if (frame < 0) return;
+    float alpha = G.duel.clock < G.cut.contact
+        ? 0.15f + 0.85f * (float)((G.duel.clock - G.cut.start) / (G.cut.contact - G.cut.start))
+        : (float)((G.cut.end - G.duel.clock) / (G.cut.end - G.cut.contact));
+    for (int hand = 0; hand < (G.cut.dual ? 2 : 1); hand++) {
+        Vector2 at;
+        if (!slash_position(hand != 0, &at)) continue;
+        float rotation = G.cut.style.rotation + (hand ? -35 : 0);
+        spr_fx_draw_rotated(G.cut.fx, G.cut.style.row, frame, at, G.boss.faceLeft,
+            fadec(G.cut.style.tint, AJ_SLASH_ALFA * alpha), G.cut.style.scale,
+            rotation, G.cut.style.flatTint);
+        G.slashesDrawn++;
+    }
 }
 
 /* Nos bonecos, o golpe forte e o salto usam as poses do golpe alto; a investida, as da estocada. */
@@ -1714,6 +1823,7 @@ static const struct { const char *fx; int row; float y; int flags; float scale; 
 /* Consulta todas as folhas usadas por um aviso antes de entrar no jogo. */
 static void preload_runtime_art(void) {
     for (int i = 0; i < ROSTER_SIZE; i++) spr_fx(TELL[i].fx);
+    spr_fx("slash");
     spr_ui_preload();
 }
 
@@ -1984,6 +2094,7 @@ static void handle_events(void) {
                 rig_pose(b, contact_pose(strike_look()), duel_strike_lead(&G.duel), EASE_IN);
                 b->trail = true;
                 sprite_launch();
+                slash_begin();
                 audio_play(SND_SWING, 0.9f, 1);
                 break;
             case EV_CUE:
@@ -3025,6 +3136,7 @@ static void draw_rigs(Color light) {
     }
     if (G.maskOnGround) draw_oni_mask(light);
     if (rastroGolpe) desenha_rastro_do_golpe(dark, true);
+    slash_draw(dark);
     draw_hanzo(light, rim);
     if (G.renS.set) {
         Rig ren = G.ren;
@@ -3265,6 +3377,7 @@ static void desenha_rastro_do_golpe(bool escuro, bool so_fio) {
         }
     }
     if (!so_fio) return;
+    if (G.cut.fx && !G.cut.hidden && G.duel.clock < G.cut.end) return;
     Vector2 empunhadura, lamina;
     boss_blade(&empunhadura, &lamina);
     (void)empunhadura;
@@ -4236,6 +4349,7 @@ int main(int argc, char **argv) {
     G.debug = getenv("APARA_DEBUG") && strcmp(getenv("APARA_DEBUG"), "0") != 0;
     G.autoJogo = getenv("APARA_AUTO") != NULL;
     G.rastro = getenv("APARA_RASTRO") ? atoi(getenv("APARA_RASTRO")) != 0 : AJ_RASTRO_FANTASMA != 0;
+    G.slashes = getenv("APARA_SLASH") ? atoi(getenv("APARA_SLASH")) != 0 : AJ_SLASH != 0;
     G.logImpactos = getenv("APARA_LOG_IMPACTOS") != NULL;
     G.logCarimbos = getenv("APARA_LOG_CARIMBOS") != NULL;
     /* Ganchos dos vídeos e dos testes: o robô do demo, o clique fora do duelo e o passo do --rec */
@@ -4548,6 +4662,7 @@ int main(int argc, char **argv) {
     arena_unload_art();
     pix_shutdown();
     if (G.logImpactos) fprintf(stderr, "FANTASMAS %ld\n", G.fantasmasDesenhados);
+    if (getenv("APARA_LOG_SLASH")) fprintf(stderr, "SLASHES %d\n", G.slashesDrawn);
     CloseWindow();
     return 0;
 }

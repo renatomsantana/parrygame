@@ -206,6 +206,7 @@ teste-windows:
 teste-jogo: apara
 	sh tests/teste_save.sh
 	sh tests/teste_rastro.sh
+	sh tests/teste_slash.sh
 	sh tests/teste_vitoria.sh
 	sh tests/teste_carimbo.sh
 	sh tests/teste_desempenho.sh
