@@ -54,15 +54,15 @@ Há fade de entrada/saída e redução durante falas e impactos. A escolha final
 O pack comprado `vfx_slash` entra sem modificar o PNG original: copiar
 `sprite_sheets_96x96/vfx_slash-Sheet.png` para
 `c_game/assets/sprites/_fx/slash.png`. São células de 96 × 96 numa folha de
-864 × 1152. O arquivo permanece privado, fora do Git; `make pacote-assets` o inclui.
+864 × 1152. A folha usada pelo jogo está versionada; `make pacote-assets` também a inclui.
 
 O pack substitui o rastro do Garfiel (garras laranja, linha 3), inclusive na katana do Oboro quando ele rouba essa postura. A recoloração ocorre no shader e preserva os highlights brancos; o PNG comprado permanece intacto. Arashi voltou ao formato do slash branco das poses originais do Samurai #5, recolorido em cinza de nuvem, com pequenos raios azul-elétrico saindo da borda. O Oboro usa a mesma paleta e os mesmos detalhes no slash original da própria katana. Os slashes completos das linhas 1/7/10 não são usados nas lutas.
 
-O gerador produz 28 camadas `_clean_*.png` e seus pontos de arma `_clean_*.txt`, nas pastas `arashi`, `garfiel`, `oboro` e `oboro_mascara`. As camadas do Arashi ficaram disponíveis, mas o jogo desenha sua tira com o slash original cinza e raios azuis. Elas retiram apenas o efeito antigo usando as tags semânticas do gerador e preservam corpo e arma. Esses arquivos derivados dos packs pagos também ficam fora do Git e entram no pacote de assets. Quem já tem os packs-fonte pode gerar novamente com `make sprites`; quem recebe só o runtime precisa do pacote atualizado, incluindo as tiras atualizadas de Shizuku, Suiren, Arashi e os respectivos ecos do Oboro com e sem máscara. `make assets-prontos` confere as camadas quando o pack slash está instalado. `APARA_SLASH=0` permite comparar as garras com o rastro anterior.
+O gerador produz 28 camadas `_clean_*.png` e seus pontos de arma `_clean_*.txt`, nas pastas `arashi`, `garfiel`, `oboro` e `oboro_mascara`. As camadas do Arashi ficaram disponíveis, mas o jogo desenha sua tira com o slash original cinza e raios azuis. Elas retiram apenas o efeito antigo usando as tags semânticas do gerador e preservam corpo e arma. Essas camadas de execução estão versionadas e também entram no pacote de assets. Quem já tem os packs-fonte pode gerar novamente com `make sprites`; quem recebe só o runtime precisa do pacote atualizado, incluindo as tiras atualizadas de Shizuku, Suiren, Arashi e os respectivos ecos do Oboro com e sem máscara. `make assets-prontos` confere as camadas quando o pack slash está instalado. `APARA_SLASH=0` permite comparar as garras com o rastro anterior.
 
 O runtime também precisa das máscaras `_weapon_<animação>.png` e `_steel_<animação>.png` em cada pasta de adversário, além do `DESARMADO.png` e do `sprite.txt` atualizados. A primeira camada recorta a arma real para o desarme; a segunda mantém os efeitos no aço. O gerador produz essas máscaras com as mesmas células dos ataques. `make assets-prontos` exige as camadas dos ataques para impedir uma entrega incompleta.
 
-O Git não contém os PNGs pagos nem as novas entregas. Na máquina que tem os arquivos:
+O Git inclui os 17 conjuntos de personagens em uso, seus manifestos e máscaras, os quatro VFX ativos e os dois spritesheets de botões. Os packs-fonte, estudos, saídas `*_gerado` e entregas ainda não integradas continuam locais. Um clone já tem a arte necessária para compilar e jogar; o ZIP continua disponível para distribuir o runtime sem Git:
 
 ```sh
 cd c_game

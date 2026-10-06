@@ -8,9 +8,8 @@ fuzz_test
 personagens
 apara_save.txt
 *.dSYM/
-# Pranchas de sprite: o pack da Mattz Art é pago e o repositório é público.
-# Os PNGs gerados por tools/personagens.c saem deles e também ficam só na máquina
-# (vale para os packs de _packs/ também; os sprite.txt deles vão para o git).
+# Packs-fonte, estudos e saídas auxiliares ficam locais.
+# As artes e os VFX de execução autorizados são liberados abaixo.
 assets/sprites/**/*.png
 assets/sprites/**/_clean_*.txt
 assets/sprites/_folhas/
@@ -33,3 +32,63 @@ videos-lutas/
 curva_relatorio
 *.exe
 ritmo_relatorio
+
+# Artes de execução versionadas: animações, máscaras e pontos das armas.
+!assets/sprites/kojiro/*.png
+!assets/sprites/kojiro/sprite.txt
+!assets/sprites/kojiro/_clean_*.txt
+!assets/sprites/hanzo/*.png
+!assets/sprites/hanzo/sprite.txt
+!assets/sprites/hanzo/_clean_*.txt
+!assets/sprites/hanzo_mascara/*.png
+!assets/sprites/hanzo_mascara/sprite.txt
+!assets/sprites/hanzo_mascara/_clean_*.txt
+!assets/sprites/daichi/*.png
+!assets/sprites/daichi/sprite.txt
+!assets/sprites/daichi/_clean_*.txt
+!assets/sprites/genbu/*.png
+!assets/sprites/genbu/sprite.txt
+!assets/sprites/genbu/_clean_*.txt
+!assets/sprites/raizo/*.png
+!assets/sprites/raizo/sprite.txt
+!assets/sprites/raizo/_clean_*.txt
+!assets/sprites/shizuku/*.png
+!assets/sprites/shizuku/sprite.txt
+!assets/sprites/shizuku/_clean_*.txt
+!assets/sprites/garfiel/*.png
+!assets/sprites/garfiel/sprite.txt
+!assets/sprites/garfiel/_clean_*.txt
+!assets/sprites/karasu/*.png
+!assets/sprites/karasu/sprite.txt
+!assets/sprites/karasu/_clean_*.txt
+!assets/sprites/hayate/*.png
+!assets/sprites/hayate/sprite.txt
+!assets/sprites/hayate/_clean_*.txt
+!assets/sprites/enjin/*.png
+!assets/sprites/enjin/sprite.txt
+!assets/sprites/enjin/_clean_*.txt
+!assets/sprites/suiren/*.png
+!assets/sprites/suiren/sprite.txt
+!assets/sprites/suiren/_clean_*.txt
+!assets/sprites/arashi/*.png
+!assets/sprites/arashi/sprite.txt
+!assets/sprites/arashi/_clean_*.txt
+!assets/sprites/yoru/*.png
+!assets/sprites/yoru/sprite.txt
+!assets/sprites/yoru/_clean_*.txt
+!assets/sprites/jinshi/*.png
+!assets/sprites/jinshi/sprite.txt
+!assets/sprites/jinshi/_clean_*.txt
+!assets/sprites/oboro/*.png
+!assets/sprites/oboro/sprite.txt
+!assets/sprites/oboro/_clean_*.txt
+!assets/sprites/oboro_mascara/*.png
+!assets/sprites/oboro_mascara/sprite.txt
+!assets/sprites/oboro_mascara/_clean_*.txt
+# VFX e botões carregados pelo jogo.
+!assets/sprites/_fx/70.png
+!assets/sprites/_fx/64.png
+!assets/sprites/_fx/197.png
+!assets/sprites/_fx/slash.png
+!assets/sprites/_ui/buttons-spritesheet.png
+!assets/sprites/_ui/buttons-pressed-spritesheet.png

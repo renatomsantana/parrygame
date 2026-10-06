@@ -876,6 +876,24 @@
         "Este registro não renova a validação de hardware de Windows ou gamepad.",
         "Precisão sonora depende do quadro e do dispositivo; pico posterior à viagem disponível começa na partida da lâmina."
       ]
+    },
+    {
+      "date": "2026-10-06",
+      "base_commit": "f11dc1a",
+      "scope": "Publicação das artes e VFX de execução autorizada pelo responsável pelo projeto.",
+      "runtime_asset_files_added": 844,
+      "sprite_sets": 17,
+      "declared_animation_strips": 281,
+      "active_fx": [
+        "64",
+        "70",
+        "197",
+        "slash"
+      ],
+      "ui_sheets": 2,
+      "verification": "Árvore Git exportada em pasta temporária, sem PNGs dos packs-fonte: make assets-prontos test-assets apara passou.",
+      "real_asset_checks": 215444,
+      "real_asset_failures": 0
     }
   ]
 }

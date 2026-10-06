@@ -7,15 +7,14 @@ o moveset e o visual estão em `../docs/JOGO.md`; a história, em `../aparar_lor
 
 ```sh
 brew install raylib                     # uma vez (Linux: o pacote raylib do sistema)
-make packs ZIP=all_the_animations.zip   # uma vez: põe as tiras dos packs pagos nas pastas
-make sprites                           # gera os PNGs de runtime com os manifests
 make assets-prontos                    # confere os 17 conjuntos antes de abrir
 make run                                # compila e abre o jogo
 ```
 
-Os packs pagos não entram no Git. `tools/instalar_packs.sh` organiza as tiras em
-`assets/sprites/_original/`, `_packs/`, `_fx/` e `_ui/`. Os personagens são
-desenhados apenas pelos PNGs de animação; sem os packs, eles não aparecem.
+As animações de execução, máscaras das armas, VFX ativos e botões já vêm no Git.
+Os personagens são desenhados apenas pelos PNGs de animação. Para regenerar a
+arte, instale os packs-fonte locais com `make packs ZIP=all_the_animations.zip`
+e execute `make sprites`; `_original/` e `_packs/` continuam fora do runtime versionado.
 Os cenários e as partículas embutidas continuam disponíveis.
 Entregas de fundos, SFX e músicas, e o pacote para outro clone: `../docs/ENTREGAS_EQUIPE.md`.
 `make teste` pode pular verificações cuja plataforma não existe na máquina. A conferência
@@ -23,7 +22,7 @@ completa de Linux é `make teste-linux`; ela exige Xvfb, XInput2, XTest, raylib 
 Os ambientes reproduzíveis estão em `tests/Dockerfile.linux` e `tests/Dockerfile.windows`:
 
 ```sh
-# Da raiz do repositório, com os PNGs de runtime já instalados:
+# Da raiz do repositório:
 docker build -t apara-linux -f c_game/tests/Dockerfile.linux .
 docker run --rm --mount type=bind,source="$PWD",target=/src,readonly apara-linux
 docker build --platform linux/amd64 -t apara-windows -f c_game/tests/Dockerfile.windows .

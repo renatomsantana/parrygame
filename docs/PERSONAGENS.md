@@ -454,8 +454,7 @@ rastro e a aura do elemento, o golpe especial.
 | **Arashi** | Samurai #5 (mascarado, duas espadas) | `_packs/samurai5/` | 96 × 64 | roupa verde → preta, cinto e botas azul elétrico, cabelo prateado, olhos de raio; as **duas espadas** do pack ficam, com raios nas lâminas e rastro azul |
 | **Oboro** | Demon (máscara oni) | `_packs/demon/` | 128 × 108 | cores do pack; ganha os ecos das posturas dos outros e a cena do grito |
 
-Como montar a pasta (os PNGs são do pack pago e ficam fora do git; os
-`sprite.txt` já estão no repositório):
+Como montar a pasta dos packs-fonte para regenerar a arte (esses PNGs-fonte ficam locais; os `sprite.txt` já estão no repositório):
 
 ```
 c_game/assets/sprites/_packs/
@@ -605,11 +604,8 @@ preservando os manifestos com tempos, âncoras e pontos das armas.
 
 ## Arte e repositório
 
-O repositório é público e as pranchas são do pack pago da Mattz Art, então os
-PNGs de `c_game/assets/sprites/` (os originais e os gerados, que saem deles)
-(e os efeitos de `_fx/` e as teclas de `_ui/`, do mesmo zip) estão no
-`.gitignore`. O programa e os `sprite.txt` das pranchas de origem
-(`_original/` e `_packs/`) vão para o git; os `sprite.txt` gerados em cada pasta
-de personagem saem do `make sprites`, como as tiras.
+As artes usadas pelo jogo estão versionadas por autorização do responsável pelo projeto: os 17 conjuntos de personagens, os `sprite.txt` de execução, as camadas `_weapon_*`, `_steel_*` e `_clean_*`, os VFX `64`, `70`, `197` e `slash`, e os dois spritesheets de botões carregados pelo jogo. Um clone pode compilar e jogar com esses arquivos.
+
+Os PNGs-fonte de `_original/` e `_packs/`, as pranchas de estudo `_folhas/`, as pastas auxiliares `*_gerado` e os efeitos não integrados continuam locais. As regras de `c_game/.gitignore` liberam os diretórios e arquivos de execução e preservam essa separação. Para regenerar os PNGs, a máquina ainda precisa dos packs-fonte.
 
 Os pontos `arma2 ANIMAÇÃO QUADRO X Y` seguem a segunda lâmina visível dos packs de duas armas. O teste `make -C c_game test-assets` carrega as folhas reais dos 13 mestres em uma janela oculta e verifica as animações e os pontos das duas espadas do Arashi.
