@@ -166,5 +166,64 @@
         "mode": "RGB"
       }
     }
+  },
+  "vfx_slash": {
+    "date": "2026-10-05",
+    "source_commit": "831047181f2f9e50f9f2f143cb89c0d0c7d8d862",
+    "asset": "assets/sprites/_fx/slash.png; original comprado, privado e ignorado pelo Git",
+    "geometry": {
+      "sheet": [
+        864,
+        1152
+      ],
+      "cell": [
+        96,
+        96
+      ],
+      "rows": 12,
+      "columns": 9
+    },
+    "presentation_checks": 54104,
+    "real_asset_checks_mac_and_linux": 68336,
+    "failures": 0,
+    "real_game_comparison": {
+      "masters": [
+        3,
+        5,
+        10,
+        13
+      ],
+      "oboro_phase": 3,
+      "identical_impacts": 58,
+      "comparison": [
+        "contact time",
+        "judgement",
+        "input lead",
+        "sprite animation and frame"
+      ],
+      "drawn_when_enabled": 448,
+      "drawn_when_disabled": 0
+    },
+    "core_checks": 15352,
+    "viable_strikes": 20280,
+    "fuzz_violations": 0,
+    "compiler_checks_mac": 168,
+    "compiler_warnings_mac": 0,
+    "tail_max_duel_seconds": 0.12,
+    "separate_weapon_points": "passed",
+    "yoru_blackout_preserved": "passed",
+    "mac_oboro_phase_3_sample": {
+      "duration_seconds": 5,
+      "mean_frame_ms": 16.66,
+      "p99_frame_ms": 18.79,
+      "max_frame_ms": 19.43,
+      "frames_over_33_4_ms": 0,
+      "mean_game_work_ms": 3.06,
+      "limitation": "Amostra local; nao garante desempenho em outro hardware."
+    },
+    "runtime_fallback": "Pack ausente ou APARA_SLASH=0 mantém o fio anterior; texturas carregadas antes da luta.",
+    "windows": "Validacao anterior do jogo registrada em c_game; este update visual foi executado em Mac e Linux.",
+    "previews": "outputs/slashes-05out: Raizo, Garfiel, Arashi e Oboro fase 3, com sons basicos de impacto",
+    "human_review": "pending"
   }
 }

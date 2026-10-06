@@ -38,6 +38,8 @@ Resolução de arte: **320 × 180**, chão em y=150. Janela inicial: **1280 × 7
 
 Os fundos procedurais continuam disponíveis. Os PNGs do artista substituem o fundo de cada arena, com sua paleta preservada e camadas animáveis. Os sons sintetizados continuam como fallback; WAVs e músicas da equipe entram sem alterar o núcleo. Formatos e nomes: `ENTREGAS_EQUIPE.md`.
 
+O pack comprado de slashes acompanha os pontos de cada lâmina: aço nas katanas/odachi, garras no Garfiel, raios no Arashi e fogo no Enjin e Oboro em fúria. Estocadas mantêm o fio estreito; o apagão do Yoru não recebe luz extra. O arco principal coincide com o contato e a cauda termina em 120 ms do relógio do duelo, congelando junto do hitstop. `APARA_SLASH=0` volta ao fio anterior. O PNG pago fica fora do Git e entra no pacote privado de assets.
+
 O save é validado, guarda corrupção em `.bak` e troca um `.tmp` sem apagar o arquivo anterior primeiro. A vitória é registrada no golpe final, antes de qualquer clique. Opções têm arquivo separado. Os modos de teste não gravam o progresso.
 
 ## Organização
