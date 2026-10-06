@@ -219,6 +219,15 @@ typedef struct {
 /* Um raio do relâmpago do arashi: cai em x depois de `espera` s e fica `vida` s na tela. */
 typedef struct { float x, espera, vida; unsigned semente; bool principal; } Raio;
 
+typedef struct {
+    const SprFx *sheet;
+    int row, peak;
+    float scale;
+    double start, contact, end;
+    Vector2 local[2];
+    bool hand[2], captured, flip, second;
+} BoughtSlash;
+
 /* F3: um aperto anotado (resultado, quando, erro em ms). */
 typedef struct {
     char res[12], quando[40], erro[80];
@@ -261,6 +270,9 @@ static struct {
     int auraEcho;
     bool gritoPending;
     struct { const SprFx *fx; int row; Vector2 pos; float t, fps, scale; bool flip, back, glow, sword, body, offhand; Color tint; } vfx[VFX_MAX];
+    BoughtSlash cut;
+    bool packSlashes;
+    long packDraws;
     Fx fx;
     FlySword sword;
 
@@ -999,6 +1011,7 @@ static void vfx_draw(bool back) {
 
 static void vfx_clear(void) {
     memset(G.vfx, 0, sizeof G.vfx);
+    memset(&G.cut, 0, sizeof G.cut);
 }
 
 /* Onde a lâmina de kojiro espera o golpe, a partir dos pés dele. */
@@ -1261,6 +1274,80 @@ static void boss_blade(Vector2 *butt, Vector2 *tip) {
 /* Tipo visual do golpe k da sequência. Algumas armas mantêm sempre a mesma direção. */
 static MoveLook strike_look(void) {
     return move_contact_look(duel_move(&G.duel), G.duel.comboStrike);
+}
+
+/* Somente Arashi/Garfiel (e seus ecos). As demais posturas continuam nativas. */
+static bool bought_slash_available(const SprAnim *a) {
+    const MasterProfile *source = feedback_master();
+    return G.packSlashes && a && a->cleanTex.id && source &&
+        (source->id == 5 || source->id == 10) && spr_fx("slash");
+}
+static bool bought_weapon(bool other, Vector2 *at) {
+    const SprPlayer *p = &G.bossS.pl;
+    const SprAnim *a = p->anim;
+    int frame = p->frame;
+    if (!a || frame < 0 || frame >= a->frames || frame >= SPR_MAX_FRAMES) return false;
+    /* Só uma arma visível neste quadro, sem repetir a posição de outra pose. */
+    if (other && (!a->hasOffhand[frame] || G.m->isBigBoss)) return false;
+    Vector2 feet = {G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};
+    return other ? spr_offhand_point(p, feet, G.boss.faceLeft, (int)G.bossS.squat, at)
+                 : spr_weapon_point(p, feet, G.boss.faceLeft, (int)G.bossS.squat, at);
+}
+static void bought_slash_begin(void) {
+    memset(&G.cut, 0, sizeof G.cut);
+    if (!bought_slash_available(G.bossS.strike)) return;
+    DuelTimeline timeline = duel_timeline(&G.duel);
+    if (!timeline.active) return;
+    int source = feedback_master()->id;
+    MoveLook look = strike_look();
+    int row = source == 5 ? 3 : look == LOOK_HEAVY ? 1 :
+        (look == LOOK_HIGH || look == LOOK_JUMP || look == LOOK_WARP) ? 7 : 10;
+    int peak = row == 3 || row == 1 ? 2 : row == 7 ? 0 : 1;
+    G.cut = (BoughtSlash){.sheet = spr_fx("slash"), .row = row, .peak = peak,
+        .scale = source == 5 ? .42f : .48f,
+        .start = fmax(timeline.launch, timeline.strike - AJ_PACK_SLASH_ANTES),
+        .contact = timeline.strike, .end = timeline.strike + AJ_PACK_SLASH_CAUDA,
+        .flip = G.boss.faceLeft,
+        .second = !G.m->isBigBoss && (source == 10 || duel_strike_dual(&G.duel))};
+}
+static void bought_slash_contact(void) {
+    if (!G.cut.sheet) return;
+    Vector2 feet = {G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};
+    for (int hand = 0; hand < 2; hand++) {
+        Vector2 at;
+        G.cut.hand[hand] = (hand == 0 || G.cut.second) && bought_weapon(hand != 0, &at);
+        if (G.cut.hand[hand]) G.cut.local[hand] = (Vector2){at.x - feet.x, at.y - feet.y};
+    }
+    G.cut.captured = true;
+}
+static int bought_slash_frame(const BoughtSlash *cut, double clock) {
+    if (!cut->sheet || clock < cut->start || clock >= cut->end) return -1;
+    if (clock < cut->contact) {
+        double u = (clock - cut->start) / fmax(.001, cut->contact - cut->start);
+        return (int)(u * cut->peak);
+    }
+    int count = spr_fx_row_frames(cut->sheet, cut->row);
+    int frame = cut->peak + (int)((clock - cut->contact) / (cut->end - cut->contact) * (count - cut->peak));
+    return frame < count ? frame : count - 1;
+}
+static void bought_slash_draw(bool dark) {
+    if (dark || G.state != ST_DUEL || G.bossHidden) return;
+    int frame = bought_slash_frame(&G.cut, G.duel.clock);
+    if (frame < 0) return;
+    float alpha = G.duel.clock < G.cut.contact ? 1 :
+        (float)((G.cut.end - G.duel.clock) / (G.cut.end - G.cut.contact));
+    Vector2 feet = {G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY};
+    for (int hand = 0; hand < 2; hand++) {
+        if (hand && !G.cut.second) continue;
+        Vector2 at;
+        if (G.cut.captured) {
+            if (!G.cut.hand[hand]) continue;
+            at = (Vector2){feet.x + G.cut.local[hand].x, feet.y + G.cut.local[hand].y};
+        } else if (!bought_weapon(hand != 0, &at)) continue;
+        spr_fx_draw_weapon(G.cut.sheet, G.cut.row, frame, at, G.cut.flip,
+            fadec(WHITE, alpha * AJ_PACK_SLASH_ALFA), G.cut.scale);
+        G.packDraws++;
+    }
 }
 
 /* Nos bonecos, o golpe forte e o salto usam as poses do golpe alto; a investida, as da estocada. */
@@ -1721,7 +1808,7 @@ static float paralisia_ritmo(void) {
 }
 
 /* Os rastros coloridos pertencem aos PNGs; não sobrepor um segundo arco. */
-static const char *const runtimeFx[] = {"70", "64", "197"};
+static const char *const runtimeFx[] = {"70", "64", "197", "slash"};
 static void preload_runtime_art(void) {
     for (unsigned i = 0; i < sizeof runtimeFx / sizeof runtimeFx[0]; i++) spr_fx(runtimeFx[i]);
     spr_ui_preload();
@@ -1961,6 +2048,7 @@ static void handle_events(void) {
                 rig_pose(b, contact_pose(strike_look()), duel_strike_lead(&G.duel), EASE_IN);
                 b->trail = true;
                 sprite_launch();
+                bought_slash_begin();
                 posture_sound(SND_SWING, 0.9f, 1);
                 break;
             case EV_CUE:
@@ -1994,6 +2082,7 @@ static void handle_events(void) {
                     fx_burst(&G.fx, P_SHARD, clash_point(), 6, 43, 0.90f, 3.14f,
                              (Color){185, 182, 174, 220}, (Color){203, 157, 92, 220});
                 sprite_impact(e);
+                bought_slash_contact();
                 G.special = false;
                 G.renParryTime = -1;
                 G.blackoutTarget = 0;
@@ -2873,6 +2962,7 @@ static void draw_sprite_fighter(const Rig *r, const Fighter *f, Color light, Col
     int breath = sprite_breath(r, f);
     const float aceso = (1 - clampf(apagar, 0, 1)) * opac, escuro = clampf(apagar, 0, 1) * corpoApagado * opac;   /* `opac`: o corvo se desfazendo em penas */
     SprDraw o = {r->faceLeft, breath, true, fadec((Color){16, 12, 18, 255}, aceso + escuro)};
+    o.withoutTrail = f == &G.bossS && bought_slash_available(a);
     static const int off[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     for (int k = 0; k < 4; k++) spr_draw(f->set, a, frame, (Vector2){feet.x + off[k][0], feet.y + off[k][1]}, o);
     if (escuro > 0.001f) {
@@ -3002,6 +3092,7 @@ static void draw_rigs(Color light) {
     }
     if (G.maskOnGround) draw_oni_mask(light);
     if (rastroGolpe) desenha_rastro_do_golpe(dark, true);
+    bought_slash_draw(dark);
     draw_hanzo(light, rim);
     if (G.renS.set) {
         Rig ren = G.ren;
@@ -4196,6 +4287,7 @@ int main(int argc, char **argv) {
     G.debug = getenv("APARA_DEBUG") && strcmp(getenv("APARA_DEBUG"), "0") != 0;
     G.autoJogo = getenv("APARA_AUTO") != NULL;
     G.rastro = getenv("APARA_RASTRO") ? atoi(getenv("APARA_RASTRO")) != 0 : AJ_RASTRO_FANTASMA != 0;
+    G.packSlashes = getenv("APARA_SLASH") ? atoi(getenv("APARA_SLASH")) != 0 : AJ_PACK_SLASH != 0;
     G.logImpactos = getenv("APARA_LOG_IMPACTOS") != NULL;
     G.logCarimbos = getenv("APARA_LOG_CARIMBOS") != NULL;
     /* Ganchos dos vídeos e dos testes: o robô do demo, o clique fora do duelo e o passo do --rec */
@@ -4508,6 +4600,7 @@ int main(int argc, char **argv) {
     arena_unload_art();
     pix_shutdown();
     if (G.logImpactos) fprintf(stderr, "FANTASMAS %ld\n", G.fantasmasDesenhados);
+    if (getenv("APARA_LOG_SLASH")) fprintf(stderr, "SLASHES %ld\n", G.packDraws);
     CloseWindow();
     return 0;
 }

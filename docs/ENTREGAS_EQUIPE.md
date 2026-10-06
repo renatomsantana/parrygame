@@ -54,7 +54,9 @@ O pack comprado `vfx_slash` entra sem modificar o PNG original: copiar
 `c_game/assets/sprites/_fx/slash.png`. São células de 96 × 96 numa folha de
 864 × 1152. O arquivo permanece privado, fora do Git; `make pacote-assets` o inclui.
 
-Após a revisão visual de 05/10, o pack permanece guardado como material comprado, mas não é sobreposto às armas no jogo. Os rastros nativos já são coloridos e acompanham as animações; Oboro na fase 2 recebe a cor da postura roubada sem trocar sua katana. A alternativa de substituir só o rastro do Garfiel exige uma máscara que separe rastro, garras e corpo; não foi aplicada nesta rodada.
+O pack substitui os rastros do Arashi (relâmpago azul, linhas 1/7/10) e do Garfiel (garras laranja, linha 3). A recoloração ocorre no shader e preserva os highlights brancos; o PNG comprado permanece intacto. Oboro recebe esses efeitos quando rouba as respectivas posturas, mantendo sua própria katana.
+
+O gerador produz 28 camadas `_clean_*.png` e seus pontos de arma `_clean_*.txt`, nas pastas `arashi`, `garfiel`, `oboro` e `oboro_mascara`. Elas retiram apenas o efeito antigo usando as tags semânticas do gerador e preservam corpo e arma. Esses arquivos derivados dos packs pagos também ficam fora do Git e entram no pacote de assets. Quem já tem os packs-fonte pode gerar novamente com `make sprites`; quem recebe só o runtime precisa do pacote atualizado. `make assets-prontos` confere essas camadas quando o pack slash está instalado. `APARA_SLASH=0` permite comparar com os rastros anteriores.
 
 O Git não contém os PNGs pagos nem as novas entregas. Na máquina que tem os arquivos:
 

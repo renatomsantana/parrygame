@@ -125,6 +125,54 @@ static void borrowed_feedback(void) {
     }
 }
 
+static void bought_pack_timing_and_hands(void) {
+    SprFx sheet = {.name = "slash", .cell = 96, .rows = 12, .frames = 9};
+    const int rows[] = {1,3,7,10}, peaks[] = {2,2,0,1}, hz[] = {30,60,144,240};
+    for (int i = 0; i < 4; i++) {
+        BoughtSlash cut = {.sheet = &sheet, .row = rows[i], .peak = peaks[i], .start = .9, .contact = 1, .end = 1.12};
+        REQUIRE(bought_slash_frame(&cut, .899) == -1, "pack começou antes da partida visual");
+        REQUIRE(bought_slash_frame(&cut, 1) == peaks[i], "quadro principal do pack fora do contato");
+        REQUIRE(bought_slash_frame(&cut, 1.12) == -1, "slash ficou preso depois da cauda");
+        for (int h = 0; h < 4; h++) {
+            int last = -1;
+            for (double clock = .9; clock < 1.12; clock += 1.0 / hz[h]) {
+                int frame = bought_slash_frame(&cut, clock);
+                REQUIRE(frame >= last && frame < spr_fx_row_frames(&sheet, rows[i]), "pack voltou de quadro ou mostrou coluna vazia");
+                last = frame;
+            }
+        }
+    }
+    memset(&G, 0, sizeof G);
+    G.m = roster_get(9); G.bossS.set = &fixture;
+    SprAnim *a = &fixture.anims[0];
+    a->hasWeapon[0] = a->hasOffhand[0] = true;
+    a->weapon[0] = (Vector2){10,-30}; a->offhand[0] = (Vector2){4,-15};
+    G.bossS.pl.anim = a;
+    G.boss.x = 200; G.boss.y = 100; G.boss.faceLeft = true;
+    G.boss.offsetX = 5; G.boss.hopY = 24; G.bossS.squat = 2;
+    Vector2 main, other;
+    REQUIRE(bought_weapon(false, &main) && bought_weapon(true, &other), "uma espada visível ficou sem o raio do pack");
+    REQUIRE(main.x != other.x && main.y != other.y, "as duas espadas duplicaram a origem do VFX");
+    G.cut.sheet = &sheet;
+    G.cut.second = true;
+    Duel before = G.duel;
+    bought_slash_contact();
+    REQUIRE(G.cut.hand[0] && G.cut.hand[1] && G.cut.captured, "contato não capturou as duas lâminas");
+    REQUIRE(!memcmp(&before, &G.duel, sizeof before), "capturar o slash alterou o duelo");
+    G.cut.second = false;
+    bought_slash_contact();
+    REQUIRE(G.cut.hand[0] && !G.cut.hand[1], "garra de espera ganhou slash num golpe simples");
+    Vector2 stored = G.cut.local[0];
+    G.boss.offsetX += 18; G.boss.hopY -= 10; G.bossS.pl.frame = 1;
+    REQUIRE(G.cut.local[0].x == stored.x && G.cut.local[0].y == stored.y, "a recuperação arrastou a cauda para outra pose");
+    G.m = roster_get(12); G.bossS.pl.frame = 0;
+    REQUIRE(bought_weapon(false, &main) && !bought_weapon(true, &other), "Oboro ganhou uma segunda espada ao roubar o raio");
+    G.m = roster_get(9); a->hasOffhand[0] = false;
+    REQUIRE(!bought_weapon(true, &other), "pack inventou uma lâmina oculta a partir de outro quadro");
+    vfx_clear();
+    REQUIRE(!G.cut.sheet, "reset deixou o slash novo ativo");
+}
+
 static void jump_and_frame_time(void) {
     memset(&G, 0, sizeof G);
     boss_hop(1, 24);
@@ -617,7 +665,7 @@ static void yoru_dark_has_no_glow(void) {
 static void real_assets(void) {
     SetTraceLogLevel(LOG_WARNING);
     SetConfigFlags(FLAG_WINDOW_HIDDEN);
-    InitWindow(64, 64, "verificação dos sprites");
+    InitWindow(256, 256, "verificação dos sprites");
     REQUIRE(IsWindowReady(), "contexto gráfico indisponível para verificar as artes");
     if (!IsWindowReady()) return;
     spr_init();
@@ -640,6 +688,28 @@ static void real_assets(void) {
             }
         }
         UnloadImage(sheet);
+    }
+    if (slashes) {
+        for (int lightning = 0; lightning < 2; lightning++) {
+            BeginDrawing(); ClearBackground(BLACK);
+            spr_fx_draw_weapon(slashes, lightning ? 1 : 3, 2, (Vector2){128,128}, false, WHITE, 1);
+            rlDrawRenderBatchActive();
+            Image image = LoadImageFromScreen();
+            EndDrawing();
+            Color *pixels = LoadImageColors(image);
+            int blue = 0, orange = 0, white = 0;
+            for (int i = 0; i < image.width * image.height; i++) {
+                Color c = pixels[i];
+                if (c.a < 128) continue;
+                blue += c.b > c.r + 40 && c.b > c.g;
+                orange += c.r > c.g + 40 && c.g > c.b + 40;
+                white += c.r > 230 && c.g > 230 && c.b > 230;
+            }
+            REQUIRE(lightning ? blue > 100 && orange == 0 : orange > 100 && blue == 0,
+                "shader do pack não produziu raio azul/garras laranja");
+            REQUIRE(white > 5, "recoloração apagou os highlights brancos do pack");
+            UnloadImageColors(pixels); UnloadImage(image);
+        }
     }
     int cachedFx = spr_fx_cache_count();
     REQUIRE(cachedFx > 0, "efeitos não foram carregados antes da luta");
@@ -665,6 +735,22 @@ static void real_assets(void) {
         for (int i = 0; i < G.bossS.set->count; i++) {
             const SprAnim *a = &G.bossS.set->anims[i]; animations++;
             REQUIRE(a->tex.id && a->frames > 0 && a->frames <= SPR_MAX_FRAMES, "folha inválida");
+            bool layerExpected = (master == 4 || master == 9) && (strstr(a->name, "ATTACK") || !strcmp(a->name, "ESPECIAL"));
+            if (G.m->isBigBoss) layerExpected = strstr(a->name, "ECO_GARFIEL") || strstr(a->name, "ECO_ARASHI") ||
+                (strstr(a->name, "FURIA") && strstr(a->name, "ATTACK"));
+            if (layerExpected) REQUIRE(a->cleanTex.id, "falta a camada que remove o slash antigo");
+            if (a->cleanTex.id) {
+                REQUIRE(a->cleanTex.width == a->tex.width && a->cleanTex.height == a->tex.height, "camada mudou tamanho/número de quadros");
+                Image original = LoadImageFromTexture(a->tex), clean = LoadImageFromTexture(a->cleanTex);
+                Color *old = LoadImageColors(original), *now = LoadImageColors(clean);
+                int removed = 0;
+                for (int pixel = 0; pixel < original.width * original.height; pixel++) {
+                    if (now[pixel].a) REQUIRE(!memcmp(&old[pixel], &now[pixel], sizeof(Color)), "camada repintou corpo/arma em vez de remover só efeitos");
+                    else removed += old[pixel].a > 0;
+                }
+                REQUIRE(removed > 0, "camada não removeu nenhum efeito antigo");
+                UnloadImageColors(old); UnloadImageColors(now); UnloadImage(original); UnloadImage(clean);
+            }
             SprPlayer player;
             spr_play(&player, a, 0, a->frames - 1, 0);
             for (int tick = 0; tick < 300; tick++) {
@@ -883,7 +969,7 @@ static void pupil_aftermath_preserves_progress(void) {
 int main(int argc, char **argv) {
     fake_sprites();
     pupil_aftermath_preserves_progress();
-    flaming_actions(); sword_attachment(); borrowed_feedback(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
+    flaming_actions(); sword_attachment(); borrowed_feedback(); bought_pack_timing_and_hands(); jump_and_frame_time(); karasu_warp_reappears_before_cue();
     damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); impact_frame_stays_on_contact(); sword_continuity_and_parry(); visual_feedback_regressions();
     gamepad_uses_frame_fallback(); menu_click_targets(); menu_state_routes(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();

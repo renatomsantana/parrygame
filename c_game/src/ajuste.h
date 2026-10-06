@@ -135,6 +135,12 @@
 #define AJ_RASTRO_ALFA           0.72f      /* opacidade do primeiro, no fim da partida */
 #define AJ_RASTRO_FIO_ALFA       0.84f      /* brilho do traço preso à arma, no fim da partida */
 
+/* Substituições do pack comprado: garras laranja e cortes elétricos azuis. */
+#define AJ_PACK_SLASH              1       /* APARA_SLASH=0 compara com a tira original */
+#define AJ_PACK_SLASH_ANTES     0.10f       /* começa após a partida, até isto antes do contato */
+#define AJ_PACK_SLASH_CAUDA     0.12f       /* relógio do duelo: acompanha o hitstop */
+#define AJ_PACK_SLASH_ALFA      0.92f
+
 /* ---- Robô do demo (--demo) e dos testes -------------------------------- */
 #define AJ_ROBO_ANTECEDENCIA       0.030f   /* aperta no máximo este tempo antes do contato (menos que a menor janela perfeita) */
 #define AJ_ROBO_SPAM_PERIODO       0.150f   /* o que martela o botão aperta a cada isto */

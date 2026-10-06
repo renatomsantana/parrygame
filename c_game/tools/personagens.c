@@ -5806,6 +5806,45 @@ static void save_strip(const char *path, Frame *frames, int n, int cw, int ch) {
     UnloadImage(im);
 }
 
+/* Camada sem o rastro antigo, para substituição pelo pack comprado.
+ * A seleção usa as tags semânticas do gerador, nunca a cor do cabelo/roupa. */
+static bool replacement_layer(const Char *ch, const char *anim) {
+    bool attack = strstr(anim, "ATTACK") || !strcmp(anim, "ESPECIAL");
+    if (!attack) return false;
+    return !strcmp(ch->id, "garfiel") || !strcmp(ch->id, "arashi") ||
+        ((!strcmp(ch->id, "oboro") || !strcmp(ch->id, "oboro_mascara")) &&
+         (strstr(anim, "ECO_GARFIEL") || strstr(anim, "ECO_ARASHI") || strstr(anim, "FURIA")));
+}
+static Frame cleanFrames[MAX_FRAMES];
+static void clean_frame(int frame, const Canvas *cv, const Char *ch) {
+    if (frame < 0 || frame >= MAX_FRAMES) return;
+    for (int y = 0; y < CH; y++) for (int x = 0; x < CW; x++) {
+        Color c = cv->a[y][x];
+        bool trail = false;
+        for (int i = 0; i < 3; i++)
+            trail |= c.r == ch->rastro[i].r && c.g == ch->rastro[i].g && c.b == ch->rastro[i].b;
+        bool remove = !cv->wpx[y][x] &&
+            (cv->tag[y][x] == T_FX || (cv->tag[y][x] == T_WEAPON && trail));
+        cleanFrames[frame].p[y][x] = remove ? (Color){0} : c;
+    }
+}
+static void save_clean(const char *dir, const char *name, int n, int cw, int ch,
+    const Vector2 *weapon, const bool *hasWeapon, const Vector2 *offhand, const bool *hasOffhand) {
+    char path[PATHLEN], filename[128];
+    snprintf(filename, sizeof filename, "_clean_%s.png", name);
+    path_join(path, dir, filename);
+    save_strip(path, cleanFrames, n, cw, ch);
+    snprintf(filename, sizeof filename, "_clean_%s.txt", name);
+    path_join(path, dir, filename);
+    FILE *points = fopen(path, "w");
+    if (!points) return;
+    for (int f = 0; f < n; f++) {
+        if (hasWeapon[f]) fprintf(points, "arma %d %.0f %.0f\n", f, weapon[f].x, weapon[f].y);
+        if (hasOffhand[f]) fprintf(points, "arma2 %d %.0f %.0f\n", f, offhand[f].x, offhand[f].y);
+    }
+    fclose(points);
+}
+
 static void copy_dir(const char *from, const char *to) {
     make_dir(to);
     FilePathList fl = LoadDirectoryFiles(from);
@@ -7063,6 +7102,7 @@ int main(int argc, char **argv) {
                     render(sf, sg, ch, &cx, &cv);
                 }
                 weapon_point(r, j, &cv, ax, ay);
+                if (replacement_layer(ch, st->name)) clean_frame(j, &cv, ch);
                 memcpy(r->frames[j].p, cv.a, sizeof cv.a);
                 if (pose && (j / 2) % 2) {
                     int top = CH, bot = 0;
@@ -7125,6 +7165,7 @@ int main(int argc, char **argv) {
             snprintf(fn, sizeof fn, "%.63s.png", st->name);
             path_join(p, d, fn);
             save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+            if (replacement_layer(ch, st->name)) save_clean(d, st->name, r->n, OUT_W(sc), sc->ch, r->weapon, r->hasWeapon, r->offhand, r->hasOffhand);
             nr++;
         }
         path_join(p, d, "sprite.txt");
@@ -7196,10 +7237,13 @@ int main(int argc, char **argv) {
                 for (int y = 0; y < CH; y++)
                     for (int x = 0; x < CW; x++) sil[k % 3][y][x] = cv.tag[y][x] == T_BODY && cv.a[y][x].a;
                 if (ci >= 0 && hr) special_fx(&cv, ch, ch->efeito, ax, rdx, ty, ay, k - ci);
+                weapon_point(r, k, &cv, ax, ay);
+                if (replacement_layer(ch, "ESPECIAL")) clean_frame(k, &cv, ch);
                 memcpy(r->frames[k].p, cv.a, sizeof cv.a);
             }
             path_join(p, d, "ESPECIAL.png");
             save_strip(p, r->frames, nst, OUT_W(sc), sc->ch);
+            if (replacement_layer(ch, "ESPECIAL")) save_clean(d, "ESPECIAL", nst, OUT_W(sc), sc->ch, r->weapon, r->hasWeapon, r->offhand, r->hasOffhand);
             if (mf) {
                 fprintf(mf, "anim %-13s  hold %d  contact %d", "ESPECIAL", hold, ci);
                 if (hr) fprintf(mf, "  alcance %d %d", rdx, rdy);
@@ -7449,12 +7493,14 @@ int main(int argc, char **argv) {
                         Ctx cx = make_ctx(st->name, j, st->nframes, info, k);
                         render(&st->frames[j], &st->segs[j], &tmp, &cx, &cv);
                         weapon_point(r, j, &cv, ax, ay);
+                        if (replacement_layer(ch, r->name)) clean_frame(j, &cv, &tmp);
                         memcpy(r->frames[j].p, cv.a, sizeof cv.a);
                         if (j == k) hr = reach(&cv, ax, ay, &rx, &ry);
                     }
                     snprintf(fn, sizeof fn, "%.63s.png", r->name);
                     path_join(p, d, fn);
                     save_strip(p, r->frames, r->n, OUT_W(sc), sc->ch);
+                    if (replacement_layer(ch, r->name)) save_clean(d, r->name, r->n, OUT_W(sc), sc->ch, r->weapon, r->hasWeapon, r->offhand, r->hasOffhand);
                     if (mf) {
                         int hold;
                         fprintf(mf, "anim %-24s", r->name);

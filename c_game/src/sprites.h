@@ -20,6 +20,7 @@
 typedef struct {
     char name[40];
     Texture2D tex;
+    Texture2D cleanTex;           /* mesma tira, sem rastro; corpo e arma intactos */
     int frames;
     int hold, contact, stop;     /* -1 = não tem */
     int reachX, reachY;          /* ponta da arma no contato, a partir dos pés */
@@ -57,6 +58,7 @@ typedef struct {
     int breath;                  /* px que o tronco desce (respiração) */
     bool flat;                   /* silhueta de uma cor só: contorno, apagão, clarão */
     Color color;                 /* tinta (ou a cor da silhueta) */
+    bool withoutTrail;           /* substituição: não desenhar o arco antigo junto */
 } SprDraw;
 
 /* Desenha o quadro com os pés em `feet` (arredondado para o pixel). */
@@ -96,6 +98,7 @@ typedef struct {
     char name[16];
     Texture2D tex;
     int frames, rows, cell;
+    Vector2 pivot[12];            /* centro dos pixels no quadro principal do slash */
 } SprFx;
 
 const SprFx *spr_fx(const char *name);
@@ -109,6 +112,8 @@ void spr_fx_draw(const SprFx *f, int row, int frame, Vector2 center, bool flip, 
 void spr_fx_draw_scaled(const SprFx *f, int row, int frame, Vector2 center, bool flip, Color tint, float scale);
 void spr_fx_draw_rotated(const SprFx *f, int row, int frame, Vector2 center, bool flip,
                          Color tint, float scale, float rotation, bool flatTint);
+
+void spr_fx_draw_weapon(const SprFx *f, int row, int frame, Vector2 at, bool flip, Color tint, float scale);
 
 /* Teclas e mouse de pixel (assets/sprites/_ui/): "A".."Z", "0".."9", "ESC",
  * "ENTER", "TAB", "SHIFT", "DEL", "CAPS", "SPACE"; mouse 0..3. `unit` é quantas

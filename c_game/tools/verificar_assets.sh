@@ -10,6 +10,14 @@ for nome in kojiro hanzo hanzo_mascara daichi genbu raizo shizuku garfiel karasu
     for anim in $(awk '$1 == "anim" { print $2 }' "$pasta/sprite.txt"); do
         case "$anim" in *[!A-Za-z0-9_]*|'') echo "Manifest inválido: $pasta ($anim)"; exit 1;; esac
         if [ ! -s "$pasta/$anim.png" ]; then echo "FALTA: $pasta/$anim.png"; falhas=$((falhas + 1)); fi
+        if [ -s assets/sprites/_fx/slash.png ]; then
+            case "$nome/$anim" in
+                garfiel/ATTACK*|garfiel/ESPECIAL|arashi/ATTACK*|arashi/ESPECIAL|oboro*/ATTACK*ECO_GARFIEL|oboro*/ATTACK*ECO_ARASHI|oboro*/ATTACK*FURIA)
+                    for ext in png txt; do
+                        if [ ! -s "$pasta/_clean_$anim.$ext" ]; then echo "FALTA: $pasta/_clean_$anim.$ext"; falhas=$((falhas + 1)); fi
+                    done;;
+            esac
+        fi
         tiras=$((tiras + 1))
     done
 done

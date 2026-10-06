@@ -12,6 +12,7 @@ apara_save.txt
 # Os PNGs gerados por tools/personagens.c saem deles e também ficam só na máquina
 # (vale para os packs de _packs/ também; os sprite.txt deles vão para o git).
 assets/sprites/**/*.png
+assets/sprites/**/_clean_*.txt
 assets/sprites/_folhas/
 assets/sprites/**/.gerado
 # O sprite.txt de cada personagem também sai do gerador (os das pranchas de origem,
