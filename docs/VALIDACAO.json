@@ -1,49 +1,170 @@
 {
-  "version": "0.5.0",
-  "date": "2026-09-11",
-  "unity": {
-    "engine": "Unity 6000.0 (não instalado nesta máquina)",
-    "core_compilation": {
-      "compiler": ".NET Framework 4.x csc.exe, /langversion:5",
-      "script": "unity_project/Tools/RunCoreTests.ps1",
-      "status": "passed"
+  "version": "1.0.0",
+  "date": "2026-10-05",
+  "active_engine": "C11 / raylib 6.0",
+  "c_game": {
+    "branch": "codex/fluidez-golpes",
+    "source_commit": "ff6476979fca40e6d8411a98daabcca4ec770fd6",
+    "status": "verificacoes automatizadas passaram; validacao humana e de hardware pendente",
+    "scope": "Nucleo, entrada, save, apresentacao, assets, audio, cenarios, narrativa, compilacao e desempenho. Nao garante ausencia de todo bug.",
+    "core": {
+      "checks": 15352,
+      "failures": 0,
+      "viable_strikes": 20280,
+      "frame_rate_contacts": 30680,
+      "frame_rate_max_difference_ms": 0,
+      "chain_intervals": 32820,
+      "chain_timing_drift_ms": 0
     },
-    "core_tests": {
-      "source": "Assets/Scripts/Core/CoreSelfTest.cs",
-      "checks": 474,
+    "input": {
+      "timestamp_fuzz_cases": 1000000,
+      "fights": 1560,
+      "hitstop_clicks": 7775,
+      "linux_real_mouse_keyboard_repeat_focus_fallback": "passed",
+      "windows_raw_input_under_wine": "passed",
+      "gamepad_hardware": "pending"
+    },
+    "simulation": {
+      "fuzz_scenarios_per_mode": 600,
+      "fuzz_modes": 4,
+      "violations": 0,
+      "curve_fights_per_master_bot": 100000,
+      "curve_targets_outside_tolerance": 0,
+      "windows_linux_comparison_fights_per_master_bot": 1000,
+      "windows_linux_comparison": "identical"
+    },
+    "presentation": {
+      "checks": 40416,
+      "failures": 0,
+      "real_asset_checks": 54541,
+      "real_asset_failures": 0,
+      "masters_loaded": 13,
+      "attack_animations_loaded": 202,
+      "runtime_sprite_sets": 17,
+      "declared_sprite_strips": 281,
+      "two_endings_with_real_assets": "passed",
+      "pupil_aftermaths_in_real_game": 12,
+      "victory_saved_before_click_and_survives_exit": "passed",
+      "test_mode_does_not_save_progress": "passed"
+    },
+    "integration": {
+      "audio_variants_polyphony_invalid_files_streaming": "passed",
+      "background_dimensions_animation_colors_unload": "passed",
+      "audio_and_background_routing_against_all_13_roster_arenas": "passed",
+      "asset_package": "created and verified; excludes original packs, saves and options",
+      "new_final_art_sound_files": "awaiting team delivery"
+    },
+    "save": {
+      "mac_checks": 81,
+      "windows_checks": 85,
+      "failures": 0,
+      "windows_failed_replacement_preserves_previous_file": "passed"
+    },
+    "fonts": {
+      "checks": 8,
+      "requested_codepoints": 197,
+      "non_ascii_codepoints": 17,
       "failures": 0
     },
-    "scene_layer": "arquivado: texturas antigas de personagens removidas"
-  },
-  "rpgmaker_mz": {
-    "engine": "RPG Maker MZ (não instalado nesta máquina)",
-    "core_tests": {
-      "source": "rpgmaker_mz/tests/core_test.js",
-      "runtime": "Node 24",
-      "checks": 275,
-      "failures": 0
+    "platforms": {
+      "mac": "Available full suite passed; latest pacing, imports and real-asset endings passed again after integration.",
+      "linux": "Strict make teste-linux passed, exit 0; no skipped gates. Latest routing and ending tests passed separately after its source snapshot.",
+      "linux_compiler_checks": 186,
+      "linux_compiler_warnings": 0,
+      "linux_compilers": [
+        "gcc",
+        "clang"
+      ],
+      "windows": "Complete current game cross-compiled with -Werror; core/save/Raw Input executed under Wine. Graphical run in this Mac environment failed with Rosetta invalid gdt selector; native Windows gameplay remains pending."
     },
-    "scene_layer": "not_run"
+    "mac_performance": {
+      "measurement": "8-second local samples; excludes initialization, does not guarantee performance on other hardware",
+      "daichi": {
+        "fps": 60.0,
+        "mean_frame_ms": 16.67,
+        "p99_frame_ms": 16.93,
+        "max_frame_ms": 17.44,
+        "frames_over_33_4_ms": 0,
+        "mean_game_work_ms": 4.98
+      },
+      "oboro_phase_3": {
+        "fps": 60.0,
+        "mean_frame_ms": 16.67,
+        "p99_frame_ms": 16.8,
+        "max_frame_ms": 17.58,
+        "frames_over_33_4_ms": 0,
+        "mean_game_work_ms": 4.27
+      }
+    },
+    "commands": [
+      "make teste",
+      "make teste-linux",
+      "make test-assets",
+      "make test-audio test-arte",
+      "make assets-prontos",
+      "make teste-windows",
+      "make pacote-assets OUT=/absolute/path/assets-runtime.zip"
+    ],
+    "pending": [
+      "Sensacao de parry, leitura visual e mixagem avaliadas por pessoas",
+      "Gamepad, TV/Bluetooth e calibracao em hardware real",
+      "Execucao grafica no Windows real",
+      "Receber e conferir fundos, SFX, musicas e personagens finais da equipe"
+    ],
+    "constraints_preserved": [
+      "Julgamento e janelas de parry",
+      "Ancoras e hitboxes",
+      "Duracao dos quadros dos golpes"
+    ],
+    "unimplemented_balance_proposals": "Acelerar Daichi e reduzir hitstop nas sequencias continuam como propostas em FLUIDEZ.md; nao foram aplicadas."
   },
-  "human_audio_and_feel_review": "pending",
-  "bosses": 7,
-  "feint_styles": [
-    "none",
-    "syncopated",
-    "heavy",
-    "double",
-    "blinding",
-    "triple",
-    "mimic"
-  ],
-  "arenas_per_boss": true,
-  "arena_art": "pending",
-  "final_boss": "undefined",
-  "png_assets": {
-    "arena.png": {
-      "width": 1672,
-      "height": 941,
-      "mode": "RGB"
+  "historical_validation_2026_09_11": {
+    "version": "0.5.0",
+    "date": "2026-09-11",
+    "unity": {
+      "engine": "Unity 6000.0 (não instalado nesta máquina)",
+      "core_compilation": {
+        "compiler": ".NET Framework 4.x csc.exe, /langversion:5",
+        "script": "unity_project/Tools/RunCoreTests.ps1",
+        "status": "passed"
+      },
+      "core_tests": {
+        "source": "Assets/Scripts/Core/CoreSelfTest.cs",
+        "checks": 474,
+        "failures": 0
+      },
+      "scene_layer": "arquivado: texturas antigas de personagens removidas"
+    },
+    "rpgmaker_mz": {
+      "engine": "RPG Maker MZ (não instalado nesta máquina)",
+      "core_tests": {
+        "source": "rpgmaker_mz/tests/core_test.js",
+        "runtime": "Node 24",
+        "checks": 275,
+        "failures": 0
+      },
+      "scene_layer": "not_run"
+    },
+    "human_audio_and_feel_review": "pending",
+    "bosses": 7,
+    "feint_styles": [
+      "none",
+      "syncopated",
+      "heavy",
+      "double",
+      "blinding",
+      "triple",
+      "mimic"
+    ],
+    "arenas_per_boss": true,
+    "arena_art": "pending",
+    "final_boss": "undefined",
+    "png_assets": {
+      "arena.png": {
+        "width": 1672,
+        "height": 941,
+        "mode": "RGB"
+      }
     }
   }
 }
