@@ -124,6 +124,10 @@
 #define AJ_RECUO_ERRO_KOJIRO         9.0f
 #define AJ_RECUO_SEGUNDA_LAMINA      8.0f
 #define AJ_RECUO_QUEBRA_MESTRE      10.0f
+#define AJ_RECUO_MESTRE_TAXA         7.0f   /* 1/s: com que rapidez o recuo do mestre volta (e^(-taxa t)) */
+#define AJ_RECUO_KOJIRO_TAXA         9.0f   /* o de Kojiro */
+#define AJ_RECUO_CENA_TAXA           3.0f   /* o do mestre nas cenas depois da luta */
+#define AJ_RECUO_SUBIDA             45.0f   /* só desenho: com que rapidez o corpo chega ao recuo (1/s: o pico em uns 2 quadros a 60 Hz, em vez de saltar de uma vez no contato). 0 = salta de uma vez, como antes. O pico mostrado continua o AJ_RECUO_* */
 
 /* ---- Rastro fantasma do golpe (só visual) ------------------------------- */
 /* Na partida da lâmina, o mestre deixa fantasmas do quadro que ele já está mostrando (nunca

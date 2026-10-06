@@ -147,6 +147,15 @@ O maior passo de um quadro (a 60 Hz, na partida de um `DASH_ATTACK`) cai de 38 p
 deslizando em vez de aparecer colado no Kojiro. Não deslizei o que vem **depois** do contato (o corpo volta uns 17 px no `DASH_ATTACK`), porque ali o hitstop já segura o quadro: fica
 como proposta se parecer duro jogando.
 
+### O recuo do choque (6 de outubro)
+
+O recuo de depois do contato (`AJ_RECUO_*`, 1 a 10 px) também saltava: o corpo ia ao deslocamento inteiro no quadro do contato e o hitstop o segurava ali, com as lâminas já
+afastadas. Agora o recuo persegue um alvo que parte do pico e decai como antes (`AJ_RECUO_MESTRE_TAXA` 7/s, `AJ_RECUO_KOJIRO_TAXA` 9/s, `AJ_RECUO_CENA_TAXA` 3/s), com um filtro de primeira ordem
+(`AJ_RECUO_SUBIDA`, 45/s): no quadro do contato e durante o hitstop as lâminas ainda se tocam, e o recuo se abre em uns 2 quadros. O alvo parte de `pico × recuo_ganho(taxa)` para o
+recuo mostrado ainda chegar ao `AJ_RECUO_*` (a 60 Hz o pico amostrado fica até 7% abaixo, a 144 Hz 3%: o pico contínuo cai entre dois quadros). Só desenho; o julgamento, o relógio e as janelas
+não conhecem esse número. `AJ_RECUO_SUBIDA = 0` volta ao salto de uma vez. `recuo_abre_sem_estalar` (presentation_test) trava: o corpo não recuou no quadro do contato, o primeiro quadro mostra menos de 80% do recuo,
+o pico mostrado chega a 10% do `AJ_RECUO_*` (60, 120 e 144 Hz, entre si em 7%), sobe e desce sem oscilar, volta a zero e não anda com `dt` 0 (hitstop); quatro mutações o reprovam.
+
 ## 5. Como as três decisões ficaram
 
 1. **Pré-carga de efeitos:** só o teste entrou (a pré-carga já estava no jogo, vinda da outra sessão).

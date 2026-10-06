@@ -311,7 +311,8 @@ static struct {
     float windupSpr;          /* a preparação como se a lâmina partisse no tempo fixo: os quadros
                                  tocam nela, então a lâmina variável não muda nenhum quadro */
     float renParryTime;       /* tempo desde o gesto; -1 = nenhum pendente */
-    float renKnock, bossKnock;
+    float renKnock, bossKnock;     /* o recuo que se vê (px) */
+    float renKnockAlvo, bossKnockAlvo; /* o recuo que ele persegue: parte do pico no choque e decai (ver recuo_passo) */
     float bossHome;
     float hitstop;
     float slowmo, slowmoTime;
@@ -409,6 +410,28 @@ static struct {
     float recStart, recEnd;
     int recFrame;
 } G;
+
+/* O recuo do choque (só desenho). Antes, o corpo saltava o recuo inteiro no quadro do contato e o hitstop o segurava deslocado, com as lâminas já
+ * longe uma da outra. Agora o recuo tem um alvo que parte do pico e decai com `taxa` (1/s), e o corpo o persegue com AJ_RECUO_SUBIDA: no quadro do
+ * contato as lâminas ainda se tocam (onde a prancha as põe), e o recuo se abre em uns 2 quadros. Como o filtro come parte do pico, o alvo parte de
+ * pico * recuo_ganho(taxa) para o recuo mostrado ainda chegar ao AJ_RECUO_*. AJ_RECUO_SUBIDA = 0 volta ao salto de uma vez. */
+static float recuo_ganho(float taxa) {
+    const float b = AJ_RECUO_SUBIDA;
+    if (b <= 0 || taxa <= 0 || fabsf(b - taxa) < 1e-3f) return 1;
+    const float t = logf(b / taxa) / (b - taxa);                       /* o instante do pico da resposta de um filtro de 1ª ordem a e^(-taxa t) */
+    const float pico = b / (b - taxa) * (expf(-taxa * t) - expf(-b * t));
+    return pico > 1e-3f ? 1 / pico : 1;
+}
+
+static void recuo_inicia(float *alvo, float pico, float taxa) { *alvo = pico * recuo_ganho(taxa); }
+
+/* Um passo: o alvo decai e o recuo mostrado o alcança. */
+static void recuo_passo(float *recuo, float *alvo, float taxa, float dt) {
+    *alvo *= expf(-dt * taxa);
+    if (AJ_RECUO_SUBIDA <= 0) { *recuo = *alvo; return; }
+    *recuo += (*alvo - *recuo) * (1 - expf(-dt * AJ_RECUO_SUBIDA));
+}
+
 
 static void start_scene(SceneId id);
 
@@ -1168,7 +1191,7 @@ static void setup_actors(void) {
     G.ren.hideBlade = G.boss.hideBlade = katana3d_ready();
     G.bossWinding = false;
     G.renParryTime = -1;
-    G.renKnock = G.bossKnock = 0;
+    G.renKnock = G.bossKnock = G.renKnockAlvo = G.bossKnockAlvo = 0;
     G.staggerTime = 0;
     G.swingWaiting=false;
     if(G.sword.held.id) UnloadTexture(G.sword.held);
@@ -1943,8 +1966,8 @@ static void on_impact(const DuelEvent *e) {
             rig_pose(b, POSE_HURT, 0.07f, EASE_OUT);
             rig_then(b, POSE_IDLE, 0.5f, EASE_INOUT);
 
-            G.bossKnock = AJ_RECUO_PERFEITO_MESTRE;
-            G.renKnock = AJ_RECUO_PERFEITO_KOJIRO;
+            recuo_inicia(&G.bossKnockAlvo, AJ_RECUO_PERFEITO_MESTRE, AJ_RECUO_MESTRE_TAXA);
+            recuo_inicia(&G.renKnockAlvo, AJ_RECUO_PERFEITO_KOJIRO, AJ_RECUO_KOJIRO_TAXA);
             break;
         case J_BOM:
             audio_play(SND_GOOD, 0.9f, 1);
@@ -1953,8 +1976,8 @@ static void on_impact(const DuelEvent *e) {
             rig_then(r, POSE_IDLE, 0.4f, EASE_INOUT);
             rig_pose(b, POSE_FOLLOW, 0.08f, EASE_OUT);
             rig_then(b, POSE_IDLE, 0.45f, EASE_INOUT);
-            G.renKnock = AJ_RECUO_BOM_KOJIRO;
-            G.bossKnock = AJ_RECUO_BOM_MESTRE;
+            recuo_inicia(&G.renKnockAlvo, AJ_RECUO_BOM_KOJIRO, AJ_RECUO_KOJIRO_TAXA);
+            recuo_inicia(&G.bossKnockAlvo, AJ_RECUO_BOM_MESTRE, AJ_RECUO_MESTRE_TAXA);
             break;
         default: {
             G.aberr = 2.5f;
@@ -1970,7 +1993,7 @@ static void on_impact(const DuelEvent *e) {
             r->flashColor = (Color){255, 80, 60, 255};
             rig_pose(b, POSE_FOLLOW, 0.1f, EASE_OUT);
             rig_then(b, POSE_IDLE, 0.5f, EASE_INOUT);
-            G.renKnock = AJ_RECUO_ERRO_KOJIRO;
+            recuo_inicia(&G.renKnockAlvo, AJ_RECUO_ERRO_KOJIRO, AJ_RECUO_KOJIRO_TAXA);
             G.renParryTime = -1;
             break;
         }
@@ -2002,7 +2025,7 @@ static void on_impact(const DuelEvent *e) {
         fx_kick(&G.fx, AJ_TREMOR_QUEBRA, AJ_TREMOR_QUEBRA_TEMPO);
         rig_pose(b, POSE_STAGGER, 0.15f, EASE_OUT);
         G.staggerTime = 0.01f;
-        G.bossKnock = AJ_RECUO_QUEBRA_MESTRE;
+        recuo_inicia(&G.bossKnockAlvo, AJ_RECUO_QUEBRA_MESTRE, AJ_RECUO_MESTRE_TAXA);
         G.slowmo = AJ_LENTA_QUEBRA;
         G.slowmoTime = AJ_LENTA_QUEBRA_TEMPO;
     }
@@ -2221,7 +2244,7 @@ static void second_blade(void) {
     fx_kick(&G.fx, AJ_TREMOR_SEGUNDA_LAMINA, AJ_TREMOR_SEGUNDA_TEMPO);
     r->flash = 1;
     r->flashColor = (Color){255, 80, 60, 255};
-    G.renKnock = fmaxf(G.renKnock, AJ_RECUO_SEGUNDA_LAMINA);
+    G.renKnockAlvo = fmaxf(G.renKnockAlvo, AJ_RECUO_SEGUNDA_LAMINA * recuo_ganho(AJ_RECUO_KOJIRO_TAXA));
 }
 
 /* Mensagem de aperto tarde; os detalhes de tempo ficam no F3. */
@@ -2688,8 +2711,8 @@ static void update_actors(float dt) {
         r->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.renPosture / G.settings.renPosture, 0, 1) : 0;
         b->fatigue = G.state == ST_DUEL ? 1 - clampf(G.duel.bossPosture / duel_posture_max(&G.duel), 0, 1) : 0;
     }
-    G.renKnock *= expf(-dt * 9);
-    G.bossKnock *= expf(-dt * 7);
+    recuo_passo(&G.renKnock, &G.renKnockAlvo, AJ_RECUO_KOJIRO_TAXA, dt);
+    recuo_passo(&G.bossKnock, &G.bossKnockAlvo, AJ_RECUO_MESTRE_TAXA, dt);
     r->offsetX = -G.renKnock;
     b->offsetX = G.bossKnock + (G.bossS.set ? G.bossStep + (G.state == ST_DUEL ? deslize_do_golpe(G.bossS.strike, duel_launch_progress(&G.duel), b->faceLeft) : 0) : 0);
     update_after(dt);
@@ -2784,7 +2807,7 @@ static void update_finisher(float dt) {
         }
     }
     r->offsetX = G.renStepFrom + (14 - G.renStepFrom) * smooth((t - 0.45f) / 0.6f);
-    G.bossKnock *= expf(-dt * 3);
+    recuo_passo(&G.bossKnock, &G.bossKnockAlvo, AJ_RECUO_CENA_TAXA, dt);
     b->offsetX = G.bossKnock + (G.bossS.set ? G.bossStep : 0);
     rig_update(r, dt);
     rig_update(b, dt);

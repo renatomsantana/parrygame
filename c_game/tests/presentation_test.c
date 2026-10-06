@@ -540,6 +540,42 @@ static void yoru_blades_on_real_sheets(void) {
     printf("adagas do yoru: tira da lâmina conferida em %zu animações\n", sizeof golpes / sizeof golpes[0]);
 }
 
+#define REQUIREF(c, ...) do { char msg_[240]; snprintf(msg_, sizeof msg_, __VA_ARGS__); REQUIRE(c, msg_); } while (0)
+
+/* O recuo do choque abre em uns 2 quadros em vez de saltar no contato, e o pico mostrado continua o dos AJ_RECUO_* (o pico contínuo cai entre dois quadros: até 7% a menos a 60 Hz, 3% a 144 Hz). */
+static void recuo_abre_sem_estalar(void) {
+    static const float TAXAS[3] = {AJ_RECUO_MESTRE_TAXA, AJ_RECUO_KOJIRO_TAXA, AJ_RECUO_CENA_TAXA};
+    static const float PICOS[3] = {AJ_RECUO_PERFEITO_MESTRE, AJ_RECUO_ERRO_KOJIRO, AJ_RECUO_QUEBRA_MESTRE};
+    static const float HZ[3] = {60, 120, 144};
+    float pico60[3] = {0};
+    for (int h = 0; h < 3; h++) {
+        const float dt = 1 / HZ[h];
+        for (int k = 0; k < 3; k++) {
+            float recuo = 0, alvo = 0, melhor = 0, primeiro = 0, antes = 0;
+            recuo_inicia(&alvo, PICOS[k], TAXAS[k]);
+            REQUIRE(recuo == 0, "no quadro do contato (antes de andar o tempo) o corpo ainda não recuou: as lâminas se tocam");
+            bool subindo = true, ordem = true;
+            for (int i = 1; i <= (int)(2.0f * HZ[h]); i++) {
+                antes = recuo;
+                recuo_passo(&recuo, &alvo, TAXAS[k], dt);
+                if (i == 1) primeiro = recuo;
+                if (recuo < antes - 1e-4f) subindo = false;                      /* depois do pico só desce */
+                if (!subindo && recuo > antes + 1e-4f) ordem = false;            /* e não volta a subir */
+                if (recuo > melhor) melhor = recuo;
+            }
+            REQUIREF(ordem, "o recuo sobe até o pico e só então desce, sem oscilar");
+            REQUIREF(fabsf(melhor - PICOS[k]) < 0.10f * PICOS[k], "o pico mostrado (%.2f px, a %.0f Hz, taxa %.0f) ficou longe do AJ_RECUO_* (%.2f px)", melhor, HZ[h], TAXAS[k], PICOS[k]);
+            if (h == 0) { pico60[k] = melhor; REQUIREF(primeiro < 0.80f * PICOS[k], "o primeiro quadro já mostrou %.0f%% do recuo: ainda estala", 100 * primeiro / PICOS[k]); }
+            else REQUIREF(fabsf(melhor - pico60[k]) < 0.07f * PICOS[k], "o pico a %.0f Hz (%.2f px) difere do de 60 Hz (%.2f px)", HZ[h], melhor, pico60[k]);
+            REQUIREF(recuo < 0.02f * PICOS[k], "o recuo não voltou a zero em 2 s (%.3f px)", recuo);
+        }
+    }
+    /* o recuo anda só com o tempo do jogo: no hitstop (dt 0) ele não se mexe */
+    float recuo = 3, alvo = 9;
+    recuo_passo(&recuo, &alvo, AJ_RECUO_MESTRE_TAXA, 0);
+    REQUIRE(recuo == 3 && alvo == 9, "com dt 0 (hitstop) o recuo não pode andar");
+}
+
 /* O golpe chega ao contato num quadro só, com o avanço do corpo pronto na prancha: na partida o mestre desliza esse avanço e no contato está onde a prancha o põe. */
 static void golpe_desliza_ate_o_contato(void) {
     SprAnim a = {0};
@@ -1082,7 +1118,7 @@ int main(int argc, char **argv) {
     pupil_aftermath_preserves_progress();
     flaming_actions(); sword_attachment(); borrowed_feedback(); oni_feedback_proprio(); fixed_element_colors(); bought_pack_timing_and_hands(); jump_and_frame_time(); karasu_teleport_contact(); cut_sound_contact_clock(); mobility_preserves_timeline();
     damage_has_no_burst(); fatal_hit_finishes_hitstop_before_fall(); parry_and_miss_play_the_right_recovery(); impact_frame_stays_on_contact(); sword_continuity_and_parry(); visual_feedback_regressions();
-    gamepad_uses_frame_fallback(); menu_click_targets(); menu_state_routes(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); tell_particles_match_master(); new_move_trails();
+    gamepad_uses_frame_fallback(); menu_click_targets(); menu_state_routes(); hanzo_uses_walk_when_available(); yoru_blade_rule(); yoru_dark_has_no_glow(); arashi_raios_e_paralisia(); golpe_desliza_ate_o_contato(); recuo_abre_sem_estalar(); tell_particles_match_master(); new_move_trails();
     if (argc > 1 && !strcmp(argv[1], "--assets")) real_assets();
     printf("apresentação: %d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
