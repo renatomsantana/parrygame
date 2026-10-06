@@ -5,7 +5,9 @@ int main(void) {
     SetTraceLogLevel(LOG_WARNING);
     if (!getenv("APARA_AUDIO_DIR")) return 2; /* nunca criar fixtures junto dos arquivos reais */
     static const struct { const char *name; float duration; } files[] = {
-        {"sfx/good_01.wav", .25f}, {"sfx/good_02.wav", .35f}, {"sfx/perfect.wav", 2}, {"music/daichi.wav", 1}
+        {"sfx/good_01.wav", .25f}, {"sfx/good_02.wav", .35f}, {"sfx/perfect.wav", 2}, {"music/daichi.wav", 1}, {"sfx/arashi/swing_01.wav", .25f},
+        {"sfx/arashi/swing_02.wav", .35f}, {"sfx/arashi/gesture.wav", .16f},
+        {"sfx/enjin/swing.wav", 2}
     };
     char path[1024];
     for (unsigned i = 0; i < sizeof files / sizeof files[0]; i++) {
@@ -44,6 +46,16 @@ int main(void) {
         const MasterProfile *m = roster_get(i);
         CHECK(!strcmp(musicNames[m->arena], m->name), "música externa foi associada à arena de outro mestre");
     }
+    PostureBank *arashi = &postureBanks[9][posture_slot(SND_SWING)];
+    CHECK(arashi->count == 2 && arashi->voiceCount == VOZES_PADRAO, "raio não carregou variantes e vozes");
+    CHECK(postureBanks[9][posture_slot(SND_GESTURE)].count == 1, "gesto por postura ausente");
+    CHECK(postureBanks[7][posture_slot(SND_SWING)].count == 0, "cauda longa entrou no banco de fogo");
+    for (int i = 0; i < 10; i++) audio_play_master(9, SND_SWING, 1, 1);
+    CHECK(arashi->next == 0 && arashi->voiceNext[0] == 1 && arashi->voiceNext[1] == 1,
+          "eco não compartilha o rodízio de vozes da postura");
+    audio_play_master(7, SND_SWING, 1, 1);
+    audio_play_master(-1, SND_SWING, 1, 1);
+    audio_play_master(99, SND_SWING, 1, 1);
     audio_music(ARENA_CELEIRO);
     CHECK(M.target == MUSIC_SILENCE && trackTarget == ARENA_CELEIRO, "música externa toca junto da trilha sintetizada");
     for (int i = 0; i < 40; i++) audio_update(1.0f / 60);

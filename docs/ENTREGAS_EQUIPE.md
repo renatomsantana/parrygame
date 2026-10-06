@@ -33,6 +33,12 @@ Pasta: `c_game/assets/audio/sfx/`. Um efeito aceita `nome.wav` ou até quatro va
 
 **Perfect, good, bad e swing: máximo de 1,6 s**, incluindo cauda. O banco existente de vozes comporta sequências e duplos dentro desse limite. Arquivos maiores ou inválidos são recusados com aviso no terminal, preservando o som embutido. Os demais efeitos não têm esse limite.
 
+### Assinatura sonora de cada postura
+
+Entregar `sfx/<mestre>/cue.wav`, `gesture.wav` e `swing.wav` (ou `_01.wav` até `_04.wav`). Exemplo: `sfx/arashi/swing_01.wav`. Oboro consulta a pasta do aprendiz cuja postura está copiando; o mesmo banco e suas vozes são compartilhados. Não entregar uma cópia dos mesmos sons em `oboro/`. Esta pasta serve para a postura própria do Oboro.
+
+Sem arquivo válido, o jogo retorna ao som global/embutido; o gesto usa o mesmo tom do aprendiz. WAVs específicos preservam seu timbre. `swing` mantém o limite de 1,6 s e quatro vozes por variante; arquivos inválidos são recusados. Jinshi continua sem som de aviso. `APARA_LOG_POSTURAS=1` registra a origem escolhida em cada evento.
+
 ## Composição
 
 Pasta: `c_game/assets/audio/music/`. OGG Vorbis ou WAV, estéreo, pronto para loop. Nomes: `daichi`, `genbu`, `raizo`, `shizuku`, `garfiel`, `karasu`, `hayate`, `enjin`, `suiren`, `arashi`, `yoru`, `jinshi`, `oboro`, `hanzo`, `title`.
@@ -48,12 +54,7 @@ O pack comprado `vfx_slash` entra sem modificar o PNG original: copiar
 `c_game/assets/sprites/_fx/slash.png`. São células de 96 × 96 numa folha de
 864 × 1152. O arquivo permanece privado, fora do Git; `make pacote-assets` o inclui.
 
-Cortes limpos entram nas katanas, odachi e foices; garras no Garfiel, raios no
-Arashi e fogo no Enjin/Oboro em fúria. Estocadas e o apagão do Yoru conservam sua
-leitura. O arco principal coincide com o contato, congela no hitstop e a cauda
-dura no máximo 120 ms do relógio do duelo. Cada arma usa seu próprio ponto no PNG.
-`APARA_SLASH=0 ./apara` compara com o fio anterior. Sem o arquivo válido, esse fio
-continua disponível. Não altera dano, parry, hitboxes ou cadência dos sprites.
+Após a revisão visual de 05/10, o pack permanece guardado como material comprado, mas não é sobreposto às armas no jogo. Os rastros nativos já são coloridos e acompanham as animações; Oboro na fase 2 recebe a cor da postura roubada sem trocar sua katana. A alternativa de substituir só o rastro do Garfiel exige uma máscara que separe rastro, garras e corpo; não foi aplicada nesta rodada.
 
 O Git não contém os PNGs pagos nem as novas entregas. Na máquina que tem os arquivos:
 

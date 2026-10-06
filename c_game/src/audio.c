@@ -26,6 +26,15 @@ static int variationVoiceNext[SND_COUNT][AUDIO_VARIANTS - 1];
 /* Vozes extras dos golpes: numa sequência, um parry não corta a cauda do anterior (vozes.h). */
 static Sound voices[SND_COUNT][VOZES_MAX];
 static int voiceCount[SND_COUNT], voiceNext[SND_COUNT];
+/* Aviso, gesto e corte por postura. Os ecos usam o mesmo banco, nunca uma cópia. */
+#define POSTURE_SOUNDS 3
+static const SoundId postureIds[POSTURE_SOUNDS] = {SND_CUE, SND_GESTURE, SND_SWING};
+typedef struct {
+    Sound clip[AUDIO_VARIANTS];
+    Sound voice[AUDIO_VARIANTS][VOZES_PADRAO];
+    int count, next, voiceCount, voiceNext[AUDIO_VARIANTS];
+} PostureBank;
+static PostureBank postureBanks[ROSTER_SIZE][POSTURE_SOUNDS];
 static AudioStream stream;
 static float master = 0.85f;
 static const char *const soundNames[SND_COUNT] = {
@@ -109,6 +118,64 @@ static void load_team_audio(void) {
             break;
         }
     }
+}
+
+static int posture_slot(SoundId id) {
+    for (int i = 0; i < POSTURE_SOUNDS; i++) if (postureIds[i] == id) return i;
+    return -1;
+}
+static void load_posture_audio(void) {
+    char path[1024];
+    for (int source = 0; source < ROSTER_SIZE; source++) for (int slot = 0; slot < POSTURE_SOUNDS; slot++) {
+        PostureBank *b = &postureBanks[source][slot];
+        SoundId id = postureIds[slot];
+        for (int v = 1; v <= AUDIO_VARIANTS; v++) {
+            snprintf(path, sizeof path, "%s/sfx/%s/%s_%02d.wav", audio_directory(), roster_get(source)->name, soundNames[id], v);
+            Sound clip = sound_file(path, id);
+            if (clip.stream.buffer) b->clip[b->count++] = clip;
+        }
+        if (!b->count) {
+            snprintf(path, sizeof path, "%s/sfx/%s/%s.wav", audio_directory(), roster_get(source)->name, soundNames[id]);
+            Sound clip = sound_file(path, id);
+            if (clip.stream.buffer) b->clip[b->count++] = clip;
+        }
+        b->voiceCount = 1;
+#if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
+        if (id == SND_SWING) b->voiceCount = VOZES_PADRAO;
+        for (int v = 0; v < b->count; v++) for (int k = 1; k < b->voiceCount; k++)
+            b->voice[v][k] = LoadSoundAlias(b->clip[v]);
+#endif
+    }
+}
+static void unload_posture_audio(void) {
+    for (int source = 0; source < ROSTER_SIZE; source++) for (int slot = 0; slot < POSTURE_SOUNDS; slot++) {
+        PostureBank *b = &postureBanks[source][slot];
+        for (int v = 0; v < b->count; v++) {
+#if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
+            for (int k = 1; k < b->voiceCount; k++) UnloadSoundAlias(b->voice[v][k]);
+#endif
+            UnloadSound(b->clip[v]);
+        }
+    }
+    memset(postureBanks, 0, sizeof postureBanks);
+}
+void audio_play_master(int source, SoundId id, float volume, float pitch) {
+    if (volume <= .001f) return;
+    int slot = posture_slot(id);
+    if (source < 0 || source >= ROSTER_SIZE || slot < 0 || !postureBanks[source][slot].count) {
+        audio_play(id, volume, pitch);
+        return;
+    }
+    PostureBank *b = &postureBanks[source][slot];
+    int v = b->next, k = b->voiceNext[v];
+    Sound clip = k ? b->voice[v][k] : b->clip[v];
+    b->next = (v + 1) % b->count;
+    b->voiceNext[v] = (k + 1) % b->voiceCount;
+    SetSoundVolume(clip, volume * master);
+    /* WAVs da equipe preservam o timbre: pitch só no som embutido de fallback. */
+    SetSoundPitch(clip, 1);
+    PlaySound(clip);
+    if (getenv("APARA_LOG_AUDIO")) fprintf(stderr, "AUDIO postura %s %s variante=%d\n", roster_get(source)->name, soundNames[id], v + 1);
 }
 
 /* ------------------------------------------------------------------ */
@@ -644,6 +711,7 @@ void audio_init(void) {
     sounds[SND_KOIGUCHI] = make_sound_room(0.04f, s_koiguchi, 0.5f, 0.03f);
     sounds[SND_SAQUE] = make_sound_room(1.3f, s_saque, 0.6f, 0.1f);
     load_team_audio();
+    load_posture_audio();
 #if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
     static const struct { SoundId id; int vozes; } POLI[] = {
         {SND_PERFECT, VOZES_PERFEITO_N}, {SND_GOOD, VOZES_PADRAO}, {SND_BAD, VOZES_PADRAO}, {SND_SWING, VOZES_PADRAO},
@@ -670,6 +738,7 @@ void audio_init(void) {
 }
 
 void audio_shutdown(void) {
+    unload_posture_audio();
     for (int i = 0; i <= MUSIC_TITLE; i++)
         if (tracks[i].stream.buffer) UnloadMusicStream(tracks[i]);
     StopAudioStream(stream);

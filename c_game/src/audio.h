@@ -20,6 +20,8 @@ void audio_init(void);
 void audio_shutdown(void);
 void audio_update(float dt);           /* mantém os arquivos de música em streaming e os fades */
 void audio_play(SoundId id, float volume, float pitch);
+/* Índice da postura de origem: aprendiz e Oboro compartilham o mesmo banco. */
+void audio_play_master(int source, SoundId id, float volume, float pitch);
 void audio_music(int style);            /* troca com fade */
 void audio_music_intensity(float x);    /* 0..1: selos do BIG BOSS, tensão */
 void audio_music_duck(float x);         /* 0..1: abafa a trilha (hitstop, falas) */

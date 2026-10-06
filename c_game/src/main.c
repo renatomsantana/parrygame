@@ -219,20 +219,6 @@ typedef struct {
 /* Um raio do relâmpago do arashi: cai em x depois de `espera` s e fica `vida` s na tela. */
 typedef struct { float x, espera, vida; unsigned semente; bool principal; } Raio;
 
-typedef struct {
-    int row, peak;
-    float scale, rotation;
-    Color tint;
-    bool flatTint;
-} SlashStyle;
-
-typedef struct {
-    const SprFx *fx;
-    SlashStyle style;
-    double start, contact, end;
-    bool dual, hidden;
-} SlashCut;
-
 /* F3: um aperto anotado (resultado, quando, erro em ms). */
 typedef struct {
     char res[12], quando[40], erro[80];
@@ -275,9 +261,6 @@ static struct {
     int auraEcho;
     bool gritoPending;
     struct { const SprFx *fx; int row; Vector2 pos; float t, fps, scale; bool flip, back, glow, sword, body, offhand; Color tint; } vfx[VFX_MAX];
-    SlashCut cut;              /* um contato, uma ou duas armas; nunca um projétil */
-    bool slashes;
-    int slashesDrawn;          /* diagnóstico de APARA_LOG_SLASH, sem efeito no duelo */
     Fx fx;
     FlySword sword;
 
@@ -783,13 +766,30 @@ static int echo_of(const Move *mv) {
     return -1;
 }
 
+/* Uma identidade por postura, compartilhada pelo aprendiz e pelo eco do Oboro. */
+static const Color postureColors[ROSTER_SIZE] = {
+    {218,178,116,255}, {64,122,83,255}, {207,175,93,255}, {170,229,252,255},
+    {249,139,62,255}, {91,94,105,255}, {136,230,167,255}, {237,77,52,255},
+    {51,106,191,255}, {89,160,251,255}, {164,99,203,255}, {238,239,249,255},
+    {181,83,211,255}
+};
+static const float posturePitch[ROSTER_SIZE] = {
+    .7f, .8f, .6f, 1.5f, 1, 1.25f, 1.4f, 1.1f, 1.3f, 1.6f, 1.2f, .65f, .9f
+};
 static Color posture_color(int echo) {
-    static const Color colors[MASTER_COUNT] = {
-        {235,165,75,255}, {110,220,140,255}, {245,85,65,255}, {100,205,255,255},
-        {255,225,135,255}, {155,110,240,255}, {100,245,180,255}, {255,125,35,255},
-        {65,145,255,255}, {100,205,255,255}, {165,85,250,255}, {205,180,255,255}
-    };
-    return echo >= 0 && echo < MASTER_COUNT ? colors[echo] : (Color){235,60,70,255};
+    return postureColors[echo >= 0 && echo < MASTER_COUNT ? echo : ROSTER_SIZE - 1];
+}
+static const MasterProfile *feedback_master(void) {
+    int echo = G.m && G.m->isBigBoss && G.duel.m == G.m ? echo_of(duel_move(&G.duel)) : -1;
+    return echo >= 0 ? roster_get(echo) : G.m;
+}
+static void posture_sound(SoundId sound, float volume, float pitch) {
+    const MasterProfile *source = feedback_master();
+    if (source && volume > .001f) {
+        if (getenv("APARA_LOG_POSTURAS")) fprintf(stderr, "POSTURA tempo=%.5f fonte=%s som=%d volume=%.3f pitch=%.3f\n",
+            G.time, source->name, (int)sound, volume, pitch);
+        audio_play_master(source->id - 1, sound, volume, pitch);
+    }
 }
 
 static int anim_contact(const SprAnim *a) {
@@ -999,7 +999,6 @@ static void vfx_draw(bool back) {
 
 static void vfx_clear(void) {
     memset(G.vfx, 0, sizeof G.vfx);
-    memset(&G.cut, 0, sizeof G.cut);
 }
 
 /* Onde a lâmina de kojiro espera o golpe, a partir dos pés dele. */
@@ -1264,93 +1263,6 @@ static MoveLook strike_look(void) {
     return move_contact_look(duel_move(&G.duel), G.duel.comboStrike);
 }
 
-/* Linhas do PNG original (96 px): fogo, raio e aço, cada um em três direções,
- * mais garras. Estocadas conservam o fio estreito: um arco não descreve a ponta
- * de um florete ou lança. Não muda nenhum tempo do sprite ou do núcleo. */
-static SlashStyle slash_style(int id, bool fury, MoveLook look) {
-    SlashStyle s = {.row = -1, .scale = 0.43f, .tint = {240, 237, 225, 255}};
-    if (id == 4 || id == 9 || look == LOOK_THRUST || look == LOOK_FAR || look == LOOK_DASH) return s;
-    bool wide = id == 3 || look == LOOK_HEAVY;
-    bool high = look == LOOK_HIGH || look == LOOK_JUMP;
-    s.row = wide ? 2 : high ? 8 : 11;
-    s.rotation = wide && high ? 25 : look == LOOK_LOW ? -15 : 0;
-    if (id == 1) s.tint = (Color){248, 224, 184, 255};
-    if (id == 2) s.tint = (Color){200, 226, 205, 255};
-    if (id == 3) { s.scale = 0.60f; s.tint = (Color){242, 226, 196, 255}; }
-    if (id == 5) { s.row = 5; s.scale = 0.36f; s.flatTint = true; s.tint = (Color){255, 218, 157, 255}; }
-    if (id == 6) { s.scale = 0.35f; s.tint = (Color){184, 188, 202, 255}; }
-    if (id == 7) { s.scale = 0.36f; s.tint = (Color){177, 230, 189, 255}; }
-    if (id == 10) { s.row = wide ? 1 : high ? 7 : 10; s.tint = (Color){184, 220, 255, 255}; }
-    if (id == 11) { s.scale = 0.27f; s.tint = (Color){199, 171, 230, 255}; }
-    if (id == 12) s.tint = (Color){221, 206, 255, 255};
-    if (id == 13) s.tint = (Color){220, 186, 243, 255};
-    /* A fúria tem prioridade sobre o eco: Oboro sempre risca fogo na fase 3. */
-    if (id == 8 || fury) {
-        s.row = id == 5 ? 3 : wide ? 0 : high ? 6 : 9;
-        s.scale = 0.48f;
-        s.tint = WHITE;
-        s.flatTint = false;
-    }
-    static const int peak[] = {1, 2, 1, 2, 2, 2, 0, 0, 1, 1, 1, 0};
-    s.peak = peak[s.row];
-    return s;
-}
-
-static void slash_begin(void) {
-    memset(&G.cut, 0, sizeof G.cut); /* a nova lâmina substitui a cauda anterior */
-    if (!G.slashes || !G.bossS.set) return;
-    SlashStyle s = slash_style(mestre_do_rastro() + 1, G.bossS.furia, strike_look());
-    if (s.row < 0) return;
-    const SprFx *fx = spr_fx("slash");
-    if (!fx) return; /* o fio antigo continua disponível sem o pack */
-    DuelTimeline t = duel_timeline(&G.duel);
-    if (!t.active) return;
-    G.cut = (SlashCut){fx, s, fmax(t.launch, t.strike - AJ_SLASH_ANTES), t.strike,
-                      t.strike + AJ_SLASH_CAUDA, duel_strike_dual(&G.duel), yoru_no_escuro()};
-}
-
-static int slash_frame(const SlashCut *cut, double now) {
-    if (!cut->fx || cut->hidden || now < cut->start || now >= cut->end) return -1;
-    int frames = spr_fx_row_frames(cut->fx, cut->style.row), peak = cut->style.peak;
-    if (frames <= peak || cut->contact <= cut->start || cut->end <= cut->contact) return -1;
-    if (now < cut->contact) {
-        double u = (now - cut->start) / (cut->contact - cut->start);
-        return peak > 0 ? (int)(u * peak) : 0;
-    }
-    double u = (now - cut->contact) / (cut->end - cut->contact);
-    int frame = peak + (int)(u * (frames - peak));
-    return frame < frames ? frame : frames - 1;
-}
-
-static bool slash_position(bool offhand, Vector2 *at) {
-    Vector2 h, tip;
-    boss_blade(&h, &tip);
-    if (offhand && !spr_offhand_point(&G.bossS.pl,
-            (Vector2){G.boss.x + G.boss.offsetX, G.boss.y - G.boss.hopY},
-            G.boss.faceLeft, (int)G.bossS.squat, &tip)) return false;
-    /* O centro do arco fica logo atrás da ponta, no espaço varrido pela lâmina. */
-    *at = (Vector2){tip.x + (G.boss.faceLeft ? 7 : -7), tip.y + 2};
-    return true;
-}
-
-static void slash_draw(bool dark) {
-    if (G.state != ST_DUEL || G.bossHidden || (dark && G.m->id == 11)) return;
-    int frame = slash_frame(&G.cut, G.duel.clock);
-    if (frame < 0) return;
-    float alpha = G.duel.clock < G.cut.contact
-        ? 0.15f + 0.85f * (float)((G.duel.clock - G.cut.start) / (G.cut.contact - G.cut.start))
-        : (float)((G.cut.end - G.duel.clock) / (G.cut.end - G.cut.contact));
-    for (int hand = 0; hand < (G.cut.dual ? 2 : 1); hand++) {
-        Vector2 at;
-        if (!slash_position(hand != 0, &at)) continue;
-        float rotation = G.cut.style.rotation + (hand ? -35 : 0);
-        spr_fx_draw_rotated(G.cut.fx, G.cut.style.row, frame, at, G.boss.faceLeft,
-            fadec(G.cut.style.tint, AJ_SLASH_ALFA * alpha), G.cut.style.scale,
-            rotation, G.cut.style.flatTint);
-        G.slashesDrawn++;
-    }
-}
-
 /* Nos bonecos, o golpe forte e o salto usam as poses do golpe alto; a investida, as da estocada. */
 static MoveLook rig_look(MoveLook l) { return l == LOOK_DASH || l == LOOK_FAR ? LOOK_THRUST : (l == LOOK_LOW || l == LOOK_THRUST ? l : LOOK_HIGH); }
 static Pose windup_pose(MoveLook l) { l = rig_look(l); return l == LOOK_LOW ? POSE_WINDUP_LOW : (l == LOOK_THRUST ? POSE_WINDUP_THRUST : POSE_WINDUP); }
@@ -1366,13 +1278,24 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
     const Fighter *f = &G.bossS;
     const SprAnim *a = NULL;
     char name[64];
+    const Move *mv = duel_move(&G.duel);
+    int borrowed = G.m->isBigBoss && !f->furia ? echo_of(mv) : -1;
+    if (borrowed >= 0) {
+        /* Variantes da própria katana do Oboro: não usar a arma do aprendiz.
+         * Os casos duplo, pesado e final também conservam a cor do eco. */
+        bool thrust = look == LOOK_THRUST || look == LOOK_DASH || look == LOOK_FAR;
+        const char *base = duel_strike_dual(&G.duel) || G.special || look == LOOK_HEAVY ? "ATTACK_3" :
+            look == LOOK_LOW ? "ATTACK_2" : thrust ? "ATTACK_1" : "ATTACK_3";
+        snprintf(name, sizeof name, "%s_ECO_%s", base, roster_get(borrowed)->name);
+        for (char *u = name; *u; u++) if (*u >= 'a' && *u <= 'z') *u = (char)(*u - 32);
+        if ((a = fa(f, name))) return a;
+    }
     if (G.special) {
         a = f->furia ? fa(f, "STRONG_ATTACK_FURIA") : NULL;
         if (!a) a = fa(f, "STRONG_ATTACK");
         if (!a) a = fa(f, "ESPECIAL");
         if (a) return a;
     }
-    const Move *mv = duel_move(&G.duel);
     if (look == LOOK_HEAVY) {
         /* golpe forte: o salto com a pancada do pack; sem ele, o especial */
         a = f->furia ? fa(f, "STRONG_ATTACK_FURIA") : NULL;
@@ -1400,13 +1323,6 @@ static const SprAnim *boss_strike_anim(MoveLook look) {
     if (look == LOOK_JUMP || look == LOOK_WARP) look = LOOK_HIGH;
     if (look == LOOK_THRUST && (a = fa(f, "DASH_ATTACK"))) return a;
     const char *base = look == LOOK_LOW ? "ATTACK_2" : (look == LOOK_THRUST ? "ATTACK_1" : "ATTACK_3");
-    int echo = G.m->isBigBoss ? echo_of(mv) : -1;
-    if (echo >= 0) {
-        snprintf(name, sizeof name, "%s_ECO_%s", base, roster_get(echo)->name);
-        for (char *u = name; *u; u++)
-            if (*u >= 'a' && *u <= 'z') *u = (char)(*u - 32);
-        if ((a = fa(f, name))) return a;
-    }
     if (f->furia) {
         snprintf(name, sizeof name, "%s_FURIA", base);
         if ((a = fa(f, name))) return a;
@@ -1741,7 +1657,7 @@ static void on_impact(const DuelEvent *e) {
 /* O relâmpago do arashi (o golpe pesado dele, LOOK_HEAVY): quando o golpe chega, raios caem do céu em volta de quem aparou ou, se pegou, de kojiro. Quem leva fica
  * meio paralisado: treme, pisca em azul e cai devagar. É só o que se vê: o núcleo julga o relâmpago como qualquer outro golpe de duas lâminas, e o aperto seguinte vale igual. */
 static bool golpe_do_raio(void) {
-    if (!G.m || G.m->id != ARASHI_ID || G.duel.m != G.m) return false;
+    if (!G.m || G.duel.m != G.m || feedback_master()->id != ARASHI_ID) return false;
     const Move *mv = duel_move(&G.duel);
     return mv && mv->look == LOOK_HEAVY;
 }
@@ -1776,7 +1692,7 @@ static void impacto_do_raio(const DuelEvent *e) {
     audio_play(SND_THUNDER, 0.9f, 1);
     fx_flash(&G.fx, (Color){170, 200, 255, 255}, aparou ? 0.3f : 0.6f);
     const float forca = e->judgement == J_RUIM ? 1.0f : (e->judgement == J_BOM && (e->i & 2)) ? 0.5f : 0.0f;
-    if (forca <= 0) return;
+    if (forca <= 0 || G.m->isBigBoss) return;
     G.paralisiaForca = forca;
     G.paralisia = G.paralisiaTotal = forca >= 1 ? PARALISIA_CHEIA : PARALISIA_METADE;
     fx_popup(&G.fx, "paralisado", (Vector2){G.ren.x + G.ren.offsetX, GROUND_LOW - 58}, 0.9f, (Color){150, 205, 255, 255});
@@ -1804,26 +1720,10 @@ static float paralisia_ritmo(void) {
     return 1 - PARALISIA_LENTIDAO * G.paralisiaForca;
 }
 
-static const struct { const char *fx; int row; float y; int flags; float scale; } TELL[ROSTER_SIZE] = {
-        {"70", 4, -8, VFX_FRONT, 0.6f},         /* daichi: poeira de terra (na cor do chão) */
-        {"26", 3, -30, VFX_BACK | VFX_GLOW | VFX_BODY},    /* genbu: o casco acompanha o corpo */
-        {"70", 4, -8, VFX_FRONT, 0.65f},        /* raizo: pó ocre aos pés */
-        {"06", 2, -30, VFX_BACK},               /* shizuku: respingo */
-        {"64", 0, -30, VFX_BACK | VFX_GLOW},    /* garfiel: garras */
-        {"64", 8, -30, VFX_BACK},               /* karasu: asas escuras */
-        {"03", 3, -30, VFX_BACK | VFX_GLOW},    /* hayate: redemoinho */
-        {"69", 0, -27, VFX_BACK | VFX_GLOW},    /* enjin: labareda */
-        {"04", 2, -24, VFX_BACK},               /* suiren: onda */
-        {"195", 2, -30, VFX_BACK | VFX_GLOW | VFX_SWORD, 0.45f}, /* arashi: raios na lâmina */
-        {"197", 1, -30, VFX_BACK | VFX_GLOW},   /* yoru: estrela da noite */
-        {"665", 5, -21, VFX_BACK | VFX_GLOW, 0.5f}, /* jinshi: o brilho da lua (pequeno, lilás, luz somada) */
-        {"197", 7, -30, VFX_BACK | VFX_GLOW},   /* oboro */
-    };
-
-/* Consulta todas as folhas usadas por um aviso antes de entrar no jogo. */
+/* Os rastros coloridos pertencem aos PNGs; não sobrepor um segundo arco. */
+static const char *const runtimeFx[] = {"70", "64", "197"};
 static void preload_runtime_art(void) {
-    for (int i = 0; i < ROSTER_SIZE; i++) spr_fx(TELL[i].fx);
-    spr_fx("slash");
+    for (unsigned i = 0; i < sizeof runtimeFx / sizeof runtimeFx[0]; i++) spr_fx(runtimeFx[i]);
     spr_ui_preload();
 }
 
@@ -1896,52 +1796,19 @@ static void tell_particles(int id, Vector2 tip, Vector2 mid, Vector2 feet) {
     }
 }
 
-/* Sinal próprio de cada vilão no começo de cada sequência: nunca dois iguais. */
+/* Partículas e som da postura de origem, incluindo cada eco do Oboro. */
 static void tell_fx(void) {
-    Rig *b = &G.boss;
+    const MasterProfile *source = feedback_master();
+    if (!source) return;
     Vector2 butt, tip;
     boss_blade(&butt, &tip);
     Vector2 mid = {(butt.x + tip.x) / 2, (butt.y + tip.y) / 2};
-    Vector2 feet = {b->x + b->offsetX - 9 * b->look.size, GROUND_LOW - 1};
-    int echo = G.m->isBigBoss ? echo_of(duel_move(&G.duel)) : -1;
-    /* tom do gesto de cada mestre, na ordem da trilha */
-    static const float pitch[ROSTER_SIZE] = {0.7f, 0.8f, 0.6f, 1.5f, 1.0f, 1.25f, 1.4f, 1.1f, 1.3f, 1.6f, 1.2f, 0.65f, 0.9f};
-    const bool escuro = yoru_no_escuro();
-    if (escuro) { /* no apagão o aviso é só o som: nenhuma luz além das adagas */ }
-    else if (G.m->id == 3 || echo == 2) raizo_tell(tip, feet);
-    else tell_particles(G.m->id, tip, mid, feet);
-    audio_play(SND_GESTURE, 0.3f, pitch[(G.m->id - 1) % ROSTER_SIZE]);
-    if (escuro) return;
-    /* E o efeito do pack de cada um: onde nasce (no chão ou no corpo) e a cor. Oboro
-     * usa o do aprendiz da postura em que está, em vermelho. */
-    int ti = (G.m->id - 1) % ROSTER_SIZE, row = TELL[ti].row;
-    if (G.m->isBigBoss && G.masked) { ti = 7; row = TELL[7].row; }   /* o oni: a lâmina acende */
-    else if (echo >= 0) { ti = echo; row = echo == 2 ? TELL[2].row : 7; }
-    float sc = TELL[ti].scale > 0 ? TELL[ti].scale : 1;
-    int flags = TELL[ti].flags;
-    Vector2 pos = {b->x + b->offsetX, GROUND_LOW + TELL[ti].y * sc};
-    if (ti > 1 && ti != 2) { flags |= VFX_SWORD; pos = tip; sc = fminf(sc, 0.5f); }
-    const SprFx *sheet = spr_fx(TELL[ti].fx);
-    float fps = 22;
-    if ((flags & VFX_SWORD) && sheet)
-        fps = sheet->frames / fmaxf(0.15f, (float)(duel_timeline(&G.duel).strike - G.duel.clock) + 0.08f);
-    vfx(TELL[ti].fx, row, pos, true, flags, fps);
-    if (ti == 9) {
-        Vector2 other;
-        if (spr_offhand_point(&G.bossS.pl,
-                (Vector2){b->x + b->offsetX, b->y - b->hopY}, b->faceLeft, (int)G.bossS.squat, &other))
-            vfx(TELL[ti].fx, row, other, true, VFX_BACK | VFX_GLOW | VFX_OFFHAND, fps);
+    Vector2 feet = {G.boss.x + G.boss.offsetX - 9 * G.boss.look.size, GROUND_LOW - 1};
+    if (!yoru_no_escuro()) {
+        if (source->id == 3) raizo_tell(tip, feet);
+        else tell_particles(source->id, tip, mid, feet);
     }
-    if (sc < 1)
-        for (int i = 0; i < VFX_MAX; i++)
-            if (G.vfx[i].fx == spr_fx(TELL[ti].fx) && G.vfx[i].t == 0) {
-                /* a fumaça branca do pack, menor e na paleta do cenário: a poeira na cor do
-                   chão, o brilho da lua no lilás do céu da serra */
-                G.vfx[i].scale = sc;
-                G.vfx[i].tint = ti == 2 ? (Color){228, 220, 204, 255}
-                               : ti == 11 ? (Color){150, 120, 170, 255}
-                               : ti == 0 ? arena_dust(G.m->arena) : (Color){255, 255, 255, 210};
-            }
+    posture_sound(SND_GESTURE, .3f, posturePitch[source->id - 1]);
 }
 
 /* A vida de kojiro acaba: ele cai e o painel de derrota aparece. */
@@ -1969,8 +1836,8 @@ static void dual_tell(void) {
         fx_star(&G.fx, (Vector2){c.x - 7, c.y - 5}, 11, 0.2f);
         fx_star(&G.fx, (Vector2){c.x + 3, c.y + 3}, 9, 0.2f);
     }
-    audio_play(SND_SWING, 0.35f, 1.7f);
-    audio_play(SND_SWING, 0.3f, 1.9f);
+    posture_sound(SND_SWING, 0.35f, 1.7f);
+    posture_sound(SND_SWING, 0.3f, 1.9f);
     G.boss.flash = 0.7f;
     G.boss.flashColor = (Color){230, 236, 255, 255};
 }
@@ -2008,7 +1875,7 @@ static void aviso_brilho(bool primeiro) {
         if (primeiro) fx_ring(&G.fx, at, 38, 0.18f, 1, (Color){219, 198, 158, 200});
         return;
     }
-    bool lua = G.m->cueAudio <= 0;
+    bool lua = feedback_master()->cueAudio <= 0;
     if (!primeiro) {
         fx_star(&G.fx, at, 8, 0.09f);
         return;
@@ -2075,10 +1942,10 @@ static void handle_events(void) {
                  * Cada tipo de sequência tem sua preparação: é assim que se lê o moveset. */
                 if (G.duel.comboStrike == 0) {
                     rig_pose(b, windup_pose(strike_look()), G.windupLen, EASE_INOUT);
-                    tell_fx();
                 }
                 else rig_pose(b, rearm_pose(strike_look()), G.windupLen, EASE_OUT);
                 sprite_windup();
+                if (G.duel.comboStrike == 0) tell_fx();
                 if (m->isBigBoss) {
                     int echo = echo_of(duel_move(&G.duel));
                     if (G.duel.comboStrike == 0) begin_posture_aura(echo);
@@ -2094,13 +1961,12 @@ static void handle_events(void) {
                 rig_pose(b, contact_pose(strike_look()), duel_strike_lead(&G.duel), EASE_IN);
                 b->trail = true;
                 sprite_launch();
-                slash_begin();
-                audio_play(SND_SWING, 0.9f, 1);
+                posture_sound(SND_SWING, 0.9f, 1);
                 break;
             case EV_CUE:
                 /* o aviso: sempre o mesmo tempo antes do contato; na sequência, mais discreto.
                  * O som vem num evento próprio, adiantado pela calibração de áudio. */
-                if (e->flag) audio_play(SND_CUE, m->cueAudio * (e->i == 0 ? 1 : 0.55f), 1);
+                if (e->flag) posture_sound(SND_CUE, feedback_master()->cueAudio * (e->i == 0 ? 1 : 0.55f), 1);
                 else aviso_brilho(e->i == 0);
                 break;
             case EV_PRESS:
@@ -3136,7 +3002,6 @@ static void draw_rigs(Color light) {
     }
     if (G.maskOnGround) draw_oni_mask(light);
     if (rastroGolpe) desenha_rastro_do_golpe(dark, true);
-    slash_draw(dark);
     draw_hanzo(light, rim);
     if (G.renS.set) {
         Rig ren = G.ren;
@@ -3259,24 +3124,7 @@ static int mestre_do_rastro(void) {
     return eco >= 0 ? eco : G.m->id - 1;
 }
 
-static Color cor_rastro(void) {
-    static const Color COR[ROSTER_SIZE] = {
-        {218, 178, 116, 255}, /* daichi: areia */
-        {64, 122, 83, 255},   /* genbu: verde escuro */
-        {207, 175, 93, 255},  /* raizo: pedra ocre */
-        {170, 229, 252, 255}, /* shizuku: gelo */
-        {249, 139, 62, 255},  /* garfiel: laranja */
-        {91, 94, 105, 255},   /* karasu: preto com fio cinza */
-        {136, 230, 167, 255}, /* hayate: verde claro */
-        {237, 77, 52, 255},   /* enjin: brasa */
-        {51, 106, 191, 255},  /* suiren: azul escuro */
-        {89, 160, 251, 255},  /* arashi: raio azul */
-        {164, 99, 203, 255},  /* yoru: roxo */
-        {238, 239, 249, 255}, /* jinshi: branco */
-        {181, 83, 211, 255},  /* oboro sem eco */
-    };
-    return COR[mestre_do_rastro()];
-}
+static Color cor_rastro(void) { return postureColors[mestre_do_rastro()]; }
 
 /* O traço acompanha o ponto da arma anotado para cada quadro do PNG Mattz.
  * Uma estocada fica longa e fina; um corte faz uma curva curta; garras viram
@@ -3377,7 +3225,6 @@ static void desenha_rastro_do_golpe(bool escuro, bool so_fio) {
         }
     }
     if (!so_fio) return;
-    if (G.cut.fx && !G.cut.hidden && G.duel.clock < G.cut.end) return;
     Vector2 empunhadura, lamina;
     boss_blade(&empunhadura, &lamina);
     (void)empunhadura;
@@ -4349,7 +4196,6 @@ int main(int argc, char **argv) {
     G.debug = getenv("APARA_DEBUG") && strcmp(getenv("APARA_DEBUG"), "0") != 0;
     G.autoJogo = getenv("APARA_AUTO") != NULL;
     G.rastro = getenv("APARA_RASTRO") ? atoi(getenv("APARA_RASTRO")) != 0 : AJ_RASTRO_FANTASMA != 0;
-    G.slashes = getenv("APARA_SLASH") ? atoi(getenv("APARA_SLASH")) != 0 : AJ_SLASH != 0;
     G.logImpactos = getenv("APARA_LOG_IMPACTOS") != NULL;
     G.logCarimbos = getenv("APARA_LOG_CARIMBOS") != NULL;
     /* Ganchos dos vídeos e dos testes: o robô do demo, o clique fora do duelo e o passo do --rec */
@@ -4662,7 +4508,6 @@ int main(int argc, char **argv) {
     arena_unload_art();
     pix_shutdown();
     if (G.logImpactos) fprintf(stderr, "FANTASMAS %ld\n", G.fantasmasDesenhados);
-    if (getenv("APARA_LOG_SLASH")) fprintf(stderr, "SLASHES %d\n", G.slashesDrawn);
     CloseWindow();
     return 0;
 }

@@ -3,7 +3,7 @@ set -eu
 cd "$(dirname "$0")/.."
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/sfx" "$tmp/music"
+mkdir -p "$tmp/sfx" "$tmp/music" "$tmp/sfx/arashi" "$tmp/sfx/enjin"
 # No Linux sem alto-falante, o ALSA null permite testar as mesmas APIs de reprodução.
 if [ "$(uname)" = Linux ]; then
     printf 'pcm.!default { type null }\n' > "$tmp/alsa.conf"

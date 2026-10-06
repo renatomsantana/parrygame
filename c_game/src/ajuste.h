@@ -129,15 +129,11 @@
 #define AJ_DESLIZE_GOLPE             1      /* 0 = desligado (o corpo salta de uma vez no contato, como antes). A prancha traz o avanço do golpe pronto, no quadro de contato, sem quadro no meio: na partida da lâmina o mestre desliza esse avanço (só desenho; no contato ele está exatamente onde a prancha põe) */
 #define AJ_DESLIZE_MIN            6.0f      /* px: um salto menor que isto fica como a prancha tem */
 #define AJ_DESLIZE_MAX           40.0f      /* px: o maior avanço que se espalha */
-#define AJ_RASTRO_FANTASMA           1      /* 0 = desligado (o golpe como antes) */
+#define AJ_RASTRO_FANTASMA           0      /* cópias do corpo: opcionais; os PNGs já têm rastros */
 #define AJ_RASTRO_FANTASMAS          3      /* quantos, atrás do mestre */
 #define AJ_RASTRO_ESPACO          5.0f      /* px de um para o outro, no fim da partida */
 #define AJ_RASTRO_ALFA           0.72f      /* opacidade do primeiro, no fim da partida */
 #define AJ_RASTRO_FIO_ALFA       0.84f      /* brilho do traço preso à arma, no fim da partida */
-#define AJ_SLASH                    1      /* 0 = só o fio anterior; APARA_SLASH=0/1 compara no jogo */
-#define AJ_SLASH_ANTES          0.12f      /* parte visível do corte antes do contato, em segundos */
-#define AJ_SLASH_CAUDA          0.12f      /* partículas após o contato, no relógio que congela com hitstop */
-#define AJ_SLASH_ALFA           0.82f      /* o arco acompanha a espada sem cobrir os lutadores */
 
 /* ---- Robô do demo (--demo) e dos testes -------------------------------- */
 #define AJ_ROBO_ANTECEDENCIA       0.030f   /* aperta no máximo este tempo antes do contato (menos que a menor janela perfeita) */
