@@ -22,6 +22,7 @@ static Sound sounds[SND_COUNT];
 static Sound variations[SND_COUNT][AUDIO_VARIANTS - 1];
 static Sound variationVoices[SND_COUNT][AUDIO_VARIANTS - 1][VOZES_MAX];
 static int variationCount[SND_COUNT], variationNext[SND_COUNT];
+static float swingPeaks[AUDIO_VARIANTS], lastFilePeak;
 static int variationVoiceNext[SND_COUNT][AUDIO_VARIANTS - 1];
 /* Vozes extras dos golpes: numa sequência, um parry não corta a cauda do anterior (vozes.h). */
 static Sound voices[SND_COUNT][VOZES_MAX];
@@ -31,6 +32,7 @@ static int voiceCount[SND_COUNT], voiceNext[SND_COUNT];
 static const SoundId postureIds[POSTURE_SOUNDS] = {SND_CUE, SND_GESTURE, SND_SWING};
 typedef struct {
     Sound clip[AUDIO_VARIANTS];
+    float peak[AUDIO_VARIANTS];
     Sound voice[AUDIO_VARIANTS][VOZES_PADRAO];
     int count, next, voiceCount, voiceNext[AUDIO_VARIANTS];
 } PostureBank;
@@ -63,6 +65,24 @@ static bool polyphonic(SoundId id) {
 
 /* Antes de substituir o som, validar a duração que o banco de vozes comporta.
  * Arquivo inválido nunca elimina o som embutido. A cauda já deve vir no WAV. */
+/* Energia em blocos de 5 ms: localiza o ataque audível, sem fazer o corte
+ * soar grave/agudo quando a viagem da lâmina muda. */
+static float wave_attack_peak(Wave w) {
+    if(!w.data || !w.sampleRate || !w.channels || !w.frameCount) return .11f;
+    float *samples=LoadWaveSamples(w); if(!samples || !w.sampleRate || !w.channels) { if(samples) UnloadWaveSamples(samples);return .11f; }
+    unsigned block=w.sampleRate/200; if(!block) block=1;
+    double best=0; unsigned at=0;
+    for(unsigned i=0;i<w.frameCount;i+=block) {
+        double energy=0; unsigned end=i+block<w.frameCount?i+block:w.frameCount;
+        for(unsigned frame=i;frame<end;frame++) for(unsigned c=0;c<w.channels;c++) {
+            float x=samples[frame*w.channels+c]; energy+=x*x;
+        }
+        if(energy>best) {best=energy;at=i;}
+    }
+    UnloadWaveSamples(samples);
+    return best>1e-12 ? (at+block*.5f)/w.sampleRate : .11f;
+}
+
 static Sound sound_file(const char *path, SoundId id) {
     if (!FileExists(path) || !IsAudioDeviceReady()) return (Sound){0};
     Wave w = LoadWave(path);
@@ -73,6 +93,7 @@ static Sound sound_file(const char *path, SoundId id) {
         if (w.data) UnloadWave(w);
         return (Sound){0};
     }
+    lastFilePeak=wave_attack_peak(w);
     Sound s = LoadSoundFromWave(w);
     UnloadWave(w);
     if (s.stream.buffer && getenv("APARA_LOG_AUDIO")) fprintf(stderr, "AUDIO arquivo %s\n", path);
@@ -87,12 +108,12 @@ static void load_team_audio(void) {
         for (int v = 1; v <= AUDIO_VARIANTS; v++) {
             snprintf(path, sizeof path, "%s/sfx/%s_%02d.wav", audio_directory(), soundNames[id], v);
             Sound s = sound_file(path, (SoundId)id);
-            if (s.stream.buffer) loaded[count++] = s;
+            if (s.stream.buffer) { if(id==SND_SWING) swingPeaks[count]=lastFilePeak; loaded[count++]=s; }
         }
         if (!count) {
             snprintf(path, sizeof path, "%s/sfx/%s.wav", audio_directory(), soundNames[id]);
             Sound s = sound_file(path, (SoundId)id);
-            if (s.stream.buffer) loaded[count++] = s;
+            if (s.stream.buffer) { if(id==SND_SWING) swingPeaks[count]=lastFilePeak; loaded[count++]=s; }
         }
         if (!count) continue;
         UnloadSound(sounds[id]);
@@ -132,12 +153,12 @@ static void load_posture_audio(void) {
         for (int v = 1; v <= AUDIO_VARIANTS; v++) {
             snprintf(path, sizeof path, "%s/sfx/%s/%s_%02d.wav", audio_directory(), roster_get(source)->name, soundNames[id], v);
             Sound clip = sound_file(path, id);
-            if (clip.stream.buffer) b->clip[b->count++] = clip;
+            if (clip.stream.buffer) { b->peak[b->count]=lastFilePeak; b->clip[b->count++]=clip; }
         }
         if (!b->count) {
             snprintf(path, sizeof path, "%s/sfx/%s/%s.wav", audio_directory(), roster_get(source)->name, soundNames[id]);
             Sound clip = sound_file(path, id);
-            if (clip.stream.buffer) b->clip[b->count++] = clip;
+            if (clip.stream.buffer) { b->peak[b->count]=lastFilePeak; b->clip[b->count++]=clip; }
         }
         b->voiceCount = 1;
 #if defined(RAYLIB_VERSION_MAJOR) && RAYLIB_VERSION_MAJOR >= 5
@@ -158,6 +179,13 @@ static void unload_posture_audio(void) {
         }
     }
     memset(postureBanks, 0, sizeof postureBanks);
+}
+float audio_swing_peak(int source) {
+    int slot=posture_slot(SND_SWING);
+    if(source>=0 && source<ROSTER_SIZE && postureBanks[source][slot].count) {
+        PostureBank *b=&postureBanks[source][slot]; return b->peak[b->next];
+    }
+    float p=swingPeaks[variationNext[SND_SWING]]; return p>0 ? p : .11f;
 }
 void audio_play_master(int source, SoundId id, float volume, float pitch) {
     if (volume <= .001f) return;

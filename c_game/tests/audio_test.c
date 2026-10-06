@@ -14,6 +14,10 @@ int main(void) {
         unsigned frames = (unsigned)(RATE * files[i].duration);
         short *data = calloc(frames, sizeof *data);
         if (!data) return 2;
+        if(strstr(files[i].name,"swing_")) {
+            unsigned at=(unsigned)(frames*.4f);
+            for(unsigned q=at;q<at+RATE/200 && q<frames;q++) data[q]=16000;
+        }
         snprintf(path, sizeof path, "%s/%s", audio_directory(), files[i].name);
         bool ok = ExportWave((Wave){frames, RATE, 16, 1, data}, path);
         free(data);
@@ -46,14 +50,20 @@ int main(void) {
         const MasterProfile *m = roster_get(i);
         CHECK(!strcmp(musicNames[m->arena], m->name), "música externa foi associada à arena de outro mestre");
     }
-    PostureBank *arashi = &postureBanks[9][posture_slot(SND_SWING)];
+    int arashiIndex=roster_by_identity(10)->id-1, enjinIndex=roster_by_identity(8)->id-1;
+    PostureBank *arashi = &postureBanks[arashiIndex][posture_slot(SND_SWING)];
+    CHECK(fabsf(audio_swing_peak(arashiIndex)-.1025f)<.004f,"pico do primeiro WAV não foi medido");
+    arashi->next=1;
+    CHECK(fabsf(audio_swing_peak(arashiIndex)-.1425f)<.004f,"próxima variação de corte perdeu seu pico próprio");
+    arashi->next=0;
+    CHECK(fabsf(audio_swing_peak(-1)-.11f)<1e-6f && wave_attack_peak((Wave){0})==.11f,"áudio ausente/inválido perdeu o fallback de timing");
     CHECK(arashi->count == 2 && arashi->voiceCount == VOZES_PADRAO, "raio não carregou variantes e vozes");
-    CHECK(postureBanks[9][posture_slot(SND_GESTURE)].count == 1, "gesto por postura ausente");
-    CHECK(postureBanks[7][posture_slot(SND_SWING)].count == 0, "cauda longa entrou no banco de fogo");
-    for (int i = 0; i < 10; i++) audio_play_master(9, SND_SWING, 1, 1);
+    CHECK(postureBanks[arashiIndex][posture_slot(SND_GESTURE)].count == 1, "gesto por postura ausente");
+    CHECK(postureBanks[enjinIndex][posture_slot(SND_SWING)].count == 0, "cauda longa entrou no banco de fogo");
+    for (int i = 0; i < 10; i++) audio_play_master(arashiIndex, SND_SWING, 1, 1);
     CHECK(arashi->next == 0 && arashi->voiceNext[0] == 1 && arashi->voiceNext[1] == 1,
           "eco não compartilha o rodízio de vozes da postura");
-    audio_play_master(7, SND_SWING, 1, 1);
+    audio_play_master(enjinIndex, SND_SWING, 1, 1);
     audio_play_master(-1, SND_SWING, 1, 1);
     audio_play_master(99, SND_SWING, 1, 1);
     audio_music(ARENA_CELEIRO);
