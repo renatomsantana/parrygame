@@ -28,8 +28,7 @@ Cada um dos sete mestres roubou uma gema da empunhadura sagrada. Vencer um
 mestre devolve a gema: a trilha mostra as sete (◆ recuperada, ◇ faltando),
 o HUD conta "GEMAS n / 7" e o painel de vitória anuncia "GEMA RECUPERADA".
 A contagem fica salva com o progresso. O Boss Final não guarda gema; ele
-espera quem juntar as sete. No RPG Maker a contagem vai para a variável de
-gemas (24), uma por mestre, contada uma vez só.
+espera quem juntar as sete.
 
 ## A trilha dos sete mestres
 
@@ -45,7 +44,7 @@ gemas (24), uma por mestre, contada uma vez só.
 | 8. Mestre Supremo (provisório) | Salão da Liga | Alta 70 / 180 ms · Baixa 45 / 130 ms | Alta 1,05 · 0,95 · 1,15 · Baixa 0,60 · 0,55 · 0,65 | Alta 30% (dupla) · Baixa 50% (mímica) | Ataques compostos, troca de postura e fases múltiplas. |
 
 As preparações vêm da especificação em quadros a 60 FPS, convertidas para
-segundos. Os sete mestres estão em `Assets/Scripts/Core/BossRoster.cs`, na ordem da trilha.
+segundos. Os mestres estão em `c_game/src/roster.c`, na ordem da trilha.
 
 ## Experiência de jogo
 
@@ -89,13 +88,7 @@ dois motores.
 
 ## Cenários: um por mestre
 
-Cada mestre tem um cenário próprio. No Unity, `ArenaAsset` nomeia a imagem em
-`Assets/Resources/Art/Arenas/` (`arena_dojo`, `arena_balada`, `arena_campo`,
-`arena_escritorio`, `arena_galeria`, `arena_salao`, `arena_jardim`); enquanto
-ela não existe, a arena comum recebe a tonalidade do mestre. No RPG Maker,
-cada mestre é um mapa, e o plugin aplica uma tonalidade de tela provisória.
-A arte pixel art de cada cenário fica para depois; `docs/ARTE.md` lista os
-nomes esperados.
+Cada mestre tem um cenário próprio, desenhado em pixel art procedural por `c_game/src/arenas.c`. `docs/ARTE.md` trata da arte.
 
 ## Boss Final (provisório)
 
@@ -166,7 +159,7 @@ pelo resto do duelo. Mais quatro perfeitos vencem. Quatro erros derrotam Ren.
 
 O herói possui `idle`, `parry`, `attack`, `hurt` e `death`. O boss possui
 `idle`, `windup`, `attack`, `hurt` e `death`. As poses estão nas pranchas PNG
-e os recortes em `Assets/Resources/Art/frames.json`.
+e os recortes em `c_game/assets/`.
 
 Os sete mestres compartilham a prancha do boss, diferenciados por tonalidade
 do sprite e do cenário (`Tint` e `ArenaTint`). A **Sombra** usa a prancha do
@@ -178,32 +171,24 @@ contato bloqueado, a defesa é levada ao frame de choque; o mundo para
 brevemente e o som continua. O flash de tela é desenhado pelo HUD e some em
 até 300 ms. O tremor máximo é de poucos pixels e pode ser desligado com F.
 
-## Organização para codar (Unity 6)
+## Organização do código
 
-| Arquivo | Responsabilidade |
+| Arquivo (em `c_game/src/`) | Responsabilidade |
 |---|---|
-| `Assets/Scripts/Core/CombatSettings.cs` | Parâmetros comuns: vida, dano, ritmo, atraso da finta, pausas |
-| `Assets/Scripts/Core/BossProfile.cs` + `BossRoster.cs` | Janelas, ritmo, fintas, visual e falas de cada mestre |
-| `Assets/Scripts/Core/Campaign.cs` | Posição na trilha |
-| `Assets/Scripts/Core/CombatCore.cs` | Relógio, tentativa, finta, classificação, vida, postura e vitória |
-| `Assets/Scripts/Core/SpriteSheetData.cs` + `MiniJson.cs` | Recortes e âncoras de `frames.json` |
-| `Assets/Scripts/Core/CoreSelfTest.cs` | Regras, mestres, fintas, trilha e prancha; roda no Test Runner e fora do Unity |
-| `Assets/Scripts/AparaBootstrap.cs` | Monta o jogo em qualquer cena ao entrar em Play |
-| `Assets/Scripts/AparaCombatBridge.cs` | Input, telas, falas, eventos, pausa e ligação com as animações |
-| `Assets/Scripts/View/ActorView.cs` | Reprodução, pivô no pé e espelho dos frames |
-| `Assets/Scripts/View/FeedbackView.cs` | Sons sintetizados, faíscas e anel de impacto |
-| `Assets/Scripts/View/HudView.cs` | Canvas 640 × 360: barras, falas, painéis, flash e resultado |
-| `Assets/Scripts/Editor/ArtImportSettings.cs` | Importação em pixel art e menu de testes |
-| `Assets/Resources/Art/` | Pranchas, arena e `frames.json` |
+| `core.c` / `core.h` | Núcleo puro: relógio, tentativa, classificação, vida, postura e vitória |
+| `roster.c` | Janelas, ritmo, golpes e falas de cada mestre, na ordem da trilha |
+| `ajuste.c` / `ajuste.h` | Constantes de ritmo e justiça, todas num lugar só |
+| `robo.c` | Jogadores automáticos para os testes e a curva |
+| `entrada*.c` | Conversão e carimbo de tempo das entradas |
+| `salvar.c`, `gravar.c`, `pasta_dados.c`, `opcoes.c` | Progresso, gravação atômica, pasta de dados e opções |
+| `main.c` | O jogo: telas, desenho, som, falas e ligação com o núcleo |
 
-O núcleo (`Apara.Core`) não referencia o UnityEngine. A câmera ortográfica
-cobre 640 × 360 unidades com um pixel por unidade; as coordenadas do desenho
-original (Y para baixo) são convertidas na ponte.
+O núcleo não depende da raylib. O desenho usa 640 × 360 pixels ampliados.
 
 ## Passo a passo para desenvolvimento
 
 1. Jogar a trilha inteira e sentir as janelas de cada mestre.
-2. Ajustar as janelas em `BossRoster.cs` em passos de 10 ms.
+2. Ajustar as janelas em `roster.c` em passos de 10 ms.
 3. Acertar o atraso da finta: curto demais vira golpe normal, longo demais fica óbvio.
 4. Refinar os recortes e âncoras se a silhueta deslizar.
 5. Criar arte própria por mestre e por cenário; hoje só a cor muda.
@@ -211,14 +196,8 @@ original (Y para baixo) são convertidas na ponte.
 
 ## Validação
 
-Em 11/09/2026 o núcleo C# compilou com o csc.exe do .NET Framework e passou
-474 verificações sem falhas (`unity_project/Tools/RunCoreTests.ps1`); o
-núcleo JavaScript do plugin passou 275 em Node 24
-(`node rpgmaker_mz/tests/core_test.js`).
-**Nem o Unity nem o RPG Maker estavam instalados nesta máquina**: as camadas de
-cena, HUD, áudio e input dos dois ainda não foram executadas. O primeiro Play precisa conferir:
+Os protótipos em Unity e RPG Maker (11/09/2026: 474 e 275 verificações do núcleo) foram removidos da árvore; ficam no histórico, na tag `legado-unity-rpgmaker-godot`. A validação atual é a do jogo em C (`docs/JOGO.md`). Na conferência jogando:
 
-- Console sem erros de compilação; pranchas importadas com alfa e sem filtro.
 - Pés dos dois na linha do chão; a Sombra escura e espelhada.
 - Ler as falas de Gorou e Ren; o clique final abre o duelo.
 - Perder quatro golpes: vida zerada, queda, placar e repetição do mestre.
@@ -227,13 +206,11 @@ cena, HUD, áudio e input dos dois ainda não foram executadas. O primeiro Play 
 - Terminar a trilha: tela final e reinício em Gorou.
 - Som, sensação das janelas e legibilidade da finta: só jogando.
 
-## Briefing para outra pessoa ou assistente continuar
+## O que não muda
 
-Continue este projeto Unity 2D de duelo com katana. Preserve Ren de cabelo
-curto e roupa predominantemente laranja. Preserve o parry de um botão, os
-três julgamentos de timing, a trilha de sete mestres com janelas decrescentes
-e fintas crescentes, as falas antes e depois de cada duelo. Use os recursos
-existentes; mantenha som e animação ligados ao contato. Não reintroduza
-seleção direcional ou um segundo botão obrigatório de ataque. Toda alteração
-de regra deve ser refletida neste roteiro, em `BossRoster.cs` ou
-`CombatSettings.cs` e em `CoreSelfTest.cs`.
+Duelo de katana em 2D. Ren de cabelo curto e roupa predominantemente laranja.
+O parry é de um botão, com três julgamentos de timing; a trilha tem sete
+mestres com janelas decrescentes e fintas crescentes, e há falas antes e depois
+de cada duelo. Som e animação ficam ligados ao contato. Não há seleção
+direcional nem um segundo botão obrigatório de ataque. Toda alteração de regra
+é refletida neste roteiro, em `c_game/src/roster.c` e em `c_game/tests/core_test.c`.

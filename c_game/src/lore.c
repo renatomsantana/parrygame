@@ -90,7 +90,7 @@ static void pine(float x, float base, float h, Color c) {
     }
 }
 
-/* A cabana pobre de Hanzo (rodada 7), acabada, simplificada no estilo
+/* A cabana pobre de Hanzo, acabada, simplificada no estilo
  * Katana Zero: poucas formas grandes e legíveis, a silhueta escura contra a noite, o luar frio só
  * nas bordas de cima e a luz quente de dentro escapando pelas frestas, pela porta e pelas falhas
  * da palha. Sem base de pedra. Ficam a palha gasta com falhas, as tábuas desiguais, o shoji
@@ -218,7 +218,7 @@ void lore_draw_cabin(float t) {
     arena_pine(120, 140, 30, pineTone, 5);
     rect(0, 138, 320, 42, C(40, 32, 38));
     rect(0, 138, 320, 2, C(62, 50, 54));
-    /* a cabana pobre do Hanzo, simplificada (rodada 7) */
+    /* a cabana pobre do Hanzo, simplificada */
     float fl = 0.9f + 0.1f * sinf(t * 7) * sinf(t * 3.1f);
     cabin_poor7(t);
     /* a fogueira entre os dois: a luz no chão, a roda de pedras, a lenha cruzada com a

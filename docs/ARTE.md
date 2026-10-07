@@ -5,5 +5,4 @@ A direção dos personagens e das animações está em
 apenas com os PNGs de animação do Mattz Artz instalados em
 `c_game/assets/sprites/`.
 
-As antigas pranchas geradas para os protótipos de Ren foram removidas. O
-cenário do protótipo Unity permanece em `unity_project/Assets/Resources/Art/arena.png`.
+As antigas pranchas geradas para os protótipos de Ren foram removidas junto com os protótipos.

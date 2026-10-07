@@ -5,7 +5,7 @@ Os números abaixo vêm do protótipo que precedeu os commits, e foram conferido
 
 ## 1. O que entra, o que não entra
 
-- **Fica com a outra sessão, não toco:** Shizuku (florete: 4 padrões e a finta; `thrustOnly`, `feint`), Raizo (odachi), o sumiço do Karasu (`sumiço` e `corvo fantasma`, `LOOK_WARP`), o Hanzo, os desarmes, o rastro fantasma e os clipes.
+- **Fora deste trabalho:** Shizuku (florete: 4 padrões e a finta; `thrustOnly`, `feint`), Raizo (odachi), o sumiço do Karasu (`sumiço` e `corvo fantasma`, `LOOK_WARP`), o Hanzo, os desarmes, o rastro fantasma e os clipes.
 - **Daichi e Genbu ficam em 7 golpes:** é a sua regra dos três primeiros mestres (o Raizo também fica em 7). O item 2 vale para os **oito** mestres seguintes, menos a Shizuku: Garfiel, Karasu, Hayate, Enjin, Suiren, Arashi, Yoru e Jinshi.
   Se quiser golpes novos no Daichi e no Genbu também, a regra dos sete precisa mudar (medi: as duas versões passam na curva, o casual deles é 100% de qualquer jeito).
 - **Oboro não muda:** os doze ecos copiam o golpe do aprendiz **pelo nome** (a tabela `ECO[12]` do `core_test.c`), e nenhum golpe existente muda.

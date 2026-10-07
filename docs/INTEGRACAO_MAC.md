@@ -1,6 +1,6 @@
 # Integração com a `mac-integracao`
 
-A branch da outra sessão (`mac-integracao`, `a11cdbc`) foi conferida e **integrada** a esta (`claude/ajustes-visuais-2`). A branch dela não foi mexida: a junção está só aqui, e a ordem dos commits é a abaixo.
+A branch `mac-integracao` (`a11cdbc`) foi conferida e **integrada** a esta. A `mac-integracao` não foi mexida: a junção está só aqui, e a ordem dos commits é a abaixo.
 
 ## Como ficou, em commits
 
@@ -9,7 +9,7 @@ A branch da outra sessão (`mac-integracao`, `a11cdbc`) foi conferida e **integr
 | `e89b45c` | **Junção** da `mac-integracao`. Um conflito só, no `Makefile`, aditivo (ela criou `presentation_test`, `test-visual`, `test-assets`, `teste-vitoria`; eu criei `teste-windows`, `ritmo`, `test-ritmo`): mantidos os dois lados. Vêm com ela a remoção de dois PNGs de protótipo do Unity e o encolhimento do `script.md` (a limpeza dos protótipos antigos dela, `1a47d08` e `7f16d35`). |
 | `bf5b47b` | **Conserto do bug que derruba o jogo** na luta final (abaixo), em `main.c`. |
 | `b314f8c` | **Windows**: o jogo inteiro compila para Windows (as duas correções de `main.c` e `katana3d.c` que estavam em patch). |
-| `c14eeea` | **Teste de desempenho**: a lógica de um quadro nunca passa de 3 ms na luta (a pré-carga em si já é da outra sessão, `01eeb13`). |
+| `c14eeea` | **Teste de desempenho**: a lógica de um quadro nunca passa de 3 ms na luta (a pré-carga em si é o commit `01eeb13`). |
 | depois | as regras de teste do item 2 e os golpes novos, um mestre por commit (`docs/GOLPES_NOVOS.md`). |
 
 A `mac-integracao` já continha esta branch até o `ebb27d2` (a curva, o robô da primeira vez, `bladeMax`); o `a11cdbc` é uma junção dela. Nenhum PNG de `assets/sprites/` em nenhum commit dela.

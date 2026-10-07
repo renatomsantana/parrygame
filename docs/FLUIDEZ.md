@@ -4,7 +4,7 @@ Só a luta: sem cenas, cutscenes nem mensagens. Quatro frentes, e o que já est�
 
 | Frente | Estado |
 |---|---|
-| Travadas e FPS | **causa achada e medida**; a pré-carga já está no jogo (`01eeb13` da outra sessão) e o teste que a guarda está no repositório (`tests/teste_desempenho.sh`) |
+| Travadas e FPS | **causa achada e medida**; a pré-carga já está no jogo (`01eeb13`) e o teste que a guarda está no repositório (`tests/teste_desempenho.sh`) |
 | Ritmo do duelo | ferramenta e teste no repositório (`make ritmo`, `make test-ritmo`); duas mudanças propostas, **nenhuma aplicada, e a decisão de 6/out é não aplicar** (seção 5) |
 | Resposta do aperto | o julgamento já é exato (carimbo); o que sobra é visual e está no `main.c`: análise abaixo |
 | Fluxo visual dos golpes | o corpo agora desliza até o contato em vez de saltar (seção 4) |
@@ -27,7 +27,7 @@ então só a seção **lógica** vale (mundo e composição não); a lógica de 
 O orçamento de um quadro é 16,7 ms a 60 Hz e 6,9 ms a 144 Hz. Não medi com placa de vídeo de verdade, mas 4 a 10 ms de CPU a mais no meio de um quadro arriscam
 perdê-lo a 60 Hz e perdem a 144 Hz, justamente no primeiro aviso e no primeiro parry perfeito.
 
-**A correção** é carregar as folhas de efeito na abertura, e **já está no jogo**: o commit `01eeb13` da outra sessão ("Carrega efeitos e ícones antes da luta", `preload_runtime_art()`) faz isso, então o patch que eu tinha preparado (que carregava 15 folhas) não foi
+**A correção** é carregar as folhas de efeito na abertura, e **já está no jogo**: o commit `01eeb13` ("Carrega efeitos e ícones antes da luta", `preload_runtime_art()`) faz isso, então o patch que eu tinha preparado (que carregava 15 folhas) não foi
 aplicado. O que entrou foi o **teste** dele (`tests/teste_desempenho.sh`): a lógica de um quadro nunca passa de 3 ms na luta (mestres 1 e 13, até 3 tentativas cada, para a máquina ocupada não reprovar). Conferido nos dois sentidos: com a pré-carga dela, o pior quadro de lógica é
 0,04 ms (daichi) e 0,07 ms (oboro); desligando a chamada, o oboro chega a 11,2 ms e o teste reprova. Sem pré-carga, o que medi antes: 9,3 ms (daichi), 9,5 ms (oboro) e 11,1 ms (karasu).
 
@@ -158,7 +158,7 @@ o pico mostrado chega a 10% do `AJ_RECUO_*` (60, 120 e 144 Hz, entre si em 7%), 
 
 ## 5. Como as três decisões ficaram
 
-1. **Pré-carga de efeitos:** só o teste entrou (a pré-carga já estava no jogo, vinda da outra sessão).
+1. **Pré-carga de efeitos:** só o teste entrou (a pré-carga já estava no jogo, vinda do commit `01eeb13`).
 2. **Ritmo:** nenhuma das duas mudanças (B e A) foi aplicada: a B endurece o casual em até 1,3 ponto e mexe em duas regras aprovadas, e a A mexe na regra do `waitScale`.
 3. **Pose de parry:** resolvida na seção 3 (não há o que mudar no rig).
 

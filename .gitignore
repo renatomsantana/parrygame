@@ -1,26 +1,8 @@
-# Unity: tudo que o editor gera na máquina.
-unity_project/[Ll]ibrary/
-unity_project/[Tt]emp/
-unity_project/[Oo]bj/
-unity_project/[Bb]uild/
-unity_project/[Bb]uilds/
-unity_project/[Ll]ogs/
-unity_project/[Uu]ser[Ss]ettings/
-unity_project/*.csproj
-unity_project/*.sln
-unity_project/.vs/
-unity_project/.idea/
-unity_project/Tools/CoreTestHarness/bin/
-unity_project/apara_*.png
-
 # Sons e imagens de referência de terceiros ficam só na máquina de quem estuda.
 art/audio/*.mp3
 art/audio/*.ogg
 art/audio/*.wav
 
-# Restos do Godot, se alguém abrir o script.md antigo aqui.
-.godot/
-*.import
 capturas/
 .DS_Store
 # modelo original em 4K; o jogo usa a cópia reduzida em c_game/assets/katana

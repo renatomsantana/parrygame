@@ -1,7 +1,6 @@
 # Personagens: o elenco saído do Samurai #3
 
-> Substitui a seção 4 (troca de paleta) do brief visual v2. Pode colar este
-> arquivo inteiro no Claude Code.
+> Substitui a seção 4 (troca de paleta) do brief visual v2.
 
 Os 15 personagens (o protagonista Kojiro, os 12 aprendizes na ordem da trilha,
 Oboro e Hanzo) saem

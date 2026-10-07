@@ -3,7 +3,7 @@ APARAR - créditos
 
 (RASCUNHO: a equipe revisa os nomes e as licenças marcadas "a equipe confirma" antes de publicar o jogo.)
 
-Jogo, regras, código e conjunto de testes: Renato Santana, com programação assistida por Claude (Anthropic).
+Jogo, regras, código e conjunto de testes: Renato Santana.
 
 Programas e dados de terceiros que vão junto com o jogo:
 

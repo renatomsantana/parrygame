@@ -6,8 +6,5 @@ instalar as animações PNG do Mattz Artz, compilar, executar os testes e montar
 O estado do jogo e a validação mais recente estão em [docs/JOGO.md](docs/JOGO.md); a curva de dificuldade, em [docs/CURVA.md](docs/CURVA.md);
 o que ainda depende da equipe (áudio, cenários, licenças) em [docs/ENTREGAS_EQUIPE.md](docs/ENTREGAS_EQUIPE.md).
 
-`unity_project/`, `rpgmaker_mz/` e `script.md` registram protótipos antigos.
-As antigas imagens de personagens foram removidas desses materiais; o
-protótipo Unity não tem mais as texturas necessárias para jogar. O cenário
-antigo foi preservado. O jogo ativo usa apenas as animações de personagens
-instaladas em `c_game/assets/sprites/`.
+Os protótipos antigos (Unity, RPG Maker MZ e o roteiro em Godot) foram removidos da árvore; ficam no histórico, na tag `legado-unity-rpgmaker-godot`.
+O jogo usa apenas as animações de personagens instaladas em `c_game/assets/sprites/`.

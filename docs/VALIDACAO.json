@@ -3,7 +3,7 @@
   "date": "2026-10-05",
   "active_engine": "C11 / raylib 6.0",
   "c_game": {
-    "branch": "codex/fluidez-golpes",
+    "branch": "fluidez-golpes",
     "source_commit": "ff6476979fca40e6d8411a98daabcca4ec770fd6",
     "status": "verificacoes automatizadas passaram; validacao humana e de hardware pendente",
     "scope": "Nucleo, entrada, save, apresentacao, assets, audio, cenarios, narrativa, compilacao e desempenho. Nao garante ausencia de todo bug.",
@@ -121,30 +121,6 @@
   "historical_validation_2026_09_11": {
     "version": "0.5.0",
     "date": "2026-09-11",
-    "unity": {
-      "engine": "Unity 6000.0 (não instalado nesta máquina)",
-      "core_compilation": {
-        "compiler": ".NET Framework 4.x csc.exe, /langversion:5",
-        "script": "unity_project/Tools/RunCoreTests.ps1",
-        "status": "passed"
-      },
-      "core_tests": {
-        "source": "Assets/Scripts/Core/CoreSelfTest.cs",
-        "checks": 474,
-        "failures": 0
-      },
-      "scene_layer": "arquivado: texturas antigas de personagens removidas"
-    },
-    "rpgmaker_mz": {
-      "engine": "RPG Maker MZ (não instalado nesta máquina)",
-      "core_tests": {
-        "source": "rpgmaker_mz/tests/core_test.js",
-        "runtime": "Node 24",
-        "checks": 275,
-        "failures": 0
-      },
-      "scene_layer": "not_run"
-    },
     "human_audio_and_feel_review": "pending",
     "bosses": 7,
     "feint_styles": [
@@ -841,7 +817,7 @@
   "updates": [
     {
       "date": "2026-10-06",
-      "branch": "codex/fluidez-golpes",
+      "branch": "fluidez-golpes",
       "base_commit": "1eaa38c",
       "scope": "Coreografia, aviso/corte/impacto sonoros, máscaras semânticas de arma, desarme dos 13 chefes e limpeza da lava. Preserva dano, pesos, intervalos e julgamento atuais; Genbu usa direções altas nos padrões existentes.",
       "mac": {

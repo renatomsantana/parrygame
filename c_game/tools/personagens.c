@@ -916,7 +916,7 @@ static const Row CAB_YORU_COSTAS[] = {
    Garfiel: curto e rente dos lados (a têmpora e a orelha aparecem), um tufinho espetado no
    alto, como um tufo de grama. Aqui H é o loiro de base, h a sombra e i a luz. */
 static const Row CAB6_GARFIEL_FRENTE[] = {
-    /* rodada 7 (ref. Garfiel, Re:Zero): loiro curto e bem espetado, pontas irregulares para cima e
+    /* ref. Garfiel, Re:Zero: loiro curto e bem espetado, pontas irregulares para cima e
        para trás, mechas caindo na testa, laterais rentes (a têmpora e a orelha aparecem) */
     /* etapa 2: curto, em tufinhos repetidos como grama, todos pequenos e do mesmo tamanho (sem coroa) */
     {-9, -7, "i.i.i.i.i"}, {-8, -8, "hHhHhHhHhi"}, {-7, -8, "hHHHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
@@ -2208,7 +2208,7 @@ static void accessories(Canvas *cv, const Char *ch, int idx) {
                         char k = SHELL[ry][rx];
                         if (k == '.') continue;
                         Rgb c = k == 'a' ? ch->destaque[1] : k == 'A' ? ch->destaque[0] : ch->destaque2;
-                        /* rodada 7: o casco verde escuro */
+                        /* o casco verde escuro */
                         c = k == 'a' ? (Rgb){0x16, 0x2e, 0x16} : k == 'A' ? (Rgb){0x2a, 0x52, 0x26} : (Rgb){0x44, 0x70, 0x36};
                         cv_behind(cv, s->ox - 6 + rx, s->oy + 10 + ry, c);
                     }
@@ -5076,7 +5076,7 @@ static const char *const OBORO_CABECA[] = {
     "......DBBBBBD.....",
 };
 #define OBORO_LINHAS ((int)(sizeof OBORO_CABECA / sizeof OBORO_CABECA[0]))
-/* Prova (OBORO_PROVA, rodada 7): o rosto sem máscara da cena final, na proporção do
+/* Prova (OBORO_PROVA): o rosto sem máscara da cena final, na proporção do
    Kojiro (do alto da cabeça ao queixo, 24% da altura). Cabelo militar, raspado rente: o
    crânio em cinza escuro com a luz no alto e a linha do cabelo reta na testa. O rosto do
    Hanzo moço: a sobrancelha em sombra por cima do olho, o nariz saindo 1 px, a orelha no
@@ -6944,7 +6944,7 @@ static void usage(void) {
 }
 
 /* A cor de cada aprendiz no rastro do golpe e na aura, que sai do corpo e fica só na arma
-   (rodada 7). Claro (miolo), meio, escuro (borda). O Oboro não entra: nos ecos ele herda o
+   Claro (miolo), meio, escuro (borda). O Oboro não entra: nos ecos ele herda o
    rastro do aprendiz imitado. O Karasu é preto, com o fio cinza na borda de fora (trail_rim). */
 static const struct { const char *id; Rgb c[3]; } COR7[] = {
     {"daichi", {HEX(0xfaf0d8), HEX(0xdcc49a), HEX(0xa88c64)}},

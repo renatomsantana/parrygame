@@ -180,7 +180,7 @@ Os outros dez mestres não mudaram (nem uma lâmina, nem uma postura).
 
 Duas coisas mexeram na curva depois da tabela acima, e as duas passam nas mesmas faixas (`make curva-alvo`, 0 itens fora da faixa ou da ordem, a 10 mil e a 100 mil lutas, a 60 e a 144 Hz):
 
-1. **A reformulação da Shizuku, da outra sessão** (9 golpes para 4): o `eco do gelo` do Oboro, que copia a dupla do florete, passou de 4 golpes para 2, e o casual do Oboro foi de 41,2 para 37,8 (faixa 37 a 43). Das 65 células da tabela, só essa mudou.
+1. **A reformulação da Shizuku** (9 golpes para 4): o `eco do gelo` do Oboro, que copia a dupla do florete, passou de 4 golpes para 2, e o casual do Oboro foi de 41,2 para 37,8 (faixa 37 a 43). Das 65 células da tabela, só essa mudou.
 2. **Os 19 golpes novos** em oito mestres (`docs/GOLPES_NOVOS.md`), com o peso de cada um calibrado para a curva ficar onde estava.
 
 | # | Mestre | Primeira vez | Casual decora | Reação 250 | Perfeito | Spam |
