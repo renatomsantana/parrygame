@@ -6,5 +6,5 @@ instalar as animações PNG do Mattz Artz, compilar, executar os testes e montar
 O estado do jogo e a validação mais recente estão em [docs/JOGO.md](docs/JOGO.md); a curva de dificuldade, em [docs/CURVA.md](docs/CURVA.md);
 o que ainda depende da equipe (áudio, cenários, licenças) em [docs/ENTREGAS_EQUIPE.md](docs/ENTREGAS_EQUIPE.md).
 
-Os protótipos antigos (Unity, RPG Maker MZ e o roteiro em Godot) foram para o repositório [parrygame-legado](https://github.com/renatomsantana/parrygame-legado) (privado); aqui, o último commit que ainda os tinha é a tag `legado-unity-rpgmaker-godot`.
+Os protótipos antigos (Unity, RPG Maker MZ e o roteiro em Godot) foram para o repositório [parrygame-legado](https://github.com/renatomsantana/parrygame-legado) (privado); aqui, o último commit que ainda os tinha é o commit `d716be8`.
 O jogo usa apenas as animações de personagens instaladas em `c_game/assets/sprites/`.
