@@ -196,7 +196,7 @@ O núcleo não depende da raylib. O desenho usa 640 × 360 pixels ampliados.
 
 ## Validação
 
-Os protótipos em Unity e RPG Maker (11/09/2026: 474 e 275 verificações do núcleo) foram removidos da árvore; ficam no histórico, na tag `legado-unity-rpgmaker-godot`. A validação atual é a do jogo em C (`docs/JOGO.md`). Na conferência jogando:
+Os protótipos em Unity e RPG Maker (11/09/2026: 474 e 275 verificações do núcleo) foram para o repositório `parrygame-legado`; aqui, o último commit que ainda os tinha é a tag `legado-unity-rpgmaker-godot`. A validação atual é a do jogo em C (`docs/JOGO.md`). Na conferência jogando:
 
 - Pés dos dois na linha do chão; a Sombra escura e espelhada.
 - Ler as falas de Gorou e Ren; o clique final abre o duelo.
