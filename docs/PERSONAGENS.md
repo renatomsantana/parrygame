@@ -603,7 +603,7 @@ preservando os manifestos com tempos, âncoras e pontos das armas.
 
 ## Arte e repositório
 
-As artes usadas pelo jogo estão versionadas por autorização do responsável pelo projeto: os 17 conjuntos de personagens, os `sprite.txt` de execução, as camadas `_weapon_*`, `_steel_*` e `_clean_*`, os VFX `64`, `70`, `197` e `slash`, e os dois spritesheets de botões carregados pelo jogo. Um clone pode compilar e jogar com esses arquivos.
+As artes usadas pelo jogo ficam no repositório privado `parrygame-assets` (`make assets-baixar` as traz para `c_game/assets/`): os 17 conjuntos de personagens, os `sprite.txt` de execução, as camadas `_weapon_*`, `_steel_*` e `_clean_*`, os VFX `64`, `70`, `197` e `slash`, e os dois spritesheets de botões carregados pelo jogo. Com elas no lugar, um clone compila e joga.
 
 Os PNGs-fonte de `_original/` e `_packs/`, as pranchas de estudo `_folhas/`, as pastas auxiliares `*_gerado` e os efeitos não integrados continuam locais. As regras de `c_game/.gitignore` liberam os diretórios e arquivos de execução e preservam essa separação. Para regenerar os PNGs, a máquina ainda precisa dos packs-fonte.
 

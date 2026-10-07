@@ -1,5 +1,6 @@
 # Para ativar: copie este arquivo para .github/workflows/ci.yml (o token da sessão que o escreveu não tinha o escopo "workflow" do GitHub,
 # que é exigido para criar arquivos nessa pasta; quem tem permissão no repositório faz o commit).
+# A arte mora no repositório privado parrygame-assets: crie o segredo ASSETS_TOKEN (um token com leitura nesse repositório) em Settings > Secrets.
 #
 # Validação automática a cada commit: os mesmos ambientes reproduzíveis que a equipe usa à mão
 # (c_game/tests/Dockerfile.linux e Dockerfile.windows; ver c_game/LEIA-ME.md).
@@ -27,6 +28,16 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+      - name: Arte (repositório privado parrygame-assets; precisa do segredo ASSETS_TOKEN, com leitura nesse repositório)
+        uses: actions/checkout@v4
+        with:
+          repository: renatomsantana/parrygame-assets
+          token: ${{ secrets.ASSETS_TOKEN }}
+          path: _arte
+      - name: Pôr a arte em c_game/assets
+        run: |
+          cp -R _arte/sprites _arte/katana c_game/assets/
+          rm -rf _arte
       - name: Imagem de teste do Linux (raylib 6.0 compilada)
         run: docker build -t apara-linux -f c_game/tests/Dockerfile.linux .
       - name: make teste-linux
@@ -37,6 +48,16 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+      - name: Arte (repositório privado parrygame-assets; precisa do segredo ASSETS_TOKEN, com leitura nesse repositório)
+        uses: actions/checkout@v4
+        with:
+          repository: renatomsantana/parrygame-assets
+          token: ${{ secrets.ASSETS_TOKEN }}
+          path: _arte
+      - name: Pôr a arte em c_game/assets
+        run: |
+          cp -R _arte/sprites _arte/katana c_game/assets/
+          rm -rf _arte
       - name: Imagem de teste do Windows (MinGW, Wine e raylib 6.0 estática)
         run: docker build --platform linux/amd64 -t apara-windows -f c_game/tests/Dockerfile.windows .
       - name: Compilar para Windows, testar no Wine e montar o pacote

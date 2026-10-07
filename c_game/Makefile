@@ -61,6 +61,10 @@ sprites: personagens
 packs:
 	tools/instalar_packs.sh "$(ZIP)"
 
+# A arte vem do repositório privado parrygame-assets (precisa de acesso a ele); APARA_ASSETS=pasta usa uma cópia local.
+assets-baixar:
+	sh tools/baixar_assets.sh
+
 assets-prontos:
 	sh tools/verificar_assets.sh
 

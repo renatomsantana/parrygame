@@ -7,6 +7,7 @@ o moveset e o visual estão em `../docs/JOGO.md`; a história, em `../aparar_lor
 
 ```sh
 brew install raylib                     # uma vez (macOS)
+make assets-baixar                     # traz a arte do repositório privado parrygame-assets (o público não a leva)
 make assets-prontos                    # confere os 17 conjuntos antes de abrir
 make run                                # compila e abre o jogo
 ```

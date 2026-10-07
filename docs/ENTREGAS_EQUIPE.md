@@ -62,7 +62,7 @@ O gerador produz 28 camadas `_clean_*.png` e seus pontos de arma `_clean_*.txt`,
 
 O runtime também precisa das máscaras `_weapon_<animação>.png` e `_steel_<animação>.png` em cada pasta de adversário, além do `DESARMADO.png` e do `sprite.txt` atualizados. A primeira camada recorta a arma real para o desarme; a segunda mantém os efeitos no aço. O gerador produz essas máscaras com as mesmas células dos ataques. `make assets-prontos` exige as camadas dos ataques para impedir uma entrega incompleta.
 
-O Git inclui os 17 conjuntos de personagens em uso, seus manifestos e máscaras, os quatro VFX ativos e os dois spritesheets de botões. Os packs-fonte, estudos, saídas `*_gerado` e entregas ainda não integradas continuam locais. Um clone já tem a arte necessária para compilar e jogar; o ZIP continua disponível para distribuir o runtime sem Git:
+Os 17 conjuntos de personagens em uso, seus manifestos e máscaras, os quatro VFX ativos, os dois spritesheets de botões e o modelo da katana **não estão neste repositório (público)**: ficam no repositório privado `parrygame-assets`. Depois de clonar, `make assets-baixar` (em `c_game/`) copia tudo para `assets/` (precisa de acesso ao privado). Os packs-fonte, estudos, saídas `*_gerado` e entregas ainda não integradas continuam locais. O ZIP continua disponível para distribuir o runtime sem Git:
 
 ```sh
 cd c_game

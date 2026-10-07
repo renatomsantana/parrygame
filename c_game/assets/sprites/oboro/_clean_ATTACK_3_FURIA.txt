@@ -1,7 +1,0 @@
-arma 0 -13 -40
-arma 1 -14 -39
-arma 2 -14 -39
-arma 3 20 -5
-arma 4 23 -3
-arma 5 34 0
-arma 6 33 -1
