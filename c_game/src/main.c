@@ -718,6 +718,15 @@ static bool garante_pasta(char *erro, size_t n) {
     return !pastaDados[0] || gravar_pasta(pastaDados, erro, n);
 }
 
+/* O número de uma variável de ambiente; `padrao` se faltar, estiver vazia ou não for número. */
+static double env_num(const char *nome, double padrao) {
+    const char *v = getenv(nome);
+    if (!v || !v[0]) return padrao;
+    char *fim;
+    double x = strtod(v, &fim);
+    return fim == v ? padrao : x;
+}
+
 /* Testes do jogo real (APARA_AUTO): uma linha por marco, para o script saber onde o jogo está. */
 static void marco_de_teste(const char *nome) {
     if (G.autoJogo) fprintf(stderr, "TESTE_MARCO %s t=%.3f\n", nome, G.time);
@@ -1250,7 +1259,7 @@ static void start_duel(void) {
     /* Outra tentativa no mesmo segundo também recebe um roteiro novo. A
      * semente explícita continua reproduzível para testes e gravações. */
     static uint32_t duelSerial;
-    uint32_t seed = getenv("APARA_SEMENTE") ? (uint32_t)atoi(getenv("APARA_SEMENTE")) :
+    uint32_t seed = getenv("APARA_SEMENTE") ? (uint32_t)(int)env_num("APARA_SEMENTE", 0) :
         (uint32_t)time(NULL) ^ (uint32_t)(G.camp.index * 7919) ^
         (++duelSerial * UINT32_C(2654435761)) ^ (uint32_t)(uint64_t)(entrada_relogio() * 1000000);
     duel_init(&G.duel, &G.settings, G.m, seed);
@@ -1879,9 +1888,11 @@ static void sprite_press(void) {
         /* corte reto contra o alto e a estocada (termina de volta na guarda); para baixo contra o baixo */
         a = fa(f, l == LOOK_LOW ? "ATTACK_3" : "ATTACK_1");
         if (!a) a = fa(f, "ATTACK_1");
-        int h = anim_hold(a), c = anim_contact(a);
-        f_add(f, a, h, c, 0.06f);
-        if (c + 1 < a->frames) f_add(f, a, c + 1, a->frames - 1, (a->frames - 1 - c) * 0.07f);
+        if (a) {
+            int h = anim_hold(a), c = anim_contact(a);
+            f_add(f, a, h, c, 0.06f);
+            if (c + 1 < a->frames) f_add(f, a, c + 1, a->frames - 1, (a->frames - 1 - c) * 0.07f);
+        }
     }
     f->strike = a;
 }
@@ -4264,7 +4275,8 @@ static void start_calibra(bool pausado) {
     set_state(ST_CALIBRA);
     /* tests/teste_save.sh: sem batidas de verdade, vai direto à confirmação com estes atrasos ("vídeo,áudio" em ms) */
     int v, a;
-    if (G.autoJogo && getenv("APARA_CALIBRA_PRONTA") && sscanf(getenv("APARA_CALIBRA_PRONTA"), "%d,%d", &v, &a) == 2) {
+    const char *pronta = getenv("APARA_CALIBRA_PRONTA");
+    if (G.autoJogo && pronta && sscanf(pronta, "%d,%d", &v, &a) == 2) {
         G.cal.video = v / 1000.0f;
         G.cal.audio = a / 1000.0f;
         G.cal.modo = 2;
@@ -4627,8 +4639,8 @@ int main(int argc, char **argv) {
     G.demoChoice = 1;
     G.debug = getenv("APARA_DEBUG") && strcmp(getenv("APARA_DEBUG"), "0") != 0;
     G.autoJogo = getenv("APARA_AUTO") != NULL;
-    G.rastro = getenv("APARA_RASTRO") ? atoi(getenv("APARA_RASTRO")) != 0 : AJ_RASTRO_FANTASMA != 0;
-    G.packSlashes = getenv("APARA_SLASH") ? atoi(getenv("APARA_SLASH")) != 0 : AJ_PACK_SLASH != 0;
+    G.rastro = (int)env_num("APARA_RASTRO", AJ_RASTRO_FANTASMA) != 0;
+    G.packSlashes = (int)env_num("APARA_SLASH", AJ_PACK_SLASH) != 0;
     G.logImpactos = getenv("APARA_LOG_IMPACTOS") != NULL;
     G.logCarimbos = getenv("APARA_LOG_CARIMBOS") != NULL;
     /* Ganchos dos vídeos e dos testes: o robô do demo, o clique fora do duelo e o passo do --rec */
@@ -4641,12 +4653,12 @@ int main(int argc, char **argv) {
         else if (!strcmp(r, "spam")) G.roboEscolhido = ROBO_APERTA_SEM_PARAR;
         else if (!strcmp(r, "nunca")) G.roboEscolhido = ROBO_SEM_DEFESA;
     }
-    G.cliquePeriodo = getenv("APARA_CLIQUE_PERIODO") && atof(getenv("APARA_CLIQUE_PERIODO")) > 0 ? (float)atof(getenv("APARA_CLIQUE_PERIODO")) : AJ_AUTO_CLIQUE_PERIODO;
-    G.recDt = getenv("APARA_REC_FPS") && atof(getenv("APARA_REC_FPS")) >= 1 ? 1.0 / atof(getenv("APARA_REC_FPS")) : 1.0 / 30;
+    { double p = env_num("APARA_CLIQUE_PERIODO", 0); G.cliquePeriodo = p > 0 ? (float)p : AJ_AUTO_CLIQUE_PERIODO; }
+    { double fps = env_num("APARA_REC_FPS", 0); G.recDt = fps >= 1 ? 1.0 / fps : 1.0 / 30; }
     parse_args(argc, argv, &startMaster, &direct, &startState);
     entrada_preparar();
-    if (getenv("APARA_PERF") && atof(getenv("APARA_PERF")) > 0) {
-        G.perfSegundos = atof(getenv("APARA_PERF"));
+    if (env_num("APARA_PERF", 0) > 0) {
+        G.perfSegundos = env_num("APARA_PERF", 0);
         int capacidade = (int)fmin(1e6, fmax(20000, G.perfSegundos * 1000));
         G.perf = perf_iniciar(&G.perfDados, capacidade);
         G.perfEstado = malloc((size_t)capacidade);
@@ -4666,7 +4678,7 @@ int main(int argc, char **argv) {
     SetExitKey(KEY_NULL);
     /* O sleep do limitador da raylib pode passar 1–2 ms do alvo no macOS.
      * Esperar até o prazo absoluto abaixo, com uma margem curta de precisão. */
-    int targetFPS = getenv("APARA_FPS") ? atoi(getenv("APARA_FPS")) : AJ_FPS_ALVO;
+    int targetFPS = (int)env_num("APARA_FPS", AJ_FPS_ALVO);
     SetTargetFPS(0);
     /* O instante de hardware do clique só vale com um humano jogando: o demo, o jogo automático e as capturas
      * apertam por código, e os testes (tests/teste_*.sh) dependem de os cliques deles caírem no meio do quadro. */
@@ -4675,7 +4687,7 @@ int main(int argc, char **argv) {
     SetWindowMinSize(LOW_W, LOW_H);
     prepara_dados();                       /* antes de mudar de pasta: um APARA_DADOS relativo vale a partir de onde o jogo foi aberto */
     ChangeDirectory(GetApplicationDirectory());
-    srand(getenv("APARA_SEMENTE") ? (unsigned)atoi(getenv("APARA_SEMENTE")) : (unsigned)time(NULL));
+    srand(getenv("APARA_SEMENTE") ? (unsigned)(int)env_num("APARA_SEMENTE", 0) : (unsigned)time(NULL));
 
     G.scene = LoadRenderTexture(RW, RH);
     G.actors = LoadRenderTexture(LOW_W, LOW_H);

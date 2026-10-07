@@ -219,8 +219,10 @@ static void add_room(float *data, int n, float wet) {
     static const int comb[4] = {1116, 1277, 1422, 1557};
     static const int allp[2] = {556, 341};
     float *out = calloc((size_t)n, sizeof(float));
+    if (!out) return;                                   /* sem memória: o efeito sai sem a sala */
     for (int c = 0; c < 4; c++) {
         float *buf = calloc((size_t)comb[c], sizeof(float));
+        if (!buf) continue;
         float damp = 0;
         for (int i = 0, k = 0; i < n; i++, k = (k + 1) % comb[c]) {
             float y = buf[k];
@@ -232,6 +234,7 @@ static void add_room(float *data, int n, float wet) {
     }
     for (int a = 0; a < 2; a++) {
         float *buf = calloc((size_t)allp[a], sizeof(float));
+        if (!buf) continue;
         for (int i = 0, k = 0; i < n; i++, k = (k + 1) % allp[a]) {
             float b = buf[k];
             buf[k] = out[i] + b * 0.5f;
@@ -246,6 +249,7 @@ static void add_room(float *data, int n, float wet) {
 static Sound make_sound_room(float dur, SynthFn fn, float gain, float room) {
     int n = (int)(dur * RATE);
     float *data = malloc(sizeof(float) * (size_t)n);
+    if (!data) return (Sound){0};                       /* sem memória: o efeito fica mudo (PlaySound ignora o som vazio) */
     float state[8] = {0};
     float peak = 0.0001f;
     for (int i = 0; i < n; i++) data[i] = fn((float)i / RATE, dur, state);
