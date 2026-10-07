@@ -1,4 +1,4 @@
-# APARA em C. Requer raylib (brew install raylib).
+# APARA em C. Requer raylib 6.0 (macOS: brew install raylib; Linux: compilar da fonte, ver LEIA-ME.md).
 CC ?= cc
 CFLAGS ?= -std=c11 -O2 -Wall -Wextra -Wno-missing-field-initializers
 RAYLIB_CFLAGS := $(shell pkg-config --cflags raylib 2>/dev/null)
@@ -15,6 +15,10 @@ ifeq ($(RAYLIB_LIBS),)
 endif
 ifeq ($(shell uname),Darwin)
   RAYLIB_LIBS += -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL
+endif
+# Pilha protegida no jogo (no Windows/MinGW ela pede a libssp, então fica de fora).
+ifneq ($(OS),Windows_NT)
+  HARDEN := -fstack-protector-strong
 endif
 ifeq ($(OS),Windows_NT)
   # MSYS2/MinGW (ou make OS=Windows_NT CC=x86_64-w64-mingw32-gcc): o raylib estático pede o OpenGL, o GDI e o multimídia
@@ -69,7 +73,8 @@ pacote:
 	sh tools/empacotar_jogo.sh "$(PLATAFORMA)" "$(EXE)" "$(OUT)"
 
 apara: $(CORE) $(GAME) $(ENTRADA_PLAT) src/*.h
-	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(ENTRADA_CFLAGS) $(CORE) $(GAME) $(ENTRADA_PLAT) -o $@ $(RAYLIB_LIBS) $(ENTRADA_LIBS) -lm
+	@$(CC) $(CFLAGS) $(HARDEN) $(RAYLIB_CFLAGS) $(ENTRADA_CFLAGS) $(CORE) $(GAME) $(ENTRADA_PLAT) -o $@ $(RAYLIB_LIBS) $(ENTRADA_LIBS) -lm \
+	  || { echo; echo "apara: não compilou. Confira se o raylib 6.0 (e, no Linux, libx11-dev, libxi-dev, libgl1-mesa-dev) está instalado; veja o LEIA-ME.md."; exit 1; }
 
 core_test: $(CORE) tests/core_test.c src/core.h src/ajuste.h src/robo.h
 	$(CC) $(CFLAGS) $(CORE) tests/core_test.c -o $@ -lm

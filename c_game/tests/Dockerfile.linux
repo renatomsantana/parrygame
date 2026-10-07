@@ -3,7 +3,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     build-essential clang git cmake pkg-config libasound2-dev libx11-dev libxi-dev \
     libxrandr-dev libxinerama-dev libxcursor-dev libgl1-mesa-dev libxtst-dev xvfb xauth zip unzip \
     && rm -rf /var/lib/apt/lists/*
+# raylib 6.0 preso pelo commit: se a tag mudar de lugar, a construção para.
+ARG RAYLIB_COMMIT=dbc56a87da87d973a9c5baa4e7438a9d20121d28
 RUN git clone --depth 1 --branch 6.0 https://github.com/raysan5/raylib.git /tmp/raylib \
+    && test "$(git -C /tmp/raylib rev-parse HEAD)" = "$RAYLIB_COMMIT" \
     && cmake -S /tmp/raylib -B /tmp/raylib-build -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Release \
     && cmake --build /tmp/raylib-build -j4 && cmake --install /tmp/raylib-build && ldconfig \
     && rm -rf /tmp/raylib /tmp/raylib-build

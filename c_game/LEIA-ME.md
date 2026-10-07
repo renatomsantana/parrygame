@@ -6,10 +6,20 @@ o moveset e o visual estão em `../docs/JOGO.md`; a história, em `../aparar_lor
 ## Rodar
 
 ```sh
-brew install raylib                     # uma vez (Linux: o pacote raylib do sistema)
+brew install raylib                     # uma vez (macOS)
 make assets-prontos                    # confere os 17 conjuntos antes de abrir
 make run                                # compila e abre o jogo
 ```
+
+No Linux é preciso a raylib **6.0**, e o pacote da distribuição costuma ser mais antigo (o do Ubuntu 24.04 é). Compile da fonte:
+
+```sh
+sudo apt install build-essential cmake git pkg-config libasound2-dev libx11-dev libxi-dev libxrandr-dev libxinerama-dev libxcursor-dev libgl1-mesa-dev libxtst-dev
+git clone --depth 1 --branch 6.0 https://github.com/raysan5/raylib.git && cd raylib
+cmake -B build -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && sudo cmake --install build && sudo ldconfig
+```
+
+(`tests/Dockerfile.linux` faz o mesmo, com o commit da 6.0 conferido.)
 
 As animações de execução, máscaras das armas, VFX ativos e botões já vêm no Git.
 Os personagens são desenhados apenas pelos PNGs de animação. Para regenerar a

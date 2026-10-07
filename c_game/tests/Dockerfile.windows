@@ -2,7 +2,10 @@ FROM ubuntu:24.04
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential git cmake pkg-config gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 \
     wine64 make xvfb xauth libx11-dev libxtst-dev zip unzip && rm -rf /var/lib/apt/lists/*
+# raylib 6.0 preso pelo commit: se a tag mudar de lugar, a construção para.
+ARG RAYLIB_COMMIT=dbc56a87da87d973a9c5baa4e7438a9d20121d28
 RUN git clone --depth 1 --branch 6.0 https://github.com/raysan5/raylib.git /opt/raylib \
+    && test "$(git -C /opt/raylib rev-parse HEAD)" = "$RAYLIB_COMMIT" \
     && cmake -S /opt/raylib -B /opt/raylib-win -DCMAKE_SYSTEM_NAME=Windows \
     -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
     -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Release \

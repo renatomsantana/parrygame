@@ -93,3 +93,6 @@ ritmo_relatorio
 !assets/sprites/_fx/slash.png
 !assets/sprites/_ui/buttons-spritesheet.png
 !assets/sprites/_ui/buttons-pressed-spritesheet.png
+dist/
+*.zip
+*.tar.gz
