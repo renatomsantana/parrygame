@@ -5,7 +5,7 @@
 cd "$(dirname "$0")/.." || exit 1
 [ -x ./apara ] || { echo "teste_desempenho: falta ./apara (make)"; exit 2; }
 command -v xvfb-run >/dev/null 2>&1 || { echo "teste_desempenho: pulado (sem xvfb-run)"; exit 0; }
-TMP=$(mktemp -d)
+TMP=$(mktemp -d) || exit 1
 trap 'rm -rf "$TMP"' EXIT
 FALHAS=0
 confere() { # descrição, condição (0 = ok)

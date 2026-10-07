@@ -17,7 +17,7 @@ cd "$(dirname "$0")/.." || exit 1
 if [ "$1" != "--dentro" ]; then
     [ -x ./apara ] || { echo "teste_vitoria: falta ./apara (make)"; exit 2; }
     command -v xvfb-run >/dev/null 2>&1 || { echo "teste_vitoria: pulado (sem xvfb-run)"; exit 0; }
-    TMP=$(mktemp -d)
+    TMP=$(mktemp -d) || exit 1
     trap 'rm -rf "$TMP"' EXIT
     cc -std=c11 -O1 -o "$TMP/xtecla" tests/xtecla.c -lX11 2>/dev/null || { echo "teste_vitoria: pulado (sem libX11 para compilar tests/xtecla.c)"; exit 0; }
     TMP="$TMP" xvfb-run -a -s '-screen 0 1280x720x24' sh "$0" --dentro

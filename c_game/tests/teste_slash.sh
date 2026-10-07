@@ -2,9 +2,9 @@
 # O pack comprado substitui o rastro antigo sem mudar contatos/quadros.
 # Garfiel usa garras; Arashi usa o slash original em cinza de nuvem com raios azuis.
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 command -v xvfb-run >/dev/null 2>&1 || { echo 'teste_slash: pulado (sem xvfb-run)'; exit 0; }
-tmp=$(mktemp -d)
+tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 for master in 7 8 6 13; do
     seconds=12

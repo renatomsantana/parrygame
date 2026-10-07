@@ -26,7 +26,7 @@ FFMPEG=${FFMPEG:-$(command -v ffmpeg)}
 FPS=${FPS:-60}; CRF=${CRF:-24}; LENTO=${LENTO:-1}
 REC_FPS=$((FPS * LENTO))
 FONTE=${FONTE:-/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf}   # a pasta dele vai para o libass (a família é "DejaVu Sans")
-TMP=$(mktemp -d)
+TMP=$(mktemp -d) || exit 1
 trap 'rm -rf "$TMP"' EXIT
 mkfifo "$TMP/cru"
 # a legenda vai numa faixa acima do jogo (1280 x 80), sem cobrir nada, escrita como legenda ASS (o ffmpeg de alguns

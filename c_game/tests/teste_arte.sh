@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
-cd "$(dirname "$0")/.."
-tmp=$(mktemp -d)
+cd "$(dirname "$0")/.." || exit 1
+tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/daichi" "$tmp/raizo"
 if [ "$(uname)" = Linux ]; then

@@ -12,7 +12,7 @@
 #      continua exatamente como estava (o jogo não grava ao lado do executável). Windows: no Wine; Linux: sob o xvfb-run; macOS: só no
 #      próprio macOS. Sem o que precisa para abrir, avisa "SEM TESTE DE ABERTURA" e empacota mesmo assim (APARA_PACOTE_EXIGE_TESTE=1 aborta).
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 plataforma=${1:-}; exe=${2:-}; saida=${3:-}
 [ -n "$plataforma" ] && [ -n "$exe" ] && [ -n "$saida" ] || { echo 'uso: tools/empacotar_jogo.sh windows|linux|macos EXECUTAVEL PASTA_DE_SAIDA' >&2; exit 2; }
 case "$plataforma" in windows|linux|macos) ;; *) echo "plataforma desconhecida: $plataforma (windows, linux ou macos)" >&2; exit 2;; esac
@@ -58,7 +58,7 @@ case "$plataforma" in
 esac
 
 # 3. montar
-tmp=$(mktemp -d)
+tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 pasta="$tmp/$nome"
 mkdir -p "$pasta/LICENCAS"

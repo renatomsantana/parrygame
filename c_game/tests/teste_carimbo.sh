@@ -19,7 +19,7 @@ if [ "$1" != "--dentro" ]; then
     [ -x ./apara ] || { echo "teste_carimbo: falta ./apara (make)"; exit 2; }
     command -v xvfb-run >/dev/null 2>&1 || { echo "teste_carimbo: pulado (sem xvfb-run)"; exit 0; }
     grep -q XISelectEvents ./apara 2>/dev/null || { echo "teste_carimbo: pulado (o jogo foi compilado sem XInput2: esta plataforma não dá carimbo)"; exit 0; }
-    TMP=$(mktemp -d)
+    TMP=$(mktemp -d) || exit 1
     trap 'rm -rf "$TMP"' EXIT
     cc -std=c11 -O1 -o "$TMP/xtecla" tests/xtecla.c -lX11 2>/dev/null || { echo "teste_carimbo: pulado (sem libX11 para compilar tests/xtecla.c)"; exit 0; }
     cc -std=c11 -O1 -o "$TMP/xclique" tests/xclique.c -lX11 -lXtst 2>/dev/null ||

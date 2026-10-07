@@ -1,7 +1,7 @@
 #!/bin/sh
 # Conferência sem GPU: o clone precisa receber os PNGs de runtime e seus manifests.
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 falhas=0
 tiras=0
 for nome in kojiro hanzo hanzo_mascara daichi genbu raizo shizuku garfiel karasu hayate enjin suiren arashi yoru jinshi oboro oboro_mascara; do

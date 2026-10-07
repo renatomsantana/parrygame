@@ -1,9 +1,9 @@
 #!/bin/sh
 # As doze saídas, emboscadas e visitas, no jogo real. O avanço já foi salvo antes da cena.
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 command -v xvfb-run >/dev/null 2>&1 || { echo 'teste_historia: pulado (sem xvfb-run)'; exit 0; }
-tmp=$(mktemp -d)
+tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 for mestre in 1 2 3 4 5 6 7 8 9 10 11 12; do
     APARA_AUTO=1 APARA_FPS=0 timeout 120 xvfb-run -a ./apara --master "$mestre" --duel --state cleared --rec "$tmp/quadros" 99999 99999 >"$tmp/$mestre.log" 2>&1

@@ -12,8 +12,8 @@ if [ -z "$zip" ] || [ ! -f "$zip" ]; then
     echo "uso: $0 arquivo.zip" >&2
     exit 1
 fi
-cd "$(dirname "$0")/.."
-tmp=$(mktemp -d)
+cd "$(dirname "$0")/.." || exit 1
+tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 unzip -q -o -j "$zip" -x '__MACOSX/*' -d "$tmp"
 

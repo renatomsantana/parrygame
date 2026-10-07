@@ -18,7 +18,7 @@ if [ "$1" != "--dentro" ]; then
     WINE=$(command -v wine64 || command -v wine || ls /usr/lib/wine/wine64 2>/dev/null | head -1)
     [ -n "$WINE" ] || { echo "teste_carimbo_windows: pulado (sem o Wine)"; exit 0; }
     command -v xvfb-run >/dev/null 2>&1 || { echo "teste_carimbo_windows: pulado (sem xvfb-run)"; exit 0; }
-    TMP=$(mktemp -d)
+    TMP=$(mktemp -d) || exit 1
     trap 'rm -rf "$TMP"' EXIT
     cc -std=c11 -O1 -o "$TMP/xclique" tests/xclique.c -lX11 -lXtst 2>/dev/null ||
         cc -std=c11 -O1 -o "$TMP/xclique" tests/xclique.c -lX11 -l:libXtst.so.6 2>/dev/null ||

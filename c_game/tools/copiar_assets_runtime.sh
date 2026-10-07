@@ -3,7 +3,7 @@
 # _folhas), as fontes, o modelo da katana e, se existirem, o áudio e os cenários da equipe. Usado pelo pacote de assets e pelo pacote do jogo.
 #   tools/copiar_assets_runtime.sh DESTINO
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 destino=${1:-}
 [ -n "$destino" ] || { echo 'uso: tools/copiar_assets_runtime.sh DESTINO' >&2; exit 2; }
 mkdir -p "$destino/assets/sprites"
