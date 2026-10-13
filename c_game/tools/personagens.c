@@ -764,6 +764,8 @@ typedef struct {
     bool mascara_oni;                       /* Hanzo no fim: a máscara de oni no rosto */
     /* Samurai #5 (duas espadas): o pack vem com um pano cobrindo a boca e o nariz. */
     bool sem_pano;                          /* tira o pano: rosto de verdade, pele em três tons */
+    bool cabelo_pack;                       /* mantém o cabelo que o pack desenha (redondo, em volta do crânio) e só troca as cores */
+    bool cabelo_mecha;                      /* com cabelo_pack: o brilho das quatro linhas de cima sai na cor de destaque (a mecha roxa do Yoru) */
     bool kasa;                              /* chapéu de palha (o mesmo do Daichi) por cima */
     bool topete;                            /* cabelo espetado para cima e para a frente */
     bool mechas;                            /* mechas coloridas (destaque) no cabelo */
@@ -1076,7 +1078,7 @@ static Char CHARS[] = {
      .rastro = {HEX(0xfff6e0), HEX(0xffc860), HEX(0xc08030)}, .elemento = EL_TERRA, .largura = 1,
      .especial = SP_INVESTIDA, .efeito = FX_GARRA,
      /* corpo do samurai de duas espadas (uma garra em cada mão): roupa preta listrada de vermelho, cabelo loiro */
-     .sem_pano = true, .parado = "DEFEND", .pack = "samurai5",
+     .sem_pano = true, .parado = "DEFEND", .pack = "samurai5", .cabelo_pack = true,
      /* golpes de garra: sem o corte de espada do pack, três riscos de arranhão */
      .golpe = GP_GARRAS, S5_REMONTA,
      .cab_frente = CAB_GARFIEL_FRENTE, .cab_costas = CAB_GARFIEL_COSTAS, .cab_balanco = 1, .pack_par = true, .pack_sem_camisa = true,
@@ -1186,7 +1188,7 @@ static Char CHARS[] = {
         elétrico, cabelo prateado e olhos de raio */
      /* Slash branco original do Samurai #5, recolorido em azul; sem remontagem ou arco extra. */
      .rastro_original = true,
-     .sem_pano = true, .pack = "samurai5", .cab_frente = CAB_ARASHI_FRENTE, .cab_costas = CAB_ARASHI_COSTAS, .cab_balanco = 3, .pack_par = true, .pack_sem_camisa = true,
+     .sem_pano = true, .pack = "samurai5", .cabelo_pack = true, .cab_frente = CAB_ARASHI_FRENTE, .cab_costas = CAB_ARASHI_COSTAS, .cab_balanco = 3, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x3a4056)}, {HEX(0x134c4c), HEX(0x252a3a)}, {HEX(0x0c2e44), HEX(0x14161f)},
                {HEX(0x391f21), HEX(0x1a4cc0)}, {HEX(0x5d2c28), HEX(0x3ca8ff)},
@@ -1208,7 +1210,7 @@ static Char CHARS[] = {
      /* corpo do samurai de duas espadas (uma adaga em cada mão): ninja preto e roxo */
      /* golpes de adaga: sem o corte de espada do pack, cortes pequenos e secos */
      .golpe = GP_ADAGAS, S5_REMONTA,
-     .pack = "samurai5", .cab_frente = CAB_YORU_FRENTE, .cab_costas = CAB_YORU_COSTAS, .cab_balanco = 2, .pack_par = true, .pack_sem_camisa = true,
+     .pack = "samurai5", .cabelo_pack = true, .cabelo_mecha = true, .cab_frente = CAB_YORU_FRENTE, .cab_costas = CAB_YORU_COSTAS, .cab_balanco = 2, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x4a3e6a)}, {HEX(0x134c4c), HEX(0x2e2844)}, {HEX(0x0c2e44), HEX(0x1a1628)},
                {HEX(0x391f21), HEX(0x4a1c7a)}, {HEX(0x5d2c28), HEX(0x8a3ce0)},
@@ -2135,6 +2137,20 @@ static void s5_hair(Canvas *cv, const Char *ch, const char *anim) {
                 clus[ny][nx] = true;
                 st[sp][0] = (short)nx; st[sp][1] = (short)ny; sp++;
             }
+    }
+    if (ch->cabelo_pack) {   /* o cabelo do pack, na cor do personagem: escuro, base e luz pela ordem de brilho da paleta */
+        Rgb pal[3] = {ch->cabelo[0], ch->cabelo[1], ch->cabelo[2]};
+        for (int i = 0; i < 3; i++)
+            for (int j = i + 1; j < 3; j++)
+                if (pal[j].r + pal[j].g + pal[j].b < pal[i].r + pal[i].g + pal[i].b) { Rgb t = pal[i]; pal[i] = pal[j]; pal[j] = t; }
+        for (int y = 0; y < CH; y++)
+            for (int x = 0; x < CW; x++) {
+                if (!clus[y][x] || !cv->a[y][x].a || cv->tag[y][x] == T_WEAPON) continue;
+                Rgb col = orig_rgb(cv, x, y, 0x3d3d3d) ? (ch->cabelo_mecha && y <= y0 + 4 ? ch->destaque[0] : pal[2]) : orig_rgb(cv, x, y, 0x391f21) ? pal[0] : pal[1];
+                cv_put(cv, x, y, col);
+                cv->tag[y][x] = T_BODY;
+            }
+        return;
     }
     int ex, ey;
     bool open = s5_eye_open(cv, &ex, &ey, false), back = false, lying = false;
