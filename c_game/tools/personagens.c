@@ -1210,7 +1210,7 @@ static Char CHARS[] = {
      /* corpo do samurai de duas espadas (uma adaga em cada mão): ninja preto e roxo */
      /* golpes de adaga: sem o corte de espada do pack, cortes pequenos e secos */
      .golpe = GP_ADAGAS, S5_REMONTA,
-     .pack = "samurai5", .cabelo_pack = true, .cabelo_mecha = true, .cab_frente = CAB_YORU_FRENTE, .cab_costas = CAB_YORU_COSTAS, .cab_balanco = 2, .pack_par = true, .pack_sem_camisa = true,
+     .sem_pano = true, .pack = "samurai5", .cabelo_pack = true, .cabelo_mecha = true, .cab_frente = CAB_YORU_FRENTE, .cab_costas = CAB_YORU_COSTAS, .cab_balanco = 2, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x4a3e6a)}, {HEX(0x134c4c), HEX(0x2e2844)}, {HEX(0x0c2e44), HEX(0x1a1628)},
                {HEX(0x391f21), HEX(0x4a1c7a)}, {HEX(0x5d2c28), HEX(0x8a3ce0)},
@@ -2169,18 +2169,22 @@ static void s5_hair(Canvas *cv, const Char *ch, const char *anim) {
             int ex, ey;
             bool olho = s5_eye_open(cv, &ex, &ey, false);
             if (!olho) { ex = x1 - 4; ey = y0 + 6; }
-            /* com topete, o cabelo de baixo é curto: sai o volume de trás e a nuca comprida, e a lateral fica na sombra (rente) */
+            /* com topete não há bob: o cabelo de cima fica, e a lateral e a nuca são rentes (escuras, que se desmancham em pele
+               para baixo, com a orelha) e a cabeça fica mais estreita */
             for (int y = 0; olho && y < CH; y++)
                 for (int x = 0; x < CW; x++) {
                     if (!clus[y][x] || !cv->a[y][x].a || cv->tag[y][x] == T_WEAPON) continue;
                     int dx = x - ex, dy = y - ey;
-                    if ((dy >= -1 && dx <= -7) || dy >= 4 || (dy >= 2 && dx <= -6)) cv_clear(cv, x, y);
-                    else if (dy >= -3 && dx <= -1) {   /* a transição do cabelo de cima para a lateral rente é pontilhada */
-                        bool rente = dy >= 0 || ((x + y) & 1);
-                        if (dy <= -2 && dx > -4) continue;
-                        cv_put(cv, x, y, rente ? pal[0] : pal[1]);
-                        cv->tag[y][x] = T_BODY;
-                    }
+                    if ((dy >= -1 && dx <= -7) || dy >= 4 || (dy >= 1 && dx <= -6) || (dy >= 3 && dx <= -5)) { cv_clear(cv, x, y); continue; }
+                    if (dy < -2 || dx > -1) continue;                                 /* o cabelo de cima e o da frente ficam */
+                    bool xadrez = (x + y) & 1;
+                    Rgb c = pal[0];
+                    if (dy == -2) c = xadrez ? pal[0] : pal[1];                       /* a linha do cabelo, pontilhada */
+                    else if (dy >= 0 && dy <= 1 && dx >= -3) c = ch->pele[dx == -3 || dy == 1 ? 2 : 0];   /* a orelha */
+                    else if (dy == 2) c = xadrez ? pal[0] : ch->pele[1];               /* o cabelo vira pele */
+                    else if (dy == 3) c = ch->pele[2];                                 /* a nuca */
+                    cv_put(cv, x, y, c);
+                    cv->tag[y][x] = T_BODY;
                 }
             for (int r = 0; t[r].t; r++)
                 for (int i = 0; t[r].t[i]; i++) {
