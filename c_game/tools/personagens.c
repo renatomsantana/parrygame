@@ -919,12 +919,15 @@ static const Row CAB6_GARFIEL_FRENTE[] = {
     /* ref. Garfiel, Re:Zero: loiro curto e bem espetado, pontas irregulares para cima e
        para trás, mechas caindo na testa, laterais rentes (a têmpora e a orelha aparecem) */
     /* etapa 2: curto, em tufinhos repetidos como grama, todos pequenos e do mesmo tamanho (sem coroa) */
-    {-9, -7, "i.i.i.i.i"}, {-8, -8, "hHhHhHhHhi"}, {-7, -8, "hHHHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
+    /* etapa 3: três espetadas de alturas diferentes (a de trás a mais alta), no lugar das ameias; o cabelo não passa de 7 linhas */
+    {-10, -6, "i"}, {-9, -7, "hHh"}, {-9, -3, "i"}, {-9, 0, "i"},
+    {-8, -8, "hHHhHHhHHhi"}, {-7, -8, "hHHHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
     {-5, -7, "hHHHHHHHHiH"}, {-4, -7, "hhHHHHHHiHi"}, {-3, -6, "hhhHHFHi"}, {-2, -5, "hkFFFHF"},
     {-1, -5, "hkfFFkk"}, {0, -5, "hkfff"}, {1, -4, "kfff"}, {2, -3, "kf"}, {0, 0, NULL},
 };
 static const Row CAB6_GARFIEL_COSTAS[] = {
-    {-9, -7, "i.i.i.i.i"}, {-8, -8, "hHhHhHhHhi"}, {-7, -8, "hHHHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
+    {-10, -6, "i"}, {-9, -7, "hHh"}, {-9, -3, "i"}, {-9, 0, "i"},
+    {-8, -8, "hHHhHHhHHhi"}, {-7, -8, "hHHHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
     {-5, -7, "hHHHHHHHHHi"}, {-4, -7, "hhHHHHHHHh"}, {-3, -6, "hhHHHHhh"}, {-2, -6, "khhhhhk"},
     {-1, -5, "fhhhhf"}, {0, -4, "ffff"}, {1, -3, "fff"}, {0, 0, NULL},
 };
@@ -960,8 +963,9 @@ static const Row CAB7_ARASHI_FRENTE[] = {
     {-7, -5, "HHHH"}, {-6, -6, "HhiihHH"}, {-5, -7, "HhiihhhhH"}, {-4, -8, "HhhhhhhhhhH"},
     {-3, -8, "HhhhhhhhHhH"}, {-2, -8, "HhhhhhhHFFF"}, {-1, -8, "HhhhhhHfkk"}, {0, -8, "HhhhhhHf"},
     /* etapa 2: nada cobre o rosto; a barba cinza curta e rente só embaixo do queixo */
-    {1, -9, "HhhhhhH"}, {2, -9, "HhhhhH"}, {3, -9, "HhihhH"}, {3, 0, "bBb"}, {4, -9, "HhhhH"}, {4, 1, "b"},
-    {5, -9, "HhihH"}, {6, -9, "HhhH"}, {7, -9, "HhH"}, {8, -8, "HH"}, {0, 0, NULL},
+    /* etapa 3: a madeixa não cai reta como um bloco: desce em diagonal para trás, afinando, com uma faixa de luz */
+    {1, -9, "HhhhhhH"}, {2, -9, "HhhihhH"}, {3, -10, "HhhhhhH"}, {3, 0, "bBb"}, {4, -10, "HhihhH"}, {4, 1, "b"},
+    {5, -11, "HhhihH"}, {6, -11, "HhhhH"}, {7, -12, "HhihH"}, {8, -12, "HhH"}, {9, -13, "HH"}, {0, 0, NULL},
 };
 
 /* Arashi e Karasu: comprido e solto, cai reto pelas costas até o meio delas (gravidade), a
@@ -2066,6 +2070,42 @@ static void head_ref(const Frame *f, const Seg *sg, int *hx, int *hy) {
             }
 }
 
+
+/* Os restos de pele do rosto do pack (o nariz, a bochecha) que o rosto novo não cobre ficam soltos,
+ * um ou dois pixels longe da cabeça. Pele solta de até 3 px, sem nada em volta, sai. */
+static void drop_skin_specks(Canvas *cv, int xa, int ya, int xb, int yb) {
+    static const uint32_t PELE[] = {0xe69c69, 0xbf6f4a, 0xf6ca9f, 0xeab088, 0x8c5640, 0xc6845e};
+    static bool vis[CH][CW];
+    memset(vis, 0, sizeof vis);
+    for (int y = ya; y <= yb; y++)
+        for (int x = xa; x <= xb; x++) {
+            if (!cv_ok(x, y) || vis[y][x] || !cv->a[y][x].a || cv->tag[y][x] == T_WEAPON) continue;
+            short qx[4], qy[4];
+            int n = 0, head = 0;
+            bool grande = false, pele = true;
+            qx[n] = (short)x; qy[n] = (short)y; n++;
+            vis[y][x] = true;
+            while (head < n && !grande) {
+                int cx = qx[head], cy = qy[head++];
+                bool p = false;
+                for (size_t k = 0; k < sizeof PELE / sizeof PELE[0]; k++) {
+                    Color c = cv->a[cy][cx];
+                    p = p || (c.r == (PELE[k] >> 16 & 0xff) && c.g == (PELE[k] >> 8 & 0xff) && c.b == (PELE[k] & 0xff));
+                }
+                if (!p) pele = false;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++) {
+                        int nx = cx + dx, ny = cy + dy;
+                        if ((!dx && !dy) || !cv_ok(nx, ny) || !cv->a[ny][nx].a || vis[ny][nx]) continue;
+                        if (n >= 3) { grande = true; continue; }
+                        vis[ny][nx] = true;
+                        qx[n] = (short)nx; qy[n] = (short)ny; n++;
+                    }
+            }
+            if (grande || !pele) continue;
+            for (int k = 0; k < n; k++) cv_clear(cv, qx[k], qy[k]);
+        }
+}
 
 static void s5_hair(Canvas *cv, const Char *ch, const char *anim) {
     static bool clus[CH][CW];
@@ -5052,27 +5092,28 @@ static void paint_px(Canvas *cv, int x, int y, char k) {
 
 /* A cabeça do Oboro sem o elmo, de perfil (virada para a direita), no tamanho da
  * dos outros (ele é maior pelo corpo e pela armadura, não pela cabeça): o cabelo
- * preto curto em três massas (a base, a sombra e uma faixa de luz no alto), preso num
- * coque baixo na nuca com o cordão vermelho; o rosto do Hanzo moço, com a sobrancelha
- * e o olho de 1 px; a barba curta em dois tons acompanhando a mandíbula, da costeleta
- * ao queixo, com a bochecha à mostra; o pescoço e a gola da armadura por baixo, que
+ * preto curto em massas (a base, fios mais claros e uma faixa de luz no alto), preso num
+ * coque baixo na nuca com o cordão vermelho; o rosto de gente, de perfil: a testa, a
+ * sobrancelha em sombra, o olho de 2 px (o branco e a pupila), o nariz saindo só 1 px da
+ * bochecha, a orelha, a boca marcada e o queixo à frente; a barba curta e cheia (costeleta, bigode e queixo, com
+ * um fio mais claro) deixa a bochecha e a boca à mostra; o pescoço e a gola da armadura por baixo, que
  * emendam a cabeça no tronco. Coluna 0 = olho de trás do elmo menos 9, a primeira
  * linha é a -5 (a dos olhos é a 0). As duas últimas linhas (a gola) só pintam onde
  * não há nada. */
 #define OBORO_TOPO 5
 static const char *const OBORO_CABECA[] = {
-    ".......LLLLLL.....",
-    "......LYYSSSSL....",
-    ".....LYgYSSSSSL...",
-    ".....LYYSSSSSLWW..",
-    "...LSLSSSSTSLXSS..",
-    "...LYASSSSuXXXLXW.",
-    "...LSLSSSVuXXXXXW.",
-    "......LSSSXXXXuu..",
-    ".......LVSSXXSSS..",
-    "........VuLSSSSL..",
-    "........VuuLLLL...",
-    ".......DVuuD......",
+    ".......LLLL.......",
+    "......LYggYSL.....",
+    ".....LYYSSYSSL....",
+    ".....LYSSYSSXXW...",
+    ".....LSSYSSSVVX...",
+    ".....LASSSuXWLX...",
+    ".....LLSSSuXXXXX..",
+    "......LLSSuXXXSS..",
+    ".......LSSSXXXVX..",
+    "........VuSYSSXu..",
+    "........VuuSSSL...",
+    ".......DVuuLLL....",
     "......DBBBBBD.....",
 };
 #define OBORO_LINHAS ((int)(sizeof OBORO_CABECA / sizeof OBORO_CABECA[0]))
@@ -5661,6 +5702,10 @@ static void render(const Frame *f, const Seg *seg, const Char *ch, const Ctx *ct
     }
     round_top(cv);
     roupa_postura(cv, ch);
+    if (ch->pack && !strcmp(ch->pack, "samurai5")) {   /* o resto de pele do rosto do pack, solto em volta da cabeça (os pés e as mãos ficam) */
+        int ex, ey;
+        if (s5_eye_open(cv, &ex, &ey, false)) drop_skin_specks(cv, ex - 8, ey - 14, ex + 16, ey + 8);
+    }
 }
 
 /* ------------------------------------------------------------------------ */
