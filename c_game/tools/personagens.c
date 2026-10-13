@@ -2167,7 +2167,21 @@ static void s5_hair(Canvas *cv, const Char *ch, const char *anim) {
         if (tv && tv[0] >= 'A' && tv[0] <= 'D' && (!strcmp(ch->id, "garfiel") || !strcmp(ch->id, "yoru"))) {
             const Row *t = (!strcmp(ch->id, "garfiel") ? TOPETES_G : TOPETES_Y)[tv[0] - 'A'];
             int ex, ey;
-            if (!s5_eye_open(cv, &ex, &ey, false)) { ex = x1 - 4; ey = y0 + 6; }
+            bool olho = s5_eye_open(cv, &ex, &ey, false);
+            if (!olho) { ex = x1 - 4; ey = y0 + 6; }
+            /* com topete, o cabelo de baixo é curto: sai o volume de trás e a nuca comprida, e a lateral fica na sombra (rente) */
+            for (int y = 0; olho && y < CH; y++)
+                for (int x = 0; x < CW; x++) {
+                    if (!clus[y][x] || !cv->a[y][x].a || cv->tag[y][x] == T_WEAPON) continue;
+                    int dx = x - ex, dy = y - ey;
+                    if ((dy >= -1 && dx <= -7) || dy >= 4 || (dy >= 2 && dx <= -6)) cv_clear(cv, x, y);
+                    else if (dy >= -3 && dx <= -1) {   /* a transição do cabelo de cima para a lateral rente é pontilhada */
+                        bool rente = dy >= 0 || ((x + y) & 1);
+                        if (dy <= -2 && dx > -4) continue;
+                        cv_put(cv, x, y, rente ? pal[0] : pal[1]);
+                        cv->tag[y][x] = T_BODY;
+                    }
+                }
             for (int r = 0; t[r].t; r++)
                 for (int i = 0; t[r].t[i]; i++) {
                     char k = t[r].t[i];
