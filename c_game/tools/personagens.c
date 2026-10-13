@@ -764,6 +764,7 @@ typedef struct {
     bool mascara_oni;                       /* Hanzo no fim: a máscara de oni no rosto */
     /* Samurai #5 (duas espadas): o pack vem com um pano cobrindo a boca e o nariz. */
     bool sem_pano;                          /* tira o pano: rosto de verdade, pele em três tons */
+    bool cabeca_toda;                       /* a cabeça (cabelo e rosto) é desenhada por inteiro: os moldes CABECA_*, no lugar da do pack */
     bool cabelo_pack;                       /* mantém o cabelo que o pack desenha (redondo, em volta do crânio) e só troca as cores */
     bool cabelo_mecha;                      /* com cabelo_pack: o brilho das quatro linhas de cima sai na cor de destaque (a mecha roxa do Yoru) */
     bool kasa;                              /* chapéu de palha (o mesmo do Daichi) por cima */
@@ -1078,7 +1079,7 @@ static Char CHARS[] = {
      .rastro = {HEX(0xfff6e0), HEX(0xffc860), HEX(0xc08030)}, .elemento = EL_TERRA, .largura = 1,
      .especial = SP_INVESTIDA, .efeito = FX_GARRA,
      /* corpo do samurai de duas espadas (uma garra em cada mão): roupa preta listrada de vermelho, cabelo loiro */
-     .sem_pano = true, .parado = "DEFEND", .pack = "samurai5", .cabelo_pack = true,
+     .sem_pano = true, .parado = "DEFEND", .pack = "samurai5", .cabeca_toda = true, .cab_frente = CAB6_GARFIEL_FRENTE, .cab_costas = CAB6_GARFIEL_COSTAS,
      /* golpes de garra: sem o corte de espada do pack, três riscos de arranhão */
      .golpe = GP_GARRAS, S5_REMONTA,
      .cab_frente = CAB_GARFIEL_FRENTE, .cab_costas = CAB_GARFIEL_COSTAS, .cab_balanco = 1, .pack_par = true, .pack_sem_camisa = true,
@@ -1201,7 +1202,7 @@ static Char CHARS[] = {
      .hakama = {HEX(0x343044), HEX(0x26243a), HEX(0x1c1a2c), HEX(0x141322), HEX(0x0d0c18)},
      .pele = {HEX(0xe0a47c), HEX(0xb87a56), HEX(0x7e4c36)},
      .cabelo = {HEX(0x141320), HEX(0x26243a), HEX(0x3c3a56)},
-     .mascara = {HEX(0x141320), HEX(0x2a2840)}, .olho = HEX(0xe8c8ff),
+     .mascara = {HEX(0x141320), HEX(0x2a2840)}, .olho = HEX(0xb070ff),
      .destaque = {HEX(0xb45cff), HEX(0x6e2cb4)}, .obi = HEX(0x8a3ce0),
      .sem_saya = true, .cabo = HEX(0x4a1c7a),
      .lamina = {HEX(0xf4e0ff), HEX(0xb45cff)},
@@ -1210,7 +1211,7 @@ static Char CHARS[] = {
      /* corpo do samurai de duas espadas (uma adaga em cada mão): ninja preto e roxo */
      /* golpes de adaga: sem o corte de espada do pack, cortes pequenos e secos */
      .golpe = GP_ADAGAS, S5_REMONTA,
-     .sem_pano = true, .pack = "samurai5", .cabelo_pack = true, .cabelo_mecha = true, .cab_frente = CAB_YORU_FRENTE, .cab_costas = CAB_YORU_COSTAS, .cab_balanco = 2, .pack_par = true, .pack_sem_camisa = true,
+     .sem_pano = true, .pack = "samurai5", .cabeca_toda = true, .cab_frente = CAB_YORU_FRENTE, .cab_costas = CAB_YORU_COSTAS, .cab_balanco = 2, .pack_par = true, .pack_sem_camisa = true,
      .leitura = {{HEX(0xf6ca9f), 'S'}, {HEX(0x0c2e44), '?'}},
      .troca = {{HEX(0x1e6f50), HEX(0x4a3e6a)}, {HEX(0x134c4c), HEX(0x2e2844)}, {HEX(0x0c2e44), HEX(0x1a1628)},
                {HEX(0x391f21), HEX(0x4a1c7a)}, {HEX(0x5d2c28), HEX(0x8a3ce0)},
@@ -2122,6 +2123,81 @@ static const Row TOP_Y_D[] = {{-11, 3, "a"}, {-10, 1, "aam"}, {-9, -1, "mmmaad"}
 static const Row *const TOPETES_G[4] = {TOP_G_A, TOP_G_B, TOP_G_C, TOP_G_D};
 static const Row *const TOPETES_Y[4] = {TOP_Y_A, TOP_Y_B, TOP_Y_C, TOP_Y_D};
 
+/* A cabeça inteira do Garfiel e do Yoru, de perfil (virada para a direita), em volta do olho do pack: (0, 0) é o branco do olho e a íris
+ * vem logo à frente. Letras: d, m, l o cabelo (sombra, base, luz); F, f, k a pele (luz, meio, sombra); W o branco do olho e E a íris (cor
+ * do olho do personagem); L o traço escuro; M a boca; T as listras; a, A o destaque. */
+static const Row CABECA_GARFIEL_P[] = {{-7, -4, "l.l.l"}, {-6, -5, "dmmlmmmd"}, {-5, -6, "dmmllmmlmd"}, {-4, -6, "dmlmmmmmmmd"}, {-3, -6, "dmmmlmmmmFF"}, {-2, -6, "dmmmmmmmlFF"}, {-1, -6, "dmmmmmmkkFF"}, {0, -6, "dmmmmmWEFF"}, {1, -6, "dmmmmmkfFFF"}, {2, -6, "dmmmmkfFFf"}, {3, -5, "dmmkfffM"}, {4, -3, "kkfFk"}, {0, 0, NULL}};
+
+/* Yoru: cabelo preto liso, a franja comprida caindo na testa com a mecha roxa, e um rabo de cavalo curto para trás. */
+static const Row CABECA_YORU_P[] = {{-6, -2, "dmmd"}, {-5, -4, "dmllmmmd"}, {-4, -5, "dmmlllmmad"}, {-3, -6, "dmmllmmmaad"}, {-2, -6, "dmmmmmmmmFF"}, {-1, -8, "da"}, {-1, -6, "dmmmmmmLLFF"}, {0, -9, "dm"}, {0, -6, "dmmmmmWEFF"}, {1, -9, "dm"}, {1, -6, "dmmmmmkfFFF"}, {2, -9, "d"}, {2, -6, "dmmmmkfFFf"}, {3, -5, "dmmkfffM"}, {4, -3, "kkfFk"}, {0, 0, NULL}};
+
+static Rgb cabeca_cor(const Char *ch, char k, const Rgb pal[3]) {
+    switch (k) {
+        case 'd': return pal[0];
+        case 'm': return pal[1];
+        case 'l': return pal[2];
+        case 'F': return ch->pele[0];
+        case 'f': return ch->pele[1];
+        case 'k': return ch->pele[2];
+        case 'W': return (Rgb){245, 245, 250};
+        case 'E': return ch->olho;
+        case 'M': return (Rgb){(unsigned char)(ch->pele[2].r * 0.7), (unsigned char)(ch->pele[2].g * 0.7), (unsigned char)(ch->pele[2].b * 0.7)};
+        case 'T': return (Rgb){60, 36, 24};
+        case 'a': return ch->destaque[0];
+        case 'A': return ch->destaque[1];
+        default: return (Rgb){24, 18, 30};   /* L */
+    }
+}
+
+static const Row *cabeca_molde(const Char *ch) {
+    if (!strcmp(ch->id, "garfiel")) return CABECA_GARFIEL_P;
+    if (!strcmp(ch->id, "yoru")) return CABECA_YORU_P;
+    return NULL;
+}
+
+static bool cabeca_rosto_do_pack(const Canvas *cv, int x, int y) {
+    static const uint32_t C[] = {0xe69c69, 0xbf6f4a, 0xf6ca9f, 0xeab088, 0x8c5640, 0xc6845e, 0x1e6f50, 0x134c4c, 0xffffff, 0x5ac54f, 0x5d2c28};
+    for (size_t i = 0; i < sizeof C / sizeof C[0]; i++)
+        if (orig_rgb(cv, x, y, C[i])) return true;
+    return false;
+}
+
+/* Desenha a cabeça inteira no lugar da do pack. (ex, ey) é o olho (de frente) ou a âncora da cabeça (de costas, de olho fechado, caído). */
+static void s5_cabeca_toda(Canvas *cv, const Char *ch, int ex, int ey, bool open, bool back, bool lying, int ground) {
+    const Row *t = cabeca_molde(ch);
+    if (!t) return;
+    Rgb pal[3] = {ch->cabelo[0], ch->cabelo[1], ch->cabelo[2]};
+    for (int i = 0; i < 3; i++)
+        for (int j = i + 1; j < 3; j++)
+            if (pal[j].r + pal[j].g + pal[j].b < pal[i].r + pal[i].g + pal[i].b) { Rgb tmp = pal[i]; pal[i] = pal[j]; pal[j] = tmp; }
+    if (!back && !lying)   /* o rosto do pack (pele, pano, olho) sai; o pescoço e a roupa ficam */
+        for (int y = ey - 4; y <= ey + 4; y++)
+            for (int x = ex - 3; x <= ex + 6; x++)
+                if (cv_ok(x, y) && cv->a[y][x].a && cv->tag[y][x] != T_WEAPON && cabeca_rosto_do_pack(cv, x, y)) cv_clear(cv, x, y);
+    for (int r = 0; t[r].t; r++)
+        for (int i = 0; t[r].t[i]; i++) {
+            char k = t[r].t[i];
+            int c = t[r].x + i, rr = t[r].y;
+            if (k == '.') continue;
+            if (!open && !back && rr == 0 && (k == 'W' || k == 'E')) k = 'k';   /* olho fechado (a dor, a queda) */
+            if (back && (k == 'F' || k == 'f' || k == 'W' || k == 'E' || k == 'M' || k == 'T') && rr < 3) k = 'm';   /* de costas, o rosto é cabelo */
+            int x = ex + c, y = ey + rr;
+            if (lying) {
+                x = ex - rr;
+                y = ey + c * 6 / 10;
+                if (c < -4) {
+                    x = ex - rr + pyround((-4 - c) * 0.6);
+                    y = ey - 2 + pyround((-4 - c) * 0.3);
+                }
+                if (y > ground) y = ground;
+            }
+            if (!cv_ok(x, y) || cv->a[y][x].a) continue;                       /* o corpo e a arma ficam na frente */
+            if (lab_at(cv, x, y) == BLADE || lab_at(cv, x, y) == SMEAR) continue;
+            cv_put(cv, x, y, cabeca_cor(ch, k, pal));
+            cv->tag[y][x] = T_BODY;
+        }
+}
+
 static void s5_hair(Canvas *cv, const Char *ch, const char *anim) {
     static bool clus[CH][CW];
     static short st[CW * CH][2];
@@ -2234,6 +2310,7 @@ static void s5_hair(Canvas *cv, const Char *ch, const char *anim) {
             if (!touch) { cv_clear(cv, x, y); cv->empty[y][x] = true; }
         }
     if (getenv("DBG_NOHAIR")) return;
+    if (ch->cabeca_toda) { s5_cabeca_toda(cv, ch, ex, ey, open, back, lying, ground); return; }
     const Row *t = back ? ch->cab_costas : ch->cab_frente;
     /* os cabelos aprovados na etapa 2 (Garfiel, Arashi, Yoru) usam o desenho novo por completo */
     bool prova6 = getenv("CAB_PROVA") != NULL || !strcmp(ch->id, "garfiel") || !strcmp(ch->id, "arashi") || !strcmp(ch->id, "yoru");
