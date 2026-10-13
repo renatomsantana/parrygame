@@ -919,16 +919,16 @@ static const Row CAB6_GARFIEL_FRENTE[] = {
     /* ref. Garfiel, Re:Zero: loiro curto e bem espetado, pontas irregulares para cima e
        para trás, mechas caindo na testa, laterais rentes (a têmpora e a orelha aparecem) */
     /* etapa 2: curto, em tufinhos repetidos como grama, todos pequenos e do mesmo tamanho (sem coroa) */
-    /* etapa 3: três espetadas de alturas diferentes (a de trás a mais alta), no lugar das ameias; o cabelo não passa de 7 linhas */
-    {-10, -6, "i"}, {-9, -7, "hHh"}, {-9, -3, "i"}, {-9, 0, "i"},
-    {-8, -8, "hHHhHHhHHhi"}, {-7, -8, "hHHHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
-    {-5, -7, "hHHHHHHHHiH"}, {-4, -7, "hhHHHHHHiHi"}, {-3, -6, "hhhHHFHi"}, {-2, -5, "hkFFFHF"},
+    /* etapa 3: três espetadas pequenas de alturas diferentes, rente ao crânio (a cabeça do pack já é alta); o cabelo não passa de 5 linhas */
+    {-8, -6, "i"}, {-7, -7, "hHh"}, {-7, -3, "i"}, {-7, 0, "i"},
+    {-6, -8, "hHHhHHhHHhi"}, {-5, -8, "hHHHHHHHHHi"},
+    {-4, -7, "hhHHHHHHiHi"}, {-3, -6, "hhhHHFHi"}, {-2, -5, "hkFFFHF"},
     {-1, -5, "hkfFFkk"}, {0, -5, "hkfff"}, {1, -4, "kfff"}, {2, -3, "kf"}, {0, 0, NULL},
 };
 static const Row CAB6_GARFIEL_COSTAS[] = {
-    {-10, -6, "i"}, {-9, -7, "hHh"}, {-9, -3, "i"}, {-9, 0, "i"},
-    {-8, -8, "hHHhHHhHHhi"}, {-7, -8, "hHHHHHHHHHi"}, {-6, -8, "hHHHHHHHHHi"},
-    {-5, -7, "hHHHHHHHHHi"}, {-4, -7, "hhHHHHHHHh"}, {-3, -6, "hhHHHHhh"}, {-2, -6, "khhhhhk"},
+    {-8, -6, "i"}, {-7, -7, "hHh"}, {-7, -3, "i"}, {-7, 0, "i"},
+    {-6, -8, "hHHhHHhHHhi"}, {-5, -8, "hHHHHHHHHHi"},
+    {-4, -7, "hhHHHHHHHh"}, {-3, -6, "hhHHHHhh"}, {-2, -6, "khhhhhk"},
     {-1, -5, "fhhhhf"}, {0, -4, "ffff"}, {1, -3, "fff"}, {0, 0, NULL},
 };
 /* Karasu (ref. Tabito Karasu, Blue Lock): preto azulado, médio-curto, bagunçado, camadas espetadas
@@ -948,24 +948,24 @@ static const Row CAB7_KARASU_COSTAS[] = {
    trás, com uma mecha roxa (o destaque). A máscara continua. Sem barba. */
 static const Row CAB7_YORU_FRENTE[] = {
     /* etapa 2: curto e rente ao crânio, só um pouco mais comprido em cima; a mecha roxa (A) */
-    {-8, -5, "HhHhH"}, {-7, -7, "HhhhAhhH"}, {-6, -8, "HhhhhAhhiH"},
-    {-5, -7, "HhhhhhAhiH"}, {-4, -6, "HhhhhhhiH"}, {-3, -6, "HhhhhhHF"}, {-2, -5, "HkFFFFF"},
+    {-7, -5, "HhHhH"}, {-6, -7, "HhhhAhhH"}, {-5, -8, "HhhhhAhhiH"},
+    {-4, -6, "HhhhhhhiH"}, {-3, -6, "HhhhhhHF"}, {-2, -5, "HkFFFFF"},
     {-1, -5, "HkfFFkk"}, {0, -5, "hkfff"}, {1, -4, "kfff"}, {2, -3, "kf"}, {0, 0, NULL},
 };
 static const Row CAB7_YORU_COSTAS[] = {
-    {-8, -5, "HhHhH"}, {-7, -7, "HhhhAhhH"}, {-6, -8, "HhhhhAhhhH"},
-    {-5, -7, "HhhhhhAhhH"}, {-4, -6, "HhhhhhhhH"}, {-3, -6, "HhhhhhhH"}, {-2, -5, "khhhhk"},
+    {-7, -5, "HhHhH"}, {-6, -7, "HhhhAhhH"}, {-5, -8, "HhhhhAhhhH"},
+    {-4, -6, "HhhhhhhhH"}, {-3, -6, "HhhhhhhH"}, {-2, -5, "khhhhk"},
     {-1, -4, "ffff"}, {0, -4, "ffff"}, {0, 0, NULL},
 };
 /* Arashi: o comprido solto prateado caindo nas costas, agora com a barba cinza da cor do cabelo
    (B e b pintam por cima do rosto: o queixo e a mandíbula). */
 static const Row CAB7_ARASHI_FRENTE[] = {
-    {-7, -5, "HHHH"}, {-6, -6, "HhiihHH"}, {-5, -7, "HhiihhhhH"}, {-4, -8, "HhhhhhhhhhH"},
+    {-6, -6, "HHHH"}, {-5, -7, "HhiihhhhH"}, {-4, -8, "HhhhhhhhhhH"},
     {-3, -8, "HhhhhhhhHhH"}, {-2, -8, "HhhhhhhHFFF"}, {-1, -8, "HhhhhhHfkk"}, {0, -8, "HhhhhhHf"},
     /* etapa 2: nada cobre o rosto; a barba cinza curta e rente só embaixo do queixo */
-    /* etapa 3: a madeixa não cai reta como um bloco: desce em diagonal para trás, afinando, com uma faixa de luz */
-    {1, -9, "HhhhhhH"}, {2, -9, "HhhihhH"}, {3, -10, "HhhhhhH"}, {3, 0, "bBb"}, {4, -10, "HhihhH"}, {4, 1, "b"},
-    {5, -11, "HhhihH"}, {6, -11, "HhhhH"}, {7, -12, "HhihH"}, {8, -12, "HhH"}, {9, -13, "HH"}, {0, 0, NULL},
+    /* etapa 3: a madeixa não cai reta como um bloco: desce em diagonal para trás só até o ombro, afinando, com uma faixa de luz */
+    {1, -9, "HhhhhhH"}, {2, -9, "HhhihhH"}, {3, -10, "HhhhhH"}, {3, 0, "bBb"}, {4, -10, "HhihH"}, {4, 1, "b"},
+    {5, -10, "HhhH"}, {6, -11, "HhH"}, {7, -11, "HH"}, {0, 0, NULL},
 };
 
 /* Arashi e Karasu: comprido e solto, cai reto pelas costas até o meio delas (gravidade), a
