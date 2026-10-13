@@ -5218,6 +5218,18 @@ static void armor_fill(Canvas *cv, bool (*gone)[CW], int ex, int ey, int r0, int
         if (a < 0 || b <= a) continue;
         for (int x = a; x <= b; x++) {
             if (!gone[y][x] || cv->a[y][x].a) continue;
+            /* a armadura de baixo continua para cima: copia a mesma coluna 4, 8 ou 12 linhas abaixo (o passo das faixas),
+               com a mesma textura e as mesmas cores, em vez de faixas inventadas */
+            bool copiou = false;
+            for (int d = 4; d <= 12 && !copiou; d += 4) {
+                int yy = y + d;
+                if (cv_ok(x, yy) && cv->a[yy][x].a && !gone[yy][x] && cv->tag[yy][x] == T_BODY && helm_px(cv->orig->p[yy][x])) {
+                    cv_put(cv, x, y, (Rgb){cv->a[yy][x].r, cv->a[yy][x].g, cv->a[yy][x].b});
+                    cv->tag[y][x] = T_BODY;
+                    copiou = true;
+                }
+            }
+            if (copiou) continue;
             int m = ((r % 4) + 4) % 4;
             char k = m == 0 ? 'E' : m == 3 ? 'D' : 'B';
             if (m == 3 && ((x - ex) % 4 + 4) % 4 == 1) k = 'A';
@@ -5248,6 +5260,37 @@ static double oboro_lean(const Canvas *cv, int ex, int ey) {
     return ((ex + 11) - sx / n) / 14.0;
 }
 
+/* Pedaços soltos de corpo (sobras do elmo e da juba que o rosto novo não cobre): até `maxn` px, sem nada ligado, saem. A aura e a arma ficam. */
+static void drop_body_specks(Canvas *cv, int xa, int ya, int xb, int yb, int maxn) {
+    static bool vis[CH][CW];
+    static short qx[64], qy[64];
+    memset(vis, 0, sizeof vis);
+    if (maxn > 60) maxn = 60;
+    for (int y = ya; y <= yb; y++)
+        for (int x = xa; x <= xb; x++) {
+            if (!cv_ok(x, y) || vis[y][x] || !cv->a[y][x].a || cv->tag[y][x] != T_BODY) continue;
+            int n = 0, head = 0;
+            bool grande = false;
+            qx[n] = (short)x; qy[n] = (short)y; n++;
+            vis[y][x] = true;
+            while (head < n && !grande) {
+                int cx = qx[head], cy = qy[head++];
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++) {
+                        int nx = cx + dx, ny = cy + dy;
+                        if ((!dx && !dy) || !cv_ok(nx, ny) || !cv->a[ny][nx].a || cv->tag[ny][nx] != T_BODY || vis[ny][nx]) continue;
+                        if (n >= maxn) { grande = true; continue; }
+                        vis[ny][nx] = true;
+                        qx[n] = (short)nx; qy[n] = (short)ny; n++;
+                    }
+            }
+            if (grande) continue;
+            for (int k = 0; k < n; k++) cv_clear(cv, qx[k], qy[k]);
+        }
+}
+
+/* A juba preta do oni (o manto atrás dos ombros) é da armadura, não da cabeça: só sai o que está colado a ela, a partir desta coluna. */
+#define OBORO_JUBA_C (-6)
 static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *molde, double k);
 static bool g_oboro_prova;
 static bool oboro_tooth(Color o) {
@@ -5280,7 +5323,7 @@ static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *
     /* a mancha escura presa à cabeça: começa no que está na caixa da cabeça */
     int sp = 0;
     for (int r = -13; r <= 4; r++)
-        for (int c = -8; c <= 20; c++) {
+        for (int c = OBORO_JUBA_C; c <= 20; c++) {
             int x = ex + c, y = ey + r;
             if (cv_ok(x, y) && oboro_dark(cv->orig->p[y][x]) && !gone[y][x] && !hand_blade_px(cv, x, y)) {
                 gone[y][x] = true;
@@ -5294,7 +5337,7 @@ static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *
         for (int dy = -1; dy <= 1; dy++)
             for (int dx = -1; dx <= 1; dx++) {
                 int x = cx + dx, y = cy + dy;
-                if (!cv_ok(x, y) || gone[y][x] || y > ey + r1 || x < ex - 16 || x > ex + 26) continue;
+                if (!cv_ok(x, y) || gone[y][x] || y > ey + r1 || x < ex + OBORO_JUBA_C || x > ex + 26) continue;
                 if (!oboro_dark(cv->orig->p[y][x]) || hand_blade_px(cv, x, y)) continue;
                 gone[y][x] = true;
                 st[sp][0] = (short)x;
@@ -5331,6 +5374,11 @@ static void oboro_head_t(Canvas *cv, int ex, int ey, int r1, const char *const *
             paint_px(cv, x, y, molde[r][c]);
             cv->tag[y][x] = T_BODY;
         }
+    /* o resto da juba preta, atrás dos ombros, fica em tiras soltas sem o elmo: sai (a armadura listrada fica) */
+    for (int y = ey - 14; y <= ey + 12; y++)
+        for (int x = ex - 26; x < ex + OBORO_JUBA_C; x++)
+            if (cv_ok(x, y) && cv->a[y][x].a && cv->tag[y][x] == T_BODY && oboro_dark(cv->orig->p[y][x]) && !hand_blade_px(cv, x, y)) cv_clear(cv, x, y);
+    drop_body_specks(cv, ex - 14, ey - 14, ex + 22, ey + 8, 6);   /* as sobras soltas em volta da cabeça */
 }
 
 /* Caído de bruços (o fim da DEATH): a mesma cabeça deitada, girada um quarto de volta
