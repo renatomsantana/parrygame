@@ -2109,6 +2109,19 @@ static void drop_skin_specks(Canvas *cv, int xa, int ya, int xb, int yb) {
         }
 }
 
+/* Topetes opcionais sobre o cabelo do pack (cabelo_pack), em volta do olho: m = base, d = sombra, l = luz, a = destaque.
+ * G_* são do Garfiel, Y_* do Yoru; TOPETE=A..D no ambiente escolhe uma para as provas. */
+static const Row TOP_G_A[] = {{-10, 3, "mm"}, {-9, 1, "mmllm"}, {-8, -1, "mmllllmd"}, {-7, -4, "dmmmmlmmmmd"}, {-6, -5, "mmmmmmmmmmd"}, {-5, 1, "mmmmd"}, {-4, 4, "md"}, {0, 0, NULL}};
+static const Row TOP_G_B[] = {{-9, -5, "l...l..l"}, {-8, -6, "mm..ml.mm"}, {-7, -7, "dmmm.dmmdmm"}, {-6, -7, "mmmmmmmmmmmd"}, {-5, 1, "mmm"}, {0, 0, NULL}};
+static const Row TOP_G_C[] = {{-9, -2, "mmm"}, {-8, -4, "mmlllm"}, {-7, -6, "dmmmmmlmmmd"}, {-6, -7, "mmmmmmmmmmmmd"}, {-5, 1, "mmmmd"}, {-4, 3, "mmd"}, {-3, 3, "md"}, {-2, 3, "m"}, {0, 0, NULL}};
+static const Row TOP_G_D[] = {{-9, -5, "mllllmm"}, {-8, -6, "dmmmmmmmmd"}, {-7, -6, "dmmmmmmmmmd"}, {-6, -6, "mmmmmmmmmmmd"}, {-5, 1, "mmmd"}, {0, 0, NULL}};
+static const Row TOP_Y_A[] = {{-8, -2, "mmmm"}, {-7, -5, "dmmmlmmmd"}, {-6, -6, "mmmmmmmmmmd"}, {-5, 0, "mmmd"}, {-4, 2, "md"}, {0, 0, NULL}};
+static const Row TOP_Y_B[] = {{-12, -5, "mmm"}, {-11, -6, "mlmmm"}, {-10, -6, "mmmmm"}, {-9, -5, "aaa"}, {-8, -5, "dmd"}, {-7, -5, "dmmmmd"}, {-6, -6, "mmmmmmmd"}, {0, 0, NULL}};
+static const Row TOP_Y_C[] = {{-9, -5, "a...a..m"}, {-8, -6, "mm..mm.mm"}, {-7, -7, "dmmm.dmmdmm"}, {-6, -7, "mmmmmmmmmmmd"}, {0, 0, NULL}};
+static const Row TOP_Y_D[] = {{-11, 3, "a"}, {-10, 1, "aam"}, {-9, -1, "mmmaad"}, {-8, -2, "mmmmmmmd"}, {-7, -4, "dmmmmlmmmd"}, {-6, -5, "mmmmmmmmmd"}, {-5, 1, "mmmd"}, {0, 0, NULL}};
+static const Row *const TOPETES_G[4] = {TOP_G_A, TOP_G_B, TOP_G_C, TOP_G_D};
+static const Row *const TOPETES_Y[4] = {TOP_Y_A, TOP_Y_B, TOP_Y_C, TOP_Y_D};
+
 static void s5_hair(Canvas *cv, const Char *ch, const char *anim) {
     static bool clus[CH][CW];
     static short st[CW * CH][2];
@@ -2150,6 +2163,21 @@ static void s5_hair(Canvas *cv, const Char *ch, const char *anim) {
                 cv_put(cv, x, y, col);
                 cv->tag[y][x] = T_BODY;
             }
+        const char *tv = getenv("TOPETE");
+        if (tv && tv[0] >= 'A' && tv[0] <= 'D' && (!strcmp(ch->id, "garfiel") || !strcmp(ch->id, "yoru"))) {
+            const Row *t = (!strcmp(ch->id, "garfiel") ? TOPETES_G : TOPETES_Y)[tv[0] - 'A'];
+            int ex, ey;
+            if (!s5_eye_open(cv, &ex, &ey, false)) { ex = x1 - 4; ey = y0 + 6; }
+            for (int r = 0; t[r].t; r++)
+                for (int i = 0; t[r].t[i]; i++) {
+                    char k = t[r].t[i];
+                    int x = ex + t[r].x + i, y = ey + t[r].y;
+                    if (k == '.' || !cv_ok(x, y)) continue;
+                    if (cv->a[y][x].a && !clus[y][x]) continue;   /* o rosto e a arma ficam na frente */
+                    cv_put(cv, x, y, k == 'd' ? pal[0] : k == 'l' ? pal[2] : k == 'a' ? ch->destaque[0] : pal[1]);
+                    cv->tag[y][x] = T_BODY;
+                }
+        }
         return;
     }
     int ex, ey;
