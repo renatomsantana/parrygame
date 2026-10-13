@@ -2126,7 +2126,7 @@ static const Row *const TOPETES_Y[4] = {TOP_Y_A, TOP_Y_B, TOP_Y_C, TOP_Y_D};
 /* A cabeça inteira do Garfiel e do Yoru, de perfil (virada para a direita), em volta do olho do pack: (0, 0) é o branco do olho e a íris
  * vem logo à frente. Letras: d, m, l o cabelo (sombra, base, luz); F, f, k a pele (luz, meio, sombra); W o branco do olho e E a íris (cor
  * do olho do personagem); L o traço escuro; M a boca; T as listras; a, A o destaque. */
-static const Row CABECA_GARFIEL_P[] = {{-7, -4, "l.l.l"}, {-6, -5, "dmmlmmmd"}, {-5, -6, "dmmllmmlmd"}, {-4, -6, "dmlmmmmmmmd"}, {-3, -6, "dmmmlmmmmFF"}, {-2, -6, "dmmmmmmmlFF"}, {-1, -6, "dmmmmmmkkFF"}, {0, -6, "dmmmmmWEFF"}, {1, -6, "dmmmmmkfFFF"}, {2, -6, "dmmmmkfFFf"}, {3, -5, "dmmkfffM"}, {4, -3, "kkfFk"}, {0, 0, NULL}};
+static const Row CABECA_GARFIEL_P[] = {{-6, -3, "l.l.l"}, {-5, -4, "dmmlmmlmd"}, {-4, -5, "dmmllmmmmmd"}, {-3, -5, "dmmmlmmmFmmd"}, {-2, -5, "dmmmmmFFFFFd"}, {-1, -5, "dmmmFkkFkkFd"}, {0, -5, "dmmFFWEfWEFd"}, {1, -5, "dmfFFfFfFFfd"}, {2, -5, "dmkfFFFMFfmd"}, {3, -4, "dmkfFFfmmd"}, {4, -4, "dmmkkfmmd"}, {5, -3, "dm.kmd"}, {0, 0, NULL}};
 
 /* Yoru: cabelo preto liso, a franja comprida caindo na testa com a mecha roxa, e um rabo de cavalo curto para trás. */
 static const Row CABECA_YORU_P[] = {{-6, -2, "dmmd"}, {-5, -4, "dmllmmmd"}, {-4, -5, "dmmlllmmad"}, {-3, -6, "dmmllmmmaad"}, {-2, -6, "dmmmmmmmmFF"}, {-1, -8, "da"}, {-1, -6, "dmmmmmmLLFF"}, {0, -9, "dm"}, {0, -6, "dmmmmmWEFF"}, {1, -9, "dm"}, {1, -6, "dmmmmmkfFFF"}, {2, -9, "d"}, {2, -6, "dmmmmkfFFf"}, {3, -5, "dmmkfffM"}, {4, -3, "kkfFk"}, {0, 0, NULL}};
@@ -2180,7 +2180,8 @@ static void s5_cabeca_toda(Canvas *cv, const Char *ch, int ex, int ey, bool open
             int c = t[r].x + i, rr = t[r].y;
             if (k == '.') continue;
             if (!open && !back && rr == 0 && (k == 'W' || k == 'E')) k = 'k';   /* olho fechado (a dor, a queda) */
-            if (back && (k == 'F' || k == 'f' || k == 'W' || k == 'E' || k == 'M' || k == 'T') && rr < 3) k = 'm';   /* de costas, o rosto é cabelo */
+            if (!open && !back && rr == -1 && k == 'k') k = 'F';                /* e a sobrancelha some, só fica o traço do olho */
+            if (back && (k == 'F' || k == 'f' || k == 'W' || k == 'E' || k == 'M' || k == 'T' || k == 'k' || k == 'L') && rr < 3) k = 'm';   /* de costas, o rosto é cabelo */
             int x = ex + c, y = ey + rr;
             if (lying) {
                 x = ex - rr;
