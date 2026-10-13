@@ -2598,6 +2598,105 @@ static void test_hitstop_exato(void) {
            contatos, pior * 1000, piorAntigo * 1000, perdidosAntes);
 }
 
+/* A latência de vídeo é descontada em tempo de COMBATE (`lastPress - latency`, core.c), mas o jogador viu o mundo `latency` segundos de tempo REAL
+ * atrás. Se o duelo ficou congelado (hitstop) dentro dessa janela, o relógio de combate andou menos que o tempo real e o desconto passa do ponto: o aperto
+ * conta mais cedo do que o jogador viu. O erro é o tempo congelado dentro de [aperto - latência, aperto]. Hoje o próximo golpe só começa bem depois do
+ * fim do hitstop, e o erro some; este teste trava isso: se uma mudança de ritmo aproximar um golpe de um congelamento, ele acusa antes de o jogador sentir.
+ * O laço é o do jogo (update_duel). A câmera lenta não entra: só roda depois de quebrar um selo, no desarme e na queda, sem golpe pendente. */
+typedef struct { double real0, c0, len; } TrechoCorrido;
+
+static double combate_no_real(const TrechoCorrido *t, int n, double real) {
+    if (n == 0 || real <= t[0].real0) return 0;
+    int f = 0;
+    for (int lo = 0, hi = n - 1; lo <= hi;) {
+        int mid = (lo + hi) / 2;
+        if (t[mid].real0 <= real) { f = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    double dentro = real - t[f].real0;
+    return t[f].c0 + (dentro < t[f].len ? dentro : t[f].len);   /* depois do trecho, congelado: o relógio parou no fim dele */
+}
+
+typedef struct { long apertos, comErro, mudaJulgamento; double pior; } MedidaLatencia;
+
+static MedidaLatencia medir_latencia_real(const Robo *robo, double lat, double hz, bool soNaJanela) {
+    static TrechoCorrido trechos[70000];
+    MedidaLatencia m = {0};
+    for (int mi = 0; mi < roster_size(); mi++) {
+        for (uint32_t seed = 1; seed <= 12; seed++) {
+            Settings s;
+            settings_default(&s);
+            settings_for_level(&s, mi);
+            s.latency = (float)lat;
+            Duel d;
+            duel_init(&d, &s, roster_get(mi), seed);
+            RoboMente mente;
+            robo_iniciar(&mente, robo, seed);
+            const double dtReal = 1.0 / hz;
+            float congelado = 0;
+            double real = 0;
+            int nt = 0;
+            DuelEvent ev[MAX_EVENTS];
+            while (d.phase != PH_FINISHED && real < 300 && nt < 69999) {
+                double inicio = real, c0 = d.clock;
+                real += dtReal;
+                float sobra = hitstop_passo(&congelado, (float)dtReal);
+                double parado = dtReal - sobra;
+                if (sobra > 0) {
+                    bool jaApertou = d.attempted;
+                    double t = robo_aperto_em(&mente, &d, sobra);
+                    trechos[nt++] = (TrechoCorrido){inicio + parado, c0, sobra};
+                    if (t >= 0 && (!soNaJanela || (!jaApertou && d.phase == PH_WINDUP))) {
+                        double relogio = c0 + t, tempoReal = inicio + parado + t;
+                        double erro = d.s.latency - (relogio - combate_no_real(trechos, nt, tempoReal - d.s.latency));
+                        if (erro < 0) erro = 0;
+                        /* o julgamento com o desconto de hoje e com o desconto em tempo real (o aperto conta `erro` mais tarde) */
+                        double lead = d.strikeAt - (relogio - d.s.latency), lead2 = lead - erro;
+                        double perfeita = duel_perfect_window(&d), boa = duel_stance(&d)->goodWindow, tarde = d.s.lateGrace;
+                        int antes = lead >= 0 && lead <= perfeita ? 2 : (lead >= -tarde && lead <= boa ? 1 : 0);
+                        int depois = lead2 >= 0 && lead2 <= perfeita ? 2 : (lead2 >= -tarde && lead2 <= boa ? 1 : 0);
+                        m.apertos++;
+                        if (erro > 1e-6) m.comErro++;
+                        if (antes != depois) m.mudaJulgamento++;
+                        if (erro > m.pior) m.pior = erro;
+                    }
+                    duel_step_at(&d, sobra, t);
+                } else {
+                    trechos[nt++] = (TrechoCorrido){inicio, c0, 0};
+                }
+                int n = duel_drain(&d, ev, MAX_EVENTS);
+                for (int i = 0; i < n; i++)
+                    if (ev[i].kind == EV_IMPACT) congelado = d.lastHitstop;
+            }
+        }
+    }
+    return m;
+}
+
+static void test_latencia_em_tempo_real(void) {
+    static const double LAT[] = {0.030, 0.060, 0.120};
+    static const double HZ[] = {60, 144};
+    const Robo robos[3] = {ROBO_DO_DEMO, ROBO_HUMANO_CASUAL, ROBO_PRIMEIRA_VEZ_PADRAO};
+    long apertos = 0, mudancas = 0;
+    double pior = 0;
+    for (int l = 0; l < 3; l++)
+        for (int h = 0; h < 2; h++)
+            for (int r = 0; r < 3; r++) {
+                MedidaLatencia m = medir_latencia_real(&robos[r], LAT[l], HZ[h], true);
+                apertos += m.apertos;
+                mudancas += m.mudaJulgamento;
+                if (m.pior > pior) pior = m.pior;
+            }
+    CHECK(apertos > 50000, "o teste da latência cobriu os apertos (%ld)", apertos);
+    CHECK(pior <= 0.010, "descontar a latência em tempo de combate erra no máximo 10 ms (pior %.2f ms): um congelamento caiu perto de um golpe", pior * 1000);
+    CHECK(mudancas == 0, "e o erro nunca muda o julgamento de um aperto (%ld mudanças)", mudancas);
+    /* o detector enxerga o problema: quem aperta sem parar, inclusive logo depois de um congelamento, tem erro de até a latência inteira */
+    MedidaLatencia sem = medir_latencia_real(&ROBO_APERTA_SEM_PARAR, 0.120, 60, false);
+    CHECK(sem.apertos > 5000 && sem.comErro * 20 > sem.apertos && sem.pior > 0.060,
+          "e o teste enxerga o erro quando ele existe: aperto sem parar, %ld de %ld com erro, até %.0f ms", sem.comErro, sem.apertos, sem.pior * 1000);
+    printf("latência em tempo real: %ld apertos (30, 60 e 120 ms a 60 e 144 Hz, três robôs), pior erro %.2f ms, %ld julgamentos mudariam; sem parar: até %.0f ms\n",
+           apertos, pior * 1000, mudancas, sem.pior * 1000);
+}
+
 /* Um passo grande (uma pausa, uma queda de quadro) não pode pular o aviso: WINDUP, LAUNCH, o brilho e o
  * som do aviso saem, nessa ordem de tempo, antes do PRESS e do IMPACT. Antes, o núcleo começava a
  * preparação numa chamada e só disparava a agenda na seguinte, e um aperto entre as duas julgava o golpe
@@ -2942,6 +3041,7 @@ int main(void) {
     test_passo_grande();
     test_vozes();
     test_hitstop_exato();
+    test_latencia_em_tempo_real();
     printf("%d verificações, %d falhas\n", checks, failures);
     return failures ? 1 : 0;
 }
