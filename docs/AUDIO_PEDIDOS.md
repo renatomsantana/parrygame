@@ -24,7 +24,7 @@ Um começo barato: **P1 com 2 ou 3 variações cada** (`nome_01.wav` a `nome_03.
 - **Sem silêncio no começo** de `cue` e dos impactos: o jogo alinha o pico do `swing` ao contato e dispara o resto no instante do evento.
 - `perfect`, `good`, `bad` e `swing`: **no máximo 1,6 s, já com a cauda** (reverb dentro do arquivo). Arquivos maiores são recusados com aviso no terminal e o jogo mantém o som embutido.
 - Até 4 variações por som (`nome_01.wav` a `nome_04.wav`), tocadas em rodízio. Elas têm prioridade sobre `nome.wav`.
-- O jogo não muda o pitch dos arquivos de resultado de forma que quebre o timbre; `perfect` varia só de 1,00 a 1,08.
+- O código aplica uma variação de pitch pequena em alguns sons (coluna `volume_e_pitch_no_codigo`; por exemplo `perfect` de 1,00 a 1,08). Entregue o arquivo no tom base que quer ouvir.
 - Por mestre: `sfx/<mestre>/cue.wav`, `gesture.wav` e `swing.wav`. Mestres: daichi, genbu, raizo, shizuku, garfiel, karasu, hayate, enjin, suiren, arashi, yoru, jinshi, oboro. Jinshi não tem som de aviso. O Oboro usa o banco do aprendiz cuja postura copia; a pasta `oboro/` é só para a postura própria dele.
 
 ## Como testar o que chegar
